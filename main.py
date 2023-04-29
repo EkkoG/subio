@@ -89,6 +89,26 @@ def add_hyphen(text):
         return f"- {line}"
     return '\n'.join(map(trans, lines))
 
+def filter_nodes(nodes, artifact, validate_map):
+    all_nodes_for_artifact = [nodes[provider]
+                                for provider in artifact['providers']]
+    all_nodes_for_artifact = reduce(
+        lambda x, y: x + y, all_nodes_for_artifact)
+    all_nodes_for_artifact = validate.validation(all_nodes_for_artifact, artifact['type'], validate_map)
+    all_nodes_for_artifact = transform.tarnsform_to(all_nodes_for_artifact, artifact['type'], validate_map)
+    return all_nodes_for_artifact
+
+def build_template(artifact):
+    template_text = open(artifact['template'], 'r').read()
+    final_snippet_text = ''
+    for snippet_file in os.listdir('snippet'):
+        snippet_file_path = os.path.join('snippet', snippet_file)
+        snippet_text = "{{% import '{}' as {} -%}}\n".format(
+            snippet_file_path, snippet_file)
+        final_snippet_text += snippet_text + '\n'
+
+    template_text_with_macro = final_snippet_text + template_text
+    return template_text_with_macro
 
 if __name__ == '__main__':
     with open('config.toml', 'r') as f:
@@ -99,24 +119,11 @@ if __name__ == '__main__':
 
     validate_map = json.load(open('map.json', 'r'))
     for artifact in config['artifact']:
-        all_nodes_for_artifact = [all_nodes[provider]
-                                  for provider in artifact['providers']]
-        all_nodes_for_artifact = reduce(
-            lambda x, y: x + y, all_nodes_for_artifact)
-        all_nodes_for_artifact = validate.validation(all_nodes_for_artifact, artifact['type'], validate_map)
-        all_nodes_for_artifact = transform.tarnsform_to(all_nodes_for_artifact, artifact['type'], validate_map)
+        all_nodes_for_artifact = filter_nodes(all_nodes, artifact, validate_map)
+
+        template_text_with_macro = build_template(artifact)
 
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
-        template_text = open(artifact['template'], 'r').read()
-        final_snippet_text = ''
-        for snippet_file in os.listdir('snippet'):
-            snippet_file_path = os.path.join('snippet', snippet_file)
-            snippet_text = "{{% import '{}' as {} -%}}\n".format(
-                snippet_file_path, snippet_file)
-            final_snippet_text += snippet_text + '\n'
-
-        template_text_with_macro = final_snippet_text + template_text
-
         template = env.from_string(template_text_with_macro)
 
         def get_proxies():
