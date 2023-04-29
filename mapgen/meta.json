@@ -1,0 +1,404 @@
+{
+  "proxies": [
+    {
+      "name": "socks",
+      "type": "socks5",
+      "server": "server",
+      "port": 443,
+      "username": "username",
+      "password": "password",
+      "tls": true,
+      "fingerprint": "xxxx",
+      "skip-cert-verify": true,
+      "udp": true,
+      "ip-version": "ipv6"
+    },
+    {
+      "name": "http",
+      "type": "http",
+      "server": "server",
+      "port": 443,
+      "username": "username",
+      "password": "password",
+      "tls": true,
+      "skip-cert-verify": true,
+      "sni": "custom.com",
+      "fingerprint": "xxxx",
+      "ip-version": "dual"
+    },
+    {
+      "name": "snell",
+      "type": "snell",
+      "server": "server",
+      "port": 44046,
+      "psk": "yourpsk",
+      "version": 2,
+      "obfs-opts": null,
+      "mode": "http",
+      "host": "bing.com"
+    },
+    {
+      "name": "ss1",
+      "type": "ss",
+      "server": "server",
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": "password",
+      "udp": true,
+      "udp-over-tcp": false,
+      "ip-version": "ipv4",
+      "smux": {
+        "enabled": false,
+        "protocol": "smux",
+        "max-connections": 4,
+        "min-streams": 4,
+        "max-streams": 0,
+        "padding": false,
+        "statistic": false,
+        "only-tcp": false
+      }
+    },
+    {
+      "name": "ss2",
+      "type": "ss",
+      "server": "server",
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "obfs",
+      "plugin-opts": {
+        "mode": "tls",
+        "host": "bing.com"
+      }
+    },
+    {
+      "name": "ss3",
+      "type": "ss",
+      "server": "server",
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "v2ray-plugin",
+      "plugin-opts": {
+        "mode": "websocket"
+      },
+      "tls": true,
+      "fingerprint": "xxxx",
+      "skip-cert-verify": true,
+      "host": "bing.com",
+      "path": "/",
+      "mux": true,
+      "headers": {
+        "custom": "value"
+      }
+    },
+    {
+      "name": "ss4-shadow-tls",
+      "type": "ss",
+      "server": "server",
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "shadow-tls",
+      "client-fingerprint": "chrome",
+      "plugin-opts": {
+        "host": "cloud.tencent.com",
+        "password": "shadow_tls_password",
+        "version": 2
+      }
+    },
+    {
+      "name": "ss-restls-tls13",
+      "type": "ss",
+      "server": [
+        "YOUR_SERVER_IP"
+      ],
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": [
+        "YOUR_SS_PASSWORD"
+      ],
+      "client-fingerprint": "chrome",
+      "plugin": "restls",
+      "plugin-opts": {
+        "host": "www.microsoft.com",
+        "password": [
+          "YOUR_RESTLS_PASSWORD"
+        ],
+        "version-hint": "tls13",
+        "restls-script": "300?100<1,400~100,350~100,600~100,300~200,300~100"
+      }
+    },
+    {
+      "name": "ss-restls-tls12",
+      "type": "ss",
+      "server": [
+        "YOUR_SERVER_IP"
+      ],
+      "port": 443,
+      "cipher": "chacha20-ietf-poly1305",
+      "password": [
+        "YOUR_SS_PASSWORD"
+      ],
+      "client-fingerprint": "chrome",
+      "plugin": "restls",
+      "plugin-opts": {
+        "host": "vscode.dev",
+        "password": [
+          "YOUR_RESTLS_PASSWORD"
+        ],
+        "version-hint": "tls12",
+        "restls-script": "1000?100<1,500~100,350~100,600~100,400~200"
+      }
+    },
+    {
+      "name": "vmess",
+      "type": "vmess",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "alterId": 32,
+      "cipher": "auto",
+      "udp": true,
+      "tls": true,
+      "fingerprint": "xxxx",
+      "client-fingerprint": "chrome",
+      "skip-cert-verify": true,
+      "servername": "example.com",
+      "network": "ws",
+      "ws-opts": {
+        "path": "/path",
+        "headers": {
+          "Host": "v2ray.com"
+        },
+        "max-early-data": 2048,
+        "early-data-header-name": "Sec-WebSocket-Protocol"
+      }
+    },
+    {
+      "name": "vmess-h2",
+      "type": "vmess",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "alterId": 32,
+      "cipher": "auto",
+      "network": "h2",
+      "tls": true,
+      "fingerprint": "xxxx",
+      "h2-opts": {
+        "host": [
+          "http.example.com",
+          "http-alt.example.com"
+        ],
+        "path": "/"
+      }
+    },
+    {
+      "name": "vmess-http",
+      "type": "vmess",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "alterId": 32,
+      "cipher": "auto",
+      "udp": true,
+      "network": "http",
+      "http-opts": {
+        "method": "GET",
+        "path": [
+          "/",
+          "/video"
+        ],
+        "headers": {
+          "Connection": [
+            "keep-alive"
+          ]
+        }
+      },
+      "ip-version": "ipv4"
+    },
+    {
+      "name": "vmess-grpc",
+      "server": "server",
+      "port": 443,
+      "type": "vmess",
+      "uuid": "uuid",
+      "alterId": 32,
+      "cipher": "auto",
+      "network": "grpc",
+      "tls": true,
+      "fingerprint": "xxxx",
+      "servername": "example.com",
+      "skip-cert-verify": true,
+      "grpc-opts": {
+        "grpc-service-name": "example"
+      },
+      "ip-version": "ipv4"
+    },
+    {
+      "name": "vless-tcp",
+      "type": "vless",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "network": "tcp",
+      "servername": "example.com",
+      "flow": "xtls-rprx-direct",
+      "skip-cert-verify": true,
+      "fingerprint": "xxxx",
+      "client-fingerprint": "random"
+    },
+    {
+      "name": "vless-vision",
+      "type": "vless",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "network": "tcp",
+      "tls": true,
+      "udp": true,
+      "flow": "xtls-rprx-vision",
+      "client-fingerprint": "chrome"
+    },
+    {
+      "name": "vless-reality-vision",
+      "type": "vless",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "network": "tcp",
+      "tls": true,
+      "udp": true,
+      "flow": "xtls-rprx-vision",
+      "servername": "www.microsoft.com",
+      "reality-opts": {
+        "public-key": "xxx",
+        "short-id": "xxx"
+      },
+      "client-fingerprint": "chrome"
+    },
+    {
+      "name": "vless-reality-grpc",
+      "type": "vless",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "network": "grpc",
+      "tls": true,
+      "udp": true,
+      "flow": null,
+      "client-fingerprint": "chrome",
+      "servername": "testingcf.jsdelivr.net",
+      "grpc-opts": {
+        "grpc-service-name": "grpc"
+      },
+      "reality-opts": {
+        "public-key": "CrrQSjAG_YkHLwvM2M-7XkKJilgL5upBKCp0od0tLhE",
+        "short-id": "10f897e26c4b9478"
+      }
+    },
+    {
+      "name": "vless-ws",
+      "type": "vless",
+      "server": "server",
+      "port": 443,
+      "uuid": "uuid",
+      "udp": true,
+      "tls": true,
+      "network": "ws",
+      "servername": "example.com",
+      "ws-opts": {
+        "path": "/",
+        "headers": {
+          "Host": "example.com"
+        }
+      }
+    },
+    {
+      "name": "trojan",
+      "type": "trojan",
+      "server": "server",
+      "port": 443,
+      "password": "yourpsk"
+    },
+    {
+      "name": "trojan-grpc",
+      "server": "server",
+      "port": 443,
+      "type": "trojan",
+      "password": "example",
+      "network": "grpc",
+      "sni": "example.com",
+      "udp": true,
+      "grpc-opts": {
+        "grpc-service-name": "example"
+      }
+    },
+    {
+      "name": "trojan-ws",
+      "server": "server",
+      "port": 443,
+      "type": "trojan",
+      "password": "example",
+      "network": "ws",
+      "sni": "example.com",
+      "udp": true
+    },
+    {
+      "name": "trojan-xtls",
+      "type": "trojan",
+      "server": "server",
+      "port": 443,
+      "password": "yourpsk",
+      "flow": "xtls-rprx-direct",
+      "flow-show": true
+    },
+    {
+      "name": "hysteria",
+      "type": "hysteria",
+      "server": "server.com",
+      "port": 443,
+      "auth_str": "yourpassword",
+      "protocol": "udp",
+      "up": "30 Mbps",
+      "down": "200 Mbps"
+    },
+    {
+      "name": "wg",
+      "type": "wireguard",
+      "server": "162.159.192.1",
+      "port": 2480,
+      "ip": "172.16.0.2",
+      "ipv6": "fd01:5ca1:ab1e:80fa:ab85:6eea:213f:f4a5",
+      "public-key": "Cr8hWlKvtDt7nrvf+f0brNQQzabAqrjfBvas9pmowjo=",
+      "private-key": "eCtXsJZ27+4PbhDkHnB923tkUn2Gj59wZw5wFA75MnU=",
+      "udp": true,
+      "reserved": "U4An"
+    },
+    {
+      "name": "tuic",
+      "server": "www.example.com",
+      "port": 10443,
+      "type": "tuic",
+      "token": "TOKEN",
+      "disable-sni": true,
+      "reduce-rtt": true,
+      "request-timeout": 8000,
+      "udp-relay-mode": "native"
+    },
+    {
+      "name": "ssr",
+      "type": "ssr",
+      "server": "server",
+      "port": 443,
+      "cipher": "chacha20-ietf",
+      "password": "password",
+      "obfs": "tls1.2_ticket_auth",
+      "protocol": "auth_sha1_v4",
+      "obfs-param": "domain.tld",
+      "protocol-param": "#",
+      "udp": true
+    }
+  ]
+}
