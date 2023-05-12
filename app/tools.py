@@ -9,5 +9,6 @@ def build_map(t):
                 if t in v1:
                     if k not in m:
                         m[k] = {}
-                    m[k][v1[t]['origin']] = k1
+                    if 'origin' in v1[t]:
+                        m[k][v1[t]['origin']] = k1
     return m 

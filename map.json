@@ -1,1399 +1,1643 @@
 {
     "socks5": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "username": {
             "clash-meta": {
-                "origin": "username",
-                "support": true
+                "origin": "username"
             },
             "clash": {
-                "origin": "username",
-                "support": true
+                "origin": "username"
             }
         },
         "password": {
             "clash-meta": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             },
             "clash": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             }
         },
         "tls": {
             "clash-meta": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             },
             "clash": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             }
         },
         "fingerprint": {
             "clash-meta": {
-                "origin": "fingerprint",
-                "support": true
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "skip_cert_verify": {
             "clash-meta": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             },
             "clash": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             },
             "clash": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             }
         },
         "ip_version": {
             "clash-meta": {
-                "origin": "ip_version",
-                "support": true
+                "origin": "ip_version"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "http": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "username": {
             "clash-meta": {
-                "origin": "username",
-                "support": true
+                "origin": "username"
             },
             "clash": {
-                "origin": "username",
-                "support": true
+                "origin": "username"
             }
         },
         "password": {
             "clash-meta": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             },
             "clash": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             }
         },
         "tls": {
             "clash-meta": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             },
             "clash": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             }
         },
         "skip_cert_verify": {
             "clash-meta": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             },
             "clash": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             }
         },
         "sni": {
             "clash-meta": {
-                "origin": "sni",
-                "support": true
+                "origin": "sni"
             },
             "clash": {
-                "origin": "sni",
-                "support": true
+                "origin": "sni"
             }
         },
         "fingerprint": {
             "clash-meta": {
-                "origin": "fingerprint",
-                "support": true
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "ip_version": {
             "clash-meta": {
-                "origin": "ip_version",
-                "support": true
+                "origin": "ip_version"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "snell": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "psk": {
             "clash-meta": {
-                "origin": "psk",
-                "support": true
+                "origin": "psk"
             },
             "clash": {
-                "origin": "psk",
-                "support": true
+                "origin": "psk"
             }
         },
         "version": {
             "clash-meta": {
-                "origin": "version",
-                "support": true
+                "origin": "version"
             },
             "clash": {
-                "origin": "version",
-                "support": true
+                "origin": "version"
             }
         },
         "obfs_opts": {
             "clash-meta": {
-                "origin": "obfs_opts",
-                "support": true
+                "origin": "obfs_opts"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "mode": {
             "clash-meta": {
-                "origin": "mode",
-                "support": true
+                "origin": "mode"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "host": {
             "clash-meta": {
-                "origin": "host",
-                "support": true
+                "origin": "host"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "obfs_opts_mode": {
             "clash": {
-                "origin": "obfs-opts.mode",
-                "support": true
+                "origin": "obfs-opts.mode"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "obfs_opts_host": {
             "clash": {
-                "origin": "obfs-opts.host",
-                "support": true
+                "origin": "obfs-opts.host"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         }
     },
     "ss": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "cipher": {
             "clash-meta": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             },
             "clash": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             }
         },
         "password": {
             "clash-meta": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             },
             "clash": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             },
             "clash": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             }
         },
         "udp_over_tcp": {
             "clash-meta": {
-                "origin": "udp_over_tcp",
-                "support": true
+                "origin": "udp_over_tcp"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "ip_version": {
             "clash-meta": {
-                "origin": "ip_version",
-                "support": true
+                "origin": "ip_version"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_enabled": {
             "clash-meta": {
-                "origin": "smux.enabled",
-                "support": true
+                "origin": "smux.enabled"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_protocol": {
             "clash-meta": {
-                "origin": "smux.protocol",
-                "support": true
+                "origin": "smux.protocol"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_max_connections": {
             "clash-meta": {
-                "origin": "smux.max-connections",
-                "support": true
+                "origin": "smux.max-connections"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_min_streams": {
             "clash-meta": {
-                "origin": "smux.min-streams",
-                "support": true
+                "origin": "smux.min-streams"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_max_streams": {
             "clash-meta": {
-                "origin": "smux.max-streams",
-                "support": true
+                "origin": "smux.max-streams"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_padding": {
             "clash-meta": {
-                "origin": "smux.padding",
-                "support": true
+                "origin": "smux.padding"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_statistic": {
             "clash-meta": {
-                "origin": "smux.statistic",
-                "support": true
+                "origin": "smux.statistic"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "smux_only_tcp": {
             "clash-meta": {
-                "origin": "smux.only-tcp",
-                "support": true
+                "origin": "smux.only-tcp"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "plugin": {
             "clash-meta": {
-                "origin": "plugin",
-                "support": true
+                "origin": "plugin"
             },
             "clash": {
-                "origin": "plugin",
-                "support": true
+                "origin": "plugin"
             }
         },
         "plugin_opts_mode": {
             "clash-meta": {
-                "origin": "plugin-opts.mode",
-                "support": true
+                "origin": "plugin-opts.mode"
             },
             "clash": {
-                "origin": "plugin-opts.mode",
-                "support": true
+                "origin": "plugin-opts.mode"
             }
         },
         "plugin_opts_host": {
             "clash-meta": {
-                "origin": "plugin-opts.host",
-                "support": true
+                "origin": "plugin-opts.host"
             },
             "clash": {
-                "origin": "plugin-opts.host",
-                "support": true
+                "origin": "plugin-opts.host"
             }
         },
         "tls": {
             "clash-meta": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "fingerprint": {
             "clash-meta": {
-                "origin": "fingerprint",
-                "support": true
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "skip_cert_verify": {
             "clash-meta": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "host": {
             "clash-meta": {
-                "origin": "host",
-                "support": true
+                "origin": "host"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "path": {
             "clash-meta": {
-                "origin": "path",
-                "support": true
+                "origin": "path"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "mux": {
             "clash-meta": {
-                "origin": "mux",
-                "support": true
+                "origin": "mux"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "headers_custom": {
             "clash-meta": {
-                "origin": "headers.custom",
-                "support": true
+                "origin": "headers.custom"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "client_fingerprint": {
             "clash-meta": {
-                "origin": "client_fingerprint",
-                "support": true
+                "origin": "client_fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "plugin_opts_password": {
             "clash-meta": {
-                "origin": "plugin-opts.password",
-                "support": true
+                "origin": "plugin-opts.password"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_version": {
             "clash-meta": {
-                "origin": "plugin-opts.version",
-                "support": true
+                "origin": "plugin-opts.version"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_version_hint": {
             "clash-meta": {
-                "origin": "plugin-opts.version-hint",
-                "support": true
+                "origin": "plugin-opts.version-hint"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_restls_script": {
             "clash-meta": {
-                "origin": "plugin-opts.restls-script",
-                "support": true
+                "origin": "plugin-opts.restls-script"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_tls": {
             "clash": {
-                "origin": "plugin-opts.tls",
-                "support": true
+                "origin": "plugin-opts.tls"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_skip_cert_verify": {
             "clash": {
-                "origin": "plugin-opts.skip-cert-verify",
-                "support": true
+                "origin": "plugin-opts.skip-cert-verify"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_path": {
             "clash": {
-                "origin": "plugin-opts.path",
-                "support": true
+                "origin": "plugin-opts.path"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_mux": {
             "clash": {
-                "origin": "plugin-opts.mux",
-                "support": true
+                "origin": "plugin-opts.mux"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "plugin_opts_headers": {
             "clash": {
-                "origin": "plugin-opts.headers",
-                "support": true
+                "origin": "plugin-opts.headers"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         }
     },
     "vmess": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "uuid": {
             "clash-meta": {
-                "origin": "uuid",
-                "support": true
+                "origin": "uuid"
             },
             "clash": {
-                "origin": "uuid",
-                "support": true
+                "origin": "uuid"
             }
         },
         "alterid": {
             "clash-meta": {
-                "origin": "alterid",
-                "support": true
+                "origin": "alterid"
             },
             "clash": {
-                "origin": "alterid",
-                "support": true
+                "origin": "alterid"
             }
         },
         "cipher": {
             "clash-meta": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             },
             "clash": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             },
             "clash": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             }
         },
         "tls": {
             "clash-meta": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             },
             "clash": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
             }
         },
         "fingerprint": {
             "clash-meta": {
-                "origin": "fingerprint",
-                "support": true
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "client_fingerprint": {
             "clash-meta": {
-                "origin": "client_fingerprint",
-                "support": true
+                "origin": "client_fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "skip_cert_verify": {
             "clash-meta": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             },
             "clash": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
             }
         },
         "servername": {
             "clash-meta": {
-                "origin": "servername",
-                "support": true
+                "origin": "servername"
             },
             "clash": {
-                "origin": "servername",
-                "support": true
+                "origin": "servername"
             }
         },
         "network": {
             "clash-meta": {
-                "origin": "network",
-                "support": true
+                "origin": "network"
             },
             "clash": {
-                "origin": "network",
-                "support": true
+                "origin": "network"
             }
         },
         "ws_opts_path": {
             "clash-meta": {
-                "origin": "ws-opts.path",
-                "support": true
+                "origin": "ws-opts.path"
             },
             "clash": {
-                "origin": "ws-opts.path",
-                "support": true
+                "origin": "ws-opts.path"
             }
         },
         "ws_opts_headers": {
             "clash-meta": {
-                "origin": "ws-opts.headers",
-                "support": true
+                "origin": "ws-opts.headers"
             },
             "clash": {
-                "origin": "ws-opts.headers",
-                "support": true
+                "origin": "ws-opts.headers"
             }
         },
         "ws_opts_max_early_data": {
             "clash-meta": {
-                "origin": "ws-opts.max-early-data",
-                "support": true
+                "origin": "ws-opts.max-early-data"
             },
             "clash": {
-                "origin": "ws-opts.max-early-data",
-                "support": true
+                "origin": "ws-opts.max-early-data"
             }
         },
         "ws_opts_early_data_header_name": {
             "clash-meta": {
-                "origin": "ws-opts.early-data-header-name",
-                "support": true
+                "origin": "ws-opts.early-data-header-name"
             },
             "clash": {
-                "origin": "ws-opts.early-data-header-name",
-                "support": true
+                "origin": "ws-opts.early-data-header-name"
             }
         },
         "h2_opts_host": {
             "clash-meta": {
-                "origin": "h2-opts.host",
-                "support": true
+                "origin": "h2-opts.host"
             },
             "clash": {
-                "origin": "h2-opts.host",
-                "support": true
+                "origin": "h2-opts.host"
             }
         },
         "h2_opts_path": {
             "clash-meta": {
-                "origin": "h2-opts.path",
-                "support": true
+                "origin": "h2-opts.path"
             },
             "clash": {
-                "origin": "h2-opts.path",
-                "support": true
+                "origin": "h2-opts.path"
             }
         },
         "http_opts_method": {
             "clash-meta": {
-                "origin": "http-opts.method",
-                "support": true
+                "origin": "http-opts.method"
             },
             "clash": {
-                "origin": "http-opts.method",
-                "support": true
+                "origin": "http-opts.method"
             }
         },
         "http_opts_path": {
             "clash-meta": {
-                "origin": "http-opts.path",
-                "support": true
+                "origin": "http-opts.path"
             },
             "clash": {
-                "origin": "http-opts.path",
-                "support": true
+                "origin": "http-opts.path"
             }
         },
         "http_opts_headers": {
             "clash-meta": {
-                "origin": "http-opts.headers",
-                "support": true
+                "origin": "http-opts.headers"
             },
             "clash": {
-                "origin": "http-opts.headers",
-                "support": true
+                "origin": "http-opts.headers"
             }
         },
         "ip_version": {
             "clash-meta": {
-                "origin": "ip_version",
-                "support": true
+                "origin": "ip_version"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "grpc_opts_grpc_service_name": {
             "clash-meta": {
-                "origin": "grpc-opts.grpc-service-name",
-                "support": true
+                "origin": "grpc-opts.grpc-service-name"
             },
             "clash": {
-                "origin": "grpc-opts.grpc-service-name",
-                "support": true
+                "origin": "grpc-opts.grpc-service-name"
             }
         }
     },
     "vless": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "uuid": {
             "clash-meta": {
-                "origin": "uuid",
-                "support": true
+                "origin": "uuid"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "network": {
             "clash-meta": {
-                "origin": "network",
-                "support": true
+                "origin": "network"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "servername": {
             "clash-meta": {
-                "origin": "servername",
-                "support": true
+                "origin": "servername"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "flow": {
             "clash-meta": {
-                "origin": "flow",
-                "support": true
+                "origin": "flow"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "skip_cert_verify": {
             "clash-meta": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "origin": "skip_cert_verify"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "fingerprint": {
             "clash-meta": {
-                "origin": "fingerprint",
-                "support": true
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "client_fingerprint": {
             "clash-meta": {
-                "origin": "client_fingerprint",
-                "support": true
+                "origin": "client_fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
             }
         },
         "tls": {
             "clash-meta": {
-                "origin": "tls",
-                "support": true
+                "origin": "tls"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "reality_opts_public_key": {
             "clash-meta": {
-                "origin": "reality-opts.public-key",
-                "support": true
+                "origin": "reality-opts.public-key"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "reality_opts_short_id": {
             "clash-meta": {
-                "origin": "reality-opts.short-id",
-                "support": true
+                "origin": "reality-opts.short-id"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "grpc_opts_grpc_service_name": {
             "clash-meta": {
-                "origin": "grpc-opts.grpc-service-name",
-                "support": true
+                "origin": "grpc-opts.grpc-service-name"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "ws_opts_path": {
             "clash-meta": {
-                "origin": "ws-opts.path",
-                "support": true
+                "origin": "ws-opts.path"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "ws_opts_headers": {
             "clash-meta": {
-                "origin": "ws-opts.headers",
-                "support": true
+                "origin": "ws-opts.headers"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "trojan": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "password": {
             "clash-meta": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             },
             "clash": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             }
         },
-        "network": {
+        "client_fingerprint": {
             "clash-meta": {
-                "origin": "network",
-                "support": true
+                "origin": "client_fingerprint"
             },
             "clash": {
-                "origin": "network",
-                "support": true
+                "policy": "allow_skip"
             }
         },
-        "sni": {
+        "fingerprint": {
             "clash-meta": {
-                "origin": "sni",
-                "support": true
+                "origin": "fingerprint"
             },
             "clash": {
-                "origin": "sni",
-                "support": true
+                "policy": "allow_skip"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             },
             "clash": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
+            }
+        },
+        "sni": {
+            "clash-meta": {
+                "origin": "sni"
+            },
+            "clash": {
+                "origin": "sni"
+            }
+        },
+        "alpn": {
+            "clash-meta": {
+                "origin": "alpn"
+            },
+            "clash": {
+                "origin": "alpn"
+            }
+        },
+        "skip_cert_verify": {
+            "clash-meta": {
+                "origin": "skip_cert_verify"
+            },
+            "clash": {
+                "origin": "skip_cert_verify"
+            }
+        },
+        "network": {
+            "clash-meta": {
+                "origin": "network"
+            },
+            "clash": {
+                "origin": "network"
             }
         },
         "grpc_opts_grpc_service_name": {
             "clash-meta": {
-                "origin": "grpc-opts.grpc-service-name",
-                "support": true
+                "origin": "grpc-opts.grpc-service-name"
             },
             "clash": {
-                "origin": "grpc-opts.grpc-service-name",
-                "support": true
+                "origin": "grpc-opts.grpc-service-name"
+            }
+        },
+        "ws_opts": {
+            "clash-meta": {
+                "origin": "ws_opts"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "path": {
+            "clash-meta": {
+                "origin": "path"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "headers_host": {
+            "clash-meta": {
+                "origin": "headers.Host"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "flow": {
             "clash-meta": {
-                "origin": "flow",
-                "support": true
+                "origin": "flow"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "flow_show": {
             "clash-meta": {
-                "origin": "flow_show",
-                "support": true
-            }
-        },
-        "alpn": {
+                "origin": "flow_show"
+            },
             "clash": {
-                "origin": "alpn",
-                "support": true
-            }
-        },
-        "skip_cert_verify": {
-            "clash": {
-                "origin": "skip_cert_verify",
-                "support": true
+                "policy": "unsupport"
             }
         },
         "ws_opts_path": {
             "clash": {
-                "origin": "ws-opts.path",
-                "support": true
+                "origin": "ws-opts.path"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         },
         "ws_opts_headers": {
             "clash": {
-                "origin": "ws-opts.headers",
-                "support": true
+                "origin": "ws-opts.headers"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
             }
         }
     },
     "hysteria": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "ports": {
+            "clash-meta": {
+                "origin": "ports"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "auth_str": {
             "clash-meta": {
-                "origin": "auth_str",
-                "support": true
+                "origin": "auth_str"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "obfs": {
+            "clash-meta": {
+                "origin": "obfs"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "alpn": {
+            "clash-meta": {
+                "origin": "alpn"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "protocol": {
             "clash-meta": {
-                "origin": "protocol",
-                "support": true
+                "origin": "protocol"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "up": {
             "clash-meta": {
-                "origin": "up",
-                "support": true
+                "origin": "up"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "down": {
             "clash-meta": {
-                "origin": "down",
-                "support": true
+                "origin": "down"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "sni": {
+            "clash-meta": {
+                "origin": "sni"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "skip_cert_verify": {
+            "clash-meta": {
+                "origin": "skip_cert_verify"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "recv_window_conn": {
+            "clash-meta": {
+                "origin": "recv_window_conn"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "recv_window": {
+            "clash-meta": {
+                "origin": "recv_window"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "ca": {
+            "clash-meta": {
+                "origin": "ca"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "ca_str": {
+            "clash-meta": {
+                "origin": "ca_str"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "disable_mtu_discovery": {
+            "clash-meta": {
+                "origin": "disable_mtu_discovery"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "fingerprint": {
+            "clash-meta": {
+                "origin": "fingerprint"
+            },
+            "clash": {
+                "policy": "allow_skip"
+            }
+        },
+        "fast_open": {
+            "clash-meta": {
+                "origin": "fast_open"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "wireguard": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "ip": {
             "clash-meta": {
-                "origin": "ip",
-                "support": true
+                "origin": "ip"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "ipv6": {
             "clash-meta": {
-                "origin": "ipv6",
-                "support": true
+                "origin": "ipv6"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "public_key": {
             "clash-meta": {
-                "origin": "public_key",
-                "support": true
+                "origin": "public_key"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "private_key": {
             "clash-meta": {
-                "origin": "private_key",
-                "support": true
+                "origin": "private_key"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "reserved": {
             "clash-meta": {
-                "origin": "reserved",
-                "support": true
+                "origin": "reserved"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "dialer_proxy": {
+            "clash-meta": {
+                "origin": "dialer_proxy"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "remote_dns_resolve": {
+            "clash-meta": {
+                "origin": "remote_dns_resolve"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "dns": {
+            "clash-meta": {
+                "origin": "dns"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "peers": {
+            "clash-meta": {
+                "origin": "peers"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "tuic": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "token": {
             "clash-meta": {
-                "origin": "token",
-                "support": true
+                "origin": "token"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "ip": {
+            "clash-meta": {
+                "origin": "ip"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "heartbeat_interval": {
+            "clash-meta": {
+                "origin": "heartbeat_interval"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "alpn": {
+            "clash-meta": {
+                "origin": "alpn"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "disable_sni": {
             "clash-meta": {
-                "origin": "disable_sni",
-                "support": true
+                "origin": "disable_sni"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "reduce_rtt": {
             "clash-meta": {
-                "origin": "reduce_rtt",
-                "support": true
+                "origin": "reduce_rtt"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "request_timeout": {
             "clash-meta": {
-                "origin": "request_timeout",
-                "support": true
+                "origin": "request_timeout"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         },
         "udp_relay_mode": {
             "clash-meta": {
-                "origin": "udp_relay_mode",
-                "support": true
+                "origin": "udp_relay_mode"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "congestion_controller": {
+            "clash-meta": {
+                "origin": "congestion_controller"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "max_udp_relay_packet_size": {
+            "clash-meta": {
+                "origin": "max_udp_relay_packet_size"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "fast_open": {
+            "clash-meta": {
+                "origin": "fast_open"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "skip_cert_verify": {
+            "clash-meta": {
+                "origin": "skip_cert_verify"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "max_open_streams": {
+            "clash-meta": {
+                "origin": "max_open_streams"
+            },
+            "clash": {
+                "policy": "unsupport"
+            }
+        },
+        "sni": {
+            "clash-meta": {
+                "origin": "sni"
+            },
+            "clash": {
+                "policy": "unsupport"
             }
         }
     },
     "ssr": {
         "_protocol": {
-            "clash-meta": {
-                "support": true
-            },
-            "clash": {
-                "support": true
-            }
+            "clash-meta": {},
+            "clash": {}
         },
         "name": {
             "clash-meta": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             },
             "clash": {
-                "origin": "name",
-                "support": true
+                "origin": "name"
             }
         },
         "type": {
             "clash-meta": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             },
             "clash": {
-                "origin": "type",
-                "support": true
+                "origin": "type"
             }
         },
         "server": {
             "clash-meta": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             },
             "clash": {
-                "origin": "server",
-                "support": true
+                "origin": "server"
             }
         },
         "port": {
             "clash-meta": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             },
             "clash": {
-                "origin": "port",
-                "support": true
+                "origin": "port"
             }
         },
         "cipher": {
             "clash-meta": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             },
             "clash": {
-                "origin": "cipher",
-                "support": true
+                "origin": "cipher"
             }
         },
         "password": {
             "clash-meta": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             },
             "clash": {
-                "origin": "password",
-                "support": true
+                "origin": "password"
             }
         },
         "obfs": {
             "clash-meta": {
-                "origin": "obfs",
-                "support": true
+                "origin": "obfs"
             },
             "clash": {
-                "origin": "obfs",
-                "support": true
+                "origin": "obfs"
             }
         },
         "protocol": {
             "clash-meta": {
-                "origin": "protocol",
-                "support": true
+                "origin": "protocol"
             },
             "clash": {
-                "origin": "protocol",
-                "support": true
+                "origin": "protocol"
             }
         },
         "obfs_param": {
             "clash-meta": {
-                "origin": "obfs_param",
-                "support": true
+                "origin": "obfs_param"
             },
             "clash": {
-                "origin": "obfs_param",
-                "support": true
+                "origin": "obfs_param"
             }
         },
         "protocol_param": {
             "clash-meta": {
-                "origin": "protocol_param",
-                "support": true
+                "origin": "protocol_param"
             },
             "clash": {
-                "origin": "protocol_param",
-                "support": true
+                "origin": "protocol_param"
             }
         },
         "udp": {
             "clash-meta": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             },
             "clash": {
-                "origin": "udp",
-                "support": true
+                "origin": "udp"
             }
         }
     }

@@ -259,7 +259,9 @@
       "tls": true,
       "udp": true,
       "flow": "xtls-rprx-vision",
-      "client-fingerprint": "chrome"
+      "client-fingerprint": "chrome",
+      "fingerprint": "xxxx",
+      "skip-cert-verify": true
     },
     {
       "name": "vless-reality-vision",
@@ -288,6 +290,7 @@
       "tls": true,
       "udp": true,
       "flow": null,
+      "skip-cert-verify": true,
       "client-fingerprint": "chrome",
       "servername": "testingcf.jsdelivr.net",
       "grpc-opts": {
@@ -307,7 +310,10 @@
       "udp": true,
       "tls": true,
       "network": "ws",
+      "client-fingerprint": "random",
       "servername": "example.com",
+      "skip-cert-verify": true,
+      "fingerprint": "xxxx",
       "ws-opts": {
         "path": "/",
         "headers": {
@@ -320,7 +326,16 @@
       "type": "trojan",
       "server": "server",
       "port": 443,
-      "password": "yourpsk"
+      "password": "yourpsk",
+      "client-fingerprint": "random",
+      "fingerprint": "xxxx",
+      "udp": true,
+      "sni": "example.com",
+      "alpn": [
+        "h2",
+        "http/1.1"
+      ],
+      "skip-cert-verify": true
     },
     {
       "name": "trojan-grpc",
@@ -330,6 +345,8 @@
       "password": "example",
       "network": "grpc",
       "sni": "example.com",
+      "skip-cert-verify": true,
+      "fingerprint": "xxxx",
       "udp": true,
       "grpc-opts": {
         "grpc-service-name": "example"
@@ -343,7 +360,14 @@
       "password": "example",
       "network": "ws",
       "sni": "example.com",
-      "udp": true
+      "skip-cert-verify": true,
+      "fingerprint": "xxxx",
+      "udp": true,
+      "ws-opts": null,
+      "path": "/path",
+      "headers": {
+        "Host": "example.com"
+      }
     },
     {
       "name": "trojan-xtls",
@@ -352,17 +376,39 @@
       "port": 443,
       "password": "yourpsk",
       "flow": "xtls-rprx-direct",
-      "flow-show": true
+      "flow-show": true,
+      "udp": true,
+      "sni": "example.com",
+      "skip-cert-verify": true,
+      "fingerprint": "xxxx"
     },
     {
       "name": "hysteria",
       "type": "hysteria",
       "server": "server.com",
       "port": 443,
+      "ports": "1000,2000-3000,5000",
       "auth_str": "yourpassword",
+      "auth-str": "yourpassword",
+      "obfs": "obfs_str",
+      "alpn": [
+        "h3"
+      ],
       "protocol": "udp",
       "up": "30 Mbps",
-      "down": "200 Mbps"
+      "down": "200 Mbps",
+      "sni": "server.com",
+      "skip-cert-verify": false,
+      "recv_window_conn": 12582912,
+      "recv-window-conn": 12582912,
+      "recv_window": 52428800,
+      "recv-window": 52428800,
+      "ca": "./my.ca",
+      "ca_str": "xyz",
+      "ca-str": "xyz",
+      "disable_mtu_discovery": false,
+      "fingerprint": "xxxx",
+      "fast-open": true
     },
     {
       "name": "wg",
@@ -374,7 +420,30 @@
       "public-key": "Cr8hWlKvtDt7nrvf+f0brNQQzabAqrjfBvas9pmowjo=",
       "private-key": "eCtXsJZ27+4PbhDkHnB923tkUn2Gj59wZw5wFA75MnU=",
       "udp": true,
-      "reserved": "U4An"
+      "reserved": "U4An",
+      "dialer-proxy": "ss1",
+      "remote-dns-resolve": true,
+      "dns": [
+        "1.1.1.1",
+        "8.8.8.8"
+      ],
+      "peers": [
+        {
+          "server": "162.159.192.1",
+          "port": 2480,
+          "ip": "172.16.0.2",
+          "ipv6": "fd01:5ca1:ab1e:80fa:ab85:6eea:213f:f4a5",
+          "public-key": "Cr8hWlKvtDt7nrvf+f0brNQQzabAqrjfBvas9pmowjo=",
+          "allowed_ips": [
+            "0.0.0.0/0"
+          ],
+          "reserved": [
+            209,
+            98,
+            59
+          ]
+        }
+      ]
     },
     {
       "name": "tuic",
@@ -382,10 +451,21 @@
       "port": 10443,
       "type": "tuic",
       "token": "TOKEN",
+      "ip": "127.0.0.1",
+      "heartbeat-interval": 10000,
+      "alpn": [
+        "h3"
+      ],
       "disable-sni": true,
       "reduce-rtt": true,
       "request-timeout": 8000,
-      "udp-relay-mode": "native"
+      "udp-relay-mode": "native",
+      "congestion-controller": "bbr",
+      "max-udp-relay-packet-size": 1500,
+      "fast-open": true,
+      "skip-cert-verify": true,
+      "max-open-streams": 20,
+      "sni": "example.com"
     },
     {
       "name": "ssr",
