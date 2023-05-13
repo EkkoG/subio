@@ -14,37 +14,36 @@ def gen_clash(file, ftype):
 
         if p['type'] not in cache:
             cache[p['type']] = {
-                "_protocol": {
-                },
+                "_protocol": {},
             }
         if ftype not in cache[p['type']]["_protocol"]:
-            cache[p['type']]["_protocol"][ftype] = {
+            cache[p['type']]["_protocol"][ftype] = {}
+
+
+        def gen(proxy):
+            mm = {}
+            for k, v in proxy.items():
+                if isinstance(v, dict):
+                    for k1, v1 in gen(v).items():
+                        mm[f'{k}.{k1}'] = ".".join([k, k1])
+                else:
+                    mm[k] = k
+            return mm
+
+        for k,v in gen(p).items():
+            k = k.replace('-', '_').replace('.', '_').lower()
+            if k not in cache[p['type']]:
+                cache[p['type']][k] = {}
+            cache[p['type']][k][ftype] = {
+                "origin": v
             }
-
-
-        for k, v in p.items():
-            if isinstance(v, dict):
-                for k1, v1 in v.items():
-                    key = f"{k}_{k1}".lower().replace('-', '_')
-                    if key not in cache[p['type']]:
-                        cache[p['type']][key] = {}
-                    cache[p['type']][key][ftype] = {
-                        "origin": f"{k}.{k1}",
-                        }
-            else:
-                k = k.lower().replace('-', '_')
-                if k not in cache[p['type']]:
-                    cache[p['type']][k] = {}
-                cache[p['type']][k][ftype] = {
-                    "origin": k,
-                    }
 
 gen_clash('mapgen/meta.json', 'clash-meta')
 gen_clash('mapgen/clash.json', 'clash')
 
 for ptype, config in cache.items():
     for k, v in config.items():
-        allow_skip_keys = ['fingerprint', 'client_fingerprint']
+        allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version']
         all_platform = ['clash', 'clash-meta']
         for platform in all_platform:
             if platform not in v:

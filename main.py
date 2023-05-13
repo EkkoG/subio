@@ -10,6 +10,13 @@ from app import parse
 
 from app.filter import all_filters
 
+import yaml
+
+
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
 
 def load_remote_resource(url):
     import hashlib
@@ -45,7 +52,7 @@ def load_rulset(config):
 
 def to_yaml(data):
     import yaml
-    return yaml.dump(data)
+    return yaml.dump(data, Dumper=NoAliasDumper)
 
 
 def to_json(data):
