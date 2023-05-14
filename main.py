@@ -52,12 +52,12 @@ def load_rulset(config):
 
 def to_yaml(data):
     import yaml
-    return yaml.dump(data, Dumper=NoAliasDumper)
+    return yaml.dump(data, Dumper=NoAliasDumper, allow_unicode=True)
 
 
 def to_json(data):
     import json
-    return json.dumps(data)
+    return json.dumps(data, ensure_ascii=False)
 
 
 def to_name(data):

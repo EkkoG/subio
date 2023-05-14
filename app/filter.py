@@ -93,9 +93,16 @@ def regex_filter(data, regex):
     return list(filter(isRegex, data))
 
 
-def combine(data, left, right, relation=False):
-    left_result = left(data)
-    right_result = right(data)
+def combine(data, left, right,left_args=None, right_args=None, relation=False):
+    if left_args is not None:
+        left_result = left(data, left_args)
+    else:
+        left_result = left(data)
+
+    if right_args is not None:
+        right_result = right(data, right_args)
+    else:
+        right_result = right(data)
     if relation:
         return list(set(left_result) & set(right_result))
     else:
