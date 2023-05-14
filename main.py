@@ -132,7 +132,7 @@ if __name__ == '__main__':
         def get_proxies_names():
             return to_name(get_proxies())
 
-        def render_ruleset(*args, **kwargs):
+        def render(*args, **kwargs):
             if artifact['type'] == 'clash' or artifact['type'] == 'clash-meta':
                 return render_ruleset_in_clash(*args, **kwargs)
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         env.globals['to_json'] = to_json
         env.globals['to_name'] = to_name
         env.globals['filter'] = all_filters
-        env.globals['render_ruleset'] = render_ruleset
+        env.globals['render'] = render
         env.globals['all_ruleset'] = all_ruleset
 
         if not os.path.exists('dist'):
