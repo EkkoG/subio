@@ -50,7 +50,7 @@ gen_clash('mapgen/stash.yaml', 'stash')
 
 for ptype, config in cache.items():
     for k, v in config['map'].items():
-        allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version']
+        allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
         all_platform = ['clash', 'clash-meta', 'stash']
         for platform in all_platform:
             if platform not in v:
