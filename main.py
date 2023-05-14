@@ -77,12 +77,14 @@ def render_ruleset(text, policy):
 
 def render_ruleset_in_clash(text, policy):
     lines = text.split('\n')
+    lines = list(filter(lambda x: 'USER-AGENT' not in x, lines))
 
     def trans(line):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
-        return f"- {line}, {policy}"
+        line = line.replace(',no-resolve', '')
+        return f"- {line},{policy}"
     return '\n'.join(map(trans, lines))
 
 
