@@ -115,7 +115,7 @@ if __name__ == '__main__':
         config = toml.load(f)
 
     all_nodes = load_nodes(config)
-    all_ruleset = load_rulset(config)
+    remote_ruleset = load_rulset(config)
 
     validate_map = json.load(open('map.json', 'r'))
     for artifact in config['artifact']:
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         env.globals['to_name'] = to_name
         env.globals['filter'] = all_filters
         env.globals['render'] = render
-        env.globals['all_ruleset'] = all_ruleset
+        env.globals['remote_ruleset'] = remote_ruleset
 
         if not os.path.exists('dist'):
             os.mkdir('dist')
