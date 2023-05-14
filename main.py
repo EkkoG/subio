@@ -64,7 +64,7 @@ def to_name(data):
     return list(map(lambda x: x['name'], data))
 
 
-def render_ruleset(text, policy):
+def render_ruleset_generic(text, policy):
     lines = text.split('\n')
 
     def trans(line):
@@ -140,6 +140,11 @@ if __name__ == '__main__':
 
         def get_proxies_names():
             return to_name(get_proxies())
+
+        def render_ruleset(*args, **kwargs):
+            if artifact['type'] == 'clash':
+                return render_ruleset_in_clash(*args, **kwargs)
+            return render_ruleset_generic(*args, **kwargs)
         env.globals['get_proxies'] = get_proxies
         env.globals['get_proxies_names'] = get_proxies_names
         env.globals['to_yaml'] = to_yaml
@@ -147,7 +152,6 @@ if __name__ == '__main__':
         env.globals['to_name'] = to_name
         env.globals['filter'] = all_filters
         env.globals['render_ruleset'] = render_ruleset
-        env.globals['render_ruleset_in_clash'] = render_ruleset_in_clash
         env.globals['all_ruleset'] = all_ruleset
         env.globals['add_hyphen'] = add_hyphen
 
