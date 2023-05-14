@@ -75,7 +75,7 @@ def render_ruleset_generic(text, policy):
     return '\n'.join(map(trans, lines))
 
 
-def render_ruleset_in_clash(text, policy):
+def render_ruleset_in_clash(text, policy=None):
     lines = text.split('\n')
     lines = list(filter(lambda x: 'USER-AGENT' not in x, lines))
 
@@ -84,18 +84,9 @@ def render_ruleset_in_clash(text, policy):
         if len(line) == 0 or line[0] == '#':
             return line
         line = line.replace(',no-resolve', '')
+        if policy is None:
+            return f"- {line}"
         return f"- {line},{policy}"
-    return '\n'.join(map(trans, lines))
-
-
-def add_hyphen(text):
-    lines = text.split('\n')
-
-    def trans(line):
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            return line
-        return f"- {line}"
     return '\n'.join(map(trans, lines))
 
 def filter_nodes(nodes, artifact, validate_map):
@@ -142,9 +133,11 @@ if __name__ == '__main__':
             return to_name(get_proxies())
 
         def render_ruleset(*args, **kwargs):
-            if artifact['type'] == 'clash':
+            if artifact['type'] == 'clash' or artifact['type'] == 'clash-meta':
                 return render_ruleset_in_clash(*args, **kwargs)
+
             return render_ruleset_generic(*args, **kwargs)
+
         env.globals['get_proxies'] = get_proxies
         env.globals['get_proxies_names'] = get_proxies_names
         env.globals['to_yaml'] = to_yaml
@@ -153,7 +146,6 @@ if __name__ == '__main__':
         env.globals['filter'] = all_filters
         env.globals['render_ruleset'] = render_ruleset
         env.globals['all_ruleset'] = all_ruleset
-        env.globals['add_hyphen'] = add_hyphen
 
         if not os.path.exists('dist'):
             os.mkdir('dist')
