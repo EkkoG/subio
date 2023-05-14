@@ -9,15 +9,19 @@ import json
 cache = {}
 
 def gen_clash(file, ftype):
-    t = json.load(open(file, 'r'))
+    if file.endswith('.yaml'):
+        t = yaml.load(open(file, 'r'), Loader=yaml.FullLoader)
+    else:
+        t = json.load(open(file, 'r'))
+
     for p in t['proxies']:
 
         if p['type'] not in cache:
             cache[p['type']] = {
-                "_protocol": {},
+                "protocol": {},
             }
-        if ftype not in cache[p['type']]["_protocol"]:
-            cache[p['type']]["_protocol"][ftype] = {}
+        if ftype not in cache[p['type']]["protocol"]:
+            cache[p['type']]["protocol"][ftype] = {}
 
 
         def gen(proxy):
@@ -32,28 +36,31 @@ def gen_clash(file, ftype):
 
         for k,v in gen(p).items():
             k = k.replace('-', '_').replace('.', '_').lower()
-            if k not in cache[p['type']]:
-                cache[p['type']][k] = {}
-            cache[p['type']][k][ftype] = {
+            if 'map' not in cache[p['type']]:
+                cache[p['type']]['map'] = {}
+            if k not in cache[p['type']]['map']:
+                cache[p['type']]['map'][k] = {}
+            cache[p['type']]['map'][k][ftype] = {
                 "origin": v
             }
 
 gen_clash('mapgen/meta.json', 'clash-meta')
 gen_clash('mapgen/clash.json', 'clash')
+gen_clash('mapgen/stash.yaml', 'stash')
 
 for ptype, config in cache.items():
-    for k, v in config.items():
+    for k, v in config['map'].items():
         allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version']
-        all_platform = ['clash', 'clash-meta']
+        all_platform = ['clash', 'clash-meta', 'stash']
         for platform in all_platform:
             if platform not in v:
 
                 if k in allow_skip_keys:
-                    cache[ptype][k][platform] = {
+                    cache[ptype]['map'][k][platform] = {
                         'policy': 'allow_skip',
                     }
                 else:
-                    cache[ptype][k][platform] = {
+                    cache[ptype]['map'][k][platform] = {
                         'policy': 'unsupport',
                     }
 

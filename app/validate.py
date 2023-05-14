@@ -3,12 +3,12 @@ def validation(nodes, dest, validate_map):
 
     def validator(node):
         def get_value(key, field, default_value):
-            return validate_map.get(node['type'], {}).get(field, {}).get(dest, {}).get(key, default_value)
+            return validate_map.get(node['type'], {})['map'].get(field, {}).get(dest, {}).get(key, default_value)
 
         if node['type'] not in validate_map:
             print(f"Unknown node type: {node['type']} for {dest}, skip")
             return False
-        if get_value('policy', '_protocol', None) == 'unsupport':
+        if get_value('policy', 'protocol', None) == 'unsupport':
             print(f"Node {node['name']}, type {node['type']} is not valid for {dest}, skip, reason: protocol not supported")
             return False
 

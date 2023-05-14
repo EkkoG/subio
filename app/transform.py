@@ -4,8 +4,8 @@ def tarnsform_to(nodes, dest, tansform_map):
     for node in nodes:
         new_node = {}
         for key, value in node.items():
-            if 'origin' in tansform_map[node['type']][key][dest]:
-                dest_key = tansform_map[node['type']][key][dest]['origin']
+            if 'origin' in tansform_map[node['type']]['map'][key][dest]:
+                dest_key = tansform_map[node['type']]['map'][key][dest]['origin']
                 if '.' in dest_key:
                     k, k1 = dest_key.split('.')
                     if k not in new_node:
