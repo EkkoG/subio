@@ -62,9 +62,17 @@ def gen():
     gen_clash('mapgen/stash.yaml', 'stash')
 
     for ptype, config in cache.items():
+        all_platform = ['clash', 'clash-meta', 'stash']
+        protocol = config['protocol'].copy()
+        for k, v in protocol.items():
+            for platform in all_platform:
+                if platform not in protocol:
+                    cache[ptype]['protocol'][platform] = {
+                        'policy': 'unsupport',
+                    }
+
         for k, v in config['map'].items():
             allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
-            all_platform = ['clash', 'clash-meta', 'stash']
             for platform in all_platform:
                 if platform not in v:
 
@@ -76,5 +84,6 @@ def gen():
                         cache[ptype]['map'][k][platform] = {
                             'policy': 'unsupport',
                         }
+
 
     print(json.dumps(cache, indent=4))

@@ -990,7 +990,13 @@
     },
     "ss.shadow-tls": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1118,7 +1124,13 @@
     },
     "ss.restls": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1606,7 +1618,10 @@
     "vmess.http": {
         "protocol": {
             "clash-meta": {},
-            "clash": {}
+            "clash": {},
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1757,7 +1772,10 @@
     "vmess.grpc": {
         "protocol": {
             "clash-meta": {},
-            "clash": {}
+            "clash": {},
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1918,7 +1936,13 @@
     },
     "vless.tcp.xtls-rprx-direct": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -2046,7 +2070,13 @@
     },
     "vless.tcp.xtls-rprx-vision": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -2196,7 +2226,13 @@
     },
     "vless.grpc": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -2357,7 +2393,13 @@
     },
     "vless.ws": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -2890,7 +2932,13 @@
     },
     "trojan.xtls-rprx-direct": {
         "protocol": {
-            "clash-meta": {}
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -2975,7 +3023,10 @@
     "hysteria": {
         "protocol": {
             "clash-meta": {},
-            "stash": {}
+            "stash": {},
+            "clash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -3149,7 +3200,10 @@
     "wireguard": {
         "protocol": {
             "clash-meta": {},
-            "stash": {}
+            "stash": {},
+            "clash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -3356,7 +3410,10 @@
     "tuic": {
         "protocol": {
             "clash-meta": {},
-            "stash": {}
+            "stash": {},
+            "clash": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -3626,7 +3683,13 @@
     },
     "vless.h2.xtls-rprx-direct": {
         "protocol": {
-            "stash": {}
+            "stash": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "clash-meta": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
