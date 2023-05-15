@@ -476,8 +476,7 @@
             },
             "password": {
                 "clash-meta": {
-                    "origin": "password",
-                    "is_list": true
+                    "origin": "password"
                 },
                 "clash": {
                     "origin": "password"

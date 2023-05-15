@@ -89,18 +89,15 @@ proxies:
       version: 2
   - name: ss-restls-tls13
     type: ss
-    server:
-      - YOUR_SERVER_IP
+    server: YOUR_SERVER_IP
     port: 443
     cipher: chacha20-ietf-poly1305
-    password:
-      - YOUR_SS_PASSWORD
+    password: YOUR_SS_PASSWORD
     client-fingerprint: chrome
     plugin: restls
     plugin-opts:
       host: www.microsoft.com
-      password:
-        - YOUR_RESTLS_PASSWORD
+      password: YOUR_RESTLS_PASSWORD
       version-hint: tls13
       restls-script: '300?100<1,400~100,350~100,600~100,300~200,300~100'
   - name: ss-restls-tls12
@@ -109,14 +106,12 @@ proxies:
       - YOUR_SERVER_IP
     port: 443
     cipher: chacha20-ietf-poly1305
-    password:
-      - YOUR_SS_PASSWORD
+    password: YOUR_SS_PASSWORD
     client-fingerprint: chrome
     plugin: restls
     plugin-opts:
       host: vscode.dev
-      password:
-        - YOUR_RESTLS_PASSWORD
+      password: YOUR_RESTLS_PASSWORD
       version-hint: tls12
       restls-script: '1000?100<1,500~100,350~100,600~100,400~200'
   - name: vmess
