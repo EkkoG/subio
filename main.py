@@ -7,6 +7,7 @@ import json
 from app import transform
 from app import validate
 from app import parse
+from app.parser import clash
 
 from app.filter import all_filters
 
@@ -36,7 +37,15 @@ def load_nodes(config):
     all_nodes = {}
     for provider in config['provider']:
         if provider['type'] == 'custom':
-            all_nodes[provider['name']] = provider['nodes']
+            all_custom_nodes = provider['nodes']
+            # add node_type use parser.clash.get_type
+            def add_node_type(node):
+                node_type = clash.get_type(node)
+                node['node_type'] = node_type
+                return node
+            all_custom_nodes = list(map(add_node_type, all_custom_nodes))
+
+            all_nodes[provider['name']] = all_custom_nodes
         else:
             sub_text = load_remote_resource(provider['url'])
             all_nodes[provider['name']] = parse.parse(config, provider['type'], sub_text)

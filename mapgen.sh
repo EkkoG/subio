@@ -1,1 +1,1 @@
-python mapgen/clash.py > map.json
+python run_mapgen.py > map.json

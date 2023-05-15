@@ -1,5 +1,6 @@
 import yaml
 import json
+from app.parser.clash import get_type
 
 cache = {}
 
@@ -10,13 +11,14 @@ def gen_clash(file, ftype):
         t = json.load(open(file, 'r'))
 
     for p in t['proxies']:
+        proxy_type = get_type(p)
 
-        if p['type'] not in cache:
-            cache[p['type']] = {
+        if proxy_type not in cache:
+            cache[proxy_type] = {
                 "protocol": {},
             }
-        if ftype not in cache[p['type']]["protocol"]:
-            cache[p['type']]["protocol"][ftype] = {}
+        if ftype not in cache[proxy_type]["protocol"]:
+            cache[proxy_type]["protocol"][ftype] = {}
 
 
         def gen(proxy):
@@ -47,30 +49,32 @@ def gen_clash(file, ftype):
 
         for k,v in gen(p).items():
             k = k.replace('-', '_').replace('.', '_').lower()
-            if 'map' not in cache[p['type']]:
-                cache[p['type']]['map'] = {}
-            if k not in cache[p['type']]['map']:
-                cache[p['type']]['map'][k] = {}
-            cache[p['type']]['map'][k][ftype] = v
+            if 'map' not in cache[proxy_type]:
+                cache[proxy_type]['map'] = {}
+            if k not in cache[proxy_type]['map']:
+                cache[proxy_type]['map'][k] = {}
+            cache[proxy_type]['map'][k][ftype] = v
 
-gen_clash('mapgen/meta.yaml', 'clash-meta')
-gen_clash('mapgen/clash.yaml', 'clash')
-gen_clash('mapgen/stash.yaml', 'stash')
 
-for ptype, config in cache.items():
-    for k, v in config['map'].items():
-        allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
-        all_platform = ['clash', 'clash-meta', 'stash']
-        for platform in all_platform:
-            if platform not in v:
+def gen():
+    gen_clash('mapgen/meta.yaml', 'clash-meta')
+    gen_clash('mapgen/clash.yaml', 'clash')
+    gen_clash('mapgen/stash.yaml', 'stash')
 
-                if k in allow_skip_keys:
-                    cache[ptype]['map'][k][platform] = {
-                        'policy': 'allow_skip',
-                    }
-                else:
-                    cache[ptype]['map'][k][platform] = {
-                        'policy': 'unsupport',
-                    }
+    for ptype, config in cache.items():
+        for k, v in config['map'].items():
+            allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
+            all_platform = ['clash', 'clash-meta', 'stash']
+            for platform in all_platform:
+                if platform not in v:
 
-print(json.dumps(cache, indent=4))
+                    if k in allow_skip_keys:
+                        cache[ptype]['map'][k][platform] = {
+                            'policy': 'allow_skip',
+                        }
+                    else:
+                        cache[ptype]['map'][k][platform] = {
+                            'policy': 'unsupport',
+                        }
+
+    print(json.dumps(cache, indent=4))

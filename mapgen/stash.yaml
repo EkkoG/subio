@@ -1,4 +1,11 @@
 proxies:
+- name: ss0
+  type: ss
+  server: server
+  port: 443
+  cipher: chacha20-ietf-poly1305
+  password: 'password'
+  udp: true
 - name: ss1
   type: ss
   server: server
