@@ -442,7 +442,8 @@
             },
             "server": {
                 "clash-meta": {
-                    "origin": "server"
+                    "origin": "server",
+                    "is_list": true
                 },
                 "clash": {
                     "origin": "server"
@@ -475,7 +476,8 @@
             },
             "password": {
                 "clash-meta": {
-                    "origin": "password"
+                    "origin": "password",
+                    "is_list": true
                 },
                 "clash": {
                     "origin": "password"
@@ -1458,13 +1460,16 @@
             },
             "alpn": {
                 "clash-meta": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "clash": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "stash": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 }
             },
             "skip_cert_verify": {
@@ -1686,10 +1691,12 @@
             },
             "alpn": {
                 "clash-meta": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "stash": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2002,10 +2009,12 @@
             },
             "dns": {
                 "clash-meta": {
-                    "origin": "dns"
+                    "origin": "dns",
+                    "is_list": true
                 },
                 "stash": {
-                    "origin": "dns"
+                    "origin": "dns",
+                    "is_list": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2186,10 +2195,12 @@
             },
             "alpn": {
                 "clash-meta": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "stash": {
-                    "origin": "alpn"
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "clash": {
                     "policy": "unsupport"

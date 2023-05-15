@@ -1,11 +1,6 @@
 import yaml
 import json
 
-# t = yaml.load(open('tt.yaml', 'r'), Loader=yaml.FullLoader)
-
-# print(t)
-
-
 cache = {}
 
 def gen_clash(file, ftype):
@@ -29,9 +24,25 @@ def gen_clash(file, ftype):
             for k, v in proxy.items():
                 if isinstance(v, dict):
                     for k1, v1 in gen(v).items():
-                        mm[f'{k}.{k1}'] = ".".join([k, k1])
+                        mm[f'{k}.{k1}'] = {
+                            "origin": f'{k}.{k1}',
+                        }
+                elif isinstance(v, list):
+                    # check if all items are str
+                    if all(isinstance(i, str) for i in v):
+                        mm[k] = {
+                            "origin": k,
+                            "is_list": True,
+                        }
+                    else:
+                        #TODO: support list of dict
+                        mm[k] = {
+                            "origin": k,
+                        }
                 else:
-                    mm[k] = k
+                    mm[k] = {
+                        "origin": k,
+                    }
             return mm
 
         for k,v in gen(p).items():
@@ -40,9 +51,7 @@ def gen_clash(file, ftype):
                 cache[p['type']]['map'] = {}
             if k not in cache[p['type']]['map']:
                 cache[p['type']]['map'][k] = {}
-            cache[p['type']]['map'][k][ftype] = {
-                "origin": v
-            }
+            cache[p['type']]['map'][k][ftype] = v
 
 gen_clash('mapgen/meta.yaml', 'clash-meta')
 gen_clash('mapgen/clash.yaml', 'clash')
