@@ -99,7 +99,7 @@ def filter_nodes(nodes, artifact, validate_map):
     return all_nodes_for_artifact
 
 def build_template(artifact):
-    template_text = open(artifact['template'], 'r').read()
+    template_text = open(f"template/{artifact['template']}", 'r').read()
     final_snippet_text = ''
     for snippet_file in os.listdir('snippet'):
         snippet_file_path = os.path.join('snippet', snippet_file)

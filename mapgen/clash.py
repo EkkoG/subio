@@ -44,8 +44,8 @@ def gen_clash(file, ftype):
                 "origin": v
             }
 
-gen_clash('mapgen/meta.json', 'clash-meta')
-gen_clash('mapgen/clash.json', 'clash')
+gen_clash('mapgen/meta.yaml', 'clash-meta')
+gen_clash('mapgen/clash.yaml', 'clash')
 gen_clash('mapgen/stash.yaml', 'stash')
 
 for ptype, config in cache.items():
