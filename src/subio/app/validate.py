@@ -1,4 +1,4 @@
-from app import log
+from . import log
 
 def validation(nodes, dest, validate_map):
 

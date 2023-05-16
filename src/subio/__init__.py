@@ -4,14 +4,13 @@ import requests
 import jinja2
 import os
 import json
-from app import transform
-from app import validate
-from app import parse
-from app.parser import clash
-from app import upload
-from app import log
+from .app import transform
+from .app import validate
+from .app import parse
+from .app import upload
+from .app import log
 
-from app.filter import all_filters
+from .app.filter import all_filters
 
 import yaml
 
@@ -25,6 +24,8 @@ def load_remote_resource(url):
     import hashlib
     file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
     import os
+    if not os.path.exists('cache'):
+        os.mkdir('cache')
     if os.path.exists(file_name):
         text = open(file_name, 'r').read()
     else:
@@ -109,16 +110,21 @@ def filter_nodes(nodes, artifact, validate_map):
 def build_template(artifact):
     template_text = open(f"template/{artifact['template']}", 'r').read()
     final_snippet_text = ''
-    for snippet_file in os.listdir('snippet'):
-        snippet_file_path = os.path.join('snippet', snippet_file)
-        snippet_text = "{{% import '{}' as {} -%}}\n".format(
-            snippet_file_path, snippet_file)
-        final_snippet_text += snippet_text + '\n'
+    if os.path.exists('snippet'):
+        for snippet_file in os.listdir('snippet'):
+            snippet_file_path = os.path.join('snippet', snippet_file)
+            snippet_text = "{{% import '{}' as {} -%}}\n".format(
+                snippet_file_path, snippet_file)
+            final_snippet_text += snippet_text + '\n'
 
     template_text_with_macro = final_snippet_text + template_text
     return template_text_with_macro
 
-if __name__ == '__main__':
+def main():
+    if os.path.exists('config.toml') is False:
+        log.logger.error('找不到配置文件 config.toml')
+        return
+
     with open('config.toml', 'r') as f:
         config = toml.load(f)
     log.logger.setLevel(config['log-level'])
@@ -128,7 +134,8 @@ if __name__ == '__main__':
     all_nodes = load_nodes(config)
     remote_ruleset = load_rulset(config)
 
-    validate_map = json.load(open('map.json', 'r'))
+    map_path = '/'.join(__file__.split('/')[:-1]) + '/map.json'
+    validate_map = json.load(open(map_path, 'r'))
     for artifact in config['artifact']:
         all_nodes_for_artifact = filter_nodes(all_nodes, artifact, validate_map)
 
@@ -176,3 +183,6 @@ if __name__ == '__main__':
                     upload.upload(upload_info)
                     log.logger.info(f"上传 {artifact['name']} 到 {upload_info['to']} 成功")
 
+
+if __name__ == '__main__':
+    main()
