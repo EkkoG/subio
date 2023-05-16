@@ -8,6 +8,7 @@ from app import transform
 from app import validate
 from app import parse
 from app.parser import clash
+from app import upload
 
 from app.filter import all_filters
 
@@ -155,3 +156,10 @@ if __name__ == '__main__':
         with open('dist/' + artifact['name'], 'w') as f:
             final_config = template.render(options=artifact['options'])
             f.write(final_config)
+            if 'upload' in artifact:
+                for upload_info in artifact['upload']:
+                    upload_info['description'] = 'subio'
+                    upload_info['file_name'] = artifact['name']
+                    upload_info['content'] = final_config
+                    upload.upload(upload_info)
+
