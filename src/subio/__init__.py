@@ -129,6 +129,24 @@ def main():
         config = toml.load(f)
     log.logger.setLevel(config['log-level'])
 
+    # 检查配置文件
+    log.logger.info('检查配置文件')
+    for artifact in config['artifact']:
+        if artifact['type'] not in ['clash', 'clash-meta', 'stash']:
+            log.logger.error(f"不支持的 artifact 类型 {artifact['type']}")
+            return
+        if artifact['providers'] is None or len(artifact['providers']) == 0:
+            log.logger.error(f"artifact {artifact['name']} 没有 provider")
+            return
+        for provider in artifact['providers']:
+            if list(filter(lambda x: x['name'] == provider, config['provider'])) == []:
+                log.logger.error(f"artifact {artifact['name']} 的 provider {provider} 不存在")
+                return
+        if artifact['template'] is None:
+            log.logger.error(f"artifact {artifact['name']} 没有 template")
+            return
+    log.logger.info('配置文件检查通过')
+
     log.logger.info('开始转换')
 
     all_nodes = load_nodes(config)
