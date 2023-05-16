@@ -1,3 +1,3 @@
 
-from .mapgen import clash
+from mapgen import clash
 clash.gen()
