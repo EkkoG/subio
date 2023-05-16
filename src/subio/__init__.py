@@ -50,6 +50,7 @@ def load_nodes(config):
             log.logger.info(f"加载 {provider['name']} 节点成功, 开始解析")
             all_nodes[provider['name']] = parse.parse(config, provider['type'], sub_text)
             log.logger.info(f"解析 {provider['name']} 节点成功，数量：{len(all_nodes[provider['name']])}")
+    log.logger.info(f"加载节点成功，总数量：{reduce(lambda x, y: x + len(y), all_nodes.values(), 0)}")
     return all_nodes
 
 
@@ -171,6 +172,7 @@ def main():
         template_text_with_macro = build_template(artifact)
 
         log.logger.info(f"开始生成 {artifact['name']}")
+        log.logger.info(f"{artifact['type']} 可用节点数量：{len(all_nodes_for_artifact)}")
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
         template = env.from_string(template_text_with_macro)
 
