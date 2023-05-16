@@ -687,9 +687,20 @@
                     "origin": "plugin-opts.host"
                 }
             },
-            "tls": {
+            "plugin_opts_tls": {
                 "clash-meta": {
-                    "origin": "tls"
+                    "origin": "plugin-opts.tls"
+                },
+                "clash": {
+                    "origin": "plugin-opts.tls"
+                },
+                "stash": {
+                    "origin": "plugin-opts.tls"
+                }
+            },
+            "plugin_opts_fingerprint": {
+                "clash-meta": {
+                    "origin": "plugin-opts.fingerprint"
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -698,71 +709,51 @@
                     "policy": "unsupport"
                 }
             },
-            "fingerprint": {
+            "plugin_opts_skip_cert_verify": {
                 "clash-meta": {
-                    "origin": "fingerprint"
+                    "origin": "plugin-opts.skip-cert-verify"
                 },
                 "clash": {
-                    "policy": "allow_skip"
+                    "origin": "plugin-opts.skip-cert-verify"
                 },
                 "stash": {
-                    "policy": "allow_skip"
+                    "origin": "plugin-opts.skip-cert-verify"
                 }
             },
-            "skip_cert_verify": {
+            "plugin_opts_path": {
                 "clash-meta": {
-                    "origin": "skip-cert-verify"
+                    "origin": "plugin-opts.path"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.path"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.path"
                 }
             },
-            "host": {
+            "plugin_opts_mux": {
                 "clash-meta": {
-                    "origin": "host"
+                    "origin": "plugin-opts.mux"
                 },
                 "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "path": {
-                "clash-meta": {
-                    "origin": "path"
-                },
-                "clash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.mux"
                 },
                 "stash": {
                     "policy": "unsupport"
                 }
             },
-            "mux": {
+            "plugin_opts_headers": {
                 "clash-meta": {
-                    "origin": "mux"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "headers": {
-                "clash-meta": {
-                    "origin": "headers",
+                    "origin": "plugin-opts.headers",
                     "any_key_value": true
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.headers",
+                    "any_key_value": true
                 }
             },
             "client_fingerprint": {
@@ -823,63 +814,6 @@
                     "policy": "unsupport"
                 },
                 "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_tls": {
-                "clash": {
-                    "origin": "plugin-opts.tls"
-                },
-                "stash": {
-                    "origin": "plugin-opts.tls"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_skip_cert_verify": {
-                "clash": {
-                    "origin": "plugin-opts.skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "plugin-opts.skip-cert-verify"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_path": {
-                "clash": {
-                    "origin": "plugin-opts.path"
-                },
-                "stash": {
-                    "origin": "plugin-opts.path"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_mux": {
-                "clash": {
-                    "origin": "plugin-opts.mux"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_headers": {
-                "clash": {
-                    "origin": "plugin-opts.headers",
-                    "any_key_value": true
-                },
-                "stash": {
-                    "origin": "plugin-opts.headers",
-                    "any_key_value": true
-                },
-                "clash-meta": {
                     "policy": "unsupport"
                 }
             }
