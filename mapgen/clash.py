@@ -1,6 +1,5 @@
 import yaml
 import json
-from app.parser.clash import get_type
 
 cache = {}
 
@@ -11,7 +10,7 @@ def gen_clash(file, ftype):
         t = json.load(open(file, 'r'))
 
     for p in t['proxies']:
-        proxy_type = get_type(p)
+        proxy_type = p['type']
 
         if proxy_type not in cache:
             cache[proxy_type] = {

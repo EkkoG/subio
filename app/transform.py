@@ -3,7 +3,7 @@ def tarnsform_to(nodes, dest, tansform_map):
     all_nodes = []
     for node in nodes:
         new_node = {}
-        node_type = node['node_type']
+        node_type = node['type']
         for key, value in node.items():
             if key != 'node_type' and 'origin' in tansform_map[node_type]['map'][key][dest]:
                 dest_key = tansform_map[node_type]['map'][key][dest]['origin']

@@ -38,13 +38,6 @@ def load_nodes(config):
     for provider in config['provider']:
         if provider['type'] == 'custom':
             all_custom_nodes = provider['nodes']
-            # add node_type use parser.clash.get_type
-            def add_node_type(node):
-                node_type = clash.get_type(node)
-                node['node_type'] = node_type
-                return node
-            all_custom_nodes = list(map(add_node_type, all_custom_nodes))
-
             all_nodes[provider['name']] = all_custom_nodes
         else:
             sub_text = load_remote_resource(provider['url'])

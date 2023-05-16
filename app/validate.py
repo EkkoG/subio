@@ -2,7 +2,7 @@
 def validation(nodes, dest, validate_map):
 
     def validator(node):
-        node_type = node['node_type']
+        node_type = node['type']
         def get_value(key, field, default_value):
             return validate_map.get(node_type, {})['map'].get(field, {}).get(dest, {}).get(key, default_value)
 
