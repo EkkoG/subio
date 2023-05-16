@@ -1,0 +1,20 @@
+[project]
+name = "subio"
+version = "0.1.0"
+authors = [{ name = "EkkoG", email = "beijiu572@gmail.com" }]
+dependencies = [
+    "requests",
+    "Jinja2>=3.1.2",
+    "pyyaml>=5.4.1",
+    "toml>=0.10.2",
+
+]
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[options]
+packages = "subio"
+
+[project.scripts]
+subio = "subio:main"

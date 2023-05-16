@@ -1,4 +1,4 @@
 dist/
 cache/
 template/
-*.toml
+example/*.toml
