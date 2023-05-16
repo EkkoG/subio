@@ -395,7 +395,7 @@ proxies:
     udp: true
     reserved: "U4An"
     # 数组格式也是合法的
-    reserved: [209,98,59]
+    # reserved: [209,98,59]
     # 一个出站代理的标识。当值不为空时，将使用指定的 proxy 发出连接
     dialer-proxy: "ss1"
     # remote-dns-resolve: true # 强制dns远程解析，默认值为false
