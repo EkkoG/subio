@@ -357,7 +357,11 @@
             },
             "mode": {
                 "clash-meta": {
-                    "origin": "mode"
+                    "origin": "mode",
+                    "allow_values": [
+                        "tls",
+                        "http"
+                    ]
                 },
                 "stash": {
                     "origin": "mode"
@@ -786,7 +790,13 @@
             },
             "client_fingerprint": {
                 "clash-meta": {
-                    "origin": "client-fingerprint"
+                    "origin": "client-fingerprint",
+                    "allow_values": [
+                        "chrome",
+                        "ios",
+                        "firefox",
+                        "safari"
+                    ]
                 },
                 "clash": {
                     "policy": "allow_skip"
@@ -973,7 +983,13 @@
             },
             "cipher": {
                 "clash-meta": {
-                    "origin": "cipher"
+                    "origin": "cipher",
+                    "allow_values": [
+                        "auto",
+                        "aes-128-gcm",
+                        "chacha20-poly1305",
+                        "none"
+                    ]
                 },
                 "clash": {
                     "origin": "cipher"
@@ -1017,7 +1033,13 @@
             },
             "client_fingerprint": {
                 "clash-meta": {
-                    "origin": "client-fingerprint"
+                    "origin": "client-fingerprint",
+                    "allow_values": [
+                        "chrome",
+                        "ios",
+                        "firefox",
+                        "safari"
+                    ]
                 },
                 "clash": {
                     "policy": "allow_skip"
@@ -1050,7 +1072,14 @@
             },
             "network": {
                 "clash-meta": {
-                    "origin": "network"
+                    "origin": "network",
+                    "allow_values": [
+                        "http",
+                        "ws",
+                        "h2",
+                        "h2",
+                        "grpc"
+                    ]
                 },
                 "clash": {
                     "origin": "network"
@@ -1275,7 +1304,12 @@
             },
             "flow": {
                 "clash-meta": {
-                    "origin": "flow"
+                    "origin": "flow",
+                    "allow_values": [
+                        "xtls-rprx-direct",
+                        "xtls-rprx-vision",
+                        "xtls-rprx-origin"
+                    ]
                 },
                 "stash": {
                     "origin": "flow"
@@ -1308,7 +1342,14 @@
             },
             "client_fingerprint": {
                 "clash-meta": {
-                    "origin": "client-fingerprint"
+                    "origin": "client-fingerprint",
+                    "allow_values": [
+                        "chrome",
+                        "firefox",
+                        "safari",
+                        "random",
+                        "none"
+                    ]
                 },
                 "clash": {
                     "policy": "allow_skip"
@@ -1553,7 +1594,11 @@
             },
             "network": {
                 "clash-meta": {
-                    "origin": "network"
+                    "origin": "network",
+                    "allow_values": [
+                        "ws",
+                        "grpc"
+                    ]
                 },
                 "clash": {
                     "origin": "network"
@@ -1609,7 +1654,12 @@
             },
             "flow": {
                 "clash-meta": {
-                    "origin": "flow"
+                    "origin": "flow",
+                    "allow_values": [
+                        "xtls-rprx-direct",
+                        "xtls-rprx-vision",
+                        "xtls-rprx-origin"
+                    ]
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1778,7 +1828,12 @@
             },
             "protocol": {
                 "clash-meta": {
-                    "origin": "protocol"
+                    "origin": "protocol",
+                    "allow_values": [
+                        "udp",
+                        "faketcp",
+                        "wechat-video"
+                    ]
                 },
                 "stash": {
                     "origin": "protocol"
@@ -2395,7 +2450,11 @@
             },
             "udp_relay_mode": {
                 "clash-meta": {
-                    "origin": "udp-relay-mode"
+                    "origin": "udp-relay-mode",
+                    "allow_values": [
+                        "quic",
+                        "native"
+                    ]
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2406,7 +2465,12 @@
             },
             "congestion_controller": {
                 "clash-meta": {
-                    "origin": "congestion-controller"
+                    "origin": "congestion-controller",
+                    "allow_values": [
+                        "bbr",
+                        "cubic",
+                        "new_reno"
+                    ]
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2547,7 +2611,15 @@
             },
             "obfs": {
                 "clash-meta": {
-                    "origin": "obfs"
+                    "origin": "obfs",
+                    "allow_values": [
+                        "plain",
+                        "http_simple",
+                        "http_post",
+                        "random_head",
+                        "tls1.2_ticket_auth",
+                        "tls1.2_ticket_fastauth"
+                    ]
                 },
                 "clash": {
                     "origin": "obfs"
@@ -2558,7 +2630,15 @@
             },
             "protocol": {
                 "clash-meta": {
-                    "origin": "protocol"
+                    "origin": "protocol",
+                    "allow_values": [
+                        "origin",
+                        "auth_sha1_v4",
+                        "auth_aes128_md5",
+                        "auth_aes128_sha1",
+                        "auth_chain_a",
+                        "auth_chain_b"
+                    ]
                 },
                 "clash": {
                     "origin": "protocol"

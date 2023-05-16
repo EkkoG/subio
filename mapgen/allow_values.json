@@ -66,6 +66,85 @@
             ]
         }
 
+    ],
+    "snell.map.mode.clash-meta.allow_values": [
+        "tls",
+        "http"
+    ],
+    "ss.map.client_fingerprint.clash-meta.allow_values": [
+        "chrome",
+        "ios",
+        "firefox",
+        "safari"
+    ],
+    "vmess.map.client_fingerprint.clash-meta.allow_values": [
+        "chrome",
+        "ios",
+        "firefox",
+        "safari"
+    ],
+    "vmess.map.network.clash-meta.allow_values": [
+        "http",
+        "ws",
+        "h2",
+        "h2",
+        "grpc"
+    ],
+    "vmess.map.cipher.clash-meta.allow_values": [
+        "auto",
+        "aes-128-gcm",
+        "chacha20-poly1305",
+        "none"
+    ],
+    "vless.map.flow.clash-meta.allow_values": [
+        "xtls-rprx-direct",
+        "xtls-rprx-vision",
+        "xtls-rprx-origin"
+    ],
+    "vless.map.client_fingerprint.clash-meta.allow_values": [
+        "chrome",
+        "firefox",
+        "safari",
+        "random",
+        "none"
+    ],
+    "trojan.map.network.clash-meta.allow_values": [
+        "ws",
+        "grpc"
+    ],
+    "trojan.map.flow.clash-meta.allow_values": [
+        "xtls-rprx-direct",
+        "xtls-rprx-vision",
+        "xtls-rprx-origin"
+    ],
+    "hysteria.map.protocol.clash-meta.allow_values": [
+        "udp",
+        "faketcp",
+        "wechat-video"
+    ],
+    "tuic.map.udp_relay_mode.clash-meta.allow_values": [
+        "quic",
+        "native"
+    ],
+    "tuic.map.congestion_controller.clash-meta.allow_values": [
+        "bbr",
+        "cubic",
+        "new_reno"
+    ],
+    "ssr.map.obfs.clash-meta.allow_values": [
+        "plain",
+        "http_simple",
+        "http_post",
+        "random_head",
+        "tls1.2_ticket_auth",
+        "tls1.2_ticket_fastauth"
+    ],
+    "ssr.map.protocol.clash-meta.allow_values": [
+        "origin",
+        "auth_sha1_v4",
+        "auth_aes128_md5",
+        "auth_aes128_sha1",
+        "auth_chain_a",
+        "auth_chain_b"
     ]
-
 }

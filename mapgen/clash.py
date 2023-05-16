@@ -92,7 +92,7 @@ def gen():
                     }
 
         for k, v in config['map'].items():
-            allow_skip_keys = ['fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
+            allow_skip_keys = ['smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
             for platform in all_platform:
                 if platform not in v:
 
