@@ -1,0 +1,22 @@
+
+proxies:
+{{ to_yaml(get_proxies()) }}
+proxy-groups:
+- type: select
+  name: 默认出口
+  proxies: {{ to_json(to_name(get_proxies())) }}
+
+- type: select
+  name: 手动选择2
+  proxies: {{ filter.hk_filter(get_proxies_names()) }}
+
+- type: select
+  name: 手动选择3
+  proxies: {{ filter.combine(get_proxies_names(), filter.hk_filter, filter.keyWord_filter, None, 'us') }}
+
+rules:
+{{ render(remote_ruleset.telegram, "DIRECT") }}
+{{ render(apple.main('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT')) }}
+
+- GEOIP,CN,DIRECT
+- MATCH,默认出口

@@ -1,0 +1,39 @@
+log-level = "DEBUG"
+
+[[provider]]
+name = "1"
+type = "clash-meta"
+url = "https://gist.github.com/EkkoG/bd2d9e20aa5b456eb7180e72f9e5e588/raw?p=1"
+
+[[provider]]
+name = "self"
+type = "custom"
+[[provider.nodes]]
+type = 'http'
+name = 'ekko-https-ahhh'
+server = 'example.com'
+port = 4443
+tls = true
+username = 'ekko'
+password = 'ahh'
+
+[[artifact]]
+name = "ekko-meta.yaml"
+type = "clash-meta"
+template = "clash.yaml"
+providers = ["self", "1"]
+[artifact.options]
+work = true
+
+[[artifact]]
+name = "ekko2.yaml"
+type = "clash"
+template = "clash.yaml"
+providers = ["self", "1"]
+[artifact.options]
+work = true
+
+
+[[ruleset]]
+name = "telegram"
+url = "https://github.com/DivineEngine/Profiles/raw/master/Surge/Ruleset/Extra/Telegram/Telegram.list"
