@@ -357,11 +357,7 @@
             },
             "mode": {
                 "clash-meta": {
-                    "origin": "mode",
-                    "allow_values": [
-                        "tls",
-                        "http"
-                    ]
+                    "origin": "mode"
                 },
                 "stash": {
                     "origin": "mode"
@@ -983,31 +979,13 @@
             },
             "cipher": {
                 "clash-meta": {
-                    "origin": "cipher",
-                    "allow_values": [
-                        "auto",
-                        "aes-128-gcm",
-                        "chacha20-poly1305",
-                        "none"
-                    ]
+                    "origin": "cipher"
                 },
                 "clash": {
-                    "origin": "cipher",
-                    "allow_values": [
-                        "auto",
-                        "aes-128-gcm",
-                        "chacha20-poly1305",
-                        "none"
-                    ]
+                    "origin": "cipher"
                 },
                 "stash": {
-                    "origin": "cipher",
-                    "allow_values": [
-                        "auto",
-                        "aes-128-gcm",
-                        "chacha20-poly1305",
-                        "none"
-                    ]
+                    "origin": "cipher"
                 }
             },
             "udp": {
@@ -1084,14 +1062,7 @@
             },
             "network": {
                 "clash-meta": {
-                    "origin": "network",
-                    "allow_values": [
-                        "http",
-                        "ws",
-                        "h2",
-                        "h2",
-                        "grpc"
-                    ]
+                    "origin": "network"
                 },
                 "clash": {
                     "origin": "network"
@@ -1316,20 +1287,10 @@
             },
             "flow": {
                 "clash-meta": {
-                    "origin": "flow",
-                    "allow_values": [
-                        "xtls-rprx-direct",
-                        "xtls-rprx-vision",
-                        "xtls-rprx-origin"
-                    ]
+                    "origin": "flow"
                 },
                 "stash": {
-                    "origin": "flow",
-                    "allow_values": [
-                        "xtls-rprx-direct",
-                        "xtls-rprx-vision",
-                        "xtls-rprx-origin"
-                    ]
+                    "origin": "flow"
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1611,11 +1572,7 @@
             },
             "network": {
                 "clash-meta": {
-                    "origin": "network",
-                    "allow_values": [
-                        "ws",
-                        "grpc"
-                    ]
+                    "origin": "network"
                 },
                 "clash": {
                     "origin": "network"
@@ -1853,7 +1810,11 @@
                     ]
                 },
                 "stash": {
-                    "origin": "protocol"
+                    "origin": "protocol",
+                    "allow_values": [
+                        "udp",
+                        "wechat-video"
+                    ]
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2628,72 +2589,24 @@
             },
             "obfs": {
                 "clash-meta": {
-                    "origin": "obfs",
-                    "allow_values": [
-                        "plain",
-                        "http_simple",
-                        "http_post",
-                        "random_head",
-                        "tls1.2_ticket_auth",
-                        "tls1.2_ticket_fastauth"
-                    ]
+                    "origin": "obfs"
                 },
                 "clash": {
-                    "origin": "obfs",
-                    "allow_values": [
-                        "plain",
-                        "http_simple",
-                        "http_post",
-                        "random_head",
-                        "tls1.2_ticket_auth",
-                        "tls1.2_ticket_fastauth"
-                    ]
+                    "origin": "obfs"
                 },
                 "stash": {
-                    "origin": "obfs",
-                    "allow_values": [
-                        "plain",
-                        "http_simple",
-                        "http_post",
-                        "random_head",
-                        "tls1.2_ticket_auth",
-                        "tls1.2_ticket_fastauth"
-                    ]
+                    "origin": "obfs"
                 }
             },
             "protocol": {
                 "clash-meta": {
-                    "origin": "protocol",
-                    "allow_values": [
-                        "origin",
-                        "auth_sha1_v4",
-                        "auth_aes128_md5",
-                        "auth_aes128_sha1",
-                        "auth_chain_a",
-                        "auth_chain_b"
-                    ]
+                    "origin": "protocol"
                 },
                 "clash": {
-                    "origin": "protocol",
-                    "allow_values": [
-                        "origin",
-                        "auth_sha1_v4",
-                        "auth_aes128_md5",
-                        "auth_aes128_sha1",
-                        "auth_chain_a",
-                        "auth_chain_b"
-                    ]
+                    "origin": "protocol"
                 },
                 "stash": {
-                    "origin": "protocol",
-                    "allow_values": [
-                        "origin",
-                        "auth_sha1_v4",
-                        "auth_aes128_md5",
-                        "auth_aes128_sha1",
-                        "auth_chain_a",
-                        "auth_chain_b"
-                    ]
+                    "origin": "protocol"
                 }
             },
             "obfs_param": {
