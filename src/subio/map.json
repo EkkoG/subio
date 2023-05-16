@@ -344,59 +344,26 @@
                     "origin": "version"
                 }
             },
-            "obfs_opts": {
-                "clash-meta": {
-                    "origin": "obfs-opts"
-                },
-                "stash": {
-                    "origin": "obfs-opts"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                }
-            },
-            "mode": {
-                "clash-meta": {
-                    "origin": "mode"
-                },
-                "stash": {
-                    "origin": "mode"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                }
-            },
-            "host": {
-                "clash-meta": {
-                    "origin": "host"
-                },
-                "stash": {
-                    "origin": "host"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                }
-            },
             "obfs_opts_mode": {
+                "clash-meta": {
+                    "origin": "obfs-opts.mode"
+                },
                 "clash": {
                     "origin": "obfs-opts.mode"
                 },
-                "clash-meta": {
-                    "policy": "unsupport"
-                },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "obfs-opts.mode"
                 }
             },
             "obfs_opts_host": {
+                "clash-meta": {
+                    "origin": "obfs-opts.host"
+                },
                 "clash": {
                     "origin": "obfs-opts.host"
                 },
-                "clash-meta": {
-                    "policy": "unsupport"
-                },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "obfs-opts.host"
                 }
             },
             "udp": {

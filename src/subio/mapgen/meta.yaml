@@ -34,8 +34,8 @@ proxies:
     psk: yourpsk
     version: 2
     obfs-opts:
-    mode: http # or tls
-    host: bing.com
+      mode: http # or tls
+      host: bing.com
   
   # Shadowsocks
   # cipher支持:
