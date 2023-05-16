@@ -22,9 +22,19 @@ def validation(nodes, dest, validate_map):
                 pass
 
             # allow_values
+            conditions = get_value('allow_values_when', k, [])
+            if len(conditions) > 0:
+                for condition in conditions:
+                    when = condition['when']
+                    if eval(when):
+                        allow_values = condition['allow_values']
+                        if len(allow_values) > 0 and v not in allow_values:
+                            print(f"Node {node['name']}, type {node_type} is not valid for {dest}, skip, reason: field {k} not in allow_values")
+                            return False
+
             allow_values = get_value('allow_values', k, [])
             if len(allow_values) > 0 and v not in allow_values:
-                print(f"Node {node['name']}, type {node_type} is not valid for {dest}, skip, reason: field {k} not in allow_values")
+                print(f"Node {node['name']}, type {node_type} is not valid for {dest}, skip, reason: field {k} value {v} not in allow_values")
                 return False
 
         return True

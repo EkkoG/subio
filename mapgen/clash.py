@@ -84,5 +84,20 @@ def gen():
                             'policy': 'unsupport',
                         }
 
+        with open('mapgen/allow_values.json') as f:
+            allow_values_obj = json.load(f)
+            for k, v in allow_values_obj.items():
+                key_paths = k.split('.')
+                exp = "cache"
+                for key_path in key_paths:
+                    exp += f"[\"{key_path}\"]"
+                exp += " = v"
+                exec(exp)
+            
+
+
+                
+
+
 
     print(json.dumps(cache, indent=4))
