@@ -257,9 +257,10 @@
                     "policy": "allow_skip"
                 }
             },
-            "headers_key": {
+            "headers": {
                 "stash": {
-                    "origin": "headers.key"
+                    "origin": "headers",
+                    "any_key_value": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -771,9 +772,10 @@
                     "policy": "unsupport"
                 }
             },
-            "headers_custom": {
+            "headers": {
                 "clash-meta": {
-                    "origin": "headers.custom"
+                    "origin": "headers",
+                    "any_key_value": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -881,23 +883,14 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_headers_custom": {
+            "plugin_opts_headers": {
                 "clash": {
-                    "origin": "plugin-opts.headers.custom"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "plugin_opts_headers_key": {
-                "stash": {
-                    "origin": "plugin-opts.headers.key"
-                },
-                "clash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.headers",
+                    "any_key_value": true
                 },
                 "clash-meta": {
                     "policy": "unsupport"
@@ -1077,15 +1070,18 @@
                     "origin": "ws-opts.path"
                 }
             },
-            "ws_opts_headers_host": {
+            "ws_opts_headers": {
                 "clash-meta": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "clash": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 }
             },
             "ws_opts_max_early_data": {
@@ -1154,12 +1150,14 @@
                     "policy": "unsupport"
                 }
             },
-            "http_opts_headers_connection": {
+            "http_opts_headers": {
                 "clash-meta": {
-                    "origin": "http-opts.headers.Connection"
+                    "origin": "http-opts.headers",
+                    "any_key_value": true
                 },
                 "clash": {
-                    "origin": "http-opts.headers.Connection"
+                    "origin": "http-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
                     "policy": "unsupport"
@@ -1385,12 +1383,14 @@
                     "policy": "unsupport"
                 }
             },
-            "ws_opts_headers_host": {
+            "ws_opts_headers": {
                 "clash-meta": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1595,9 +1595,10 @@
                     "policy": "unsupport"
                 }
             },
-            "headers_host": {
+            "headers": {
                 "clash-meta": {
-                    "origin": "headers.Host"
+                    "origin": "headers",
+                    "any_key_value": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1639,12 +1640,14 @@
                     "policy": "unsupport"
                 }
             },
-            "ws_opts_headers_host": {
+            "ws_opts_headers": {
                 "clash": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "origin": "ws-opts.headers.Host"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "clash-meta": {
                     "policy": "unsupport"

@@ -24,10 +24,18 @@ def gen_clash(file, ftype):
             mm = {}
             for k, v in proxy.items():
                 if isinstance(v, dict):
-                    for k1, v1 in gen(v).items():
-                        mm[f'{k}.{k1}'] = {
-                            "origin": f'{k}.{k1}',
+                    if 'headers' in k.lower():
+                        mm[k] = {
+                            "origin": k,
+                            "any_key_value": True,
                         }
+                    else:
+                        for k1, v1 in gen(v).items():
+                            mm[f'{k}.{k1}'] = {
+                                "origin": f'{k}.{k1}',
+                            }
+                            if v1.get('any_key_value'):
+                                mm[f'{k}.{k1}']['any_key_value'] = True
                 elif isinstance(v, list):
                     # check if all items are str
                     if all(isinstance(i, str) for i in v):

@@ -37,6 +37,10 @@ def validation(nodes, dest, validate_map):
                 print(f"Node {node['name']}, type {node_type} is not valid for {dest}, skip, reason: field {k} value {v} not in allow_values")
                 return False
 
+            if get_value('any_key_value', k, False) and not isinstance(v, dict):
+                print(f"Node {node['name']}, type {node_type} is not valid for {dest}, skip, reason: field {k} should be dict")
+                return False
+
         return True
 
 
