@@ -90,13 +90,30 @@
         "h2",
         "grpc"
     ],
+    "vmess.map.cipher.clash.allow_values": [
+        "auto",
+        "aes-128-gcm",
+        "chacha20-poly1305",
+        "none"
+    ],
     "vmess.map.cipher.clash-meta.allow_values": [
         "auto",
         "aes-128-gcm",
         "chacha20-poly1305",
         "none"
     ],
+    "vmess.map.cipher.stash.allow_values": [
+        "auto",
+        "aes-128-gcm",
+        "chacha20-poly1305",
+        "none"
+    ],
     "vless.map.flow.clash-meta.allow_values": [
+        "xtls-rprx-direct",
+        "xtls-rprx-vision",
+        "xtls-rprx-origin"
+    ],
+    "vless.map.flow.stash.allow_values": [
         "xtls-rprx-direct",
         "xtls-rprx-vision",
         "xtls-rprx-origin"
@@ -140,6 +157,38 @@
         "tls1.2_ticket_fastauth"
     ],
     "ssr.map.protocol.clash-meta.allow_values": [
+        "origin",
+        "auth_sha1_v4",
+        "auth_aes128_md5",
+        "auth_aes128_sha1",
+        "auth_chain_a",
+        "auth_chain_b"
+    ],
+    "ssr.map.obfs.stash.allow_values": [
+        "plain",
+        "http_simple",
+        "http_post",
+        "random_head",
+        "tls1.2_ticket_auth",
+        "tls1.2_ticket_fastauth"
+    ],
+    "ssr.map.protocol.stash.allow_values": [
+        "origin",
+        "auth_sha1_v4",
+        "auth_aes128_md5",
+        "auth_aes128_sha1",
+        "auth_chain_a",
+        "auth_chain_b"
+    ],
+    "ssr.map.obfs.clash.allow_values": [
+        "plain",
+        "http_simple",
+        "http_post",
+        "random_head",
+        "tls1.2_ticket_auth",
+        "tls1.2_ticket_fastauth"
+    ],
+    "ssr.map.protocol.clash.allow_values": [
         "origin",
         "auth_sha1_v4",
         "auth_aes128_md5",

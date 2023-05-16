@@ -992,10 +992,22 @@
                     ]
                 },
                 "clash": {
-                    "origin": "cipher"
+                    "origin": "cipher",
+                    "allow_values": [
+                        "auto",
+                        "aes-128-gcm",
+                        "chacha20-poly1305",
+                        "none"
+                    ]
                 },
                 "stash": {
-                    "origin": "cipher"
+                    "origin": "cipher",
+                    "allow_values": [
+                        "auto",
+                        "aes-128-gcm",
+                        "chacha20-poly1305",
+                        "none"
+                    ]
                 }
             },
             "udp": {
@@ -1312,7 +1324,12 @@
                     ]
                 },
                 "stash": {
-                    "origin": "flow"
+                    "origin": "flow",
+                    "allow_values": [
+                        "xtls-rprx-direct",
+                        "xtls-rprx-vision",
+                        "xtls-rprx-origin"
+                    ]
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2622,10 +2639,26 @@
                     ]
                 },
                 "clash": {
-                    "origin": "obfs"
+                    "origin": "obfs",
+                    "allow_values": [
+                        "plain",
+                        "http_simple",
+                        "http_post",
+                        "random_head",
+                        "tls1.2_ticket_auth",
+                        "tls1.2_ticket_fastauth"
+                    ]
                 },
                 "stash": {
-                    "origin": "obfs"
+                    "origin": "obfs",
+                    "allow_values": [
+                        "plain",
+                        "http_simple",
+                        "http_post",
+                        "random_head",
+                        "tls1.2_ticket_auth",
+                        "tls1.2_ticket_fastauth"
+                    ]
                 }
             },
             "protocol": {
@@ -2641,10 +2674,26 @@
                     ]
                 },
                 "clash": {
-                    "origin": "protocol"
+                    "origin": "protocol",
+                    "allow_values": [
+                        "origin",
+                        "auth_sha1_v4",
+                        "auth_aes128_md5",
+                        "auth_aes128_sha1",
+                        "auth_chain_a",
+                        "auth_chain_b"
+                    ]
                 },
                 "stash": {
-                    "origin": "protocol"
+                    "origin": "protocol",
+                    "allow_values": [
+                        "origin",
+                        "auth_sha1_v4",
+                        "auth_aes128_md5",
+                        "auth_aes128_sha1",
+                        "auth_chain_a",
+                        "auth_chain_b"
+                    ]
                 }
             },
             "obfs_param": {
