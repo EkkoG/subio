@@ -660,13 +660,27 @@
             },
             "plugin": {
                 "clash-meta": {
-                    "origin": "plugin"
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin",
+                        "shadow-tls",
+                        "restls"
+                    ]
                 },
                 "clash": {
-                    "origin": "plugin"
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
                 },
                 "stash": {
-                    "origin": "plugin"
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
                 }
             },
             "plugin_opts_mode": {

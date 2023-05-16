@@ -51,6 +51,20 @@
         "chacha20-ietf-poly1305",
         "xchacha20-ietf-poly1305"
     ],
+    "ss.map.plugin.stash.allow_values": [
+        "obfs",
+        "v2ray-plugin"
+    ],
+    "ss.map.plugin.clash.allow_values": [
+        "obfs",
+        "v2ray-plugin"
+    ],
+    "ss.map.plugin.clash-meta.allow_values": [
+        "obfs",
+        "v2ray-plugin",
+        "shadow-tls",
+        "restls"
+    ],
     "ss.map.plugin_opts_mode.clash-meta.allow_values_when": [
         {
             "when": "node['plugin'] == 'obfs'",
