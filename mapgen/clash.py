@@ -35,8 +35,19 @@ def gen_clash(file, ftype):
                             "origin": k,
                             "is_list": True,
                         }
+                    #TODO: support list of dict
+                    elif all(isinstance(i, dict) for i in v):
+                        mm[k] = {
+                            "origin": k,
+                            "is_list": True,
+                        }
+                        for i in v:
+                            for k1, v1 in gen(i).items():
+                                mm[f'{k}.{k1}'] = {
+                                    "origin": f'{k}.{k1}',
+                                    "dict_in_list": True,
+                                }
                     else:
-                        #TODO: support list of dict
                         mm[k] = {
                             "origin": k,
                         }
@@ -46,13 +57,15 @@ def gen_clash(file, ftype):
                     }
             return mm
 
-        for k,v in gen(p).items():
+        for k, v in gen(p).items():
             k = k.replace('-', '_').replace('.', '_').lower()
             if 'map' not in cache[proxy_type]:
                 cache[proxy_type]['map'] = {}
             if k not in cache[proxy_type]['map']:
                 cache[proxy_type]['map'][k] = {}
             cache[proxy_type]['map'][k][ftype] = v
+
+
 
 
 def gen():
@@ -94,10 +107,5 @@ def gen():
                 exp += " = v"
                 exec(exp)
             
-
-
-                
-
-
 
     print(json.dumps(cache, indent=4))

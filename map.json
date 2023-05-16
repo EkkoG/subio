@@ -1482,26 +1482,26 @@
                     "origin": "password"
                 }
             },
-            "network": {
+            "client_fingerprint": {
                 "clash-meta": {
-                    "origin": "network"
+                    "origin": "client-fingerprint"
                 },
                 "clash": {
-                    "origin": "network"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "network"
+                    "policy": "allow_skip"
                 }
             },
-            "sni": {
+            "fingerprint": {
                 "clash-meta": {
-                    "origin": "sni"
+                    "origin": "fingerprint"
                 },
                 "clash": {
-                    "origin": "sni"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "sni"
+                    "policy": "allow_skip"
                 }
             },
             "udp": {
@@ -1515,6 +1515,53 @@
                     "origin": "udp"
                 }
             },
+            "sni": {
+                "clash-meta": {
+                    "origin": "sni"
+                },
+                "clash": {
+                    "origin": "sni"
+                },
+                "stash": {
+                    "origin": "sni"
+                }
+            },
+            "alpn": {
+                "clash-meta": {
+                    "origin": "alpn",
+                    "is_list": true
+                },
+                "clash": {
+                    "origin": "alpn",
+                    "is_list": true
+                },
+                "stash": {
+                    "origin": "alpn",
+                    "is_list": true
+                }
+            },
+            "skip_cert_verify": {
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                }
+            },
+            "network": {
+                "clash-meta": {
+                    "origin": "network"
+                },
+                "clash": {
+                    "origin": "network"
+                },
+                "stash": {
+                    "origin": "network"
+                }
+            },
             "grpc_opts_grpc_service_name": {
                 "clash-meta": {
                     "origin": "grpc-opts.grpc-service-name"
@@ -1524,6 +1571,39 @@
                 },
                 "stash": {
                     "origin": "grpc-opts.grpc-service-name"
+                }
+            },
+            "ws_opts": {
+                "clash-meta": {
+                    "origin": "ws-opts"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "path": {
+                "clash-meta": {
+                    "origin": "path"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "headers_host": {
+                "clash-meta": {
+                    "origin": "headers.Host"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
                 }
             },
             "flow": {
@@ -1545,30 +1625,6 @@
                     "policy": "unsupport"
                 },
                 "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "alpn": {
-                "clash": {
-                    "origin": "alpn",
-                    "is_list": true
-                },
-                "stash": {
-                    "origin": "alpn",
-                    "is_list": true
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "skip_cert_verify": {
-                "clash": {
-                    "origin": "skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "skip-cert-verify"
-                },
-                "clash-meta": {
                     "policy": "unsupport"
                 }
             },
@@ -1671,12 +1727,47 @@
                     "policy": "unsupport"
                 }
             },
+            "ports": {
+                "clash-meta": {
+                    "origin": "ports"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
             "auth_str": {
                 "clash-meta": {
-                    "origin": "auth_str"
+                    "origin": "auth-str"
                 },
                 "stash": {
                     "origin": "auth-str"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "obfs": {
+                "clash-meta": {
+                    "origin": "obfs"
+                },
+                "stash": {
+                    "origin": "obfs"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "alpn": {
+                "clash-meta": {
+                    "origin": "alpn",
+                    "is_list": true
+                },
+                "stash": {
+                    "origin": "alpn",
+                    "is_list": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1715,6 +1806,105 @@
                     "policy": "unsupport"
                 }
             },
+            "sni": {
+                "clash-meta": {
+                    "origin": "sni"
+                },
+                "stash": {
+                    "origin": "sni"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "skip_cert_verify": {
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "recv_window_conn": {
+                "clash-meta": {
+                    "origin": "recv-window-conn"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "recv_window": {
+                "clash-meta": {
+                    "origin": "recv-window"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "ca": {
+                "clash-meta": {
+                    "origin": "ca"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "ca_str": {
+                "clash-meta": {
+                    "origin": "ca-str"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "disable_mtu_discovery": {
+                "clash-meta": {
+                    "origin": "disable_mtu_discovery"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "fingerprint": {
+                "clash-meta": {
+                    "origin": "fingerprint"
+                },
+                "clash": {
+                    "policy": "allow_skip"
+                },
+                "stash": {
+                    "policy": "allow_skip"
+                }
+            },
+            "fast_open": {
+                "clash-meta": {
+                    "origin": "fast-open"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
             "up_speed": {
                 "stash": {
                     "origin": "up-speed"
@@ -1740,51 +1930,6 @@
             "auth": {
                 "stash": {
                     "origin": "auth"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "obfs": {
-                "stash": {
-                    "origin": "obfs"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "sni": {
-                "stash": {
-                    "origin": "sni"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "alpn": {
-                "stash": {
-                    "origin": "alpn",
-                    "is_list": true
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "skip_cert_verify": {
-                "stash": {
-                    "origin": "skip-cert-verify"
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1914,21 +2059,129 @@
                     "policy": "unsupport"
                 }
             },
-            "preshared_key": {
-                "stash": {
-                    "origin": "preshared-key"
+            "dialer_proxy": {
+                "clash-meta": {
+                    "origin": "dialer-proxy"
                 },
                 "clash": {
                     "policy": "unsupport"
                 },
-                "clash-meta": {
+                "stash": {
                     "policy": "unsupport"
                 }
             },
             "dns": {
+                "clash-meta": {
+                    "origin": "dns",
+                    "is_list": true
+                },
                 "stash": {
                     "origin": "dns",
                     "is_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers": {
+                "clash-meta": {
+                    "origin": "peers",
+                    "is_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_server": {
+                "clash-meta": {
+                    "origin": "peers.server",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_port": {
+                "clash-meta": {
+                    "origin": "peers.port",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_ip": {
+                "clash-meta": {
+                    "origin": "peers.ip",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_ipv6": {
+                "clash-meta": {
+                    "origin": "peers.ipv6",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_public_key": {
+                "clash-meta": {
+                    "origin": "peers.public-key",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_allowed_ips": {
+                "clash-meta": {
+                    "origin": "peers.allowed_ips",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers_reserved": {
+                "clash-meta": {
+                    "origin": "peers.reserved",
+                    "dict_in_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "preshared_key": {
+                "stash": {
+                    "origin": "preshared-key"
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2069,6 +2322,41 @@
                     "policy": "unsupport"
                 }
             },
+            "ip": {
+                "clash-meta": {
+                    "origin": "ip"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "heartbeat_interval": {
+                "clash-meta": {
+                    "origin": "heartbeat-interval"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "alpn": {
+                "clash-meta": {
+                    "origin": "alpn",
+                    "is_list": true
+                },
+                "stash": {
+                    "origin": "alpn",
+                    "is_list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
             "disable_sni": {
                 "clash-meta": {
                     "origin": "disable-sni"
@@ -2113,37 +2401,69 @@
                     "policy": "unsupport"
                 }
             },
+            "congestion_controller": {
+                "clash-meta": {
+                    "origin": "congestion-controller"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "max_udp_relay_packet_size": {
+                "clash-meta": {
+                    "origin": "max-udp-relay-packet-size"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "fast_open": {
+                "clash-meta": {
+                    "origin": "fast-open"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
             "skip_cert_verify": {
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
                 "stash": {
                     "origin": "skip-cert-verify"
                 },
                 "clash": {
                     "policy": "unsupport"
-                },
+                }
+            },
+            "max_open_streams": {
                 "clash-meta": {
+                    "origin": "max-open-streams"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
                     "policy": "unsupport"
                 }
             },
             "sni": {
+                "clash-meta": {
+                    "origin": "sni"
+                },
                 "stash": {
                     "origin": "sni"
                 },
                 "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "alpn": {
-                "stash": {
-                    "origin": "alpn",
-                    "is_list": true
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
                     "policy": "unsupport"
                 }
             }
