@@ -29,7 +29,16 @@ with open('map.json', 'r') as f:
             all_platform = ['clash', 'clash-meta', 'stash']
 
             for platform in all_platform:
-                support_symbol = '❌' if 'policy' in info[platform] and info[platform]['policy'] == 'unsupport' else '✅'
+                if 'policy' in info[platform]:
+                    if info[platform]['policy'] == 'unsupport':
+                        support_symbol = '❌ 不支持'
+                    elif info[platform]['policy'] == 'allow_skip':
+                        support_symbol = '⚠️ 不支持，但是可以跳过'
+                    else:
+                        support_symbol = '✅ 支持'
+                else:
+                    support_symbol = '✅ 支持'
+
 
                 allow_values_when = info[platform].get('allow_values_when', [])
                 allow_values_str = ''
