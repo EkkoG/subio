@@ -9,16 +9,16 @@ def validation(nodes, dest, validate_map):
 
         if node_type not in validate_map:
             print(f"Unknown node type: {node_type} for {dest}, skip")
-            log.logger.warning(f"目标平台{dest} 不支持协议 {node_type}，忽略 {node['name']}")
+            log.logger.warning(f"目标平台 {dest} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
         if get_value('policy', 'protocol', None) == 'unsupport':
-            log.logger.warning(f"目标平台{dest} 不支持协议 {node_type}，忽略 {node['name']}")
+            log.logger.warning(f"目标平台 {dest} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
 
 
         for k, v in node.items():
             if get_value('policy', k, None) == 'unsupport':
-                log.logger.warning(f"目标平台{dest} 不支持配置 {node_type} 的 {k}，忽略 {node['name']}")
+                log.logger.warning(f"目标平台 {dest} 不支持配置 {node_type} 的 {k} 字段，忽略 {node['name']}")
                 return False
             if get_value('policy', k, None) == 'allow_skip':
                 pass
@@ -31,16 +31,16 @@ def validation(nodes, dest, validate_map):
                     if eval(when):
                         allow_values = condition['allow_values']
                         if len(allow_values) > 0 and v not in allow_values:
-                            log.logger.warning(f"目标平台{dest} 不支持 {node_type} 的 {k} 的值为 {v}，忽略 {node['name']}")
+                            log.logger.warning(f"目标平台 {dest} 不支持 {node_type} {k} 字段的值为 {v}，忽略 {node['name']}")
                             return False
 
             allow_values = get_value('allow_values', k, [])
             if len(allow_values) > 0 and v not in allow_values:
-                log.logger.warning(f"目标平台{dest} 不支持 {node_type} 的 {k} 的值为 {v}，忽略 {node['name']}")
+                log.logger.warning(f"目标平台 {dest} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                 return False
 
             if get_value('any_key_value', k, False) and not isinstance(v, dict):
-                log.logger.warning(f"目标平台{dest} 不支持 {node_type} 的 {k} 的值为 {v}，忽略 {node['name']}")
+                log.logger.warning(f"目标平台 {dest} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                 return False
 
         return True

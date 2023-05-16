@@ -4,6 +4,10 @@ import requests
 import jinja2
 import os
 import json
+import json5
+import yaml
+import hashlib
+
 from .app import transform
 from .app import validate
 from .app import parse
@@ -12,7 +16,6 @@ from .app import log
 
 from .app.filter import all_filters
 
-import yaml
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -21,9 +24,7 @@ class NoAliasDumper(yaml.SafeDumper):
 
 
 def load_remote_resource(url):
-    import hashlib
     file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
-    import os
     if not os.path.exists('cache'):
         os.mkdir('cache')
     if os.path.exists(file_name):
@@ -60,12 +61,10 @@ def load_rulset(config):
 
 
 def to_yaml(data):
-    import yaml
     return yaml.dump(data, Dumper=NoAliasDumper, allow_unicode=True)
 
 
 def to_json(data):
-    import json
     return json.dumps(data, ensure_ascii=False)
 
 
@@ -120,13 +119,25 @@ def build_template(artifact):
     template_text_with_macro = final_snippet_text + template_text
     return template_text_with_macro
 
+def laod_config():
+    if os.path.exists('config.toml'):
+        with open('config.toml', 'r') as f:
+            config = toml.load(f)
+    elif os.path.exists('config.yaml'):
+        with open('config.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+    elif os.path.exists('config.json'):
+        with open('config.json', 'r') as f:
+            config = json5.load(f)
+    return config
+
+
 def main():
-    if os.path.exists('config.toml') is False:
-        log.logger.error('找不到配置文件 config.toml')
+    config = laod_config()
+    if not config:
+        log.logger.error('配置文件不存在或者格式错误')
         return
 
-    with open('config.toml', 'r') as f:
-        config = toml.load(f)
     log.logger.setLevel(config['log-level'])
 
     # 检查配置文件
