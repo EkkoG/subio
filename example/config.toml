@@ -1,12 +1,12 @@
 log-level = "DEBUG"
 
 [[provider]]
-name = "1"
+name = "主力机场"
 type = "clash-meta"
 url = "https://gist.github.com/EkkoG/bd2d9e20aa5b456eb7180e72f9e5e588/raw?p=1"
 
 [[provider]]
-name = "self"
+name = "自建节点"
 type = "custom"
 [[provider.nodes]]
 type = 'http'
@@ -21,7 +21,7 @@ password = 'ahh'
 name = "ekko-meta.yaml"
 type = "clash-meta"
 template = "clash.yaml"
-providers = ["self", "1"]
+providers = ["自建节点", "主力机场"]
 [artifact.options]
 work = true
 
@@ -29,7 +29,7 @@ work = true
 name = "ekko2.yaml"
 type = "clash"
 template = "clash.yaml"
-providers = ["self", "1"]
+providers = ["自建节点", "主力机场"]
 [artifact.options]
 work = true
 
