@@ -9,6 +9,7 @@ from app import validate
 from app import parse
 from app.parser import clash
 from app import upload
+from app import log
 
 from app.filter import all_filters
 
@@ -40,9 +41,13 @@ def load_nodes(config):
         if provider['type'] == 'custom':
             all_custom_nodes = provider['nodes']
             all_nodes[provider['name']] = all_custom_nodes
+            log.logger.info('加载自定义节点成功')
         else:
+            log.logger.info(f"加载 {provider['name']} 节点")
             sub_text = load_remote_resource(provider['url'])
+            log.logger.info(f"加载 {provider['name']} 节点成功, 开始解析")
             all_nodes[provider['name']] = parse.parse(config, provider['type'], sub_text)
+            log.logger.info(f"解析 {provider['name']} 节点成功，数量：{len(all_nodes[provider['name']])}")
     return all_nodes
 
 
@@ -116,6 +121,9 @@ def build_template(artifact):
 if __name__ == '__main__':
     with open('config.toml', 'r') as f:
         config = toml.load(f)
+    log.logger.setLevel(config['log-level'])
+
+    log.logger.info('开始转换')
 
     all_nodes = load_nodes(config)
     remote_ruleset = load_rulset(config)
@@ -126,6 +134,7 @@ if __name__ == '__main__':
 
         template_text_with_macro = build_template(artifact)
 
+        log.logger.info(f"开始生成 {artifact['name']}")
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
         template = env.from_string(template_text_with_macro)
 
@@ -155,11 +164,15 @@ if __name__ == '__main__':
 
         with open('dist/' + artifact['name'], 'w') as f:
             final_config = template.render(options=artifact['options'])
+            log.logger.info(f"生成 {artifact['name']} 成功")
             f.write(final_config)
             if 'upload' in artifact:
+                log.logger.info(f"开始上传 {artifact['name']}")
                 for upload_info in artifact['upload']:
+                    log.logger.info(f"上传 {artifact['name']} 到 {upload_info['to']}")
                     upload_info['description'] = 'subio'
                     upload_info['file_name'] = artifact['name']
                     upload_info['content'] = final_config
                     upload.upload(upload_info)
+                    log.logger.info(f"上传 {artifact['name']} 到 {upload_info['to']} 成功")
 
