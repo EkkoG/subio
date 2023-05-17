@@ -3,6 +3,15 @@ import json
 
 cache = {}
 
+filed_name_map = {
+    "hysteria": {
+        "stash": {
+            "down-speed": "down",
+            "up-speed": "up",
+        }
+    }
+}
+
 def gen_clash(file, ftype):
     if file.endswith('.yaml'):
         t = yaml.load(open(file, 'r'), Loader=yaml.FullLoader)
@@ -60,7 +69,12 @@ def gen_clash(file, ftype):
                             "origin": k,
                         }
                 else:
-                    mm[k] = {
+                    unify_key = k
+                    if proxy_type in filed_name_map:
+                        if ftype in filed_name_map[proxy_type]:
+                            if k in filed_name_map[proxy_type][ftype]:
+                                unify_key = filed_name_map[proxy_type][ftype][k]
+                    mm[unify_key] = {
                         "origin": k,
                     }
             return mm
@@ -92,7 +106,12 @@ def gen():
                     }
 
         for k, v in config['map'].items():
-            allow_skip_keys = ['smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast-open']
+            allow_skip_keys = ['smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast_open', 'disable_sni', 'reduce_rtt', 'request_timeout', 'udp_relay_mode']
+            # lower
+            allow_skip_keys = list(map(lambda x: x.lower(), allow_skip_keys))
+            # - to _
+            allow_skip_keys = list(map(lambda x: x.replace('-', '_'), allow_skip_keys))
+
             for platform in all_platform:
                 if platform not in v:
 

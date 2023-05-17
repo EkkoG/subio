@@ -1244,10 +1244,10 @@
                 "clash-meta": {
                     "origin": "udp"
                 },
-                "clash": {
-                    "policy": "unsupport"
-                },
                 "stash": {
+                    "origin": "udp"
+                },
+                "clash": {
                     "policy": "unsupport"
                 }
             },
@@ -1695,10 +1695,10 @@
                 "clash-meta": {
                     "origin": "up"
                 },
-                "clash": {
-                    "policy": "unsupport"
-                },
                 "stash": {
+                    "origin": "up-speed"
+                },
+                "clash": {
                     "policy": "unsupport"
                 }
             },
@@ -1706,10 +1706,10 @@
                 "clash-meta": {
                     "origin": "down"
                 },
-                "clash": {
-                    "policy": "unsupport"
-                },
                 "stash": {
+                    "origin": "down-speed"
+                },
+                "clash": {
                     "policy": "unsupport"
                 }
             },
@@ -1806,32 +1806,10 @@
                     "origin": "fast-open"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "up_speed": {
-                "stash": {
-                    "origin": "up-speed"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "down_speed": {
-                "stash": {
-                    "origin": "down-speed"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "auth": {
@@ -1948,10 +1926,10 @@
                 "clash-meta": {
                     "origin": "udp"
                 },
-                "clash": {
-                    "policy": "unsupport"
-                },
                 "stash": {
+                    "origin": "udp"
+                },
+                "clash": {
                     "policy": "unsupport"
                 }
             },
@@ -2269,10 +2247,10 @@
                     "origin": "disable-sni"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "reduce_rtt": {
@@ -2280,10 +2258,10 @@
                     "origin": "reduce-rtt"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "request_timeout": {
@@ -2291,10 +2269,10 @@
                     "origin": "request-timeout"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "udp_relay_mode": {
@@ -2306,10 +2284,10 @@
                     ]
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "congestion_controller": {
@@ -2344,10 +2322,10 @@
                     "origin": "fast-open"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "skip_cert_verify": {

@@ -193,6 +193,7 @@ proxies:
     skip-cert-verify: true
     network: h2
     tls: true
+    udp: true
     ws-opts:
       path: /path
       headers:
@@ -228,6 +229,7 @@ proxies:
     mtu: 1420 # optional
     reserved: [0, 0, 0] # optional
     keepalive: 45 # optional
+    udp: true
     underlying-proxy: # optional
       type: trojan
       server: your-underlying-proxy
