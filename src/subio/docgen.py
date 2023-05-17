@@ -14,8 +14,8 @@ with open('map.json', 'r') as f:
         #     },
         # }
 
-        markdown += f'| 平台 | 是否支持 |\n'
-        markdown += f'| --- | --- |\n'
+        markdown += '| 平台 | 是否支持 |\n'
+        markdown += '| --- | --- |\n'
         for platform, support in v['protocol'].items():
             # gen a table
             support_symbol = '❌' if 'policy' in support and support['policy'] == 'unsupport' else '✅'
@@ -24,8 +24,8 @@ with open('map.json', 'r') as f:
         markdown += '\n'
         for m, info in v['map'].items():
             markdown += f'### {m}\n'
-            markdown += f'| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
-            markdown += f'| --- | --- | --- | --- |\n'
+            markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
+            markdown += '| --- | --- | --- | --- |\n'
             all_platform = ['clash', 'clash-meta', 'stash']
 
             for platform in all_platform:
