@@ -29,8 +29,9 @@ with open('map.json', 'r') as f:
             markdown += f'| {platform_map[platform]} | {support_symbol} |\n'
 
         markdown += '\n'
+        markdown += '### 字段\n'
         for m, info in v['map'].items():
-            markdown += f'### {m}\n'
+            markdown += f'#### {m}\n'
             markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
             markdown += '| --- | --- | --- | --- |\n'
 

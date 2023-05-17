@@ -232,7 +232,7 @@
                     "origin": "sni"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "sni"
                 }
             },
             "fingerprint": {
@@ -255,18 +255,6 @@
                 },
                 "stash": {
                     "policy": "allow_skip"
-                }
-            },
-            "headers": {
-                "stash": {
-                    "origin": "headers",
-                    "any_key_value": true
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
                 }
             }
         }
@@ -364,17 +352,6 @@
                 },
                 "stash": {
                     "origin": "obfs-opts.host"
-                }
-            },
-            "udp": {
-                "stash": {
-                    "origin": "udp"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
                 }
             }
         }
@@ -739,7 +716,7 @@
                     "origin": "plugin-opts.mux"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "plugin-opts.mux"
                 }
             },
             "plugin_opts_headers": {
@@ -889,7 +866,7 @@
                     "origin": "alterId"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "alterId"
                 }
             },
             "cipher": {
@@ -911,7 +888,7 @@
                     "origin": "udp"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "udp"
                 }
             },
             "tls": {
@@ -961,7 +938,7 @@
                     "origin": "skip-cert-verify"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "skip-cert-verify"
                 }
             },
             "servername": {
@@ -972,7 +949,7 @@
                     "origin": "servername"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "servername"
                 }
             },
             "network": {
@@ -1063,7 +1040,7 @@
                     "origin": "http-opts.method"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "http-opts.method"
                 }
             },
             "http_opts_path": {
@@ -1074,7 +1051,7 @@
                     "origin": "http-opts.path"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "http-opts.path"
                 }
             },
             "http_opts_headers": {
@@ -1087,7 +1064,8 @@
                     "any_key_value": true
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "http-opts.headers",
+                    "any_key_value": true
                 }
             },
             "ip_version": {
@@ -1109,7 +1087,7 @@
                     "origin": "grpc-opts.grpc-service-name"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "grpc-opts.grpc-service-name"
                 }
             }
         }
@@ -1587,28 +1565,6 @@
                 "stash": {
                     "origin": "ws-opts.headers",
                     "any_key_value": true
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_max_early_data": {
-                "stash": {
-                    "origin": "ws-opts.max-early-data"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_early_data_header_name": {
-                "stash": {
-                    "origin": "ws-opts.early-data-header-name"
-                },
-                "clash": {
-                    "policy": "unsupport"
                 },
                 "clash-meta": {
                     "policy": "unsupport"
@@ -2554,7 +2510,7 @@
                     "origin": "udp"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "udp"
                 }
             }
         }

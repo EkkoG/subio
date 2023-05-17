@@ -183,7 +183,7 @@ def main():
             return to_name(get_proxies())
 
         def render(*args, **kwargs):
-            if artifact['type'] == 'clash' or artifact['type'] == 'clash-meta':
+            if artifact['type'] == 'clash' or artifact['type'] == 'clash-meta' or artifact['type'] == 'stash':
                 return render_ruleset_in_clash(*args, **kwargs)
 
             return render_ruleset_generic(*args, **kwargs)

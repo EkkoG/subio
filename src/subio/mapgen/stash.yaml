@@ -1,219 +1,235 @@
 proxies:
-- name: ss0
-  type: ss
-  server: server
-  port: 443
-  cipher: chacha20-ietf-poly1305
-  password: 'password'
-  udp: true
-- name: ss1
-  type: ss
-  server: server
-  port: 443
-  cipher: chacha20-ietf-poly1305
-  password: 'password'
-  udp: true
-  plugin: obfs
-  plugin-opts:
-    mode: tls # 混淆模式，可以选择 http 或 tls
-    host: bing.com # 混淆域名，需要和服务器配置保持一致
-
-- name: ss2
-  type: ss
-  server: server
-  port: 443
-  cipher: chacha20-ietf-poly1305
-  password: 'password'
-  udp: true
-  plugin: v2ray-plugin
-  plugin-opts:
-    mode: websocket # 暂时不支持 QUIC 协议
-    tls: true # wss
-    skip-cert-verify: true # 不验证证书
-    host: bing.com
-    path: '/'
-    headers: # 自定义请求头
-      key: value
-
-- name: ssr
-  type: ssr
-  server: server
-  port: 443
-  cipher: chacha20-ietf
-  password: 'password'
-  obfs: ''
-  protocol: ''
-  obfs-param: ''
-  protocol-param: ''
-
-- name: socks
-  type: socks5
-  server: server
-  port: 443
-  username: username
-  password: password
-  tls: true
-  skip-cert-verify: true
-  udp: true
-
-- name: http
-  type: http
-  server: server
-  port: 443
-  headers:
-    key: value
-  tls: true # https
-  skip-cert-verify: true
-  username: username
-  password: password
-
-- name: vmess
-  type: vmess
-  server: server
-  port: 443
-  uuid: d0529668-8835-11ec-a8a3-0242ac120002
-  cipher: auto
-  network: ws
-  ws-opts:
-    path: /path
-    headers:
-      Host: v2ray.com
-    max-early-data: 2048
-    early-data-header-name: Sec-WebSocket-Protocol
-
-- name: vmess
-  type: vmess
-  server: server
-  port: 443
-  uuid: d0529668-8835-11ec-a8a3-0242ac120002
-  cipher: auto
-  network: h2
-  tls: true
-  h2-opts:
-    host:
-      - http.example.com
-      - http-alt.example.com
-    path: /
-
-- name: snell
-  type: snell
-  server: server
-  port: 443
-  psk: yourpsk
-  udp: true # 需要 v3 以上服务端
-  version: 3
-  obfs-opts:
-    mode: http # 或 tls
-    host: bing.com
-
-- name: trojan
-  type: trojan
-  server: server
-  port: 443
-  password: yourpassword
-  udp: true
-  sni: example.com # Server Name Indication，如果空会使用 server 中的值
-  alpn:
-    - h2
-    - http/1.1
-  skip-cert-verify: true 
-
-- name: trojan
-  type: trojan
-  server: server
-  port: 443
-  password: yourpassword
-  udp: true
-  sni: example.com # Server Name Indication，如果空会使用 server 中的值
-  alpn:
-    - h2
-    - http/1.1
-  skip-cert-verify: true 
-  network: ws
-  ws-opts:
-    path: /path
-    headers:
-      Host: v2ray.com
-    max-early-data: 2048
-    early-data-header-name: Sec-WebSocket-Protocol
-
-
-- name: trojan
-  type: trojan
-  server: server
-  port: 443
-  password: yourpassword
-  udp: true
-  sni: example.com # Server Name Indication，如果空会使用 server 中的值
-  alpn:
-    - h2
-    - http/1.1
-  skip-cert-verify: true 
-  network: grpc
-  grpc-opts:
-    grpc-service-name: "example"
-
-- name: 'hysteria'
-  type: hysteria
-  server: server
-  port: 443
-  up-speed: 100 # 上传带宽（单位：Mbps）
-  down-speed: 100 # 下载带宽（单位：Mbps）
-  auth-str: your-password
-  auth: aHR0cHM6Ly9oeXN0ZXJpYS5uZXR3b3JrL2RvY3MvYWR2YW5jZWQtdXNhZ2Uv # bytes encoded in base64
-  protocol: '' # udp / wechat-video
-  obfs: '' # obfs password
-  sni: example.com # Server Name Indication，如果空会使用 server 中的值
-  alpn:
-    - hysteria
-  skip-cert-verify: true
-
-- name: vless
-  type: vless
-  server: server
-  port: 443
-  uuid: d0529668-8835-11ec-a8a3-0242ac120002
-  flow: xtls-rprx-direct
-  skip-cert-verify: true
-  network: h2
-  tls: true
-  ws-opts:
-    path: /path
-    headers:
-      Host: v2ray.com
-  grpc-opts:
-    grpc-service-name: "example"
-  h2-opts:
-    host:
-      - http.example.com
-      - http-alt.example.com
-    path: /
-
-- name: tuic
-  type: tuic
-  server: server
-  port: 443
-  token: 'your_token'
-  skip-cert-verify: true
-  sni: ''
-  alpn:
-    - h3
-
-- name: wireguard
-  type: wireguard
-  server: server # domain is supported
-  port: 51820
-  ip: 10.8.4.8
-  ipv6: fe80::e6bf:faff:fea0:9fae # optional
-  private-key: 0G6TTWwvgv8Gy5013/jv2GttkCLYYaNTArHV0NdNkGI= # client private key
-  public-key: 0ag+C+rINHBnvLJLUyJeYkMWvIAkBjQPPObicuBUn1U= # peer public key
-  preshared-key: # optional
-  dns: [1.0.0.1, 223.6.6.6] # optional
-  mtu: 1420 # optional
-  reserved: [0, 0, 0] # optional
-  keepalive: 45 # optional
-  underlying-proxy: # optional
-    type: trojan
-    server: your-underlying-proxy
+  - name: ss1
+    type: ss
+    server: server
     port: 443
-    password: your-password
+    cipher: chacha20-ietf-poly1305
+    password: password
+    udp: true
+  - name: ss2
+    type: ss
+    server: server
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: password
+    plugin: obfs
+    plugin-opts:
+      mode: tls
+      host: bing.com
+  - name: ss3
+    type: ss
+    server: server
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: password
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      tls: true
+      skip-cert-verify: true
+      host: bing.com
+      path: /
+      mux: true
+      headers:
+        custom: value
+  - name: vmess
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    udp: true
+    tls: true
+    skip-cert-verify: true
+    servername: example.com
+    network: ws
+    ws-opts:
+      path: /path
+      headers:
+        Host: v2ray.com
+      max-early-data: 2048
+      early-data-header-name: Sec-WebSocket-Protocol
+  - name: vmess-h2
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    network: h2
+    tls: true
+    h2-opts:
+      host:
+        - http.example.com
+        - http-alt.example.com
+      path: /
+  - name: vmess-http
+    type: vmess
+    server: server
+    port: 443
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    udp: true
+    network: http
+    http-opts:
+      method: GET
+      path:
+        - /
+        - /video
+      headers:
+        Connection:
+          - keep-alive
+  - name: vmess-grpc
+    server: server
+    port: 443
+    type: vmess
+    uuid: uuid
+    alterId: 32
+    cipher: auto
+    network: grpc
+    tls: true
+    servername: example.com
+    skip-cert-verify: true
+    grpc-opts:
+      grpc-service-name: example
+  - name: socks
+    type: socks5
+    server: server
+    port: 443
+    username: username
+    password: password
+    tls: true
+    skip-cert-verify: true
+    udp: true
+  - name: http
+    type: http
+    server: server
+    port: 443
+    username: username
+    password: password
+    tls: true
+    skip-cert-verify: true
+    sni: custom.com
+  - name: snell
+    type: snell
+    server: server
+    port: 44046
+    psk: yourpsk
+    version: 2
+    obfs-opts:
+      mode: http
+      host: bing.com
+  - name: trojan
+    type: trojan
+    server: server
+    port: 443
+    password: yourpsk
+    udp: true
+    sni: example.com
+    alpn:
+      - h2
+      - http/1.1
+    skip-cert-verify: true
+  - name: trojan-grpc
+    server: server
+    port: 443
+    type: trojan
+    password: example
+    network: grpc
+    sni: example.com
+    skip-cert-verify: true
+    udp: true
+    grpc-opts:
+      grpc-service-name: example
+  - name: trojan-ws
+    server: server
+    port: 443
+    type: trojan
+    password: example
+    network: ws
+    sni: example.com
+    skip-cert-verify: true
+    udp: true
+    ws-opts:
+      path: /path
+      headers:
+        Host: example.com
+  - name: ssr
+    type: ssr
+    server: server
+    port: 443
+    cipher: chacha20-ietf
+    password: password
+    obfs: tls1.2_ticket_auth
+    protocol: auth_sha1_v4
+    obfs-param: domain.tld
+    protocol-param: '#'
+    udp: true
+
+
+  - name: 'hysteria'
+    type: hysteria
+    server: server
+    port: 443
+    up-speed: 100 # 上传带宽（单位：Mbps）
+    down-speed: 100 # 下载带宽（单位：Mbps）
+    auth-str: your-password
+    auth: aHR0cHM6Ly9oeXN0ZXJpYS5uZXR3b3JrL2RvY3MvYWR2YW5jZWQtdXNhZ2Uv # bytes encoded in base64
+    protocol: '' # udp / wechat-video
+    obfs: '' # obfs password
+    sni: example.com # Server Name Indication，如果空会使用 server 中的值
+    alpn:
+      - hysteria
+    skip-cert-verify: true
+
+  - name: vless
+    type: vless
+    server: server
+    port: 443
+    uuid: d0529668-8835-11ec-a8a3-0242ac120002
+    flow: xtls-rprx-direct
+    skip-cert-verify: true
+    network: h2
+    tls: true
+    ws-opts:
+      path: /path
+      headers:
+        Host: v2ray.com
+    grpc-opts:
+      grpc-service-name: "example"
+    h2-opts:
+      host:
+        - http.example.com
+        - http-alt.example.com
+      path: /
+
+  - name: tuic
+    type: tuic
+    server: server
+    port: 443
+    token: 'your_token'
+    skip-cert-verify: true
+    sni: ''
+    alpn:
+      - h3
+
+  - name: wireguard
+    type: wireguard
+    server: server # domain is supported
+    port: 51820
+    ip: 10.8.4.8
+    ipv6: fe80::e6bf:faff:fea0:9fae # optional
+    private-key: 0G6TTWwvgv8Gy5013/jv2GttkCLYYaNTArHV0NdNkGI= # client private key
+    public-key: 0ag+C+rINHBnvLJLUyJeYkMWvIAkBjQPPObicuBUn1U= # peer public key
+    preshared-key: # optional
+    dns: [1.0.0.1, 223.6.6.6] # optional
+    mtu: 1420 # optional
+    reserved: [0, 0, 0] # optional
+    keepalive: 45 # optional
+    underlying-proxy: # optional
+      type: trojan
+      server: your-underlying-proxy
+      port: 443
+      password: your-password

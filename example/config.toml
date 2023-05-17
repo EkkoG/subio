@@ -33,6 +33,13 @@ providers = ["自建节点", "主力机场"]
 [artifact.options]
 work = true
 
+[[artifact]]
+name = "ekko-stash.yaml"
+type = "stash"
+template = "clash.yaml"
+providers = ["自建节点", "主力机场"]
+[artifact.options]
+work = true
 
 [[ruleset]]
 name = "telegram"
