@@ -1,4 +1,11 @@
 import json
+
+platform_map = {
+    'clash': 'Clash',
+    'clash-meta': 'Clash.Meta',
+    'stash': 'Stash'
+}
+
 markdown = ''
 with open('map.json', 'r') as f:
     validate_map = json.load(f)
@@ -19,13 +26,14 @@ with open('map.json', 'r') as f:
         for platform, support in v['protocol'].items():
             # gen a table
             support_symbol = '❌' if 'policy' in support and support['policy'] == 'unsupport' else '✅'
-            markdown += f'| {platform} | {support_symbol} |\n'
+            markdown += f'| {platform_map[platform]} | {support_symbol} |\n'
 
         markdown += '\n'
         for m, info in v['map'].items():
             markdown += f'### {m}\n'
             markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
             markdown += '| --- | --- | --- | --- |\n'
+
             all_platform = ['clash', 'clash-meta', 'stash']
 
             for platform in all_platform:
@@ -54,7 +62,7 @@ with open('map.json', 'r') as f:
                     allow_values_str = '无限制'
 
 
-                markdown += f"| {platform} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '')} |\n"
+                markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '')} |\n"
 
 
 with open('../../docs/protocol.md', 'w') as f:
