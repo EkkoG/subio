@@ -69,6 +69,9 @@ def to_yaml(data):
     return yaml.dump(data, Dumper=NoAliasDumper, allow_unicode=True)
 
 
+def to_name_list(data):
+    return ', '.join(map(lambda x: x['name'], data))
+
 def to_json(data):
     # all dict
     if isinstance(data, list) and all(isinstance(x, dict) and 'name' in x for x in data):
@@ -90,7 +93,7 @@ def render_ruleset_generic(text, policy):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
-        return f"{line}, {policy}"
+        return f"{line},{policy}"
     return '\n'.join(map(trans, lines))
 
 
@@ -203,6 +206,7 @@ def main():
         env.globals['to_yaml'] = to_yaml
         env.globals['to_json'] = to_json
         env.globals['to_name'] = to_name
+        env.globals['to_name_list'] = to_name_list
         env.globals['filter'] = all_filters
         env.globals['render'] = render
         env.globals['remote_ruleset'] = remote_ruleset
