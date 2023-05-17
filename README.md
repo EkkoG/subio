@@ -16,8 +16,6 @@ pip3 install -e git+https://github.com/ekkog/subio#egg=subio
 
 ### 使用
 
-SubIO 需
-
 - 在当前目录下，创建配置文件 `config.toml`，内容参考 [config.toml](./config.example.toml)。SubIO 也支持 config.yaml/config.json 格式的配置，json 文件支持 [JSON5](https://json5.org/)，JSON5 支持文件中带注释。
 - 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/clash.yaml)。
 - 可以在当前目录下创建 `snippet` 目录，用于存放一些公共的配置片段，参考 [snippet](./example/snippet)。 snippet 语法参考 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/#macros)。
