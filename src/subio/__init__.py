@@ -16,7 +16,11 @@ from .app import log
 
 from .app.filter import all_filters
 
+def md5_to_uuid4(md5):
+    return f"{md5[0:8]}-{md5[8:12]}-{md5[12:16]}-{md5[16:20]}-{md5[20:32]}"
 
+def shadowrocketUUID(name):
+    return md5_to_uuid4(hashlib.md5(name.encode('utf-8')).hexdigest())
 
 class NoAliasDumper(yaml.SafeDumper):
     def ignore_aliases(self, data):
@@ -66,6 +70,12 @@ def to_yaml(data):
 
 
 def to_json(data):
+    # all dict
+    if isinstance(data, list) and all(isinstance(x, dict) and 'name' in x for x in data):
+        # set uuid key for shadowrocket
+        for x in data:
+            x['uuid'] = shadowrocketUUID(x['name'])
+
     return json.dumps(data, ensure_ascii=False)
 
 
