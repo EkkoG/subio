@@ -3,7 +3,7 @@ markdown = ''
 with open('map.json', 'r') as f:
     validate_map = json.load(f)
     for k, v in validate_map.items():
-        markdown += f'## {k}\n'
+        markdown += f'## {k} 协议\n'
         # "vless": {
         #     "protocol": {
         #         "clash-meta": {},

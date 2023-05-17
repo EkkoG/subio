@@ -1,4 +1,4 @@
-## socks5
+## socks5 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -71,7 +71,7 @@
 | clash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 | clash-meta | ✅ 支持 | 无限制 | ip-version |
 | stash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
-## http
+## http 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -150,7 +150,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | headers |
-## snell
+## snell 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -211,7 +211,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | udp |
-## ss
+## ss 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -404,7 +404,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ✅ 支持 | 无限制 | plugin-opts.restls-script |
 | stash | ❌ 不支持 | 无限制 |  |
-## vmess
+## vmess 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -561,7 +561,7 @@
 | clash | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
 | clash-meta | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
 | stash | ❌ 不支持 | 无限制 |  |
-## vless
+## vless 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -688,7 +688,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | h2-opts.path |
-## trojan
+## trojan 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -827,7 +827,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
-## hysteria
+## hysteria 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -972,7 +972,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | auth |
-## wireguard
+## wireguard 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -1141,7 +1141,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ❌ 不支持 | 无限制 |  |
 | stash | ✅ 支持 | 无限制 | underlying-proxy.password |
-## tuic
+## tuic 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
@@ -1256,7 +1256,7 @@
 | clash | ❌ 不支持 | 无限制 |  |
 | clash-meta | ✅ 支持 | 无限制 | sni |
 | stash | ✅ 支持 | 无限制 | sni |
-## ssr
+## ssr 协议
 | 平台 | 是否支持 |
 | --- | --- |
 | clash-meta | ✅ |
