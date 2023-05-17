@@ -127,12 +127,15 @@ def gen():
         with open('mapgen/allow_values.json') as f:
             allow_values_obj = json.load(f)
             for k, v in allow_values_obj.items():
-                key_paths = k.split('.')
-                exp = "cache"
-                for key_path in key_paths:
-                    exp += f"[\"{key_path}\"]"
-                exp += " = v"
-                exec(exp)
+                all_level = k.split('.')
+                def set_value(node, level, value):
+                    if level == len(all_level) - 1:
+                        node[all_level[level]] = value
+                        return
+                    if all_level[level] not in node:
+                        node[all_level[level]] = {}
+                    set_value(node[all_level[level]], level + 1, value)
+                set_value(cache, 0, v)
             
 
     print(json.dumps(cache, indent=4))

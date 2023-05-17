@@ -8,10 +8,16 @@ def tarnsform_to(nodes, dest, tansform_map):
             if 'origin' in tansform_map[node_type]['map'][key][dest]:
                 dest_key = tansform_map[node_type]['map'][key][dest]['origin']
                 if '.' in dest_key:
-                    k, k1 = dest_key.split('.')
-                    if k not in new_node:
-                        new_node[k] = {}
-                    new_node[k][k1] = value
+                    all_level = dest_key.split('.')
+                    def set_value(node, level, value):
+                        if level == len(all_level) - 1:
+                            node[all_level[level]] = value
+                            return
+                        if all_level[level] not in node:
+                            node[all_level[level]] = {}
+                        set_value(node[all_level[level]], level + 1, value)
+
+                    set_value(new_node, 0, value)
                 else:
                     new_node[dest_key] = value
         all_nodes.append(new_node)
