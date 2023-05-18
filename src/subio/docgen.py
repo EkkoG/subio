@@ -3,7 +3,8 @@ import json
 platform_map = {
     'clash': 'Clash',
     'clash-meta': 'Clash.Meta',
-    'stash': 'Stash'
+    'stash': 'Stash',
+    'surge': 'Surge',
 }
 
 markdown = ''
@@ -35,7 +36,7 @@ with open('map.json', 'r') as f:
             markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
             markdown += '| --- | --- | --- | --- |\n'
 
-            all_platform = ['clash', 'clash-meta', 'stash']
+            all_platform = ['clash', 'clash-meta', 'stash', 'surge']
 
             for platform in all_platform:
                 if 'policy' in info[platform]:

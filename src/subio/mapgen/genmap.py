@@ -1,5 +1,6 @@
 import yaml
 import json
+from app.parser import surge
 
 cache = {}
 
@@ -9,7 +10,43 @@ filed_name_map = {
             "down-speed": "down",
             "up-speed": "up",
         }
+    },
+    "ss": {
+        "surge": {
+            "encrypt-method": "cipher",
+            "udp-relay": "udp",
+            "obfs": "plugin-opts.mode",
+            "obfs-host": "plugin-opts.host",
+            "obfs-uri": "plugin-opts.uri",
+        }
+    },
+
+    "vmess": {
+        "surge": {
+            "username": "uuid",
+            "encrypt-method": "cipher",
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "trojan": {
+        "surge": {
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "tuic": {
+        "surge": {
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "http": {
+        "surge": {
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
     }
+
 }
 
 def gen_clash(file, ftype):
@@ -17,8 +54,11 @@ def gen_clash(file, ftype):
         t = yaml.load(open(file, 'r'), Loader=yaml.FullLoader)
     else:
         t = json.load(open(file, 'r'))
+    
+    gen_with(t['proxies'], ftype)
 
-    for p in t['proxies']:
+def gen_with(proxies, ftype):
+    for p in proxies:
         proxy_type = p['type']
 
         if proxy_type not in cache:
@@ -88,15 +128,21 @@ def gen_clash(file, ftype):
             cache[proxy_type]['map'][k][ftype] = v
 
 
+def gen_surge_like(file, ftype):
+    with open(file, 'r') as f:
+        text = f.read()
+    proxies = surge.parse(text)
 
+    gen_with(proxies, ftype)
 
 def gen():
+    gen_surge_like('mapgen/surge.conf', 'surge')
     gen_clash('mapgen/meta.yaml', 'clash-meta')
     gen_clash('mapgen/clash.yaml', 'clash')
     gen_clash('mapgen/stash.yaml', 'stash')
 
     for ptype, config in cache.items():
-        all_platform = ['clash', 'clash-meta', 'stash']
+        all_platform = ['clash', 'clash-meta', 'stash', 'surge']
         protocol = config['protocol'].copy()
         for k, v in protocol.items():
             for platform in all_platform:
@@ -106,7 +152,7 @@ def gen():
                     }
 
         for k, v in config['map'].items():
-            allow_skip_keys = ['smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast_open', 'disable_sni', 'reduce_rtt', 'request_timeout', 'udp_relay_mode']
+            allow_skip_keys = ["alterid", 'smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast_open', 'disable_sni', 'reduce_rtt', 'request_timeout', 'udp_relay_mode']
             # lower
             allow_skip_keys = list(map(lambda x: x.lower(), allow_skip_keys))
             # - to _
@@ -120,9 +166,14 @@ def gen():
                             'policy': 'allow_skip',
                         }
                     else:
-                        cache[ptype]['map'][k][platform] = {
-                            'policy': 'unsupport',
-                        }
+                        if ptype == 'ss' and platform == 'surge' and k == 'plugin':
+                            cache[ptype]['map'][k][platform] = {
+                                'policy': 'allow_skip',
+                            }
+                        else:
+                            cache[ptype]['map'][k][platform] = {
+                                'policy': 'unsupport',
+                            }
 
         with open('mapgen/allow_values.json') as f:
             allow_values_obj = json.load(f)
@@ -138,4 +189,6 @@ def gen():
                 set_value(cache, 0, v)
             
 
-    print(json.dumps(cache, indent=4))
+    # print()
+    with open('map.json', 'w') as f:
+        json.dump(cache, f, indent=4)

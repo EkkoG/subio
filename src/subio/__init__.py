@@ -13,6 +13,8 @@ from .app import validate
 from .app import parse
 from .app import upload
 from .app import log
+from .subio_platform import supported_artifact, supported_provider
+from .app.parser.surge import surge_anonymous_keys
 
 from .app.filter import all_filters
 
@@ -81,6 +83,23 @@ def to_json(data):
 
     return json.dumps(data, ensure_ascii=False)
 
+def to_surge_like(data):
+    def trans(node):
+        # filter out surge anonymous keys exsits in node
+        all_exist_anonymoues_keys = list(filter(lambda x: x in node, surge_anonymous_keys))
+        anonymous_key_text = ', '.join(map(lambda x: f"{node[x]}", all_exist_anonymoues_keys))
+        other_keys = list(filter(lambda x: x not in surge_anonymous_keys, node.keys()))
+        other_keys = list(filter(lambda x: x != 'name', other_keys))
+
+        def trans_values(value):
+            if isinstance(value, bool):
+                return 'true' if value else 'false'
+            return f"{value}"
+        other_text = ', '.join(map(lambda x: f"{x}={trans_values(node[x])}", other_keys))
+
+        return f"{node['name']} = {anonymous_key_text}, {other_text}"
+    return '\n'.join(list(map(trans, data)))
+        
 
 def to_name(data):
     return list(map(lambda x: x['name'], data))
@@ -156,8 +175,12 @@ def main():
 
     # 检查配置文件
     log.logger.info('检查配置文件')
+    for provider in config['provider']:
+        if provider['type'] not in supported_provider:
+            log.logger.error(f"不支持的 provider 类型 {provider['type']}")
+            return
     for artifact in config['artifact']:
-        if artifact['type'] not in ['clash', 'clash-meta', 'stash']:
+        if artifact['type'] not in supported_artifact:
             log.logger.error(f"不支持的 artifact 类型 {artifact['type']}")
             return
         if artifact['providers'] is None or len(artifact['providers']) == 0:
@@ -210,6 +233,7 @@ def main():
         env.globals['filter'] = all_filters
         env.globals['render'] = render
         env.globals['remote_ruleset'] = remote_ruleset
+        env.globals['to_surge_like'] = to_surge_like
 
         if not os.path.exists('dist'):
             os.mkdir('dist')
