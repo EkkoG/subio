@@ -5,6 +5,7 @@ surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
 def parse(sub_text):
     config = ConfigParser()
+    config.optionxform=str
     config.read_string(sub_text)
     all_proxies = []
     for k, v in config['Proxy'].items():
