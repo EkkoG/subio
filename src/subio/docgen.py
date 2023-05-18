@@ -10,12 +10,16 @@ platform_map = {
 markdown = ''
 with open('map.json', 'r') as f:
     validate_map = json.load(f)
+
+    all_platform = ['surge', 'clash-meta', 'clash', 'stash']
+
     for k, v in validate_map.items():
         markdown += f'## {k} 协议\n'
 
         markdown += '| 平台 | 是否支持 |\n'
         markdown += '| --- | --- |\n'
-        for platform, support in v['protocol'].items():
+        for platform in all_platform:
+            support = v['protocol'][platform] if platform in v['protocol'] else {}
             # gen a table
             support_symbol = '❌' if 'policy' in support and support['policy'] == 'unsupport' else '✅'
             markdown += f'| {platform_map[platform]} | {support_symbol} |\n'
@@ -26,8 +30,6 @@ with open('map.json', 'r') as f:
             markdown += f'#### {m}\n'
             markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
             markdown += '| --- | --- | --- | --- |\n'
-
-            all_platform = ['surge', 'clash-meta', 'clash', 'stash']
 
             for platform in all_platform:
                 if 'policy' in info[platform]:
