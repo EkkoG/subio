@@ -651,7 +651,11 @@
             },
             "plugin_opts_mode": {
                 "surge": {
-                    "origin": "obfs"
+                    "origin": "obfs",
+                    "allow_values": [
+                        "tls",
+                        "http"
+                    ]
                 },
                 "clash-meta": {
                     "origin": "plugin-opts.mode",
@@ -885,7 +889,9 @@
                     ]
                 },
                 "surge": {
-                    "policy": "allow_skip"
+                    "allow_values": [
+                        "obfs"
+                    ]
                 }
             },
             "plugin_opts_tls": {

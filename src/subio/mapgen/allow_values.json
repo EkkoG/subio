@@ -87,11 +87,18 @@
         "obfs",
         "v2ray-plugin"
     ],
+    "ss.map.plugin.surge.allow_values": [
+        "obfs"
+    ],
     "ss.map.plugin.clash-meta.allow_values": [
         "obfs",
         "v2ray-plugin",
         "shadow-tls",
         "restls"
+    ],
+    "ss.map.plugin_opts_mode.surge.allow_values": [
+        "tls",
+        "http"
     ],
     "ss.map.plugin_opts_mode.clash-meta.allow_values_when": [
         {
