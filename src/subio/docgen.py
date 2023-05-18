@@ -59,7 +59,7 @@ with open('map.json', 'r') as f:
                     allow_values_str = '-'
 
 
-                markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '')} |\n"
+                markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '-')} |\n"
 
 
 with open('../../docs/protocol.md', 'w') as f:
