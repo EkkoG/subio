@@ -12,15 +12,6 @@ with open('map.json', 'r') as f:
     validate_map = json.load(f)
     for k, v in validate_map.items():
         markdown += f'## {k} 协议\n'
-        # "vless": {
-        #     "protocol": {
-        #         "clash-meta": {},
-        #         "stash": {},
-        #         "clash": {
-        #             "policy": "unsupport"
-        #         }
-        #     },
-        # }
 
         markdown += '| 平台 | 是否支持 |\n'
         markdown += '| --- | --- |\n'
@@ -36,7 +27,7 @@ with open('map.json', 'r') as f:
             markdown += '| 平台 | 是否支持 | 允许的值 | 对应字段 |\n'
             markdown += '| --- | --- | --- | --- |\n'
 
-            all_platform = ['clash', 'clash-meta', 'stash', 'surge']
+            all_platform = ['surge', 'clash-meta', 'clash', 'stash']
 
             for platform in all_platform:
                 if 'policy' in info[platform]:
@@ -62,6 +53,10 @@ with open('map.json', 'r') as f:
 
                 if len(allow_values_str) == 0:
                     allow_values_str = '无限制'
+
+                if 'policy' in v['protocol'][platform] and 'unsupport' == v['protocol'][platform]['policy']:
+                    support_symbol = '-'
+                    allow_values_str = '-'
 
 
                 markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '')} |\n"
