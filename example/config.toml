@@ -1,13 +1,9 @@
 log-level = "DEBUG"
-[[provider]]
-name = "本地节点"
-type = "clash-meta"
-file = "meta.yaml"
 
 [[provider]]
 name = "主力机场"
 type = "clash-meta"
-url = "https://gist.github.com/EkkoG/bd2d9e20aa5b456eb7180e72f9e5e588/raw?p=1"
+file = "meta.yaml"
 
 [[provider]]
 name = "Surge 测试"
@@ -54,7 +50,7 @@ work = true
 name = "ekko-surge.conf"
 type = "surge"
 template = "surge.conf"
-providers = ["自建节点", "主力机场", "Surge 测试", "本地节点"]
+providers = ["自建节点", "主力机场", "Surge 测试"]
 [artifact.options]
 work = true
 
