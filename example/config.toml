@@ -1,4 +1,8 @@
 log-level = "DEBUG"
+[[provider]]
+name = "本地节点"
+type = "clash-meta"
+file = "meta.yaml"
 
 [[provider]]
 name = "主力机场"
@@ -50,7 +54,7 @@ work = true
 name = "ekko-surge.conf"
 type = "surge"
 template = "surge.conf"
-providers = ["自建节点", "主力机场", "Surge 测试"]
+providers = ["自建节点", "主力机场", "Surge 测试", "本地节点"]
 [artifact.options]
 work = true
 

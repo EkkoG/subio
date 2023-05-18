@@ -49,10 +49,13 @@ def load_nodes(config):
         if provider['type'] == 'custom':
             all_custom_nodes = provider['nodes']
             all_nodes[provider['name']] = all_custom_nodes
-            log.logger.info('加载自定义节点成功')
+            log.logger.info(f'加载自定义节点成功, 数量：{len(all_custom_nodes)}')
         else:
             log.logger.info(f"加载 {provider['name']} 节点")
-            sub_text = load_remote_resource(provider['url'])
+            if 'file' in provider:
+                sub_text = open(f"provider/{provider['file']}", 'r').read()
+            else:
+                sub_text = load_remote_resource(provider['url'])
             log.logger.info(f"加载 {provider['name']} 节点成功, 开始解析")
             all_nodes[provider['name']] = parse.parse(config, provider['type'], sub_text)
             log.logger.info(f"解析 {provider['name']} 节点成功，数量：{len(all_nodes[provider['name']])}")
