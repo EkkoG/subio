@@ -676,10 +676,40 @@
                     ]
                 },
                 "clash": {
-                    "origin": "plugin-opts.mode"
+                    "origin": "plugin-opts.mode",
+                    "allow_values_when": [
+                        {
+                            "when": "node['plugin'] == 'obfs'",
+                            "allow_values": [
+                                "tls",
+                                "http"
+                            ]
+                        },
+                        {
+                            "when": "node['plugin'] == 'v2ray-plugin'",
+                            "allow_values": [
+                                "websocket"
+                            ]
+                        }
+                    ]
                 },
                 "stash": {
-                    "origin": "plugin-opts.mode"
+                    "origin": "plugin-opts.mode",
+                    "allow_values_when": [
+                        {
+                            "when": "node['plugin'] == 'obfs'",
+                            "allow_values": [
+                                "tls",
+                                "http"
+                            ]
+                        },
+                        {
+                            "when": "node['plugin'] == 'v2ray-plugin'",
+                            "allow_values": [
+                                "websocket"
+                            ]
+                        }
+                    ]
                 }
             },
             "plugin_opts_host": {

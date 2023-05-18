@@ -100,6 +100,36 @@
         "tls",
         "http"
     ],
+    "ss.map.plugin_opts_mode.stash.allow_values_when": [
+        {
+            "when": "node['plugin'] == 'obfs'",
+            "allow_values": [
+                "tls",
+                "http"
+            ]
+        },
+        {
+            "when": "node['plugin'] == 'v2ray-plugin'",
+            "allow_values": [
+                "websocket"
+            ]
+        }
+    ],
+    "ss.map.plugin_opts_mode.clash.allow_values_when": [
+        {
+            "when": "node['plugin'] == 'obfs'",
+            "allow_values": [
+                "tls",
+                "http"
+            ]
+        },
+        {
+            "when": "node['plugin'] == 'v2ray-plugin'",
+            "allow_values": [
+                "websocket"
+            ]
+        }
+    ],
     "ss.map.plugin_opts_mode.clash-meta.allow_values_when": [
         {
             "when": "node['plugin'] == 'obfs'",

@@ -305,8 +305,8 @@
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | tls<br>http | obfs |
 | Clash.Meta | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
-| Clash | ✅ 支持 | 无限制 | plugin-opts.mode |
-| Stash | ✅ 支持 | 无限制 | plugin-opts.mode |
+| Clash | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
+| Stash | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
 #### plugin_opts_host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
