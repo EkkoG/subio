@@ -63,12 +63,12 @@
 | Clash.Meta | ✅ 支持 | 无限制 | sni |
 | Stash | ✅ 支持 | 无限制 | sni |
 | Surge | ✅ 支持 | 无限制 | sni |
-#### server_cert_fingerprint_sha256
+#### fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
+| Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
+| Stash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 | Surge | ✅ 支持 | 无限制 | server-cert-fingerprint-sha256 |
 #### tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
@@ -77,13 +77,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | tls |
 | Stash | ✅ 支持 | 无限制 | tls |
 | Surge | ✅ 支持 | 无限制 | tls |
-#### fingerprint
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
-| Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
-| Stash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
-| Surge | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 #### ip_version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -235,6 +228,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | version |
 | Stash | ✅ 支持 | 无限制 | version |
 | Surge | ✅ 支持 | 无限制 | version |
+#### udp
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Clash | ❌ 不支持 | 无限制 |  |
+| Clash.Meta | ❌ 不支持 | 无限制 |  |
+| Stash | ❌ 不支持 | 无限制 |  |
+| Surge | ✅ 支持 | 无限制 | udp-relay |
 #### obfs_opts_mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -286,12 +286,12 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Stash | ✅ 支持 | 无限制 | port |
 | Surge | ✅ 支持 | 无限制 | port |
-#### encrypt_method
+#### cipher
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
+| Clash.Meta | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305<br>2022-blake3-aes-128-gcm<br>2022-blake3-aes-256-gcm<br>2022-blake3-chacha20-poly1305 | cipher |
+| Stash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
 | Surge | ✅ 支持 | 无限制 | encrypt-method |
 #### password
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
@@ -300,55 +300,34 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
 | Surge | ✅ 支持 | 无限制 | password |
-#### obfs
+#### plugin_opts_mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ✅ 支持 | 无限制 | plugin-opts.mode |
+| Clash.Meta | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
+| Stash | ✅ 支持 | 无限制 | plugin-opts.mode |
 | Surge | ✅ 支持 | 无限制 | obfs |
-#### obfs_host
+#### plugin_opts_host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ✅ 支持 | 无限制 | plugin-opts.host |
+| Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.host |
+| Stash | ✅ 支持 | 无限制 | plugin-opts.host |
 | Surge | ✅ 支持 | 无限制 | obfs-host |
-#### obfs_uri
+#### plugin_opts_uri
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Clash | ❌ 不支持 | 无限制 |  |
 | Clash.Meta | ❌ 不支持 | 无限制 |  |
 | Stash | ❌ 不支持 | 无限制 |  |
 | Surge | ✅ 支持 | 无限制 | obfs-uri |
-#### udp_relay
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
-| Surge | ✅ 支持 | 无限制 | udp-relay |
-#### tfo
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
-| Surge | ✅ 支持 | 无限制 | tfo |
-#### cipher
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
-| Clash.Meta | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305<br>2022-blake3-aes-128-gcm<br>2022-blake3-aes-256-gcm<br>2022-blake3-chacha20-poly1305 | cipher |
-| Stash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
-| Surge | ❌ 不支持 | 无限制 |  |
 #### udp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-| Surge | ❌ 不支持 | 无限制 |  |
+| Surge | ✅ 支持 | 无限制 | udp-relay |
 #### udp_over_tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -425,21 +404,7 @@
 | Clash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
 | Clash.Meta | ✅ 支持 | obfs<br>v2ray-plugin<br>shadow-tls<br>restls | plugin |
 | Stash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
-| Surge | ❌ 不支持 | 无限制 |  |
-#### plugin_opts_mode
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | 无限制 | plugin-opts.mode |
-| Clash.Meta | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
-| Stash | ✅ 支持 | 无限制 | plugin-opts.mode |
-| Surge | ❌ 不支持 | 无限制 |  |
-#### plugin_opts_host
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | 无限制 | plugin-opts.host |
-| Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.host |
-| Stash | ✅ 支持 | 无限制 | plugin-opts.host |
-| Surge | ❌ 不支持 | 无限制 |  |
+| Surge | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 #### plugin_opts_tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -554,19 +519,19 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Stash | ✅ 支持 | 无限制 | port |
 | Surge | ✅ 支持 | 无限制 | port |
-#### username
+#### uuid
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ✅ 支持 | 无限制 | uuid |
+| Clash.Meta | ✅ 支持 | 无限制 | uuid |
+| Stash | ✅ 支持 | 无限制 | uuid |
 | Surge | ✅ 支持 | 无限制 | username |
-#### encrypt_method
+#### cipher
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Clash | ❌ 不支持 | 无限制 |  |
-| Clash.Meta | ❌ 不支持 | 无限制 |  |
-| Stash | ❌ 不支持 | 无限制 |  |
+| Clash | ✅ 支持 | 无限制 | cipher |
+| Clash.Meta | ✅ 支持 | 无限制 | cipher |
+| Stash | ✅ 支持 | 无限制 | cipher |
 | Surge | ✅ 支持 | 无限制 | encrypt-method |
 #### ws
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
@@ -589,27 +554,13 @@
 | Clash.Meta | ❌ 不支持 | 无限制 |  |
 | Stash | ❌ 不支持 | 无限制 |  |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
-#### uuid
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | 无限制 | uuid |
-| Clash.Meta | ✅ 支持 | 无限制 | uuid |
-| Stash | ✅ 支持 | 无限制 | uuid |
-| Surge | ❌ 不支持 | 无限制 |  |
 #### alterid
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Clash | ✅ 支持 | 无限制 | alterId |
 | Clash.Meta | ✅ 支持 | 无限制 | alterId |
 | Stash | ✅ 支持 | 无限制 | alterId |
-| Surge | ❌ 不支持 | 无限制 |  |
-#### cipher
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | 无限制 | cipher |
-| Clash.Meta | ✅ 支持 | 无限制 | cipher |
-| Stash | ✅ 支持 | 无限制 | cipher |
-| Surge | ❌ 不支持 | 无限制 |  |
+| Surge | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 #### udp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -801,6 +752,13 @@
 | Clash.Meta | ❌ 不支持 | 无限制 |  |
 | Stash | ❌ 不支持 | 无限制 |  |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
+#### udp
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Clash | ✅ 支持 | 无限制 | udp |
+| Clash.Meta | ✅ 支持 | 无限制 | udp |
+| Stash | ✅ 支持 | 无限制 | udp |
+| Surge | ✅ 支持 | 无限制 | udp-relay |
 #### client_fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -815,13 +773,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
 | Stash | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
 | Surge | ⚠️ 不支持，但是可以跳过 | 无限制 |  |
-#### udp
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Clash | ✅ 支持 | 无限制 | udp |
-| Clash.Meta | ✅ 支持 | 无限制 | udp |
-| Stash | ✅ 支持 | 无限制 | udp |
-| Surge | ❌ 不支持 | 无限制 |  |
 #### sni
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -957,6 +908,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | alpn |
 | Stash | ✅ 支持 | 无限制 | alpn |
 | Surge | ✅ 支持 | 无限制 | alpn |
+#### udp
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Clash | ❌ 不支持 | 无限制 |  |
+| Clash.Meta | ❌ 不支持 | 无限制 |  |
+| Stash | ❌ 不支持 | 无限制 |  |
+| Surge | ✅ 支持 | 无限制 | udp-relay |
 #### ip
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |

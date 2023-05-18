@@ -35,6 +35,11 @@ filed_name_map = {
             "server-cert-fingerprint-sha256": "fingerprint"
         }
     },
+    "snell": {
+        "surge": {
+            "udp-relay": "udp",
+        }
+    },
     "tuic": {
         "surge": {
             "udp-relay": "udp",

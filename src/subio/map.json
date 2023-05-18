@@ -433,7 +433,7 @@
                     "origin": "version"
                 }
             },
-            "udp_relay": {
+            "udp": {
                 "surge": {
                     "origin": "udp-relay"
                 },
