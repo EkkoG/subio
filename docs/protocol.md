@@ -289,7 +289,7 @@
 #### cipher
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | encrypt-method |
+| Surge | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305<br>rc4<br>rc4-md5<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>bf-cfb<br>camellia-128-cfb<br>camellia-192-cfb<br>camellia-256-cfb<br>cast5-cfb<br>des-cfb<br>idea-cfb<br>rc2-cfb<br>seed-cfb<br>salsa20<br>chacha20<br>chacha20-ietf<br>none | encrypt-method |
 | Clash.Meta | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305<br>2022-blake3-aes-128-gcm<br>2022-blake3-aes-256-gcm<br>2022-blake3-chacha20-poly1305 | cipher |
 | Clash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
 | Stash | ✅ 支持 | aes-128-gcm<br>aes-192-gcm<br>aes-256-gcm<br>aes-128-cfb<br>aes-192-cfb<br>aes-256-cfb<br>aes-128-ctr<br>aes-192-ctr<br>aes-256-ctr<br>rc4-md5<br>chacha20<br>chacha20-ietf<br>xchacha20<br>chacha20-ietf-poly1305<br>xchacha20-ietf-poly1305 | cipher |
