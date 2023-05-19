@@ -18,8 +18,8 @@ def tarnsform_to(nodes, dest, tansform_map):
                 node['ws-headers'] = dict_to_str(node['ws-headers'])
 
         if node['type'] in ['ss']:
-            if 'plugin' in node and node['plugin'] == 'shadow-tls':
-                node.pop('plugin', None)
+            if 'plugin_opts_version' in node:
+                node.pop('plugin_opts_version', None)
         return node
     return list(map(lambda x: fix(x), to))
 

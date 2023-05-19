@@ -54,6 +54,7 @@ def parse(sub_text):
         if proxy['type'] == 'ss':
             if 'shadow-tls-password' in proxy:
                 proxy['plugin'] = 'shadow-tls'
+                proxy['plugin_opts_version'] = 2
         all_proxies.append(proxy)
 
     return all_proxies

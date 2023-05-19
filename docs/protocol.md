@@ -345,10 +345,17 @@
 #### plugin
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | obfs | plugin |
+| Surge | ✅ 支持 | obfs<br>shadow-tls | plugin |
 | Clash.Meta | ✅ 支持 | obfs<br>v2ray-plugin<br>shadow-tls<br>restls | plugin |
 | Clash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
 | Stash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
+#### plugin_opts_version
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 2 | plugin_opts_version |
+| Clash.Meta | ✅ 支持 | 1<br>2<br>3 | plugin-opts.version |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
 #### udp_over_tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -468,13 +475,6 @@
 | Clash.Meta | ✅ 支持 | chrome<br>ios<br>firefox<br>safari | client-fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### plugin_opts_version
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.version |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
 #### plugin_opts_version_hint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
