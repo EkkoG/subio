@@ -1,0 +1,21 @@
+{
+    "common": [
+        "smux",
+        "fingerprint",
+        "client_fingerprint",
+        "ip_version",
+        "fast_open"
+    ],
+    "vmess": [
+        "alterid"
+    ],
+    "ss": [
+        "plugin"
+    ],
+    "tuic": [
+        "disable_sni",
+        "reduce_rtt",
+        "request_timeout",
+        "udp_relay_mode"
+    ]
+}

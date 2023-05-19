@@ -1,0 +1,47 @@
+{
+    "hysteria": {
+        "stash": {
+            "down-speed": "down",
+            "up-speed": "up"
+        }
+    },
+    "ss": {
+        "surge": {
+            "encrypt-method": "cipher",
+            "udp-relay": "udp",
+            "obfs": "plugin-opts.mode",
+            "obfs-host": "plugin-opts.host",
+            "obfs-uri": "plugin-opts.uri"
+        }
+    },
+    "vmess": {
+        "surge": {
+            "username": "uuid",
+            "encrypt-method": "cipher",
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "trojan": {
+        "surge": {
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "snell": {
+        "surge": {
+            "udp-relay": "udp"
+        }
+    },
+    "tuic": {
+        "surge": {
+            "udp-relay": "udp",
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    },
+    "http": {
+        "surge": {
+            "server-cert-fingerprint-sha256": "fingerprint"
+        }
+    }
+}

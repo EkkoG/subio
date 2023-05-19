@@ -3,57 +3,8 @@ import json
 from app.parser import surge
 
 cache = {}
-
-filed_name_map = {
-    "hysteria": {
-        "stash": {
-            "down-speed": "down",
-            "up-speed": "up",
-        }
-    },
-    "ss": {
-        "surge": {
-            "encrypt-method": "cipher",
-            "udp-relay": "udp",
-            "obfs": "plugin-opts.mode",
-            "obfs-host": "plugin-opts.host",
-            "obfs-uri": "plugin-opts.uri",
-        }
-    },
-
-    "vmess": {
-        "surge": {
-            "username": "uuid",
-            "encrypt-method": "cipher",
-            "udp-relay": "udp",
-            "server-cert-fingerprint-sha256": "fingerprint"
-        }
-    },
-    "trojan": {
-        "surge": {
-            "udp-relay": "udp",
-            "server-cert-fingerprint-sha256": "fingerprint"
-        }
-    },
-    "snell": {
-        "surge": {
-            "udp-relay": "udp",
-        }
-    },
-    "tuic": {
-        "surge": {
-            "udp-relay": "udp",
-            "server-cert-fingerprint-sha256": "fingerprint"
-        }
-    },
-    "http": {
-        "surge": {
-            "server-cert-fingerprint-sha256": "fingerprint"
-        }
-    }
-
-}
-
+with open('mapgen/filed_name_map.json', 'r') as f:
+    filed_name_map = json.load(f)
 def gen_clash(file, ftype):
     if file.endswith('.yaml'):
         t = yaml.load(open(file, 'r'), Loader=yaml.FullLoader)
@@ -156,13 +107,17 @@ def gen():
                         'policy': 'unsupport',
                     }
 
-        for k, v in config['map'].items():
-            allow_skip_keys = ["alterid", 'smux', 'fingerprint', 'client_fingerprint', 'ip_version', 'fast_open', 'disable_sni', 'reduce_rtt', 'request_timeout', 'udp_relay_mode']
-            # lower
-            allow_skip_keys = list(map(lambda x: x.lower(), allow_skip_keys))
-            # - to _
-            allow_skip_keys = list(map(lambda x: x.replace('-', '_'), allow_skip_keys))
+        with open('mapgen/allow_skip.json', 'r') as f:
+            allow_skip = json.load(f)
 
+        common_allow_skip_keys = allow_skip['common'] if 'common' in allow_skip else []
+        allow_skip_keys = allow_skip[ptype] if ptype in allow_skip else []
+        allow_skip_keys = allow_skip_keys + common_allow_skip_keys
+        # lower
+        allow_skip_keys = list(map(lambda x: x.lower(), allow_skip_keys))
+        # - to _
+        allow_skip_keys = list(map(lambda x: x.replace('-', '_'), allow_skip_keys))
+        for k, v in config['map'].items():
             for platform in all_platform:
                 if platform not in v:
 
@@ -171,14 +126,9 @@ def gen():
                             'policy': 'allow_skip',
                         }
                     else:
-                        if ptype == 'ss' and platform == 'surge' and k == 'plugin':
-                            cache[ptype]['map'][k][platform] = {
-                                'policy': 'allow_skip',
-                            }
-                        else:
-                            cache[ptype]['map'][k][platform] = {
-                                'policy': 'unsupport',
-                            }
+                        cache[ptype]['map'][k][platform] = {
+                            'policy': 'unsupport',
+                        }
 
         with open('mapgen/allow_values.json') as f:
             allow_values_obj = json.load(f)

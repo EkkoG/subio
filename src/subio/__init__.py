@@ -13,7 +13,7 @@ from .app import validate
 from .app import parse
 from .app import upload
 from .app import log
-from .subio_platform import supported_artifact, supported_provider
+from .subio_platform import supported_artifact, supported_provider, clash_like
 from .app.parser.surge import surge_anonymous_keys
 
 from .app.filter import all_filters
@@ -222,7 +222,7 @@ def main():
             return to_name(get_proxies())
 
         def render(*args, **kwargs):
-            if artifact['type'] == 'clash' or artifact['type'] == 'clash-meta' or artifact['type'] == 'stash':
+            if artifact['type'] in clash_like:
                 return render_ruleset_in_clash(*args, **kwargs)
 
             return render_ruleset_generic(*args, **kwargs)
