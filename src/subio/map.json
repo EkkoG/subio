@@ -1558,14 +1558,14 @@
                 "surge": {
                     "origin": "ws-path"
                 },
+                "clash-meta": {
+                    "origin": "ws-opts.path"
+                },
                 "clash": {
                     "origin": "ws-opts.path"
                 },
                 "stash": {
                     "origin": "ws-opts.path"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
                 }
             },
             "ws_opts_headers": {
@@ -1573,6 +1573,10 @@
                     "origin": "ws-headers",
                     "any_key_value": true
                 },
+                "clash-meta": {
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
+                },
                 "clash": {
                     "origin": "ws-opts.headers",
                     "any_key_value": true
@@ -1580,9 +1584,6 @@
                 "stash": {
                     "origin": "ws-opts.headers",
                     "any_key_value": true
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -1695,49 +1696,6 @@
                 },
                 "stash": {
                     "origin": "grpc-opts.grpc-service-name"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts": {
-                "clash-meta": {
-                    "origin": "ws-opts"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "path": {
-                "clash-meta": {
-                    "origin": "path"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "headers": {
-                "clash-meta": {
-                    "origin": "headers",
-                    "any_key_value": true
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
                 },
                 "surge": {
                     "policy": "unsupport"

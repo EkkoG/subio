@@ -721,14 +721,14 @@
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-path |
-| Clash.Meta | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
 | Clash | ✅ 支持 | 无限制 | ws-opts.path |
 | Stash | ✅ 支持 | 无限制 | ws-opts.path |
 #### ws_opts_headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
-| Clash.Meta | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.headers |
 | Clash | ✅ 支持 | 无限制 | ws-opts.headers |
 | Stash | ✅ 支持 | 无限制 | ws-opts.headers |
 #### udp
@@ -787,27 +787,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
 | Clash | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
 | Stash | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
-#### ws_opts
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ws-opts |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### path
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | path |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### headers
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | headers |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
 #### flow
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
