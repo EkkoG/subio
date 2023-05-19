@@ -317,7 +317,7 @@
 #### plugin_opts_host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | obfs-host |
+| Surge | ✅ 支持 | 无限制 | shadow-tls-sni |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.host |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.host |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.host |
@@ -335,6 +335,20 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
+#### plugin_opts_password
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | shadow-tls-password |
+| Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.password |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### plugin
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | obfs | plugin |
+| Clash.Meta | ✅ 支持 | obfs<br>v2ray-plugin<br>shadow-tls<br>restls | plugin |
+| Clash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
+| Stash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
 #### udp_over_tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -405,13 +419,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | smux.only-tcp |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### plugin
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ✅ 支持 | obfs | - |
-| Clash.Meta | ✅ 支持 | obfs<br>v2ray-plugin<br>shadow-tls<br>restls | plugin |
-| Clash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
-| Stash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
 #### plugin_opts_tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -461,13 +468,6 @@
 | Clash.Meta | ✅ 支持 | chrome<br>ios<br>firefox<br>safari | client-fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### plugin_opts_password
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.password |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
 #### plugin_opts_version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |

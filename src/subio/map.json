@@ -728,7 +728,7 @@
             },
             "plugin_opts_host": {
                 "surge": {
-                    "origin": "obfs-host"
+                    "origin": "shadow-tls-sni"
                 },
                 "clash-meta": {
                     "origin": "plugin-opts.host"
@@ -766,6 +766,51 @@
                 },
                 "stash": {
                     "origin": "udp"
+                }
+            },
+            "plugin_opts_password": {
+                "surge": {
+                    "origin": "shadow-tls-password"
+                },
+                "clash-meta": {
+                    "origin": "plugin-opts.password"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "plugin": {
+                "surge": {
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs"
+                    ]
+                },
+                "clash-meta": {
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin",
+                        "shadow-tls",
+                        "restls"
+                    ]
+                },
+                "clash": {
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
+                },
+                "stash": {
+                    "origin": "plugin",
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
                 }
             },
             "udp_over_tcp": {
@@ -908,36 +953,6 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin": {
-                "clash-meta": {
-                    "origin": "plugin",
-                    "allow_values": [
-                        "obfs",
-                        "v2ray-plugin",
-                        "shadow-tls",
-                        "restls"
-                    ]
-                },
-                "clash": {
-                    "origin": "plugin",
-                    "allow_values": [
-                        "obfs",
-                        "v2ray-plugin"
-                    ]
-                },
-                "stash": {
-                    "origin": "plugin",
-                    "allow_values": [
-                        "obfs",
-                        "v2ray-plugin"
-                    ]
-                },
-                "surge": {
-                    "allow_values": [
-                        "obfs"
-                    ]
-                }
-            },
             "plugin_opts_tls": {
                 "clash-meta": {
                     "origin": "plugin-opts.tls"
@@ -1043,20 +1058,6 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
-                }
-            },
-            "plugin_opts_password": {
-                "clash-meta": {
-                    "origin": "plugin-opts.password"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
                 }
             },
             "plugin_opts_version": {

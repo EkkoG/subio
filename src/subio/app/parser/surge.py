@@ -1,6 +1,6 @@
 from configparser import ConfigParser
-from functools import reduce
 from .common import _origin_to_unify_trans
+from subio.tools import set_value
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
@@ -32,7 +32,6 @@ def parse(sub_text):
                     proxy[first_5_keys[i]] = all_comps[i]
                 else:
                     print(f"Warning: {k} has too many components")
-        all_proxies.append(proxy)
         if proxy['type'] == 'https':
             proxy['type'] = 'http'
             proxy['tls'] = True
@@ -52,6 +51,10 @@ def parse(sub_text):
 
                 proxy['ws-headers'] = parse_headers(proxy['ws-headers']) if 'ws-headers' in proxy else {}
                 proxy.pop('ws', None)
+        if proxy['type'] == 'ss':
+            if 'shadow-tls-password' in proxy:
+                proxy['plugin'] = 'shadow-tls'
+        all_proxies.append(proxy)
 
     return all_proxies
 

@@ -9,9 +9,11 @@
         "surge": {
             "encrypt-method": "cipher",
             "udp-relay": "udp",
-            "obfs": "plugin-opts.mode",
-            "obfs-host": "plugin-opts.host",
-            "obfs-uri": "plugin-opts.uri"
+            "obfs": "plugin_opts_mode",
+            "obfs-host": "plugin_opts_host",
+            "obfs-uri": "plugin_opts_uri",
+            "shadow-tls-password": "plugin_opts_password",
+            "shadow-tls-sni": "plugin_opts_host"
         }
     },
     "vmess": {

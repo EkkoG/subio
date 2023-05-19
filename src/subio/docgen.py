@@ -1,4 +1,5 @@
 import json
+from collections import OrderedDict
 
 platform_map = {
     'clash': 'Clash',
@@ -10,6 +11,7 @@ platform_map = {
 markdown = ''
 with open('map.json', 'r') as f:
     validate_map = json.load(f)
+    validate_map = OrderedDict(validate_map)
 
     all_platform = ['surge', 'clash-meta', 'clash', 'stash']
 

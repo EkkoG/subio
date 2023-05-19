@@ -1,7 +1,12 @@
+from subio.tools import set_value
 
 def tarnsform_to(nodes, dest, tansform_map):
     to = _tarnsform_to(nodes, dest, tansform_map)
     def fix(node):
+        if node['type'] in ['ss']:
+            if 'plugin' in node:
+                node.pop('plugin', None)
+
         if node['type'] in ['vmess', 'trojan']:
             if 'network' in node and node['network'] == 'ws':
                 node['ws'] = True
@@ -11,6 +16,10 @@ def tarnsform_to(nodes, dest, tansform_map):
                 def dict_to_str(d):
                     return '|'.join([f'{k}:{v}' for k, v in d.items()])
                 node['ws-headers'] = dict_to_str(node['ws-headers'])
+
+        if node['type'] in ['ss']:
+            if 'plugin' in node and node['plugin'] == 'shadow-tls':
+                node.pop('plugin', None)
         return node
     return list(map(lambda x: fix(x), to))
 
@@ -23,16 +32,7 @@ def _tarnsform_to(nodes, dest, tansform_map):
             if 'origin' in tansform_map[node_type]['map'][key][dest]:
                 dest_key = tansform_map[node_type]['map'][key][dest]['origin']
                 if '.' in dest_key:
-                    all_level = dest_key.split('.')
-                    def set_value(node, level, value):
-                        if level == len(all_level) - 1:
-                            node[all_level[level]] = value
-                            return
-                        if all_level[level] not in node:
-                            node[all_level[level]] = {}
-                        set_value(node[all_level[level]], level + 1, value)
-
-                    set_value(new_node, 0, value)
+                    set_value(new_node, 0, value, dest_key)
                 else:
                     new_node[dest_key] = value
         all_nodes.append(new_node)
