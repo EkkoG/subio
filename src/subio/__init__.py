@@ -212,6 +212,12 @@ def main():
 
         log.logger.info(f"开始生成 {artifact['name']}")
         log.logger.info(f"{artifact['type']} 可用节点数量：{len(all_nodes_for_artifact)}")
+        # check if node names are duplicated
+        node_names = to_name(all_nodes_for_artifact)
+        if len(node_names) != len(set(node_names)):
+            log.logger.error(f"artifact {artifact['name']} 有重复的节点名")
+            return
+
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
         template = env.from_string(template_text_with_macro)
 
