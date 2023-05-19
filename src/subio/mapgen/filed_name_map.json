@@ -19,13 +19,17 @@
             "username": "uuid",
             "encrypt-method": "cipher",
             "udp-relay": "udp",
-            "server-cert-fingerprint-sha256": "fingerprint"
+            "server-cert-fingerprint-sha256": "fingerprint",
+            "ws-path": "ws_opts_path",
+            "ws-headers": "ws_opts_headers"
         }
     },
     "trojan": {
         "surge": {
             "udp-relay": "udp",
-            "server-cert-fingerprint-sha256": "fingerprint"
+            "server-cert-fingerprint-sha256": "fingerprint",
+            "ws-path": "ws_opts_path",
+            "ws-headers": "ws_opts_headers"
         }
     },
     "snell": {

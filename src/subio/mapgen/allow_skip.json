@@ -7,7 +7,9 @@
         "fast_open"
     ],
     "vmess": [
-        "alterid"
+        "alterid",
+        "ws_opts_max_early_data",
+        "ws_opts_early_data_header_name"
     ],
     "ss": [
         "plugin"

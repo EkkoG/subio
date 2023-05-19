@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+from functools import reduce
 from .common import common_transform_list
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
@@ -38,6 +39,20 @@ def parse(sub_text):
         if proxy['type'] == 'socks5-tls':
             proxy['type'] = 'socks5'
             proxy['tls'] = True
+        if proxy['type'] in ['vmess', 'trojan']:
+            if proxy['ws']:
+                proxy['network'] = 'ws'
+                def parse_headers(header_str):
+                    # ws-headers=X-Header-1:value|X-Header-2:value
+                    headers = {}
+                    for header in header_str.split('|'):
+                        k, v = header.split(':', 1)
+                        headers[k] = v
+                    return headers
+
+                proxy['ws-headers'] = parse_headers(proxy['ws-headers']) if 'ws-headers' in proxy else {}
+                proxy.pop('ws', None)
+                print()
 
     return all_proxies
 

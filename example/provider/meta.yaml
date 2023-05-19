@@ -159,12 +159,10 @@ proxies:
     uuid: d0529668-8835-11ec-a8a3-0242ac120002
     alterId: 32
     cipher: auto
-    udp: true
     tls: true
     fingerprint: xxxx
     client-fingerprint: chrome    # Available: "chrome","firefox","safari","ios","random", currently only support TLS transport in TCP/GRPC/WS/HTTP for VLESS/Vmess and trojan.
     skip-cert-verify: true
-    servername: example.com # priority over wss host
     network: ws
     ws-opts:
       path: /path

@@ -269,6 +269,20 @@
                     "policy": "unsupport"
                 }
             },
+            "skip_cert_verify": {
+                "surge": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                }
+            },
             "tls": {
                 "surge": {
                     "origin": "tls"
@@ -295,20 +309,6 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
-                }
-            },
-            "skip_cert_verify": {
-                "clash-meta": {
-                    "origin": "skip-cert-verify"
-                },
-                "clash": {
-                    "origin": "skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "skip-cert-verify"
-                },
-                "surge": {
-                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -436,6 +436,20 @@
             "udp": {
                 "surge": {
                     "origin": "udp-relay"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "skip_cert_verify": {
+                "surge": {
+                    "origin": "skip-cert-verify"
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -1181,46 +1195,78 @@
                     "origin": "cipher"
                 }
             },
-            "ws": {
+            "tls": {
                 "surge": {
-                    "origin": "ws"
-                },
-                "clash": {
-                    "policy": "unsupport"
+                    "origin": "tls"
                 },
                 "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "tls"
+                },
+                "clash": {
+                    "origin": "tls"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "tls"
                 }
             },
-            "ws_path": {
+            "skip_cert_verify": {
+                "surge": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                }
+            },
+            "ws_opts_path": {
                 "surge": {
                     "origin": "ws-path"
                 },
-                "clash": {
-                    "policy": "unsupport"
-                },
                 "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.path"
+                },
+                "clash": {
+                    "origin": "ws-opts.path"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.path"
                 }
             },
-            "ws_headers": {
+            "ws_opts_headers": {
                 "surge": {
-                    "origin": "ws-headers"
-                },
-                "clash": {
-                    "policy": "unsupport"
+                    "origin": "ws-headers",
+                    "any_key_value": true
                 },
                 "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
+                },
+                "clash": {
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
+                }
+            },
+            "network": {
+                "surge": {
+                    "origin": "network"
+                },
+                "clash-meta": {
+                    "origin": "network"
+                },
+                "clash": {
+                    "origin": "network"
+                },
+                "stash": {
+                    "origin": "network"
                 }
             },
             "alterid": {
@@ -1246,20 +1292,6 @@
                 },
                 "stash": {
                     "origin": "udp"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "tls": {
-                "clash-meta": {
-                    "origin": "tls"
-                },
-                "clash": {
-                    "origin": "tls"
-                },
-                "stash": {
-                    "origin": "tls"
                 },
                 "surge": {
                     "policy": "unsupport"
@@ -1299,20 +1331,6 @@
                     "policy": "allow_skip"
                 }
             },
-            "skip_cert_verify": {
-                "clash-meta": {
-                    "origin": "skip-cert-verify"
-                },
-                "clash": {
-                    "origin": "skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "skip-cert-verify"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
             "servername": {
                 "clash-meta": {
                     "origin": "servername"
@@ -1322,51 +1340,6 @@
                 },
                 "stash": {
                     "origin": "servername"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "network": {
-                "clash-meta": {
-                    "origin": "network"
-                },
-                "clash": {
-                    "origin": "network"
-                },
-                "stash": {
-                    "origin": "network"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_path": {
-                "clash-meta": {
-                    "origin": "ws-opts.path"
-                },
-                "clash": {
-                    "origin": "ws-opts.path"
-                },
-                "stash": {
-                    "origin": "ws-opts.path"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_headers": {
-                "clash-meta": {
-                    "origin": "ws-opts.headers",
-                    "any_key_value": true
-                },
-                "clash": {
-                    "origin": "ws-opts.headers",
-                    "any_key_value": true
-                },
-                "stash": {
-                    "origin": "ws-opts.headers",
-                    "any_key_value": true
                 },
                 "surge": {
                     "policy": "unsupport"
@@ -1383,7 +1356,7 @@
                     "origin": "ws-opts.max-early-data"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "ws_opts_early_data_header_name": {
@@ -1397,7 +1370,7 @@
                     "origin": "ws-opts.early-data-header-name"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "h2_opts_host": {
@@ -1581,45 +1554,34 @@
                     "origin": "password"
                 }
             },
-            "ws": {
-                "surge": {
-                    "origin": "ws"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_path": {
+            "ws_opts_path": {
                 "surge": {
                     "origin": "ws-path"
                 },
                 "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.path"
                 },
                 "stash": {
+                    "origin": "ws-opts.path"
+                },
+                "clash-meta": {
                     "policy": "unsupport"
                 }
             },
-            "ws_headers": {
+            "ws_opts_headers": {
                 "surge": {
-                    "origin": "ws-headers"
+                    "origin": "ws-headers",
+                    "any_key_value": true
                 },
                 "clash": {
-                    "policy": "unsupport"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
                 },
                 "stash": {
+                    "origin": "ws-opts.headers",
+                    "any_key_value": true
+                },
+                "clash-meta": {
                     "policy": "unsupport"
                 }
             },
@@ -1635,6 +1597,34 @@
                 },
                 "stash": {
                     "origin": "udp"
+                }
+            },
+            "skip_cert_verify": {
+                "surge": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                }
+            },
+            "network": {
+                "surge": {
+                    "origin": "network"
+                },
+                "clash-meta": {
+                    "origin": "network"
+                },
+                "clash": {
+                    "origin": "network"
+                },
+                "stash": {
+                    "origin": "network"
                 }
             },
             "client_fingerprint": {
@@ -1691,34 +1681,6 @@
                 "stash": {
                     "origin": "alpn",
                     "is_list": true
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "skip_cert_verify": {
-                "clash-meta": {
-                    "origin": "skip-cert-verify"
-                },
-                "clash": {
-                    "origin": "skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "skip-cert-verify"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "network": {
-                "clash-meta": {
-                    "origin": "network"
-                },
-                "clash": {
-                    "origin": "network"
-                },
-                "stash": {
-                    "origin": "network"
                 },
                 "surge": {
                     "policy": "unsupport"
@@ -1808,36 +1770,6 @@
                     "policy": "unsupport"
                 },
                 "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_path": {
-                "clash": {
-                    "origin": "ws-opts.path"
-                },
-                "stash": {
-                    "origin": "ws-opts.path"
-                },
-                "clash-meta": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ws_opts_headers": {
-                "clash": {
-                    "origin": "ws-opts.headers",
-                    "any_key_value": true
-                },
-                "stash": {
-                    "origin": "ws-opts.headers",
-                    "any_key_value": true
-                },
-                "clash-meta": {
                     "policy": "unsupport"
                 },
                 "surge": {
@@ -1953,6 +1885,20 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "skip_cert_verify": {
+                "surge": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash-meta": {
+                    "origin": "skip-cert-verify"
+                },
+                "stash": {
+                    "origin": "skip-cert-verify"
+                },
+                "clash": {
                     "policy": "unsupport"
                 }
             },
@@ -2089,20 +2035,6 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
-                }
-            },
-            "skip_cert_verify": {
-                "clash-meta": {
-                    "origin": "skip-cert-verify"
-                },
-                "stash": {
-                    "origin": "skip-cert-verify"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
                 }
             },
             "max_open_streams": {

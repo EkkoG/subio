@@ -1,5 +1,20 @@
 
 def tarnsform_to(nodes, dest, tansform_map):
+    to = _tarnsform_to(nodes, dest, tansform_map)
+    def fix(node):
+        if node['type'] in ['vmess', 'trojan']:
+            if 'network' in node and node['network'] == 'ws':
+                node['ws'] = True
+                node.pop('network', None)
+
+            if 'ws-headers' in node:
+                def dict_to_str(d):
+                    return '|'.join([f'{k}:{v}' for k, v in d.items()])
+                node['ws-headers'] = dict_to_str(node['ws-headers'])
+        return node
+    return list(map(lambda x: fix(x), to))
+
+def _tarnsform_to(nodes, dest, tansform_map):
     all_nodes = []
     for node in nodes:
         new_node = {}

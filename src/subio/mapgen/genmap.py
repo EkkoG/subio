@@ -28,9 +28,16 @@ def gen_with(proxies, ftype):
         def gen(proxy):
             mm = {}
             for k, v in proxy.items():
+                unify_key = k
+                if proxy_type in filed_name_map:
+                    if ftype in filed_name_map[proxy_type]:
+                        if k in filed_name_map[proxy_type][ftype]:
+                            unify_key = filed_name_map[proxy_type][ftype][k]
+                            if proxy_type == 'vmess':
+                                print()
                 if isinstance(v, dict):
                     if 'headers' in k.lower():
-                        mm[k] = {
+                        mm[unify_key] = {
                             "origin": k,
                             "any_key_value": True,
                         }
@@ -65,11 +72,6 @@ def gen_with(proxies, ftype):
                             "origin": k,
                         }
                 else:
-                    unify_key = k
-                    if proxy_type in filed_name_map:
-                        if ftype in filed_name_map[proxy_type]:
-                            if k in filed_name_map[proxy_type][ftype]:
-                                unify_key = filed_name_map[proxy_type][ftype][k]
                     mm[unify_key] = {
                         "origin": k,
                     }
@@ -90,6 +92,7 @@ def gen_surge_like(file, ftype):
     proxies = surge.parse(text)
 
     gen_with(proxies, ftype)
+    print()
 
 def gen():
     gen_surge_like('mapgen/surge.conf', 'surge')

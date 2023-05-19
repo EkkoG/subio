@@ -142,6 +142,13 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
+#### skip_cert_verify
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
+| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
 #### tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -156,13 +163,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### skip_cert_verify
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
-| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
-| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
 #### udp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -232,6 +232,13 @@
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | udp-relay |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### skip_cert_verify
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | skip-cert-verify |
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
@@ -533,27 +540,41 @@
 | Clash.Meta | ✅ 支持 | 无限制 | cipher |
 | Clash | ✅ 支持 | 无限制 | cipher |
 | Stash | ✅ 支持 | 无限制 | cipher |
-#### ws
+#### tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | ws |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### ws_path
+| Surge | ✅ 支持 | 无限制 | tls |
+| Clash.Meta | ✅ 支持 | 无限制 | tls |
+| Clash | ✅ 支持 | 无限制 | tls |
+| Stash | ✅ 支持 | 无限制 | tls |
+#### skip_cert_verify
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
+| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
+#### ws_opts_path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-path |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### ws_headers
+| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
+| Clash | ✅ 支持 | 无限制 | ws-opts.path |
+| Stash | ✅ 支持 | 无限制 | ws-opts.path |
+#### ws_opts_headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.headers |
+| Clash | ✅ 支持 | 无限制 | ws-opts.headers |
+| Stash | ✅ 支持 | 无限制 | ws-opts.headers |
+#### network
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | network |
+| Clash.Meta | ✅ 支持 | 无限制 | network |
+| Clash | ✅ 支持 | 无限制 | network |
+| Stash | ✅ 支持 | 无限制 | network |
 #### alterid
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -568,13 +589,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### tls
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | tls |
-| Clash | ✅ 支持 | 无限制 | tls |
-| Stash | ✅ 支持 | 无限制 | tls |
 #### fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -589,13 +603,6 @@
 | Clash.Meta | ✅ 支持 | chrome<br>ios<br>firefox<br>safari | client-fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### skip_cert_verify
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
-| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
-| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
 #### servername
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -603,38 +610,17 @@
 | Clash.Meta | ✅ 支持 | 无限制 | servername |
 | Clash | ✅ 支持 | 无限制 | servername |
 | Stash | ✅ 支持 | 无限制 | servername |
-#### network
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | network |
-| Clash | ✅ 支持 | 无限制 | network |
-| Stash | ✅ 支持 | 无限制 | network |
-#### ws_opts_path
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
-| Clash | ✅ 支持 | 无限制 | ws-opts.path |
-| Stash | ✅ 支持 | 无限制 | ws-opts.path |
-#### ws_opts_headers
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ws-opts.headers |
-| Clash | ✅ 支持 | 无限制 | ws-opts.headers |
-| Stash | ✅ 支持 | 无限制 | ws-opts.headers |
 #### ws_opts_max_early_data
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.max-early-data |
 | Clash | ✅ 支持 | 无限制 | ws-opts.max-early-data |
 | Stash | ✅ 支持 | 无限制 | ws-opts.max-early-data |
 #### ws_opts_early_data_header_name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
 | Clash | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
 | Stash | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
@@ -731,27 +717,20 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Clash | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
-#### ws
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | ws |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### ws_path
+#### ws_opts_path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-path |
 | Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### ws_headers
+| Clash | ✅ 支持 | 无限制 | ws-opts.path |
+| Stash | ✅ 支持 | 无限制 | ws-opts.path |
+#### ws_opts_headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
 | Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Clash | ✅ 支持 | 无限制 | ws-opts.headers |
+| Stash | ✅ 支持 | 无限制 | ws-opts.headers |
 #### udp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -759,6 +738,20 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
+#### skip_cert_verify
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
+| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
+#### network
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | network |
+| Clash.Meta | ✅ 支持 | 无限制 | network |
+| Clash | ✅ 支持 | 无限制 | network |
+| Stash | ✅ 支持 | 无限制 | network |
 #### client_fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -787,20 +780,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | alpn |
 | Clash | ✅ 支持 | 无限制 | alpn |
 | Stash | ✅ 支持 | 无限制 | alpn |
-#### skip_cert_verify
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
-| Clash | ✅ 支持 | 无限制 | skip-cert-verify |
-| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
-#### network
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | network |
-| Clash | ✅ 支持 | 无限制 | network |
-| Stash | ✅ 支持 | 无限制 | network |
 #### grpc_opts_grpc_service_name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -843,20 +822,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | flow-show |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### ws_opts_path
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ✅ 支持 | 无限制 | ws-opts.path |
-| Stash | ✅ 支持 | 无限制 | ws-opts.path |
-#### ws_opts_headers
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | ✅ 支持 | 无限制 | ws-opts.headers |
-| Stash | ✅ 支持 | 无限制 | ws-opts.headers |
 ## tuic 协议
 | 平台 | 是否支持 |
 | --- | --- |
@@ -915,6 +880,13 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
+#### skip_cert_verify
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
 #### ip
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -978,13 +950,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fast-open |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### skip_cert_verify
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
-| Clash | - | - | - |
-| Stash | ✅ 支持 | 无限制 | skip-cert-verify |
 #### max_open_streams
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
