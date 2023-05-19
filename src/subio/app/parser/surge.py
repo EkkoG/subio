@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from functools import reduce
-from .common import common_transform_list
+from .common import _origin_to_unify_trans
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
@@ -52,12 +52,11 @@ def parse(sub_text):
 
                 proxy['ws-headers'] = parse_headers(proxy['ws-headers']) if 'ws-headers' in proxy else {}
                 proxy.pop('ws', None)
-                print()
 
     return all_proxies
 
-def transform_list(lst, unify_map):
-    common_trans =  common_transform_list(lst, unify_map)
+def origin_to_unify_trans(lst, unify_map):
+    common_trans =  _origin_to_unify_trans(lst, unify_map)
     def fix(node):
         if node['type'] == 'ss':
             if 'plugin_opts_mode' in node:

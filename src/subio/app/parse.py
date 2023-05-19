@@ -9,11 +9,11 @@ def parse(config, origin, sub_text):
 
         unify_map = tools.build_map(origin)
 
-        return clash.transform_list(nodes, unify_map)
+        return clash.origin_to_unify_trans(nodes, unify_map)
     elif origin in surge_like:
         nodes = surge.parse(sub_text)
 
         unify_map = tools.build_map(origin)
 
-        return surge.transform_list(nodes, unify_map)
+        return surge.origin_to_unify_trans(nodes, unify_map)
     return []

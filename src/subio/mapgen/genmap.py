@@ -33,8 +33,6 @@ def gen_with(proxies, ftype):
                     if ftype in filed_name_map[proxy_type]:
                         if k in filed_name_map[proxy_type][ftype]:
                             unify_key = filed_name_map[proxy_type][ftype][k]
-                            if proxy_type == 'vmess':
-                                print()
                 if isinstance(v, dict):
                     if 'headers' in k.lower():
                         mm[unify_key] = {
@@ -92,7 +90,6 @@ def gen_surge_like(file, ftype):
     proxies = surge.parse(text)
 
     gen_with(proxies, ftype)
-    print()
 
 def gen():
     gen_surge_like('mapgen/surge.conf', 'surge')
@@ -147,6 +144,5 @@ def gen():
                 set_value(cache, 0, v)
             
 
-    # print()
     with open('map.json', 'w') as f:
         json.dump(cache, f, indent=4)
