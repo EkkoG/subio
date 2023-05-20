@@ -30,15 +30,18 @@ class NoAliasDumper(yaml.SafeDumper):
 
 
 def load_remote_resource(url):
-    file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
-    if not os.path.exists('cache'):
-        os.mkdir('cache')
-    if os.path.exists(file_name):
-        text = open(file_name, 'r').read()
+    if os.getenv('DEBUG'):
+        file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
+        if not os.path.exists('cache'):
+            os.mkdir('cache')
+        if os.path.exists(file_name):
+            text = open(file_name, 'r').read()
+        else:
+            text = requests.get(url).text
+            with open(file_name, 'w') as f:
+                f.write(text)
     else:
         text = requests.get(url).text
-        with open(file_name, 'w') as f:
-            f.write(text)
 
     return text
 

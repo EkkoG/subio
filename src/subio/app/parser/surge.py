@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from .common import _origin_to_unify_trans
-from subio.tools import set_value
+from subio.app.log import logger
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
@@ -31,7 +31,7 @@ def parse(sub_text):
                 if i < len(first_5_keys):
                     proxy[first_5_keys[i]] = all_comps[i]
                 else:
-                    print(f"Warning: {k} has too many components")
+                    logger.warning(f"{k} has too many components")
         if proxy['type'] == 'https':
             proxy['type'] = 'http'
             proxy['tls'] = True

@@ -1,3 +1,5 @@
+from subio.app.log import logger
+
 def _origin_to_unify_trans(lst, unify_map):
     unified_nodes = []
     for node in lst:
@@ -14,6 +16,6 @@ def _origin_to_unify_trans(lst, unify_map):
                         new_node[unify_map[node_type][k]] = v
             unified_nodes.append(new_node)
         else:
-            print(f"Warning: type {node_type} not found in map.json")
+            logger.warning(f"type {node_type} not found in map.json")
         
     return unified_nodes
