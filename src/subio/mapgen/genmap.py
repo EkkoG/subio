@@ -77,7 +77,7 @@ def gen_with(proxies, ftype):
             return mm
 
         for k, v in gen(p).items():
-            k = k.replace('-', '_').replace('.', '_').lower()
+            k = k.replace('.', '-').lower()
             if 'map' not in cache[proxy_type]:
                 cache[proxy_type]['map'] = {}
             if k not in cache[proxy_type]['map']:
@@ -117,7 +117,7 @@ def gen():
         # lower
         allow_skip_keys = list(map(lambda x: x.lower(), allow_skip_keys))
         # - to _
-        allow_skip_keys = list(map(lambda x: x.replace('-', '_'), allow_skip_keys))
+        # allow_skip_keys = list(map(lambda x: x.replace('-', '_'), allow_skip_keys))
         for k, v in config['map'].items():
             for platform in all_platform:
                 if platform not in v:

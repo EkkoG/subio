@@ -54,7 +54,7 @@ def parse(sub_text):
         if proxy['type'] == 'ss':
             if 'shadow-tls-password' in proxy:
                 proxy['plugin'] = 'shadow-tls'
-                proxy['plugin_opts_version'] = 2
+                proxy['plugin-opts-version'] = 2
         all_proxies.append(proxy)
 
     return all_proxies
@@ -63,7 +63,7 @@ def origin_to_unify_trans(lst, unify_map):
     common_trans =  _origin_to_unify_trans(lst, unify_map)
     def fix(node):
         if node['type'] == 'ss':
-            if 'plugin_opts_mode' in node:
+            if 'plugin-opts-mode' in node:
                 node['plugin'] = 'obfs'
         return node
     return list(map(fix, common_trans))

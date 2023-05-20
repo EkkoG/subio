@@ -2,34 +2,34 @@
     "common": [
         "smux",
         "fingerprint",
-        "client_fingerprint",
-        "ip_version",
-        "fast_open"
+        "client-fingerprint",
+        "ip-version",
+        "fast-open"
     ],
     "vmess": [
-        "alterid",
-        "ws_opts_max_early_data",
-        "ws_opts_early_data_header_name"
+        "alterId",
+        "ws-opts-max-early-data",
+        "ws-opts-early-data-header-name"
     ],
     "trojan": [
         "alpn"
     ],
     "ss": [
         "plugin",
-        "plugin_opts_fingerprint"
+        "plugin-opts-fingerprint"
     ],
     "vless": [
         "servername"
     ],
     "tuic": [
         "ip",
-        "heartbeat_interval",
-        "disable_sni",
-        "reduce_rtt",
-        "request_timeout",
-        "udp_relay_mode",
-        "congestion_controller",
-        "max_open_streams",
-        "max_udp_relay_packet_size"
+        "heartbeat-interval",
+        "disable-sni",
+        "reduce-rtt",
+        "request-timeout",
+        "udp-relay-mode",
+        "congestion-controller",
+        "max-open-streams",
+        "max-udp-relay-packet-size"
     ]
 }

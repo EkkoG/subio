@@ -9,11 +9,11 @@
         "surge": {
             "encrypt-method": "cipher",
             "udp-relay": "udp",
-            "obfs": "plugin_opts_mode",
-            "obfs-host": "plugin_opts_host",
-            "obfs-uri": "plugin_opts_uri",
-            "shadow-tls-password": "plugin_opts_password",
-            "shadow-tls-sni": "plugin_opts_host"
+            "obfs": "plugin-opts-mode",
+            "obfs-host": "plugin-opts-host",
+            "obfs-uri": "plugin-opts-uri",
+            "shadow-tls-password": "plugin-opts-password",
+            "shadow-tls-sni": "plugin-opts-host"
         }
     },
     "vmess": {
@@ -22,16 +22,16 @@
             "encrypt-method": "cipher",
             "udp-relay": "udp",
             "server-cert-fingerprint-sha256": "fingerprint",
-            "ws-path": "ws_opts_path",
-            "ws-headers": "ws_opts_headers"
+            "ws-path": "ws-opts-path",
+            "ws-headers": "ws-opts-headers"
         }
     },
     "trojan": {
         "surge": {
             "udp-relay": "udp",
             "server-cert-fingerprint-sha256": "fingerprint",
-            "ws-path": "ws_opts_path",
-            "ws-headers": "ws_opts_headers"
+            "ws-path": "ws-opts-path",
+            "ws-headers": "ws-opts-headers"
         }
     },
     "snell": {

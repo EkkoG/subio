@@ -34,7 +34,7 @@ with open('map.json', 'r') as f:
             markdown += '| --- | --- | --- | --- |\n'
 
             for platform in all_platform:
-                allow_values_when = info[platform].get('allow_values_when', [])
+                allow_values_when = info[platform].get('allow-values-when', [])
                 allow_values_str = ''
                 if len(allow_values_when) > 0:
                     for item in allow_values_when:

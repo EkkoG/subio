@@ -91,7 +91,7 @@
                     "origin": "password"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -147,7 +147,7 @@
                     "origin": "tls"
                 }
             },
-            "ip_version": {
+            "ip-version": {
                 "clash-meta": {
                     "origin": "ip-version"
                 },
@@ -255,7 +255,7 @@
                     "origin": "password"
                 }
             },
-            "skip_common_name_verify": {
+            "skip-common-name-verify": {
                 "surge": {
                     "origin": "skip-common-name-verify"
                 },
@@ -269,7 +269,7 @@
                     "policy": "unsupport"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -325,7 +325,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ip_version": {
+            "ip-version": {
                 "clash-meta": {
                     "origin": "ip-version"
                 },
@@ -447,7 +447,7 @@
                     "policy": "unsupport"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -461,7 +461,7 @@
                     "policy": "unsupport"
                 }
             },
-            "obfs_opts_mode": {
+            "obfs-opts-mode": {
                 "clash-meta": {
                     "origin": "obfs-opts.mode"
                 },
@@ -475,7 +475,7 @@
                     "policy": "unsupport"
                 }
             },
-            "obfs_opts_host": {
+            "obfs-opts-host": {
                 "clash-meta": {
                     "origin": "obfs-opts.host"
                 },
@@ -558,7 +558,7 @@
             "cipher": {
                 "surge": {
                     "origin": "encrypt-method",
-                    "allow_values": [
+                    "allow-values": [
                         "aes-128-gcm",
                         "aes-192-gcm",
                         "aes-256-gcm",
@@ -589,7 +589,7 @@
                 },
                 "clash-meta": {
                     "origin": "cipher",
-                    "allow_values": [
+                    "allow-values": [
                         "aes-128-gcm",
                         "aes-192-gcm",
                         "aes-256-gcm",
@@ -611,7 +611,7 @@
                 },
                 "clash": {
                     "origin": "cipher",
-                    "allow_values": [
+                    "allow-values": [
                         "aes-128-gcm",
                         "aes-192-gcm",
                         "aes-256-gcm",
@@ -630,7 +630,7 @@
                 },
                 "stash": {
                     "origin": "cipher",
-                    "allow_values": [
+                    "allow-values": [
                         "aes-128-gcm",
                         "aes-192-gcm",
                         "aes-256-gcm",
@@ -663,27 +663,27 @@
                     "origin": "password"
                 }
             },
-            "plugin_opts_mode": {
+            "plugin-opts-mode": {
                 "surge": {
                     "origin": "obfs",
-                    "allow_values": [
+                    "allow-values": [
                         "tls",
                         "http"
                     ]
                 },
                 "clash-meta": {
                     "origin": "plugin-opts.mode",
-                    "allow_values_when": [
+                    "allow-values-when": [
                         {
                             "when": "node['plugin'] == 'obfs'",
-                            "allow_values": [
+                            "allow-values": [
                                 "tls",
                                 "http"
                             ]
                         },
                         {
                             "when": "node['plugin'] == 'v2ray-plugin'",
-                            "allow_values": [
+                            "allow-values": [
                                 "websocket"
                             ]
                         }
@@ -691,17 +691,17 @@
                 },
                 "clash": {
                     "origin": "plugin-opts.mode",
-                    "allow_values_when": [
+                    "allow-values-when": [
                         {
                             "when": "node['plugin'] == 'obfs'",
-                            "allow_values": [
+                            "allow-values": [
                                 "tls",
                                 "http"
                             ]
                         },
                         {
                             "when": "node['plugin'] == 'v2ray-plugin'",
-                            "allow_values": [
+                            "allow-values": [
                                 "websocket"
                             ]
                         }
@@ -709,24 +709,24 @@
                 },
                 "stash": {
                     "origin": "plugin-opts.mode",
-                    "allow_values_when": [
+                    "allow-values-when": [
                         {
                             "when": "node['plugin'] == 'obfs'",
-                            "allow_values": [
+                            "allow-values": [
                                 "tls",
                                 "http"
                             ]
                         },
                         {
                             "when": "node['plugin'] == 'v2ray-plugin'",
-                            "allow_values": [
+                            "allow-values": [
                                 "websocket"
                             ]
                         }
                     ]
                 }
             },
-            "plugin_opts_host": {
+            "plugin-opts-host": {
                 "surge": {
                     "origin": "shadow-tls-sni"
                 },
@@ -740,7 +740,7 @@
                     "origin": "plugin-opts.host"
                 }
             },
-            "plugin_opts_uri": {
+            "plugin-opts-uri": {
                 "surge": {
                     "origin": "obfs-uri"
                 },
@@ -768,7 +768,7 @@
                     "origin": "udp"
                 }
             },
-            "plugin_opts_password": {
+            "plugin-opts-password": {
                 "surge": {
                     "origin": "shadow-tls-password"
                 },
@@ -785,14 +785,14 @@
             "plugin": {
                 "surge": {
                     "origin": "plugin",
-                    "allow_values": [
+                    "allow-values": [
                         "obfs",
                         "shadow-tls"
                     ]
                 },
                 "clash-meta": {
                     "origin": "plugin",
-                    "allow_values": [
+                    "allow-values": [
                         "obfs",
                         "v2ray-plugin",
                         "shadow-tls",
@@ -801,29 +801,29 @@
                 },
                 "clash": {
                     "origin": "plugin",
-                    "allow_values": [
+                    "allow-values": [
                         "obfs",
                         "v2ray-plugin"
                     ]
                 },
                 "stash": {
                     "origin": "plugin",
-                    "allow_values": [
+                    "allow-values": [
                         "obfs",
                         "v2ray-plugin"
                     ]
                 }
             },
-            "plugin_opts_version": {
+            "plugin-opts-version": {
                 "surge": {
-                    "origin": "plugin_opts_version",
-                    "allow_values": [
+                    "origin": "plugin-opts-version",
+                    "allow-values": [
                         "2"
                     ]
                 },
                 "clash-meta": {
                     "origin": "plugin-opts.version",
-                    "allow_values": [
+                    "allow-values": [
                         "1",
                         "2",
                         "3"
@@ -836,7 +836,7 @@
                     "policy": "unsupport"
                 }
             },
-            "udp_over_tcp": {
+            "udp-over-tcp": {
                 "clash-meta": {
                     "origin": "udp-over-tcp"
                 },
@@ -850,7 +850,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ip_version": {
+            "ip-version": {
                 "clash-meta": {
                     "origin": "ip-version"
                 },
@@ -864,7 +864,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "smux_enabled": {
+            "smux-enabled": {
                 "clash-meta": {
                     "origin": "smux.enabled"
                 },
@@ -878,7 +878,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_protocol": {
+            "smux-protocol": {
                 "clash-meta": {
                     "origin": "smux.protocol"
                 },
@@ -892,7 +892,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_max_connections": {
+            "smux-max-connections": {
                 "clash-meta": {
                     "origin": "smux.max-connections"
                 },
@@ -906,7 +906,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_min_streams": {
+            "smux-min-streams": {
                 "clash-meta": {
                     "origin": "smux.min-streams"
                 },
@@ -920,7 +920,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_max_streams": {
+            "smux-max-streams": {
                 "clash-meta": {
                     "origin": "smux.max-streams"
                 },
@@ -934,7 +934,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_padding": {
+            "smux-padding": {
                 "clash-meta": {
                     "origin": "smux.padding"
                 },
@@ -948,7 +948,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_statistic": {
+            "smux-statistic": {
                 "clash-meta": {
                     "origin": "smux.statistic"
                 },
@@ -962,7 +962,7 @@
                     "policy": "unsupport"
                 }
             },
-            "smux_only_tcp": {
+            "smux-only-tcp": {
                 "clash-meta": {
                     "origin": "smux.only-tcp"
                 },
@@ -976,7 +976,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_tls": {
+            "plugin-opts-tls": {
                 "clash-meta": {
                     "origin": "plugin-opts.tls"
                 },
@@ -990,7 +990,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_fingerprint": {
+            "plugin-opts-fingerprint": {
                 "clash-meta": {
                     "origin": "plugin-opts.fingerprint"
                 },
@@ -1004,7 +1004,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "plugin_opts_skip_cert_verify": {
+            "plugin-opts-skip-cert-verify": {
                 "clash-meta": {
                     "origin": "plugin-opts.skip-cert-verify"
                 },
@@ -1018,7 +1018,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_path": {
+            "plugin-opts-path": {
                 "clash-meta": {
                     "origin": "plugin-opts.path"
                 },
@@ -1032,7 +1032,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_mux": {
+            "plugin-opts-mux": {
                 "clash-meta": {
                     "origin": "plugin-opts.mux"
                 },
@@ -1046,7 +1046,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_headers": {
+            "plugin-opts-headers": {
                 "clash-meta": {
                     "origin": "plugin-opts.headers",
                     "any_key_value": true
@@ -1063,10 +1063,10 @@
                     "policy": "unsupport"
                 }
             },
-            "client_fingerprint": {
+            "client-fingerprint": {
                 "clash-meta": {
                     "origin": "client-fingerprint",
-                    "allow_values": [
+                    "allow-values": [
                         "chrome",
                         "ios",
                         "firefox",
@@ -1083,7 +1083,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "plugin_opts_version_hint": {
+            "plugin-opts-version-hint": {
                 "clash-meta": {
                     "origin": "plugin-opts.version-hint"
                 },
@@ -1097,7 +1097,7 @@
                     "policy": "unsupport"
                 }
             },
-            "plugin_opts_restls_script": {
+            "plugin-opts-restls-script": {
                 "clash-meta": {
                     "origin": "plugin-opts.restls-script"
                 },
@@ -1219,7 +1219,7 @@
                     "origin": "tls"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -1233,7 +1233,7 @@
                     "origin": "skip-cert-verify"
                 }
             },
-            "ws_opts_path": {
+            "ws-opts-path": {
                 "surge": {
                     "origin": "ws-path"
                 },
@@ -1247,7 +1247,7 @@
                     "origin": "ws-opts.path"
                 }
             },
-            "ws_opts_headers": {
+            "ws-opts-headers": {
                 "surge": {
                     "origin": "ws-headers",
                     "any_key_value": true
@@ -1321,10 +1321,10 @@
                     "policy": "allow_skip"
                 }
             },
-            "client_fingerprint": {
+            "client-fingerprint": {
                 "clash-meta": {
                     "origin": "client-fingerprint",
-                    "allow_values": [
+                    "allow-values": [
                         "chrome",
                         "ios",
                         "firefox",
@@ -1355,7 +1355,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ws_opts_max_early_data": {
+            "ws-opts-max-early-data": {
                 "clash-meta": {
                     "origin": "ws-opts.max-early-data"
                 },
@@ -1369,7 +1369,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "ws_opts_early_data_header_name": {
+            "ws-opts-early-data-header-name": {
                 "clash-meta": {
                     "origin": "ws-opts.early-data-header-name"
                 },
@@ -1383,7 +1383,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "h2_opts_host": {
+            "h2-opts-host": {
                 "clash-meta": {
                     "origin": "h2-opts.host"
                 },
@@ -1397,7 +1397,7 @@
                     "policy": "unsupport"
                 }
             },
-            "h2_opts_path": {
+            "h2-opts-path": {
                 "clash-meta": {
                     "origin": "h2-opts.path"
                 },
@@ -1411,7 +1411,7 @@
                     "policy": "unsupport"
                 }
             },
-            "http_opts_method": {
+            "http-opts-method": {
                 "clash-meta": {
                     "origin": "http-opts.method"
                 },
@@ -1425,7 +1425,7 @@
                     "policy": "unsupport"
                 }
             },
-            "http_opts_path": {
+            "http-opts-path": {
                 "clash-meta": {
                     "origin": "http-opts.path"
                 },
@@ -1439,7 +1439,7 @@
                     "policy": "unsupport"
                 }
             },
-            "http_opts_headers": {
+            "http-opts-headers": {
                 "clash-meta": {
                     "origin": "http-opts.headers",
                     "any_key_value": true
@@ -1456,7 +1456,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ip_version": {
+            "ip-version": {
                 "clash-meta": {
                     "origin": "ip-version"
                 },
@@ -1470,7 +1470,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "grpc_opts_grpc_service_name": {
+            "grpc-opts-grpc-service-name": {
                 "clash-meta": {
                     "origin": "grpc-opts.grpc-service-name"
                 },
@@ -1578,7 +1578,7 @@
                     "origin": "password"
                 }
             },
-            "ws_opts_path": {
+            "ws-opts-path": {
                 "surge": {
                     "origin": "ws-path"
                 },
@@ -1592,7 +1592,7 @@
                     "origin": "ws-opts.path"
                 }
             },
-            "ws_opts_headers": {
+            "ws-opts-headers": {
                 "surge": {
                     "origin": "ws-headers",
                     "any_key_value": true
@@ -1624,7 +1624,7 @@
                     "origin": "udp"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -1652,7 +1652,7 @@
                     "origin": "network"
                 }
             },
-            "client_fingerprint": {
+            "client-fingerprint": {
                 "clash-meta": {
                     "origin": "client-fingerprint"
                 },
@@ -1697,7 +1697,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "grpc_opts_grpc_service_name": {
+            "grpc-opts-grpc-service-name": {
                 "clash-meta": {
                     "origin": "grpc-opts.grpc-service-name"
                 },
@@ -1714,7 +1714,7 @@
             "flow": {
                 "clash-meta": {
                     "origin": "flow",
-                    "allow_values": [
+                    "allow-values": [
                         "xtls-rprx-direct",
                         "xtls-rprx-vision",
                         "xtls-rprx-origin"
@@ -1730,7 +1730,7 @@
                     "policy": "unsupport"
                 }
             },
-            "flow_show": {
+            "flow-show": {
                 "clash-meta": {
                     "origin": "flow-show"
                 },
@@ -1870,7 +1870,7 @@
                     "policy": "unsupport"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "surge": {
                     "origin": "skip-cert-verify"
                 },
@@ -1898,7 +1898,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "heartbeat_interval": {
+            "heartbeat-interval": {
                 "clash-meta": {
                     "origin": "heartbeat-interval"
                 },
@@ -1912,7 +1912,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "disable_sni": {
+            "disable-sni": {
                 "clash-meta": {
                     "origin": "disable-sni"
                 },
@@ -1926,7 +1926,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "reduce_rtt": {
+            "reduce-rtt": {
                 "clash-meta": {
                     "origin": "reduce-rtt"
                 },
@@ -1940,7 +1940,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "request_timeout": {
+            "request-timeout": {
                 "clash-meta": {
                     "origin": "request-timeout"
                 },
@@ -1954,10 +1954,10 @@
                     "policy": "allow_skip"
                 }
             },
-            "udp_relay_mode": {
+            "udp-relay-mode": {
                 "clash-meta": {
                     "origin": "udp-relay-mode",
-                    "allow_values": [
+                    "allow-values": [
                         "quic",
                         "native"
                     ]
@@ -1972,13 +1972,13 @@
                     "policy": "allow_skip"
                 }
             },
-            "congestion_controller": {
+            "congestion-controller": {
                 "clash-meta": {
                     "origin": "congestion-controller",
-                    "allow_values": [
+                    "allow-values": [
                         "bbr",
                         "cubic",
-                        "new_reno"
+                        "new-reno"
                     ]
                 },
                 "clash": {
@@ -1991,7 +1991,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "max_udp_relay_packet_size": {
+            "max-udp-relay-packet-size": {
                 "clash-meta": {
                     "origin": "max-udp-relay-packet-size"
                 },
@@ -2005,7 +2005,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "fast_open": {
+            "fast-open": {
                 "clash-meta": {
                     "origin": "fast-open"
                 },
@@ -2019,7 +2019,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "max_open_streams": {
+            "max-open-streams": {
                 "clash-meta": {
                     "origin": "max-open-streams"
                 },
@@ -2159,7 +2159,7 @@
                     "policy": "unsupport"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "clash-meta": {
                     "origin": "skip-cert-verify"
                 },
@@ -2187,10 +2187,10 @@
                     "policy": "allow_skip"
                 }
             },
-            "client_fingerprint": {
+            "client-fingerprint": {
                 "clash-meta": {
                     "origin": "client-fingerprint",
-                    "allow_values": [
+                    "allow-values": [
                         "chrome",
                         "firefox",
                         "safari",
@@ -2236,7 +2236,7 @@
                     "policy": "unsupport"
                 }
             },
-            "reality_opts_public_key": {
+            "reality-opts-public-key": {
                 "clash-meta": {
                     "origin": "reality-opts.public-key"
                 },
@@ -2250,7 +2250,7 @@
                     "policy": "unsupport"
                 }
             },
-            "reality_opts_short_id": {
+            "reality-opts-short-id": {
                 "clash-meta": {
                     "origin": "reality-opts.short-id"
                 },
@@ -2264,7 +2264,7 @@
                     "policy": "unsupport"
                 }
             },
-            "grpc_opts_grpc_service_name": {
+            "grpc-opts-grpc-service-name": {
                 "clash-meta": {
                     "origin": "grpc-opts.grpc-service-name"
                 },
@@ -2278,7 +2278,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ws_opts_path": {
+            "ws-opts-path": {
                 "clash-meta": {
                     "origin": "ws-opts.path"
                 },
@@ -2292,7 +2292,7 @@
                     "policy": "unsupport"
                 }
             },
-            "ws_opts_headers": {
+            "ws-opts-headers": {
                 "clash-meta": {
                     "origin": "ws-opts.headers",
                     "any_key_value": true
@@ -2308,7 +2308,7 @@
                     "policy": "unsupport"
                 }
             },
-            "h2_opts_host": {
+            "h2-opts-host": {
                 "stash": {
                     "origin": "h2-opts.host"
                 },
@@ -2322,7 +2322,7 @@
                     "policy": "unsupport"
                 }
             },
-            "h2_opts_path": {
+            "h2-opts-path": {
                 "stash": {
                     "origin": "h2-opts.path"
                 },
@@ -2422,6 +2422,20 @@
             },
             "auth_str": {
                 "clash-meta": {
+                    "origin": "auth_str"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "auth-str": {
+                "clash-meta": {
                     "origin": "auth-str"
                 },
                 "stash": {
@@ -2467,7 +2481,7 @@
             "protocol": {
                 "clash-meta": {
                     "origin": "protocol",
-                    "allow_values": [
+                    "allow-values": [
                         "udp",
                         "faketcp",
                         "wechat-video"
@@ -2475,7 +2489,7 @@
                 },
                 "stash": {
                     "origin": "protocol",
-                    "allow_values": [
+                    "allow-values": [
                         "udp",
                         "wechat-video"
                     ]
@@ -2529,7 +2543,7 @@
                     "policy": "unsupport"
                 }
             },
-            "skip_cert_verify": {
+            "skip-cert-verify": {
                 "clash-meta": {
                     "origin": "skip-cert-verify"
                 },
@@ -2545,6 +2559,20 @@
             },
             "recv_window_conn": {
                 "clash-meta": {
+                    "origin": "recv_window_conn"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "recv-window-conn": {
+                "clash-meta": {
                     "origin": "recv-window-conn"
                 },
                 "clash": {
@@ -2558,6 +2586,20 @@
                 }
             },
             "recv_window": {
+                "clash-meta": {
+                    "origin": "recv_window"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "recv-window": {
                 "clash-meta": {
                     "origin": "recv-window"
                 },
@@ -2586,6 +2628,20 @@
                 }
             },
             "ca_str": {
+                "clash-meta": {
+                    "origin": "ca_str"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "ca-str": {
                 "clash-meta": {
                     "origin": "ca-str"
                 },
@@ -2627,7 +2683,7 @@
                     "policy": "allow_skip"
                 }
             },
-            "fast_open": {
+            "fast-open": {
                 "clash-meta": {
                     "origin": "fast-open"
                 },
@@ -2779,7 +2835,7 @@
                     "policy": "unsupport"
                 }
             },
-            "obfs_param": {
+            "obfs-param": {
                 "clash-meta": {
                     "origin": "obfs-param"
                 },
@@ -2793,7 +2849,7 @@
                     "policy": "unsupport"
                 }
             },
-            "protocol_param": {
+            "protocol-param": {
                 "clash-meta": {
                     "origin": "protocol-param"
                 },
