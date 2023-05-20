@@ -39,10 +39,10 @@ with open('map.json', 'r') as f:
                 if len(allow_values_when) > 0:
                     for item in allow_values_when:
                         when = item['when']
-                        allow_values = '<br>'.join(item['allow_values'])
+                        allow_values = '<br>'.join(item['allow-values'])
                         allow_values_str += f'当{when}时<br>{allow_values}<br><br>'
-                elif 'allow_values' in info[platform]:
-                    allow_values_str = '<br>'.join(info[platform]['allow_values'])
+                elif 'allow-values' in info[platform]:
+                    allow_values_str = '<br>'.join(info[platform]['allow-values'])
 
                 if len(allow_values_str) == 0:
                     allow_values_str = '无限制'

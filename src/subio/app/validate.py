@@ -33,12 +33,12 @@ def validation(nodes, dest, validate_map):
                 return True
 
             # allow_values
-            conditions = get_map_value('allow_values_when', k, [])
+            conditions = get_map_value('allow-values-when', k, [])
             if len(conditions) > 0:
                 for condition in conditions:
                     when = condition['when']
                     if eval(when):
-                        allow_values = condition['allow_values']
+                        allow_values = condition['allow-values']
                         if not value_allowed(allow_values, v):
                             return False
 
@@ -46,7 +46,7 @@ def validation(nodes, dest, validate_map):
             if not value_allowed(allow_values, v):
                 return False
 
-            if get_map_value('any_key_value', k, False) and not isinstance(v, dict):
+            if get_map_value('any-key-value', k, False) and not isinstance(v, dict):
                 log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                 return False
 

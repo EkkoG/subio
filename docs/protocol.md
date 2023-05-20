@@ -49,7 +49,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Clash | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
@@ -77,7 +77,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | tls |
 | Clash | ✅ 支持 | 无限制 | tls |
 | Stash | ✅ 支持 | 无限制 | tls |
-#### ip_version
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
@@ -135,14 +135,14 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Clash | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
-#### skip_common_name_verify
+#### skip-common-name-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-common-name-verify |
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
@@ -170,7 +170,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### ip_version
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
@@ -235,21 +235,21 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### obfs_opts_mode
+#### obfs-opts-mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | obfs-opts.mode |
 | Clash | ✅ 支持 | 无限制 | obfs-opts.mode |
 | Stash | ✅ 支持 | 无限制 | obfs-opts.mode |
-#### obfs_opts_host
+#### obfs-opts-host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
@@ -307,21 +307,21 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Clash | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
-#### plugin_opts_mode
+#### plugin-opts-mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | tls<br>http | obfs |
 | Clash.Meta | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
 | Clash | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
 | Stash | ✅ 支持 | 当node['plugin'] == 'obfs'时<br>tls<br>http<br><br>当node['plugin'] == 'v2ray-plugin'时<br>websocket<br><br> | plugin-opts.mode |
-#### plugin_opts_host
+#### plugin-opts-host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | shadow-tls-sni |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.host |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.host |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.host |
-#### plugin_opts_uri
+#### plugin-opts-uri
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | obfs-uri |
@@ -335,7 +335,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### plugin_opts_password
+#### plugin-opts-password
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | shadow-tls-password |
@@ -349,140 +349,140 @@
 | Clash.Meta | ✅ 支持 | obfs<br>v2ray-plugin<br>shadow-tls<br>restls | plugin |
 | Clash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
 | Stash | ✅ 支持 | obfs<br>v2ray-plugin | plugin |
-#### plugin_opts_version
+#### plugin-opts-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 2 | plugin_opts_version |
+| Surge | ✅ 支持 | 2 | plugin-opts-version |
 | Clash.Meta | ✅ 支持 | 1<br>2<br>3 | plugin-opts.version |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### udp_over_tcp
+#### udp-over-tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | udp-over-tcp |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### ip_version
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ip-version |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### smux_enabled
+#### smux-enabled
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.enabled |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_protocol
+#### smux-protocol
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.protocol |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_max_connections
+#### smux-max-connections
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.max-connections |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_min_streams
+#### smux-min-streams
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.min-streams |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_max_streams
+#### smux-max-streams
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.max-streams |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_padding
+#### smux-padding
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.padding |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_statistic
+#### smux-statistic
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.statistic |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### smux_only_tcp
+#### smux-only-tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | smux.only-tcp |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### plugin_opts_tls
+#### plugin-opts-tls
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.tls |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.tls |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.tls |
-#### plugin_opts_fingerprint
+#### plugin-opts-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### plugin_opts_skip_cert_verify
+#### plugin-opts-skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.skip-cert-verify |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.skip-cert-verify |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.skip-cert-verify |
-#### plugin_opts_path
+#### plugin-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.path |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.path |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.path |
-#### plugin_opts_mux
+#### plugin-opts-mux
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.mux |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.mux |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.mux |
-#### plugin_opts_headers
+#### plugin-opts-headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.headers |
 | Clash | ✅ 支持 | 无限制 | plugin-opts.headers |
 | Stash | ✅ 支持 | 无限制 | plugin-opts.headers |
-#### client_fingerprint
+#### client-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | chrome<br>ios<br>firefox<br>safari | client-fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### plugin_opts_version_hint
+#### plugin-opts-version-hint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.version-hint |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### plugin_opts_restls_script
+#### plugin-opts-restls-script
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
@@ -547,21 +547,21 @@
 | Clash.Meta | ✅ 支持 | 无限制 | tls |
 | Clash | ✅ 支持 | 无限制 | tls |
 | Stash | ✅ 支持 | 无限制 | tls |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
 | Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
 | Clash | ✅ 支持 | 无限制 | skip-cert-verify |
 | Stash | ✅ 支持 | 无限制 | skip-cert-verify |
-#### ws_opts_path
+#### ws-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-path |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
 | Clash | ✅ 支持 | 无限制 | ws-opts.path |
 | Stash | ✅ 支持 | 无限制 | ws-opts.path |
-#### ws_opts_headers
+#### ws-opts-headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
@@ -596,7 +596,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### client_fingerprint
+#### client-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
@@ -610,63 +610,63 @@
 | Clash.Meta | ✅ 支持 | 无限制 | servername |
 | Clash | ✅ 支持 | 无限制 | servername |
 | Stash | ✅ 支持 | 无限制 | servername |
-#### ws_opts_max_early_data
+#### ws-opts-max-early-data
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.max-early-data |
 | Clash | ✅ 支持 | 无限制 | ws-opts.max-early-data |
 | Stash | ✅ 支持 | 无限制 | ws-opts.max-early-data |
-#### ws_opts_early_data_header_name
+#### ws-opts-early-data-header-name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
 | Clash | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
 | Stash | ✅ 支持 | 无限制 | ws-opts.early-data-header-name |
-#### h2_opts_host
+#### h2-opts-host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | h2-opts.host |
 | Clash | ✅ 支持 | 无限制 | h2-opts.host |
 | Stash | ✅ 支持 | 无限制 | h2-opts.host |
-#### h2_opts_path
+#### h2-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | h2-opts.path |
 | Clash | ✅ 支持 | 无限制 | h2-opts.path |
 | Stash | ✅ 支持 | 无限制 | h2-opts.path |
-#### http_opts_method
+#### http-opts-method
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | http-opts.method |
 | Clash | ✅ 支持 | 无限制 | http-opts.method |
 | Stash | ✅ 支持 | 无限制 | http-opts.method |
-#### http_opts_path
+#### http-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | http-opts.path |
 | Clash | ✅ 支持 | 无限制 | http-opts.path |
 | Stash | ✅ 支持 | 无限制 | http-opts.path |
-#### http_opts_headers
+#### http-opts-headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | http-opts.headers |
 | Clash | ✅ 支持 | 无限制 | http-opts.headers |
 | Stash | ✅ 支持 | 无限制 | http-opts.headers |
-#### ip_version
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ip-version |
 | Clash | ⚠️ 不支持，但是可以跳过 | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### grpc_opts_grpc_service_name
+#### grpc-opts-grpc-service-name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
@@ -724,14 +724,14 @@
 | Clash.Meta | ✅ 支持 | 无限制 | password |
 | Clash | ✅ 支持 | 无限制 | password |
 | Stash | ✅ 支持 | 无限制 | password |
-#### ws_opts_path
+#### ws-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-path |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
 | Clash | ✅ 支持 | 无限制 | ws-opts.path |
 | Stash | ✅ 支持 | 无限制 | ws-opts.path |
-#### ws_opts_headers
+#### ws-opts-headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | ws-headers |
@@ -745,7 +745,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
@@ -759,7 +759,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | network |
 | Clash | ✅ 支持 | 无限制 | network |
 | Stash | ✅ 支持 | 无限制 | network |
-#### client_fingerprint
+#### client-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
@@ -780,7 +780,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | alpn |
 | Clash | ✅ 支持 | 无限制 | alpn |
 | Stash | ✅ 支持 | 无限制 | alpn |
-#### grpc_opts_grpc_service_name
+#### grpc-opts-grpc-service-name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
@@ -794,7 +794,7 @@
 | Clash.Meta | ✅ 支持 | xtls-rprx-direct<br>xtls-rprx-vision<br>xtls-rprx-origin | flow |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### flow_show
+#### flow-show
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
@@ -866,7 +866,7 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | skip-cert-verify |
@@ -880,63 +880,63 @@
 | Clash.Meta | ✅ 支持 | 无限制 | ip |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### heartbeat_interval
+#### heartbeat-interval
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | heartbeat-interval |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### disable_sni
+#### disable-sni
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | disable-sni |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### reduce_rtt
+#### reduce-rtt
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | reduce-rtt |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### request_timeout
+#### request-timeout
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | request-timeout |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### udp_relay_mode
+#### udp-relay-mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | quic<br>native | udp-relay-mode |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### congestion_controller
+#### congestion-controller
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
-| Clash.Meta | ✅ 支持 | bbr<br>cubic<br>new_reno | congestion-controller |
+| Clash.Meta | ✅ 支持 | bbr<br>cubic<br>new-reno | congestion-controller |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### max_udp_relay_packet_size
+#### max-udp-relay-packet-size
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | max-udp-relay-packet-size |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### fast_open
+#### fast-open
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | fast-open |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### max_open_streams
+#### max-open-streams
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ⚠️ 不支持，但是可以跳过 | - | - |
@@ -1008,7 +1008,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | flow |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | flow |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1022,7 +1022,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### client_fingerprint
+#### client-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1043,49 +1043,49 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### reality_opts_public_key
+#### reality-opts-public-key
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | reality-opts.public-key |
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### reality_opts_short_id
+#### reality-opts-short-id
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | reality-opts.short-id |
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### grpc_opts_grpc_service_name
+#### grpc-opts-grpc-service-name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | grpc-opts.grpc-service-name |
-#### ws_opts_path
+#### ws-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.path |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | ws-opts.path |
-#### ws_opts_headers
+#### ws-opts-headers
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ws-opts.headers |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | ws-opts.headers |
-#### h2_opts_host
+#### h2-opts-host
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | h2-opts.host |
-#### h2_opts_path
+#### h2-opts-path
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1140,6 +1140,13 @@
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | auth_str |
+| Clash | - | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### auth-str
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | auth-str |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | auth-str |
@@ -1185,7 +1192,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | sni |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | sni |
-#### skip_cert_verify
+#### skip-cert-verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1196,10 +1203,24 @@
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | recv_window_conn |
+| Clash | - | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### recv-window-conn
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | recv-window-conn |
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
 #### recv_window
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | - | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | recv_window |
+| Clash | - | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### recv-window
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1214,6 +1235,13 @@
 | Clash | - | - | - |
 | Stash | ❌ 不支持 | - | - |
 #### ca_str
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | - | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ca_str |
+| Clash | - | - | - |
+| Stash | ❌ 不支持 | - | - |
+#### ca-str
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1234,7 +1262,7 @@
 | Clash.Meta | ✅ 支持 | 无限制 | fingerprint |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
-#### fast_open
+#### fast-open
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
@@ -1313,14 +1341,14 @@
 | Clash.Meta | ✅ 支持 | 无限制 | protocol |
 | Clash | ✅ 支持 | 无限制 | protocol |
 | Stash | ✅ 支持 | 无限制 | protocol |
-#### obfs_param
+#### obfs-param
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | obfs-param |
 | Clash | ✅ 支持 | 无限制 | obfs-param |
 | Stash | ✅ 支持 | 无限制 | obfs-param |
-#### protocol_param
+#### protocol-param
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | - | - | - |

@@ -1049,15 +1049,15 @@
             "plugin-opts-headers": {
                 "clash-meta": {
                     "origin": "plugin-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash": {
                     "origin": "plugin-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "stash": {
                     "origin": "plugin-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "surge": {
                     "policy": "unsupport"
@@ -1250,19 +1250,19 @@
             "ws-opts-headers": {
                 "surge": {
                     "origin": "ws-headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash-meta": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "stash": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 }
             },
             "network": {
@@ -1442,15 +1442,15 @@
             "http-opts-headers": {
                 "clash-meta": {
                     "origin": "http-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash": {
                     "origin": "http-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "stash": {
                     "origin": "http-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "surge": {
                     "policy": "unsupport"
@@ -1595,19 +1595,19 @@
             "ws-opts-headers": {
                 "surge": {
                     "origin": "ws-headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash-meta": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "stash": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 }
             },
             "udp": {
@@ -1683,15 +1683,15 @@
             "alpn": {
                 "clash-meta": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "clash": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "stash": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "surge": {
                     "policy": "allow_skip"
@@ -1846,11 +1846,11 @@
                 },
                 "clash-meta": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "stash": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2295,11 +2295,11 @@
             "ws-opts-headers": {
                 "clash-meta": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "stash": {
                     "origin": "ws-opts.headers",
-                    "any_key_value": true
+                    "any-key-value": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2465,11 +2465,11 @@
             "alpn": {
                 "clash-meta": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "stash": {
                     "origin": "alpn",
-                    "is_list": true
+                    "is-list": true
                 },
                 "clash": {
                     "policy": "unsupport"

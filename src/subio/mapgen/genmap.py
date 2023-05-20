@@ -38,33 +38,33 @@ def gen_with(proxies, ftype):
                     if 'headers' in k.lower():
                         mm[unify_key] = {
                             "origin": k,
-                            "any_key_value": True,
+                            "any-key-value": True,
                         }
                     else:
                         for k1, v1 in gen(v).items():
                             mm[f'{k}.{k1}'] = {
                                 "origin": f'{k}.{k1}',
                             }
-                            if v1.get('any_key_value'):
-                                mm[f'{k}.{k1}']['any_key_value'] = True
+                            if v1.get('any-key-value'):
+                                mm[f'{k}.{k1}']['any-key-value'] = True
                 elif isinstance(v, list):
                     # check if all items are str
                     if all(isinstance(i, str) for i in v):
                         mm[k] = {
                             "origin": k,
-                            "is_list": True,
+                            "is-list": True,
                         }
                     #TODO: support list of dict
                     elif all(isinstance(i, dict) for i in v):
                         mm[k] = {
                             "origin": k,
-                            "is_list": True,
+                            "is-list": True,
                         }
                         for i in v:
                             for k1, v1 in gen(i).items():
                                 mm[f'{k}.{k1}'] = {
                                     "origin": f'{k}.{k1}',
-                                    "dict_in_list": True,
+                                    "dict-in-list": True,
                                 }
                     else:
                         mm[k] = {
