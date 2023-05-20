@@ -1550,6 +1550,20 @@
                     "origin": "port"
                 }
             },
+            "sni": {
+                "surge": {
+                    "origin": "sni"
+                },
+                "clash-meta": {
+                    "origin": "sni"
+                },
+                "clash": {
+                    "origin": "sni"
+                },
+                "stash": {
+                    "origin": "sni"
+                }
+            },
             "password": {
                 "surge": {
                     "origin": "password"
@@ -1666,20 +1680,6 @@
                     "policy": "allow_skip"
                 }
             },
-            "sni": {
-                "clash-meta": {
-                    "origin": "sni"
-                },
-                "clash": {
-                    "origin": "sni"
-                },
-                "stash": {
-                    "origin": "sni"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
             "alpn": {
                 "clash-meta": {
                     "origin": "alpn",
@@ -1694,7 +1694,7 @@
                     "is_list": true
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "grpc_opts_grpc_service_name": {
