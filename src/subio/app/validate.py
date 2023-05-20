@@ -50,6 +50,7 @@ def validation(nodes, dest, validate_map):
                 log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                 return False
 
+        log.logger.info(f"目标平台 {platform_map[dest]} 可以使用 {node['name']}")
         return True
 
 
