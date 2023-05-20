@@ -258,8 +258,11 @@ def main():
                     upload_info['description'] = 'subio'
                     upload_info['file_name'] = artifact['name']
                     upload_info['content'] = final_config
-                    upload.upload(upload_info)
-                    log.logger.info(f"上传 {artifact['name']} 到 {upload_info['to']} 成功")
+                    success = upload.upload(upload_info)
+                    if success:
+                        log.logger.info(f"上传 {artifact['name']} 到 {upload_info['to']} 成功")
+                    else:
+                        log.logger.error(f"上传 {artifact['name']} 到 {upload_info['to']} 失败")
 
 
 if __name__ == '__main__':

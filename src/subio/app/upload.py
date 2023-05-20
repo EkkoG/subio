@@ -1,16 +1,10 @@
 import requests
+from subio.app.log import logger
+
 def upload(args):
     to = args['to']
     if to == 'gist':
-        pass
-#     curl -L \
-#   -X PATCH \
-#   -H "Accept: application/vnd.github+json" \
-#   -H "Authorization: Bearer <YOUR-TOKEN>"\
-#   -H "X-GitHub-Api-Version: 2022-11-28" \
-#   https://api.github.com/gists/GIST_ID \
-#   -d '{"description":"An updated gist description","files":{"README.md":{"content":"Hello World from GitHub"}}}'
-        requests.patch(
+        resp = requests.patch(
             f"https://api.github.com/gists/{args['id']}",
             headers={
                 "Accept": "application/vnd.github+json",
@@ -26,5 +20,10 @@ def upload(args):
                 }
             }
         )
+        if resp.status_code == 200:
+            return True
+        logger.info(resp.text)
+        return False
     else:
         print(f"Unknown upload destination: {to}")
+        return False

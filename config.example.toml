@@ -41,6 +41,10 @@ template = "clash.yaml"
 providers = ["自建节点", "主力机场"]
 [artifact.options]
 work = true
+[[artifact.upload]]
+to = "gist"
+token = "ghp_xxx"
+id = "62xxx"
 
 
 # 远程 ruleset 定义，可以在模板中使用，如 render(remote_ruleset.telegram, "DIRECT")
