@@ -15,12 +15,21 @@
         "alpn"
     ],
     "ss": [
-        "plugin"
+        "plugin",
+        "plugin_opts_fingerprint"
+    ],
+    "vless": [
+        "servername"
     ],
     "tuic": [
+        "ip",
+        "heartbeat_interval",
         "disable_sni",
         "reduce_rtt",
         "request_timeout",
-        "udp_relay_mode"
+        "udp_relay_mode",
+        "congestion_controller",
+        "max_open_streams",
+        "max_udp_relay_packet_size"
     ]
 }

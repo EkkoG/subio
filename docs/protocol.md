@@ -436,10 +436,10 @@
 #### plugin_opts_fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | plugin-opts.fingerprint |
-| Clash | ❌ 不支持 | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### plugin_opts_skip_cert_verify
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -838,6 +838,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | port |
+#### sni
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | sni |
+| Clash.Meta | ✅ 支持 | 无限制 | sni |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | sni |
 #### token
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -869,17 +876,17 @@
 #### ip
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | ip |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### heartbeat_interval
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | heartbeat-interval |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### disable_sni
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -911,17 +918,17 @@
 #### congestion_controller
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | bbr<br>cubic<br>new_reno | congestion-controller |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### max_udp_relay_packet_size
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | max-udp-relay-packet-size |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### fast_open
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -932,17 +939,10 @@
 #### max_open_streams
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
+| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | max-open-streams |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
-#### sni
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | sni |
-| Clash | - | - | - |
-| Stash | ✅ 支持 | 无限制 | sni |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 ## vless 协议
 | 平台 | 是否支持 |
 | --- | --- |
@@ -1000,7 +1000,7 @@
 | Surge | - | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | servername |
 | Clash | - | - | - |
-| Stash | ❌ 不支持 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### flow
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |

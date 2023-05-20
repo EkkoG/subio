@@ -995,13 +995,13 @@
                     "origin": "plugin-opts.fingerprint"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "plugin_opts_skip_cert_verify": {
@@ -1812,6 +1812,20 @@
                     "policy": "unsupport"
                 }
             },
+            "sni": {
+                "surge": {
+                    "origin": "sni"
+                },
+                "clash-meta": {
+                    "origin": "sni"
+                },
+                "stash": {
+                    "origin": "sni"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
             "token": {
                 "surge": {
                     "origin": "token"
@@ -1875,13 +1889,13 @@
                     "origin": "ip"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "heartbeat_interval": {
@@ -1889,13 +1903,13 @@
                     "origin": "heartbeat-interval"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "disable_sni": {
@@ -1968,13 +1982,13 @@
                     ]
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "max_udp_relay_packet_size": {
@@ -1982,13 +1996,13 @@
                     "origin": "max-udp-relay-packet-size"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "fast_open": {
@@ -2010,27 +2024,13 @@
                     "origin": "max-open-streams"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "sni": {
-                "clash-meta": {
-                    "origin": "sni"
-                },
-                "stash": {
-                    "origin": "sni"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             }
         }
@@ -2136,13 +2136,13 @@
                     "origin": "servername"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 },
                 "surge": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
                 }
             },
             "flow": {
