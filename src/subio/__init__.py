@@ -206,12 +206,16 @@ def main():
     map_path = '/'.join(__file__.split('/')[:-1]) + '/map.json'
     validate_map = json.load(open(map_path, 'r'))
     for artifact in config['artifact']:
+        log.logger.info(f"开始转换 {artifact['name']}，类型为 {artifact['type']}")
+        log.logger.info(f"使用 {artifact['providers']} 作为数据源")
+        log.logger.info(f"使用 {artifact['template']} 作为模板")
+        log.logger.info("过滤可用节点")
         all_nodes_for_artifact = filter_nodes(all_nodes, artifact, validate_map)
+        log.logger.info(f"可用节点数量：{len(all_nodes_for_artifact)}")
 
         template_text_with_macro = build_template(artifact)
 
         log.logger.info(f"开始生成 {artifact['name']}")
-        log.logger.info(f"{artifact['type']} 可用节点数量：{len(all_nodes_for_artifact)}")
         # check if node names are duplicated
         node_names = to_name(all_nodes_for_artifact)
         if len(node_names) != len(set(node_names)):
