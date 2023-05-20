@@ -93,10 +93,10 @@ def gen_surge_like(file, ftype):
     gen_with(proxies, ftype)
 
 def gen():
-    gen_surge_like('mapgen/surge.conf', 'surge')
-    gen_clash('mapgen/meta.yaml', 'clash-meta')
-    gen_clash('mapgen/clash.yaml', 'clash')
-    gen_clash('mapgen/stash.yaml', 'stash')
+    gen_surge_like('mapgen/config/surge.conf', 'surge')
+    gen_clash('mapgen/config/meta.yaml', 'clash-meta')
+    gen_clash('mapgen/config/clash.yaml', 'clash')
+    gen_clash('mapgen/config/stash.yaml', 'stash')
 
     for ptype, config in cache.items():
         all_platform = ['clash', 'clash-meta', 'stash', 'surge']
