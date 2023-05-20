@@ -26,6 +26,12 @@ def validation(nodes, dest, validate_map):
             if get_map_value('policy', k, None) == 'allow_skip':
                 pass
 
+            def value_allowed(allow_values, v):
+                if len(allow_values) > 0 and (v not in allow_values and str(v) not in allow_values):
+                    log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
+                    return False
+                return True
+
             # allow_values
             conditions = get_map_value('allow_values_when', k, [])
             if len(conditions) > 0:
@@ -33,13 +39,11 @@ def validation(nodes, dest, validate_map):
                     when = condition['when']
                     if eval(when):
                         allow_values = condition['allow_values']
-                        if len(allow_values) > 0 and v not in allow_values:
-                            log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} {k} 字段的值为 {v}，忽略 {node['name']}")
+                        if not value_allowed(allow_values, v):
                             return False
 
             allow_values = get_map_value('allow_values', k, [])
-            if len(allow_values) > 0 and v not in allow_values:
-                log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
+            if not value_allowed(allow_values, v):
                 return False
 
             if get_map_value('any_key_value', k, False) and not isinstance(v, dict):
