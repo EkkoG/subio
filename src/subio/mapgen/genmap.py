@@ -131,11 +131,16 @@ def gen():
                             'policy': 'unsupport',
                         }
 
-        with open('mapgen/allow_values.json') as f:
-            allow_values_obj = json.load(f)
+    with open('mapgen/allow_values.json') as f:
+        allow_values_obj = json.load(f)
+        # merge cache and allow_values_obj only if the key is not in cache
+        def merge(obj, allow_values_obj):
             for k, v in allow_values_obj.items():
-                set_value(cache, 0, v, k)
-            
+                if k not in obj:
+                    obj[k] = v
+                elif isinstance(v, dict):
+                    merge(obj[k], v)
+        merge(cache, allow_values_obj)
 
     with open('map.json', 'w') as f:
         json.dump(cache, f, indent=4)

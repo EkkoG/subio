@@ -1,199 +1,289 @@
 {
-    "ss.map.cipher.clash-meta.allow_values": [
-        "aes-128-gcm",
-        "aes-192-gcm",
-        "aes-256-gcm",
-        "aes-128-cfb",
-        "aes-192-cfb",
-        "aes-256-cfb",
-        "aes-128-ctr",
-        "aes-192-ctr",
-        "aes-256-ctr",
-        "rc4-md5",
-        "chacha20-ietf",
-        "xchacha20",
-        "chacha20-ietf-poly1305",
-        "xchacha20-ietf-poly1305",
-        "2022-blake3-aes-128-gcm",
-        "2022-blake3-aes-256-gcm",
-        "2022-blake3-chacha20-poly1305"
-    ],
-    "ss.map.cipher.stash.allow_values": [
-        "aes-128-gcm",
-        "aes-192-gcm",
-        "aes-256-gcm",
-        "aes-128-cfb",
-        "aes-192-cfb",
-        "aes-256-cfb",
-        "aes-128-ctr",
-        "aes-192-ctr",
-        "aes-256-ctr",
-        "rc4-md5",
-        "chacha20",
-        "chacha20-ietf",
-        "xchacha20",
-        "chacha20-ietf-poly1305",
-        "xchacha20-ietf-poly1305"
-    ],
-    "ss.map.cipher.surge.allow_values": [
-        "aes-128-gcm",
-        "aes-192-gcm",
-        "aes-256-gcm",
-        "chacha20-ietf-poly1305",
-        "xchacha20-ietf-poly1305",
-        "rc4",
-        "rc4-md5",
-        "aes-128-cfb",
-        "aes-192-cfb",
-        "aes-256-cfb",
-        "aes-128-ctr",
-        "aes-192-ctr",
-        "aes-256-ctr",
-        "bf-cfb",
-        "camellia-128-cfb",
-        "camellia-192-cfb",
-        "camellia-256-cfb",
-        "cast5-cfb",
-        "des-cfb",
-        "idea-cfb",
-        "rc2-cfb",
-        "seed-cfb",
-        "salsa20",
-        "chacha20",
-        "chacha20-ietf",
-        "none"
-    ],
-    "ss.map.cipher.clash.allow_values": [
-        "aes-128-gcm",
-        "aes-192-gcm",
-        "aes-256-gcm",
-        "aes-128-cfb",
-        "aes-192-cfb",
-        "aes-256-cfb",
-        "aes-128-ctr",
-        "aes-192-ctr",
-        "aes-256-ctr",
-        "rc4-md5",
-        "chacha20-ietf",
-        "xchacha20",
-        "chacha20-ietf-poly1305",
-        "xchacha20-ietf-poly1305"
-    ],
-    "ss.map.plugin.stash.allow_values": [
-        "obfs",
-        "v2ray-plugin"
-    ],
-    "ss.map.plugin.clash.allow_values": [
-        "obfs",
-        "v2ray-plugin"
-    ],
-    "ss.map.plugin.surge.allow_values": [
-        "obfs",
-        "shadow-tls"
-    ],
-    "ss.map.plugin_opts_version.clash-meta.allow_values": [
-        "1",
-        "2",
-        "3"
-    ],
-    "ss.map.plugin_opts_version.surge.allow_values": [
-        "2"
-    ],
-    "ss.map.plugin.clash-meta.allow_values": [
-        "obfs",
-        "v2ray-plugin",
-        "shadow-tls",
-        "restls"
-    ],
-    "ss.map.plugin_opts_mode.surge.allow_values": [
-        "tls",
-        "http"
-    ],
-    "ss.map.plugin_opts_mode.stash.allow_values_when": [
-        {
-            "when": "node['plugin'] == 'obfs'",
-            "allow_values": [
-                "tls",
-                "http"
-            ]
-        },
-        {
-            "when": "node['plugin'] == 'v2ray-plugin'",
-            "allow_values": [
-                "websocket"
-            ]
+    "ss": {
+        "map": {
+            "cipher": {
+                "clash-meta": {
+                    "allow_values": [
+                        "aes-128-gcm",
+                        "aes-192-gcm",
+                        "aes-256-gcm",
+                        "aes-128-cfb",
+                        "aes-192-cfb",
+                        "aes-256-cfb",
+                        "aes-128-ctr",
+                        "aes-192-ctr",
+                        "aes-256-ctr",
+                        "rc4-md5",
+                        "chacha20-ietf",
+                        "xchacha20",
+                        "chacha20-ietf-poly1305",
+                        "xchacha20-ietf-poly1305",
+                        "2022-blake3-aes-128-gcm",
+                        "2022-blake3-aes-256-gcm",
+                        "2022-blake3-chacha20-poly1305"
+                    ]
+                },
+                "stash": {
+                    "allow_values": [
+                        "aes-128-gcm",
+                        "aes-192-gcm",
+                        "aes-256-gcm",
+                        "aes-128-cfb",
+                        "aes-192-cfb",
+                        "aes-256-cfb",
+                        "aes-128-ctr",
+                        "aes-192-ctr",
+                        "aes-256-ctr",
+                        "rc4-md5",
+                        "chacha20",
+                        "chacha20-ietf",
+                        "xchacha20",
+                        "chacha20-ietf-poly1305",
+                        "xchacha20-ietf-poly1305"
+                    ]
+                },
+                "surge": {
+                    "allow_values": [
+                        "aes-128-gcm",
+                        "aes-192-gcm",
+                        "aes-256-gcm",
+                        "chacha20-ietf-poly1305",
+                        "xchacha20-ietf-poly1305",
+                        "rc4",
+                        "rc4-md5",
+                        "aes-128-cfb",
+                        "aes-192-cfb",
+                        "aes-256-cfb",
+                        "aes-128-ctr",
+                        "aes-192-ctr",
+                        "aes-256-ctr",
+                        "bf-cfb",
+                        "camellia-128-cfb",
+                        "camellia-192-cfb",
+                        "camellia-256-cfb",
+                        "cast5-cfb",
+                        "des-cfb",
+                        "idea-cfb",
+                        "rc2-cfb",
+                        "seed-cfb",
+                        "salsa20",
+                        "chacha20",
+                        "chacha20-ietf",
+                        "none"
+                    ]
+                },
+                "clash": {
+                    "allow_values": [
+                        "aes-128-gcm",
+                        "aes-192-gcm",
+                        "aes-256-gcm",
+                        "aes-128-cfb",
+                        "aes-192-cfb",
+                        "aes-256-cfb",
+                        "aes-128-ctr",
+                        "aes-192-ctr",
+                        "aes-256-ctr",
+                        "rc4-md5",
+                        "chacha20-ietf",
+                        "xchacha20",
+                        "chacha20-ietf-poly1305",
+                        "xchacha20-ietf-poly1305"
+                    ]
+                }
+            },
+            "plugin": {
+                "stash": {
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
+                },
+                "clash": {
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin"
+                    ]
+                },
+                "surge": {
+                    "allow_values": [
+                        "obfs",
+                        "shadow-tls"
+                    ]
+                },
+                "clash-meta": {
+                    "allow_values": [
+                        "obfs",
+                        "v2ray-plugin",
+                        "shadow-tls",
+                        "restls"
+                    ]
+                }
+            },
+            "plugin_opts_version": {
+                "clash-meta": {
+                    "allow_values": [
+                        "1",
+                        "2",
+                        "3"
+                    ]
+                },
+                "surge": {
+                    "allow_values": [
+                        "2"
+                    ]
+                }
+            },
+            "plugin_opts_mode": {
+                "surge": {
+                    "allow_values": [
+                        "tls",
+                        "http"
+                    ]
+                },
+                "stash": {
+                    "allow_values_when": [
+                        {
+                            "when": "node['plugin'] == 'obfs'",
+                            "allow_values": [
+                                "tls",
+                                "http"
+                            ]
+                        },
+                        {
+                            "when": "node['plugin'] == 'v2ray-plugin'",
+                            "allow_values": [
+                                "websocket"
+                            ]
+                        }
+                    ]
+                },
+                "clash": {
+                    "allow_values_when": [
+                        {
+                            "when": "node['plugin'] == 'obfs'",
+                            "allow_values": [
+                                "tls",
+                                "http"
+                            ]
+                        },
+                        {
+                            "when": "node['plugin'] == 'v2ray-plugin'",
+                            "allow_values": [
+                                "websocket"
+                            ]
+                        }
+                    ]
+                },
+                "clash-meta": {
+                    "allow_values_when": [
+                        {
+                            "when": "node['plugin'] == 'obfs'",
+                            "allow_values": [
+                                "tls",
+                                "http"
+                            ]
+                        },
+                        {
+                            "when": "node['plugin'] == 'v2ray-plugin'",
+                            "allow_values": [
+                                "websocket"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "client_fingerprint": {
+                "clash-meta": {
+                    "allow_values": [
+                        "chrome",
+                        "ios",
+                        "firefox",
+                        "safari"
+                    ]
+                }
+            }
         }
-    ],
-    "ss.map.plugin_opts_mode.clash.allow_values_when": [
-        {
-            "when": "node['plugin'] == 'obfs'",
-            "allow_values": [
-                "tls",
-                "http"
-            ]
-        },
-        {
-            "when": "node['plugin'] == 'v2ray-plugin'",
-            "allow_values": [
-                "websocket"
-            ]
+    },
+    "vmess": {
+        "map": {
+            "client_fingerprint": {
+                "clash-meta": {
+                    "allow_values": [
+                        "chrome",
+                        "ios",
+                        "firefox",
+                        "safari"
+                    ]
+                }
+            }
         }
-    ],
-    "ss.map.plugin_opts_mode.clash-meta.allow_values_when": [
-        {
-            "when": "node['plugin'] == 'obfs'",
-            "allow_values": [
-                "tls",
-                "http"
-            ]
-        },
-        {
-            "when": "node['plugin'] == 'v2ray-plugin'",
-            "allow_values": [
-                "websocket"
-            ]
+    },
+    "vless": {
+        "map": {
+            "client_fingerprint": {
+                "clash-meta": {
+                    "allow_values": [
+                        "chrome",
+                        "firefox",
+                        "safari",
+                        "random",
+                        "none"
+                    ]
+                }
+            }
         }
-    ],
-    "ss.map.client_fingerprint.clash-meta.allow_values": [
-        "chrome",
-        "ios",
-        "firefox",
-        "safari"
-    ],
-    "vmess.map.client_fingerprint.clash-meta.allow_values": [
-        "chrome",
-        "ios",
-        "firefox",
-        "safari"
-    ],
-    "vless.map.client_fingerprint.clash-meta.allow_values": [
-        "chrome",
-        "firefox",
-        "safari",
-        "random",
-        "none"
-    ],
-    "trojan.map.flow.clash-meta.allow_values": [
-        "xtls-rprx-direct",
-        "xtls-rprx-vision",
-        "xtls-rprx-origin"
-    ],
-    "hysteria.map.protocol.clash-meta.allow_values": [
-        "udp",
-        "faketcp",
-        "wechat-video"
-    ],
-    "hysteria.map.protocol.stash.allow_values": [
-        "udp",
-        "wechat-video"
-    ],
-    "tuic.map.udp_relay_mode.clash-meta.allow_values": [
-        "quic",
-        "native"
-    ],
-    "tuic.map.congestion_controller.clash-meta.allow_values": [
-        "bbr",
-        "cubic",
-        "new_reno"
-    ]
+    },
+    "trojan": {
+        "map": {
+            "flow": {
+                "clash-meta": {
+                    "allow_values": [
+                        "xtls-rprx-direct",
+                        "xtls-rprx-vision",
+                        "xtls-rprx-origin"
+                    ]
+                }
+            }
+        }
+    },
+    "hysteria": {
+        "map": {
+            "protocol": {
+                "clash-meta": {
+                    "allow_values": [
+                        "udp",
+                        "faketcp",
+                        "wechat-video"
+                    ]
+                },
+                "stash": {
+                    "allow_values": [
+                        "udp",
+                        "wechat-video"
+                    ]
+                }
+            }
+        }
+    },
+    "tuic": {
+        "map": {
+            "udp_relay_mode": {
+                "clash-meta": {
+                    "allow_values": [
+                        "quic",
+                        "native"
+                    ]
+                }
+            },
+            "congestion_controller": {
+                "clash-meta": {
+                    "allow_values": [
+                        "bbr",
+                        "cubic",
+                        "new_reno"
+                    ]
+                }
+            }
+        }
+    }
 }
