@@ -43,6 +43,7 @@ providers = ["自建节点", "主力机场"]
 work = true
 [[artifact.upload]]
 to = "gist"
+# https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
 token = "ghp_xxx"
 id = "62xxx"
 
