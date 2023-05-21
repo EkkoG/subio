@@ -13,8 +13,7 @@ def validation(nodes, dest, validate_map):
         if node_type not in validate_map:
             log.logger.warning(f"目标平台 {platform_map[dest]} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
-        ahh = get_protocol_value('policy', None)
-        if ahh == 'unsupport':
+        if get_protocol_value('policy', None) == 'unsupport':
             log.logger.warning(f"目标平台 {platform_map[dest]} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
 
