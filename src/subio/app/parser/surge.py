@@ -26,7 +26,7 @@ def parse(sub_text):
                 elif v == 'false':
                     v = False
 
-                node[k] = v
+                node[k.strip()] = v.strip() if isinstance(v, str) else v
             else:
                 if i < len(first_5_keys):
                     node[first_5_keys[i]] = all_comps[i]
@@ -55,6 +55,35 @@ def parse(sub_text):
             if 'shadow-tls-password' in node:
                 node['plugin'] = 'shadow-tls'
                 node['plugin-opts-version'] = 2
+        if node['type'] == 'wireguard':
+            section_name = node['section-name']
+            for k, v in config[f"WireGuard {section_name}"].items():
+                node[k] = v
+            if 'peer' in node:
+                # peer = (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235) , (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235)
+                peer_str = node['peer'].replace(' ', '')
+                peers = []
+                for peer in peer_str.split('),'):
+                    peer_dict = {}
+                    last_key = ''
+                    for peer_comp in peer.replace('(', '').replace(')', '').split('='):
+                        if ',' not in peer_comp:
+                            last_key = peer_comp
+                        else:
+                            k, v = peer_comp.rsplit(',', 1)
+                            peer_dict[last_key] = k
+                            last_key = v
+
+                    for k, v in peer_dict.items():
+                        v = v.replace('"', '')
+                        if ',' in v:
+                            peer_dict[k] = v.split(',')
+                    peers.append(peer_dict)
+                node['peer'] = peers
+
+                        
+
+            node.pop('section-name', None)
         all_proxies.append(node)
 
     return all_proxies
