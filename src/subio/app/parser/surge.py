@@ -57,7 +57,7 @@ def parse(sub_text):
                 node['plugin-opts-version'] = 2
         if node['type'] == 'wireguard':
             section_name = node['section-name']
-            for k, v in config[f"WireGuard {section_name}"].items():
+            for k, v in config[section_name].items():
                 node[k] = v
             if 'peer' in node:
                 # peer = (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235) , (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235)
