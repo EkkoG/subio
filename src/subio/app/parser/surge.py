@@ -10,7 +10,7 @@ def parse(sub_text):
     config.read_string(sub_text)
     all_proxies = []
     for k, v in config['Proxy'].items():
-        proxy = {
+        node = {
             "name": k,
         }
         all_comps = v.split(',')
@@ -26,21 +26,21 @@ def parse(sub_text):
                 elif v == 'false':
                     v = False
 
-                proxy[k] = v
+                node[k] = v
             else:
                 if i < len(first_5_keys):
-                    proxy[first_5_keys[i]] = all_comps[i]
+                    node[first_5_keys[i]] = all_comps[i]
                 else:
                     logger.warning(f"{k} has too many components")
-        if proxy['type'] == 'https':
-            proxy['type'] = 'http'
-            proxy['tls'] = True
-        if proxy['type'] == 'socks5-tls':
-            proxy['type'] = 'socks5'
-            proxy['tls'] = True
-        if proxy['type'] in ['vmess', 'trojan']:
-            if proxy['ws']:
-                proxy['network'] = 'ws'
+        if node['type'] == 'https':
+            node['type'] = 'http'
+            node['tls'] = True
+        if node['type'] == 'socks5-tls':
+            node['type'] = 'socks5'
+            node['tls'] = True
+        if node['type'] in ['vmess', 'trojan']:
+            if node['ws']:
+                node['network'] = 'ws'
                 def parse_headers(header_str):
                     # ws-headers=X-Header-1:value|X-Header-2:value
                     headers = {}
@@ -49,13 +49,13 @@ def parse(sub_text):
                         headers[k] = v
                     return headers
 
-                proxy['ws-headers'] = parse_headers(proxy['ws-headers']) if 'ws-headers' in proxy else {}
-                proxy.pop('ws', None)
-        if proxy['type'] == 'ss':
-            if 'shadow-tls-password' in proxy:
-                proxy['plugin'] = 'shadow-tls'
-                proxy['plugin-opts-version'] = 2
-        all_proxies.append(proxy)
+                node['ws-headers'] = parse_headers(node['ws-headers']) if 'ws-headers' in node else {}
+                node.pop('ws', None)
+        if node['type'] == 'ss':
+            if 'shadow-tls-password' in node:
+                node['plugin'] = 'shadow-tls'
+                node['plugin-opts-version'] = 2
+        all_proxies.append(node)
 
     return all_proxies
 
