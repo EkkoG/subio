@@ -215,6 +215,9 @@ def main():
         log.logger.info("过滤可用节点")
         all_nodes_for_artifact = filter_nodes(all_nodes, artifact, validate_map)
         log.logger.info(f"可用节点数量：{len(all_nodes_for_artifact)}")
+        if len(all_nodes_for_artifact) == 0:
+            log.logger.error(f"artifact {artifact['name']} 没有可用节点")
+            return
 
         template_text_with_macro = build_template(artifact)
 
