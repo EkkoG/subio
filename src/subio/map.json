@@ -2035,6 +2035,468 @@
             }
         }
     },
+    "wireguard": {
+        "protocol": {
+            "surge": {},
+            "clash-meta": {},
+            "clash": {
+                "policy": "unsupport"
+            },
+            "stash": {
+                "policy": "unsupport"
+            }
+        },
+        "map": {
+            "name": {
+                "surge": {
+                    "origin": "name"
+                },
+                "clash-meta": {
+                    "origin": "name"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "type": {
+                "surge": {
+                    "origin": "type"
+                },
+                "clash-meta": {
+                    "origin": "type"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "private-key": {
+                "surge": {
+                    "origin": "private-key"
+                },
+                "clash-meta": {
+                    "origin": "private-key"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "self-ip": {
+                "surge": {
+                    "origin": "self-ip"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "self-ip-v6": {
+                "surge": {
+                    "origin": "self-ip-v6"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "dns-server": {
+                "surge": {
+                    "origin": "dns-server"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "prefer-ipv6": {
+                "surge": {
+                    "origin": "prefer-ipv6"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "mtu": {
+                "surge": {
+                    "origin": "mtu"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peer": {
+                "surge": {
+                    "origin": "peer",
+                    "is-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peer-public-key": {
+                "surge": {
+                    "origin": "peer.public-key",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peer-allowed-ips": {
+                "surge": {
+                    "origin": "peer.allowed-ips",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "peer-endpoint": {
+                "surge": {
+                    "origin": "peer.endpoint",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "port": {
+                "clash-meta": {
+                    "origin": "port"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "ip": {
+                "clash-meta": {
+                    "origin": "ip"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "ipv6": {
+                "clash-meta": {
+                    "origin": "ipv6"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "public-key": {
+                "clash-meta": {
+                    "origin": "public-key"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "pre-shared-key": {
+                "clash-meta": {
+                    "origin": "pre-shared-key"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "udp": {
+                "clash-meta": {
+                    "origin": "udp"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "reserved": {
+                "clash-meta": {
+                    "origin": "reserved"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "remote-dns-resolve": {
+                "clash-meta": {
+                    "origin": "remote-dns-resolve"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "dns": {
+                "clash-meta": {
+                    "origin": "dns",
+                    "is-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers": {
+                "clash-meta": {
+                    "origin": "peers",
+                    "is-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-server": {
+                "clash-meta": {
+                    "origin": "peers.server",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-port": {
+                "clash-meta": {
+                    "origin": "peers.port",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-ip": {
+                "clash-meta": {
+                    "origin": "peers.ip",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-ipv6": {
+                "clash-meta": {
+                    "origin": "peers.ipv6",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-public-key": {
+                "clash-meta": {
+                    "origin": "peers.public-key",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-pre-shared-key": {
+                "clash-meta": {
+                    "origin": "peers.pre-shared-key",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-allowed_ips": {
+                "clash-meta": {
+                    "origin": "peers.allowed_ips",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
+            "peers-reserved": {
+                "clash-meta": {
+                    "origin": "peers.reserved",
+                    "dict-in-list": true
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            }
+        }
+    },
     "vless": {
         "protocol": {
             "clash-meta": {},

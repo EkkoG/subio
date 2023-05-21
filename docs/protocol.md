@@ -943,6 +943,232 @@
 | Clash.Meta | ✅ 支持 | 无限制 | max-open-streams |
 | Clash | - | - | - |
 | Stash | ⚠️ 不支持，但是可以跳过 | - | - |
+## wireguard 协议
+| 平台 | 是否支持 |
+| --- | --- |
+| Surge | ✅ |
+| Clash.Meta | ✅ |
+| Clash | ❌ |
+| Stash | ❌ |
+
+### 字段
+#### name
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | name |
+| Clash.Meta | ✅ 支持 | 无限制 | name |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### type
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | type |
+| Clash.Meta | ✅ 支持 | 无限制 | type |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### private-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | private-key |
+| Clash.Meta | ✅ 支持 | 无限制 | private-key |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### self-ip
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | self-ip |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### self-ip-v6
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | self-ip-v6 |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### dns-server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | dns-server |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### prefer-ipv6
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | prefer-ipv6 |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### mtu
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | mtu |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peer
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | peer |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peer-public-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | peer.public-key |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peer-allowed-ips
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | peer.allowed-ips |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peer-endpoint
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | peer.endpoint |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### port
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | port |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### ip
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ip |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### ipv6
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | ipv6 |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### public-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | public-key |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### pre-shared-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | pre-shared-key |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### udp
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | udp |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### reserved
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | reserved |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### remote-dns-resolve
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | remote-dns-resolve |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### dns
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | dns |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.server |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-port
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.port |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-ip
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.ip |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-ipv6
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.ipv6 |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-public-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.public-key |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-pre-shared-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.pre-shared-key |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-allowed_ips
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.allowed_ips |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peers-reserved
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | peers.reserved |
+| Clash | - | - | - |
+| Stash | - | - | - |
 ## vless 协议
 | 平台 | 是否支持 |
 | --- | --- |

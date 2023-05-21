@@ -16,6 +16,11 @@
             "shadow-tls-sni": "plugin-opts-host"
         }
     },
+    "wireguard": {
+        "surge": {
+            "peer": "peers"
+        }
+    },
     "vmess": {
         "surge": {
             "username": "uuid",
