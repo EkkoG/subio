@@ -124,13 +124,20 @@ def render_ruleset_generic(text, policy):
 
 def render_ruleset_in_clash(text, policy=None):
     lines = text.split('\n')
-    lines = list(filter(lambda x: 'USER-AGENT' not in x, lines))
+    def filter_rules(rule):
+        if 'USER-AGENT' in rule:
+            log.logger.warning(f"发现 USER-AGENT 规则，已经自动过滤，规则：{rule}")
+            return False
+        if ',no-resolve' in rule:
+            log.logger.warning(f"发现 no-resolve 规则，已经自动过滤，规则：{rule}")
+            return False
+        return True
+    lines = list(filter(filter_rules, lines))
 
     def trans(line):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
-        line = line.replace(',no-resolve', '')
         if policy is None:
             return f"- {line}"
         return f"- {line},{policy}"
