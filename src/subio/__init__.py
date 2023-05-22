@@ -89,7 +89,7 @@ def to_json(data):
 
     return json.dumps(data, ensure_ascii=False)
 
-def to_surge_like(data):
+def to_surge(data):
     def trans(node):
         # filter out surge anonymous keys exsits in node
         all_exist_anonymoues_keys = list(filter(lambda x: x in node, surge_anonymous_keys))
@@ -229,6 +229,9 @@ def main():
             return
 
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
+        env.filters['to_surge'] = to_surge
+        env.filters['to_yaml'] = to_yaml
+        env.filters['to_json'] = to_json
         template = env.from_string(template_text_with_macro)
 
         def get_proxies():
@@ -245,14 +248,11 @@ def main():
 
         env.globals['get_proxies'] = get_proxies
         env.globals['get_proxies_names'] = get_proxies_names
-        env.globals['to_yaml'] = to_yaml
-        env.globals['to_json'] = to_json
         env.globals['to_name'] = to_name
         env.globals['to_name_list'] = to_name_list
         env.globals['filter'] = all_filters
         env.globals['render'] = render
         env.globals['remote_ruleset'] = remote_ruleset
-        env.globals['to_surge_like'] = to_surge_like
 
         if not os.path.exists('dist'):
             os.mkdir('dist')

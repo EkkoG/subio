@@ -1,10 +1,10 @@
 
 proxies:
-{{ to_yaml(get_proxies()) }}
+{{ get_proxies() | to_yaml }}
 proxy-groups:
 - type: select
   name: 默认出口
-  proxies: {{ to_json(to_name(get_proxies())) }}
+  proxies: {{ to_name(get_proxies()) | to_json }}
 
 - type: select
   name: 手动选择2
