@@ -87,6 +87,10 @@ def wrap_with_jinja2_macro(text, name):
             return rule
         if rule.strip().startswith('//'):
             return rule
+        if '//' in rule:
+            rule_comment = rule.split('//')[1]
+            rule = rule.split('//')[0].strip()
+            return rule + ',{{ rule }} // ' + rule_comment
         if ',no-resolve' in rule:
             return rule.replace(',no-resolve', ',{{ rule }},no-resolve')
         return rule + ',{{ rule }}'
