@@ -29,7 +29,10 @@ class NoAliasDumper(yaml.SafeDumper):
         return True
 
 
-def load_remote_resource(url):
+def load_remote_resource(url, ua=None):
+    headers = {
+        'User-Agent': ua 
+        }
     if os.getenv('DEBUG'):
         file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
         if not os.path.exists('cache'):
@@ -37,45 +40,69 @@ def load_remote_resource(url):
         if os.path.exists(file_name):
             text = open(file_name, 'r').read()
         else:
-            text = requests.get(url).text
+            text = requests.get(url, headers=headers).text
             with open(file_name, 'w') as f:
                 f.write(text)
     else:
-        text = requests.get(url).text
+        text = requests.get(url, headers=headers).text
 
     return text
 
+def rename_node(node, rename):
+    if rename.get('add-prefix'):
+        node['name'] = rename['add-prefix'] + node['name']
+    if rename.get('add-suffix'):
+        node['name'] = rename['add-suffix'] + node['name']
+    if rename.get('replace'):
+        for r in rename['replace']:
+            node['name'] = node['name'].replace(r['old'], r['new'])
+
+    return node
 
 def load_nodes(config):
     all_nodes = {}
     for provider in config['provider']:
-        if provider['type'] == 'custom':
-            all_custom_nodes = provider['nodes']
-            all_nodes[provider['name']] = all_custom_nodes
-            log.logger.info(f'加载自定义节点成功, 数量：{len(all_custom_nodes)}')
+        log.logger.info(f"加载 {provider['name']} 节点")
+        if 'file' in provider:
+            sub_text = open(f"provider/{provider['file']}", 'r').read()
         else:
-            log.logger.info(f"加载 {provider['name']} 节点")
-            if 'file' in provider:
-                sub_text = open(f"provider/{provider['file']}", 'r').read()
-            else:
-                sub_text = load_remote_resource(provider['url'])
-            log.logger.info(f"加载 {provider['name']} 节点成功, 开始解析")
+            sub_text = load_remote_resource(provider['url'], provider.get('user-agent', None))
+        log.logger.info(f"加载 {provider['name']} 节点成功, 开始解析")
+        try:
             all_nodes[provider['name']] = parse.parse(config, provider['type'], sub_text)
-            log.logger.info(f"解析 {provider['name']} 节点成功，数量：{len(all_nodes[provider['name']])}")
+        except Exception as e:
+            log.logger.error(f"解析 {provider['name']} 节点失败，错误信息：{e}")
+            exit(1)
+        if provider.get('rename'):
+            all_nodes[provider['name']] = list(map(lambda x: rename_node(x, provider['rename']), all_nodes[provider['name']]))
+        log.logger.info(f"解析 {provider['name']} 节点成功，数量：{len(all_nodes[provider['name']])}")
     log.logger.info(f"加载节点成功，总数量：{reduce(lambda x, y: x + len(y), all_nodes.values(), 0)}")
     return all_nodes
 
+def wrap_with_jinja2_macro(text, name):
+    def append_rule(rule):
+        if rule.strip() == '':
+            return ''
+        if rule.strip().startswith('#'):
+            return rule
+        if rule.strip().startswith('//'):
+            return rule
+        if ',no-resolve' in rule:
+            return rule.replace(',no-resolve', ',{{ rule }},no-resolve')
+        return rule + ',{{ rule }}'
+    text = '\n'.join(map(append_rule, text.split('\n')))
+    return "{{% macro {}(rule) -%}}\n{}\n{{%- endmacro -%}}".format(
+                f"remote_{name}", text)
 
 def load_rulset(config):
     all_rule_set = {}
     for ruleset in config['ruleset']:
-        all_rule_set[ruleset['name']] = load_remote_resource(ruleset['url'])
+        all_rule_set[ruleset['name']] = wrap_with_jinja2_macro(load_remote_resource(ruleset['url'], ruleset.get('user-agent', None)), ruleset['name'])
     return all_rule_set
 
 
 def to_yaml(data):
     return yaml.dump(data, Dumper=NoAliasDumper, allow_unicode=True)
-
 
 def to_name_list(data):
     return ', '.join(map(lambda x: x['name'], data))
@@ -111,25 +138,21 @@ def to_name(data):
     return list(map(lambda x: x['name'], data))
 
 
-def render_ruleset_generic(text, policy):
+def render_ruleset_generic(text):
     lines = text.split('\n')
 
     def trans(line):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
-        return f"{line},{policy}"
     return '\n'.join(map(trans, lines))
 
 
-def render_ruleset_in_clash(text, policy=None):
+def render_ruleset_in_clash(text):
     lines = text.split('\n')
     def filter_rules(rule):
         if 'USER-AGENT' in rule:
-            log.logger.warning(f"发现 USER-AGENT 规则，已经自动过滤，规则：{rule}")
-            return False
-        if ',no-resolve' in rule:
-            log.logger.warning(f"发现 no-resolve 规则，已经自动过滤，规则：{rule}")
+            log.logger.warning(f"发现 USER-AGENT 规则，已经自动忽略，规则：{rule}")
             return False
         return True
     lines = list(filter(filter_rules, lines))
@@ -138,9 +161,7 @@ def render_ruleset_in_clash(text, policy=None):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
-        if policy is None:
-            return f"- {line}"
-        return f"- {line},{policy}"
+        return f"- {line}"
     return '\n'.join(map(trans, lines))
 
 def filter_nodes(nodes, artifact, validate_map):
@@ -152,17 +173,19 @@ def filter_nodes(nodes, artifact, validate_map):
     all_nodes_for_artifact = transform.tarnsform_to(all_nodes_for_artifact, artifact['type'], validate_map)
     return all_nodes_for_artifact
 
-def build_template(artifact):
+def build_template(artifact, remote_ruleset):
     template_text = open(f"template/{artifact['template']}", 'r').read()
     final_snippet_text = ''
     if os.path.exists('snippet'):
         for snippet_file in os.listdir('snippet'):
-            snippet_file_path = os.path.join('snippet', snippet_file)
-            snippet_text = "{{% import '{}' as {} -%}}\n".format(
-                snippet_file_path, snippet_file)
+            snippet_text = open(os.path.join('snippet', snippet_file), 'r').read()
             final_snippet_text += snippet_text + '\n'
 
-    template_text_with_macro = final_snippet_text + template_text
+    final_ruleset_text = ''
+    for name, ruleset in remote_ruleset.items():
+        final_ruleset_text += ruleset + '\n'
+
+    template_text_with_macro = final_ruleset_text + '\n' + final_snippet_text + template_text
     return template_text_with_macro
 
 def laod_config():
@@ -226,7 +249,7 @@ def main():
             log.logger.error(f"artifact {artifact['name']} 没有可用节点")
             return
 
-        template_text_with_macro = build_template(artifact)
+        template_text_with_macro = build_template(artifact, remote_ruleset)
 
         log.logger.info(f"开始生成 {artifact['name']}")
         # check if node names are duplicated
@@ -235,10 +258,17 @@ def main():
             log.logger.error(f"artifact {artifact['name']} 有重复的节点名")
             return
 
+        def render(*args, **kwargs):
+            if artifact['type'] in clash_like:
+                return render_ruleset_in_clash(*args, **kwargs)
+
+            return render_ruleset_generic(*args, **kwargs)
+
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
         env.filters['to_surge'] = to_surge
         env.filters['to_yaml'] = to_yaml
         env.filters['to_json'] = to_json
+        env.filters['render'] = render
         template = env.from_string(template_text_with_macro)
 
         def get_proxies():
@@ -247,18 +277,11 @@ def main():
         def get_proxies_names():
             return to_name(get_proxies())
 
-        def render(*args, **kwargs):
-            if artifact['type'] in clash_like:
-                return render_ruleset_in_clash(*args, **kwargs)
-
-            return render_ruleset_generic(*args, **kwargs)
-
         env.globals['get_proxies'] = get_proxies
         env.globals['get_proxies_names'] = get_proxies_names
         env.globals['to_name'] = to_name
         env.globals['to_name_list'] = to_name_list
         env.globals['filter'] = all_filters
-        env.globals['render'] = render
         env.globals['remote_ruleset'] = remote_ruleset
 
         if not os.path.exists('dist'):

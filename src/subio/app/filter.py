@@ -92,6 +92,15 @@ def regex_filter(data, regex):
 
     return list(filter(isRegex, data))
 
+def exclude(data, regex):
+    def isRegex(s):
+        # if s contains regex, what ever the case, it is regex
+        if re.search(regex, s, re.IGNORECASE):
+            return False
+        return True
+
+    return list(filter(isRegex, data))
+
 
 def combine(data, left, right,left_args=None, right_args=None, relation=False):
     if left_args is not None:
@@ -118,5 +127,6 @@ all_filters = {
     'us_filter': us_filter,
     'keyWord_filter': keyWord_filter,
     'regex_filter': regex_filter,
+    'exclude': exclude,
     'combine': combine
 }
