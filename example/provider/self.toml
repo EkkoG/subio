@@ -1,0 +1,8 @@
+[[nodes]]
+type = 'http'
+name = 'ekko-https-ahhh'
+server = 'example.com'
+port = 4443
+tls = true
+username = 'ekko'
+password = 'ahh'

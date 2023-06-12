@@ -1,4 +1,4 @@
-{% macro main(default_rule, api_rule, cdn_rule, location_rule, apple_news_rule) -%}
+default_rule, api_rule, cdn_rule, location_rule, apple_news_rule
 # http://www.jjinc.com.au/announcements/apple170008services
 # https://gist.github.com/joseconstela/a6e06ef9737e097eddcaf940ea313e38
 #
@@ -157,4 +157,3 @@ DOMAIN-SUFFIX,me.com,{{ api_rule }}
 DOMAIN-SUFFIX,apple.com,{{ api_rule }}
 DOMAIN-SUFFIX,icloud.com,{{ api_rule }}
 DOMAIN-SUFFIX,apple-cloudkit.com,{{ api_rule }}
-{%- endmacro -%}

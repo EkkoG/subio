@@ -23,14 +23,8 @@ replace = [
 [[provider]]
 name = "自建节点"
 type = "custom"
-[[provider.nodes]]
-type = 'http'
-name = 'ekko-https-ahhh'
-server = 'example.com'
-port = 4443
-tls = true
-username = 'ekko'
-password = 'ahh'
+file = 'self.toml'
+
 
 [[artifact]]
 name = "ekko-meta.yaml"

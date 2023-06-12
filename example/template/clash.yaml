@@ -15,8 +15,8 @@ proxy-groups:
   proxies: {{ filter.combine(get_proxies_names(), filter.hk_filter, filter.keyWord_filter, None, 'us') }}
 
 rules:
-{{ render(remote_ruleset.telegram, "DIRECT") }}
-{{ render(apple.main('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT')) }}
+{{ remote_telegram("DIRECT") | render }}
+{{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') | render }}
 
 - GEOIP,CN,DIRECT
 - MATCH,默认出口

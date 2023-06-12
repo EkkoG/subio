@@ -183,7 +183,13 @@ def build_template(artifact, remote_ruleset):
     if os.path.exists('snippet'):
         for snippet_file in os.listdir('snippet'):
             snippet_text = open(os.path.join('snippet', snippet_file), 'r').read()
-            final_snippet_text += snippet_text + '\n'
+            args = snippet_text.split('\n')[0].strip()
+            if args == '':
+                log.logger.error(f"snippet {snippet_file} 缺少参数")
+                exit(1)
+            content = '\n'.join(snippet_text.split('\n')[1:])
+            # {% macro apple(default_rule, api_rule, cdn_rule, location_rule, apple_news_rule) -%}
+            final_snippet_text += f"{{% macro {snippet_file}({args}) -%}}\n{content}\n{{%- endmacro -%}}\n"
 
     final_ruleset_text = ''
     for name, ruleset in remote_ruleset.items():
