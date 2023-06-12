@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 from .common import _origin_to_unify_trans
 from subio.app.log import logger
+import re
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
@@ -61,23 +62,34 @@ def parse(sub_text):
                 node[k] = v
             if 'peer' in node:
                 # peer = (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235) , (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235)
-                peer_str = node['peer'].replace(' ', '')
                 peers = []
-                for peer in peer_str.split('),'):
+                # (?<=\()(.*?)(?=\))
+                all_peers = node['peer'].replace(' ', '')
+                peers_str = re.findall(r'(?<=\()(.*?)(?=\))', all_peers)
+                for peer_str in peers_str:
                     peer_dict = {}
-                    last_key = ''
-                    for peer_comp in peer.replace('(', '').replace(')', '').split('='):
-                        if ',' not in peer_comp:
-                            last_key = peer_comp
+                    # allowed-ips[^=]*=\s*([\s\S]*?)\s*=
+                    allowed_ips_re = re.findall(r'allowed-ips[^=]*=\s*([\s\S]*?)\s*=', peer_str)
+                    if len(allowed_ips_re) == 0:
+                        # allowed-ips[^=]*=\s*([\s\S]*)
+                        allowed_ips_re = re.findall(r'allowed-ips[^=]*=\s*([\s\S]*)', peer_str)
+                        peer_dict['allowed-ips'] = [allowed_ips_re[0]]
+                        peer_str = peer_str.replace(',allowed-ips=' + allowed_ips_re[0], '')
+                    else:
+                        allowed_ips_str = allowed_ips_re[0]
+                        if '"' in allowed_ips_re[0]:
+                            # match char between ""
+                            allowed_ips_re = re.findall(r'"(.*?)"', allowed_ips_re[0])
+                            peer_dict['allowed-ips'] = allowed_ips_re[0].split(',')
                         else:
-                            k, v = peer_comp.rsplit(',', 1)
-                            peer_dict[last_key] = k
-                            last_key = v
+                            peer_dict['allowed-ips'] = [allowed_ips_re[0].split(',')[0]]
 
-                    for k, v in peer_dict.items():
-                        v = v.replace('"', '')
-                        if ',' in v:
-                            peer_dict[k] = v.split(',')
+                        peer_str = peer_str.replace('allowed-ips=' + allowed_ips_str, allowed_ips_str.split(',')[-1])
+                    peer_comps = peer_str.split(',')
+                    for peer_comp in peer_comps:
+                        k, v = peer_comp.split('=', 1)
+                        peer_dict[k] = v
+
                     peers.append(peer_dict)
                 node['peer'] = peers
 
