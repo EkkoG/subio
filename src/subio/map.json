@@ -1884,6 +1884,48 @@
                     "policy": "unsupport"
                 }
             },
+            "uuid": {
+                "surge": {
+                    "origin": "uuid"
+                },
+                "clash-meta": {
+                    "origin": "uuid"
+                },
+                "stash": {
+                    "origin": "uuid"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "password": {
+                "surge": {
+                    "origin": "password"
+                },
+                "clash-meta": {
+                    "origin": "password"
+                },
+                "stash": {
+                    "origin": "password"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "version": {
+                "surge": {
+                    "origin": "version"
+                },
+                "stash": {
+                    "origin": "version"
+                },
+                "clash": {
+                    "policy": "allow_skip"
+                },
+                "clash-meta": {
+                    "policy": "allow_skip"
+                }
+            },
             "ip": {
                 "clash-meta": {
                     "origin": "ip"

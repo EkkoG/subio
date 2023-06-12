@@ -215,6 +215,17 @@ proxies:
     sni: ''
     alpn:
       - h3
+  - name: TUIC
+    port: 443
+    server: 1.2.3.4
+    type: tuic
+    skip-cert-verify: true
+    version: 5
+    uuid: 00000000-0000-0000-0000-000000000001
+    password: PASSWORD_1
+    alpn:
+      - h3
+
   # - name: wireguard
   #   type: wireguard
   #   server: server # domain is supported

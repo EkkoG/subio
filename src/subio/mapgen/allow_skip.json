@@ -30,6 +30,7 @@
         "udp-relay-mode",
         "congestion-controller",
         "max-open-streams",
+        "version",
         "max-udp-relay-packet-size"
     ]
 }

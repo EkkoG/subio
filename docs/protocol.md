@@ -873,6 +873,27 @@
 | Clash.Meta | ✅ 支持 | 无限制 | skip-cert-verify |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | skip-cert-verify |
+#### uuid
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | uuid |
+| Clash.Meta | ✅ 支持 | 无限制 | uuid |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | uuid |
+#### password
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | password |
+| Clash.Meta | ✅ 支持 | 无限制 | password |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | password |
+#### version
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | version |
+| Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | version |
 #### ip
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
