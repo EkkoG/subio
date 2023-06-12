@@ -20,6 +20,15 @@ def tarnsform_to(nodes, dest, tansform_map):
         if node['type'] in ['ss']:
             if 'plugin-opts-version' in node:
                 node.pop('plugin-opts-version', None)
+        if node['type'] == 'tuic':
+            if 'uuid' in node:
+                if dest in ['stash', 'surge']:
+                    node['version'] = 5
+                elif dest == 'clash-meta':
+                    node.pop('version', None)
+            if dest == 'surge':
+                if 'alpn' in node:
+                    node['alpn'] = node['alpn'][0]
         return node
     return list(map(lambda x: fix(x), to))
 
