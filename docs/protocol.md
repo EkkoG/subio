@@ -21,13 +21,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -77,13 +77,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | tls |
 | Clash | ✅ 支持 | 无限制 | tls |
 | Stash | ✅ 支持 | 无限制 | tls |
-#### ip-version
+#### server
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
-| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
-| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 ## socks5 协议
 | 平台 | 是否支持 |
 | --- | --- |
@@ -107,13 +107,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -156,6 +156,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | tls |
 | Clash | ✅ 支持 | 无限制 | tls |
 | Stash | ✅ 支持 | 无限制 | tls |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 #### fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -170,13 +177,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
 | Clash | ✅ 支持 | 无限制 | udp |
 | Stash | ✅ 支持 | 无限制 | udp |
-#### ip-version
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
-| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
-| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 ## snell 协议
 | 平台 | 是否支持 |
 | --- | --- |
@@ -200,13 +200,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -214,6 +214,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Clash | ✅ 支持 | 无限制 | port |
 | Stash | ✅ 支持 | 无限制 | port |
+#### username
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | username |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
 #### psk
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -242,6 +249,13 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 #### obfs-opts-mode
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -279,13 +293,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -293,6 +307,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Clash | ✅ 支持 | 无限制 | port |
 | Stash | ✅ 支持 | 无限制 | port |
+#### username
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | username |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
 #### cipher
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -356,6 +377,13 @@
 | Clash.Meta | ✅ 支持 | 1<br>2<br>3 | plugin-opts.version |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 #### udp-over-tcp
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -363,13 +391,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | udp-over-tcp |
 | Clash | ❌ 不支持 | - | - |
 | Stash | ❌ 不支持 | - | - |
-#### ip-version
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
-| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
-| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### smux-enabled
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -512,13 +533,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -575,6 +596,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | network |
 | Clash | ✅ 支持 | 无限制 | network |
 | Stash | ✅ 支持 | 无限制 | network |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 #### alterid
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -659,13 +687,6 @@
 | Clash.Meta | ✅ 支持 | 无限制 | http-opts.headers |
 | Clash | ✅ 支持 | 无限制 | http-opts.headers |
 | Stash | ✅ 支持 | 无限制 | http-opts.headers |
-#### ip-version
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ⚠️ 不支持，但是可以跳过 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ip-version |
-| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
-| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### grpc-opts-grpc-service-name
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -696,13 +717,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | ✅ 支持 | 无限制 | type |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | ✅ 支持 | 无限制 | server |
-| Stash | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
+| Clash | ⚠️ 不支持，但是可以跳过 | - | - |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -710,6 +731,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Clash | ✅ 支持 | 无限制 | port |
 | Stash | ✅ 支持 | 无限制 | port |
+#### username
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | username |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | ❌ 不支持 | - | - |
+| Stash | ❌ 不支持 | - | - |
 #### sni
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -759,6 +787,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | network |
 | Clash | ✅ 支持 | 无限制 | network |
 | Stash | ✅ 支持 | 无限制 | network |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | ✅ 支持 | 无限制 | server |
+| Stash | ✅ 支持 | 无限制 | server |
 #### client-fingerprint
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -824,13 +859,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | type |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | type |
-#### server
+#### ip-version
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | server |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash | - | - | - |
-| Stash | ✅ 支持 | 无限制 | server |
+| Stash | ⚠️ 不支持，但是可以跳过 | - | - |
 #### port
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -838,6 +873,13 @@
 | Clash.Meta | ✅ 支持 | 无限制 | port |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | port |
+#### username
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | username |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | ❌ 不支持 | - | - |
 #### sni
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -894,6 +936,13 @@
 | Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash | - | - | - |
 | Stash | ✅ 支持 | 无限制 | version |
+#### server
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ❌ 不支持 | - | - |
+| Clash.Meta | ✅ 支持 | 无限制 | server |
+| Clash | - | - | - |
+| Stash | ✅ 支持 | 无限制 | server |
 #### ip
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
@@ -985,6 +1034,13 @@
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | type |
 | Clash.Meta | ✅ 支持 | 无限制 | type |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### ip-version
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | ip-version |
+| Clash.Meta | ⚠️ 不支持，但是可以跳过 | - | - |
 | Clash | - | - | - |
 | Stash | - | - | - |
 #### private-key

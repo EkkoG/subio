@@ -35,18 +35,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -147,18 +147,18 @@
                     "origin": "tls"
                 }
             },
-            "ip-version": {
+            "server": {
                 "clash-meta": {
-                    "origin": "ip-version"
+                    "origin": "server"
                 },
                 "clash": {
-                    "policy": "allow_skip"
+                    "origin": "server"
                 },
                 "stash": {
-                    "policy": "allow_skip"
+                    "origin": "server"
                 },
                 "surge": {
-                    "policy": "allow_skip"
+                    "policy": "unsupport"
                 }
             }
         }
@@ -199,18 +199,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -297,6 +297,20 @@
                     "origin": "tls"
                 }
             },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
             "fingerprint": {
                 "clash-meta": {
                     "origin": "fingerprint"
@@ -323,20 +337,6 @@
                 },
                 "surge": {
                     "policy": "unsupport"
-                }
-            },
-            "ip-version": {
-                "clash-meta": {
-                    "origin": "ip-version"
-                },
-                "clash": {
-                    "policy": "allow_skip"
-                },
-                "stash": {
-                    "policy": "allow_skip"
-                },
-                "surge": {
-                    "policy": "allow_skip"
                 }
             }
         }
@@ -377,18 +377,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
-                },
-                "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
+                },
+                "clash-meta": {
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -403,6 +403,20 @@
                 },
                 "stash": {
                     "origin": "port"
+                }
+            },
+            "username": {
+                "surge": {
+                    "origin": "username"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
                 }
             },
             "psk": {
@@ -458,6 +472,20 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                }
+            },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "surge": {
                     "policy": "unsupport"
                 }
             },
@@ -527,18 +555,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -553,6 +581,20 @@
                 },
                 "stash": {
                     "origin": "port"
+                }
+            },
+            "username": {
+                "surge": {
+                    "origin": "username"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
                 }
             },
             "cipher": {
@@ -836,6 +878,20 @@
                     "policy": "unsupport"
                 }
             },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "surge": {
+                    "policy": "unsupport"
+                }
+            },
             "udp-over-tcp": {
                 "clash-meta": {
                     "origin": "udp-over-tcp"
@@ -848,20 +904,6 @@
                 },
                 "surge": {
                     "policy": "unsupport"
-                }
-            },
-            "ip-version": {
-                "clash-meta": {
-                    "origin": "ip-version"
-                },
-                "clash": {
-                    "policy": "allow_skip"
-                },
-                "stash": {
-                    "policy": "allow_skip"
-                },
-                "surge": {
-                    "policy": "allow_skip"
                 }
             },
             "smux-enabled": {
@@ -1149,18 +1191,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -1277,6 +1319,20 @@
                 },
                 "stash": {
                     "origin": "network"
+                }
+            },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "surge": {
+                    "policy": "unsupport"
                 }
             },
             "alterid": {
@@ -1456,20 +1512,6 @@
                     "policy": "unsupport"
                 }
             },
-            "ip-version": {
-                "clash-meta": {
-                    "origin": "ip-version"
-                },
-                "clash": {
-                    "policy": "allow_skip"
-                },
-                "stash": {
-                    "policy": "allow_skip"
-                },
-                "surge": {
-                    "policy": "allow_skip"
-                }
-            },
             "grpc-opts-grpc-service-name": {
                 "clash-meta": {
                     "origin": "grpc-opts.grpc-service-name"
@@ -1522,18 +1564,18 @@
                     "origin": "type"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
-                },
-                "clash-meta": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
+                },
+                "clash-meta": {
+                    "policy": "allow_skip"
                 },
                 "stash": {
-                    "origin": "server"
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -1548,6 +1590,20 @@
                 },
                 "stash": {
                     "origin": "port"
+                }
+            },
+            "username": {
+                "surge": {
+                    "origin": "username"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
+                    "policy": "unsupport"
                 }
             },
             "sni": {
@@ -1650,6 +1706,20 @@
                 },
                 "stash": {
                     "origin": "network"
+                }
+            },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "surge": {
+                    "policy": "unsupport"
                 }
             },
             "client-fingerprint": {
@@ -1784,18 +1854,18 @@
                     "policy": "unsupport"
                 }
             },
-            "server": {
+            "ip-version": {
                 "surge": {
-                    "origin": "server"
-                },
-                "clash-meta": {
-                    "origin": "server"
-                },
-                "stash": {
-                    "origin": "server"
+                    "origin": "ip-version"
                 },
                 "clash": {
-                    "policy": "unsupport"
+                    "policy": "allow_skip"
+                },
+                "clash-meta": {
+                    "policy": "allow_skip"
+                },
+                "stash": {
+                    "policy": "allow_skip"
                 }
             },
             "port": {
@@ -1809,6 +1879,20 @@
                     "origin": "port"
                 },
                 "clash": {
+                    "policy": "unsupport"
+                }
+            },
+            "username": {
+                "surge": {
+                    "origin": "username"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "clash-meta": {
+                    "policy": "unsupport"
+                },
+                "stash": {
                     "policy": "unsupport"
                 }
             },
@@ -1924,6 +2008,20 @@
                 },
                 "clash-meta": {
                     "policy": "allow_skip"
+                }
+            },
+            "server": {
+                "clash-meta": {
+                    "origin": "server"
+                },
+                "stash": {
+                    "origin": "server"
+                },
+                "clash": {
+                    "policy": "unsupport"
+                },
+                "surge": {
+                    "policy": "unsupport"
                 }
             },
             "ip": {
@@ -2115,6 +2213,20 @@
                 },
                 "stash": {
                     "policy": "unsupport"
+                }
+            },
+            "ip-version": {
+                "surge": {
+                    "origin": "ip-version"
+                },
+                "clash": {
+                    "policy": "allow_skip"
+                },
+                "clash-meta": {
+                    "policy": "allow_skip"
+                },
+                "stash": {
+                    "policy": "allow_skip"
                 }
             },
             "private-key": {
