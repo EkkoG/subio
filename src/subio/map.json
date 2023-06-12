@@ -2119,7 +2119,8 @@
             },
             "dns-server": {
                 "surge": {
-                    "origin": "dns-server"
+                    "origin": "dns-server",
+                    "is-list": true
                 },
                 "clash": {
                     "policy": "unsupport"
@@ -2174,9 +2175,9 @@
                     "policy": "unsupport"
                 }
             },
-            "peer-public-key": {
+            "peer-allowed-ips": {
                 "surge": {
-                    "origin": "peer.public-key",
+                    "origin": "peer.allowed-ips",
                     "dict-in-list": true
                 },
                 "clash": {
@@ -2189,9 +2190,9 @@
                     "policy": "unsupport"
                 }
             },
-            "peer-allowed-ips": {
+            "peer-public-key": {
                 "surge": {
-                    "origin": "peer.allowed-ips",
+                    "origin": "peer.public-key",
                     "dict-in-list": true
                 },
                 "clash": {
@@ -2219,107 +2220,24 @@
                     "policy": "unsupport"
                 }
             },
-            "server": {
-                "clash-meta": {
-                    "origin": "server"
+            "peer-client-id": {
+                "surge": {
+                    "origin": "peer.client-id",
+                    "dict-in-list": true
                 },
                 "clash": {
                     "policy": "unsupport"
                 },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "port": {
                 "clash-meta": {
-                    "origin": "port"
-                },
-                "clash": {
                     "policy": "unsupport"
                 },
                 "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ip": {
-                "clash-meta": {
-                    "origin": "ip"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "ipv6": {
-                "clash-meta": {
-                    "origin": "ipv6"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "public-key": {
-                "clash-meta": {
-                    "origin": "public-key"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "pre-shared-key": {
-                "clash-meta": {
-                    "origin": "pre-shared-key"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
                     "policy": "unsupport"
                 }
             },
             "udp": {
                 "clash-meta": {
                     "origin": "udp"
-                },
-                "clash": {
-                    "policy": "unsupport"
-                },
-                "stash": {
-                    "policy": "unsupport"
-                },
-                "surge": {
-                    "policy": "unsupport"
-                }
-            },
-            "reserved": {
-                "clash-meta": {
-                    "origin": "reserved"
                 },
                 "clash": {
                     "policy": "unsupport"

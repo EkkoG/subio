@@ -1015,17 +1015,17 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | - | - | - |
-#### peer-public-key
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ✅ 支持 | 无限制 | peer.public-key |
-| Clash.Meta | ❌ 不支持 | - | - |
-| Clash | - | - | - |
-| Stash | - | - | - |
 #### peer-allowed-ips
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
 | Surge | ✅ 支持 | 无限制 | peer.allowed-ips |
+| Clash.Meta | ❌ 不支持 | - | - |
+| Clash | - | - | - |
+| Stash | - | - | - |
+#### peer-public-key
+| 平台 | 是否支持 | 允许的值 | 对应字段 |
+| --- | --- | --- | --- |
+| Surge | ✅ 支持 | 无限制 | peer.public-key |
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | - | - | - |
@@ -1036,46 +1036,11 @@
 | Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | - | - | - |
-#### server
+#### peer-client-id
 | 平台 | 是否支持 | 允许的值 | 对应字段 |
 | --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | server |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### port
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | port |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### ip
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ip |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### ipv6
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | ipv6 |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### public-key
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | public-key |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### pre-shared-key
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | pre-shared-key |
+| Surge | ✅ 支持 | 无限制 | peer.client-id |
+| Clash.Meta | ❌ 不支持 | - | - |
 | Clash | - | - | - |
 | Stash | - | - | - |
 #### udp
@@ -1083,13 +1048,6 @@
 | --- | --- | --- | --- |
 | Surge | ❌ 不支持 | - | - |
 | Clash.Meta | ✅ 支持 | 无限制 | udp |
-| Clash | - | - | - |
-| Stash | - | - | - |
-#### reserved
-| 平台 | 是否支持 | 允许的值 | 对应字段 |
-| --- | --- | --- | --- |
-| Surge | ❌ 不支持 | - | - |
-| Clash.Meta | ✅ 支持 | 无限制 | reserved |
 | Clash | - | - | - |
 | Stash | - | - | - |
 #### remote-dns-resolve

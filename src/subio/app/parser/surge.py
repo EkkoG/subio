@@ -59,7 +59,10 @@ def parse(sub_text):
         if node['type'] == 'wireguard':
             section_name = node['section-name']
             for k, v in config[f"WireGuard {section_name}"].items():
-                node[k] = v
+                if k == 'dns-server':
+                    node[k] = v.split(',')
+                else:
+                    node[k] = v
             if 'peer' in node:
                 # peer = (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235) , (public-key = <key>, allowed-ips = "0.0.0.0/0, ::/0", endpoint = example.com:51820, client-id = 83/12/235)
                 peers = []
@@ -88,7 +91,10 @@ def parse(sub_text):
                     peer_comps = peer_str.split(',')
                     for peer_comp in peer_comps:
                         k, v = peer_comp.split('=', 1)
-                        peer_dict[k] = v
+                        if k == 'client-id':
+                            peer_dict[k] = v.split('/')
+                        else:
+                            peer_dict[k] = v
 
                     peers.append(peer_dict)
                 node['peer'] = peers
