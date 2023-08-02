@@ -10,6 +10,7 @@ import hashlib
 
 from subio.app.ruleset_transform import render_ruleset_in_clash
 from subio.app.ruleset_transform import render_ruleset_generic
+from subio.app.ruleset_transform import render_ruleset_in_dae
 
 from .app import transform
 from .app import validate
@@ -91,7 +92,6 @@ def wrap_with_jinja2_macro(text, name):
         if rule.strip().startswith('//'):
             return rule
         if '//' in rule:
-            rule_comment = rule.split('//')[1]
             rule = rule.split('//')[0].strip()
             return rule + ',{{ rule }}'
         if ',no-resolve' in rule:
