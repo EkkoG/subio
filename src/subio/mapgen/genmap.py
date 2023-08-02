@@ -2,6 +2,8 @@ import yaml
 import json
 from subio.app.parser import surge
 from subio.tools import set_value
+from subio.app.parser import dae
+from subio.subio_platform import supported_artifact
 
 cache = {}
 with open('mapgen/filed_name_map.json', 'r') as f:
@@ -92,14 +94,21 @@ def gen_surge_like(file, ftype):
 
     gen_with(proxies, ftype)
 
+def gen_dae(file, ftype):
+    with open(file, 'r') as f:
+        text = f.read()
+        proxies = dae.parse(text)
+        gen_with(proxies, ftype)
+
 def gen():
     gen_surge_like('mapgen/config/surge.conf', 'surge')
     gen_clash('mapgen/config/meta.yaml', 'clash-meta')
     gen_clash('mapgen/config/clash.yaml', 'clash')
     gen_clash('mapgen/config/stash.yaml', 'stash')
+    gen_dae('mapgen/config/dae.conf', 'dae')
 
     for ptype, config in cache.items():
-        all_platform = ['clash', 'clash-meta', 'stash', 'surge']
+        all_platform = supported_artifact
         protocol = config['protocol'].copy()
         for k, v in protocol.items():
             for platform in all_platform:

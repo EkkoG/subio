@@ -58,6 +58,14 @@ providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地
 [artifact.options]
 work = true
 
+[[artifact]]
+name = "dae.conf"
+type = "dae"
+template = "dae.conf"
+providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
+[artifact.options]
+work = true
+
 [[ruleset]]
 name = "telegram"
 url = "https://github.com/DivineEngine/Profiles/raw/master/Surge/Ruleset/Extra/Telegram/Telegram.list"

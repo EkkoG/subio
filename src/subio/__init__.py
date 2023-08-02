@@ -7,6 +7,7 @@ import json
 import json5
 import yaml
 import hashlib
+import base64
 
 from subio.app.ruleset_transform import render_ruleset_in_clash
 from subio.app.ruleset_transform import render_ruleset_generic
@@ -122,6 +123,35 @@ def to_json(data):
             x['uuid'] = shadowrocketUUID(x['name'])
 
     return json.dumps(data, ensure_ascii=False)
+
+def to_url(data):
+    def trans(node):
+        if node['type'] == 'http':
+            scheme = 'http'
+            if 'tls' in node and node['tls']:
+                scheme = 'https'
+            userinfo = ''
+            if node['username'] and node['password']:
+                userinfo = f"{node['username']}:{node['password']}@"
+            return f"{scheme}://{userinfo}{node['server']}:{node['port']}"
+        elif node['type'] == 'socks5':
+            scheme = 'socks5'
+            if 'tls' in node and node['tls']:
+                scheme = 'socks5-tls'
+            userinfo = ''
+            if node['username'] and node['password']:
+                userinfo = f"{node['username']}:{node['password']}@"
+            return f"{scheme}://{userinfo}{node['server']}:{node['port']}"
+        elif node['type'] == 'ss':
+            if '2022' in node['cipher']:
+                return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}"
+            else:
+                userinfo = f"{node['cipher']}:{node['password']}"
+                userinfo = base64.b64encode(userinfo.encode('utf-8')).decode('utf-8')
+                userinfo = userinfo.replace('=', '')
+                return f"ss://{userinfo}@{node['server']}:{node['port']}"
+        return ''
+    return '\n'.join(list(map(trans, data)))
 
 def to_surge(data):
     def trans(node):
@@ -248,6 +278,8 @@ def main():
         def render(*args, **kwargs):
             if artifact['type'] in clash_like:
                 return render_ruleset_in_clash(*args, **kwargs)
+            if artifact['type'] == 'dae':
+                return render_ruleset_in_dae(*args, **kwargs)
 
             return render_ruleset_generic(*args, **kwargs)
 
@@ -256,6 +288,7 @@ def main():
         env.filters['to_yaml'] = to_yaml
         env.filters['to_json'] = to_json
         env.filters['render'] = render
+        env.filters['to_url'] = to_url
         template = env.from_string(template_text_with_macro)
 
         def get_proxies():

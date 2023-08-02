@@ -4,7 +4,8 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {}
         },
         "map": {
             "name": {
@@ -18,6 +19,9 @@
                     "origin": "name"
                 },
                 "stash": {
+                    "origin": "name"
+                },
+                "dae": {
                     "origin": "name"
                 }
             },
@@ -33,6 +37,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "origin": "type"
                 }
             },
             "server": {
@@ -46,6 +53,9 @@
                     "origin": "server"
                 },
                 "stash": {
+                    "origin": "server"
+                },
+                "dae": {
                     "origin": "server"
                 }
             },
@@ -61,6 +71,9 @@
                 },
                 "stash": {
                     "origin": "port"
+                },
+                "dae": {
+                    "origin": "port"
                 }
             },
             "username": {
@@ -74,6 +87,9 @@
                     "origin": "username"
                 },
                 "stash": {
+                    "origin": "username"
+                },
+                "dae": {
                     "origin": "username"
                 }
             },
@@ -89,6 +105,9 @@
                 },
                 "stash": {
                     "origin": "password"
+                },
+                "dae": {
+                    "origin": "password"
                 }
             },
             "ip-version": {
@@ -102,6 +121,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -117,6 +139,9 @@
                 },
                 "stash": {
                     "origin": "skip-cert-verify"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "sni": {
@@ -131,6 +156,9 @@
                 },
                 "stash": {
                     "origin": "sni"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "fingerprint": {
@@ -144,6 +172,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -159,6 +190,9 @@
                 },
                 "stash": {
                     "origin": "tls"
+                },
+                "dae": {
+                    "origin": "tls"
                 }
             }
         }
@@ -168,7 +202,8 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {}
         },
         "map": {
             "name": {
@@ -182,6 +217,9 @@
                     "origin": "name"
                 },
                 "stash": {
+                    "origin": "name"
+                },
+                "dae": {
                     "origin": "name"
                 }
             },
@@ -197,6 +235,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "origin": "type"
                 }
             },
             "server": {
@@ -210,6 +251,9 @@
                     "origin": "server"
                 },
                 "stash": {
+                    "origin": "server"
+                },
+                "dae": {
                     "origin": "server"
                 }
             },
@@ -225,6 +269,9 @@
                 },
                 "stash": {
                     "origin": "port"
+                },
+                "dae": {
+                    "origin": "port"
                 }
             },
             "username": {
@@ -238,6 +285,9 @@
                     "origin": "username"
                 },
                 "stash": {
+                    "origin": "username"
+                },
+                "dae": {
                     "origin": "username"
                 }
             },
@@ -253,6 +303,9 @@
                 },
                 "stash": {
                     "origin": "password"
+                },
+                "dae": {
+                    "origin": "password"
                 }
             },
             "ip-version": {
@@ -266,6 +319,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -281,6 +337,9 @@
                 },
                 "stash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "skip-cert-verify": {
@@ -295,6 +354,9 @@
                 },
                 "stash": {
                     "origin": "skip-cert-verify"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "tls": {
@@ -309,6 +371,9 @@
                 },
                 "stash": {
                     "origin": "tls"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "fingerprint": {
@@ -323,6 +388,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "udp": {
@@ -337,6 +405,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -346,7 +417,10 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -361,6 +435,9 @@
                 },
                 "stash": {
                     "origin": "name"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -375,6 +452,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "server": {
@@ -389,6 +469,9 @@
                 },
                 "stash": {
                     "origin": "server"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -403,6 +486,9 @@
                 },
                 "stash": {
                     "origin": "port"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "psk": {
@@ -417,6 +503,9 @@
                 },
                 "stash": {
                     "origin": "psk"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "version": {
@@ -431,6 +520,9 @@
                 },
                 "stash": {
                     "origin": "version"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -445,6 +537,9 @@
                 },
                 "stash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "skip-cert-verify": {
@@ -458,6 +553,9 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -473,6 +571,9 @@
                 },
                 "stash": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "obfs-opts-mode": {
@@ -486,6 +587,9 @@
                     "origin": "obfs-opts.mode"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -501,6 +605,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -510,7 +617,8 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {}
         },
         "map": {
             "name": {
@@ -524,6 +632,9 @@
                     "origin": "name"
                 },
                 "stash": {
+                    "origin": "name"
+                },
+                "dae": {
                     "origin": "name"
                 }
             },
@@ -539,6 +650,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "origin": "type"
                 }
             },
             "server": {
@@ -553,6 +667,9 @@
                 },
                 "stash": {
                     "origin": "server"
+                },
+                "dae": {
+                    "origin": "server"
                 }
             },
             "port": {
@@ -566,6 +683,9 @@
                     "origin": "port"
                 },
                 "stash": {
+                    "origin": "port"
+                },
+                "dae": {
                     "origin": "port"
                 }
             },
@@ -661,6 +781,9 @@
                         "chacha20-ietf-poly1305",
                         "xchacha20-ietf-poly1305"
                     ]
+                },
+                "dae": {
+                    "origin": "cipher"
                 }
             },
             "password": {
@@ -674,6 +797,9 @@
                     "origin": "password"
                 },
                 "stash": {
+                    "origin": "password"
+                },
+                "dae": {
                     "origin": "password"
                 }
             },
@@ -738,6 +864,9 @@
                             ]
                         }
                     ]
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "plugin-opts-host": {
@@ -752,6 +881,9 @@
                 },
                 "stash": {
                     "origin": "plugin-opts.host"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "plugin-opts-uri": {
@@ -765,6 +897,9 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -780,6 +915,9 @@
                 },
                 "stash": {
                     "origin": "udp"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ip-version": {
@@ -794,6 +932,9 @@
                 },
                 "stash": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "plugin-opts-password": {
@@ -807,6 +948,9 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -840,6 +984,9 @@
                         "obfs",
                         "v2ray-plugin"
                     ]
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "plugin-opts-version": {
@@ -862,6 +1009,9 @@
                 },
                 "stash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "udp-over-tcp": {
@@ -875,6 +1025,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -890,6 +1043,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "smux-protocol": {
@@ -903,6 +1059,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -918,6 +1077,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "smux-min-streams": {
@@ -931,6 +1093,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -946,6 +1111,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "smux-padding": {
@@ -959,6 +1127,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -974,6 +1145,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "smux-only-tcp": {
@@ -987,6 +1161,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1002,6 +1179,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "plugin-opts-fingerprint": {
@@ -1015,6 +1195,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1030,6 +1213,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "plugin-opts-path": {
@@ -1044,6 +1230,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "plugin-opts-mux": {
@@ -1057,6 +1246,9 @@
                     "origin": "plugin-opts.mux"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1075,6 +1267,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "client-fingerprint": {
@@ -1095,6 +1290,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "plugin-opts-version-hint": {
@@ -1108,6 +1306,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1123,6 +1324,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -1132,7 +1336,10 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1147,6 +1354,9 @@
                 },
                 "stash": {
                     "origin": "name"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -1161,6 +1371,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "server": {
@@ -1175,6 +1388,9 @@
                 },
                 "stash": {
                     "origin": "server"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -1189,6 +1405,9 @@
                 },
                 "stash": {
                     "origin": "port"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "uuid": {
@@ -1203,6 +1422,9 @@
                 },
                 "stash": {
                     "origin": "uuid"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "cipher": {
@@ -1217,6 +1439,9 @@
                 },
                 "stash": {
                     "origin": "cipher"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "tls": {
@@ -1231,6 +1456,9 @@
                 },
                 "stash": {
                     "origin": "tls"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "skip-cert-verify": {
@@ -1245,6 +1473,9 @@
                 },
                 "stash": {
                     "origin": "skip-cert-verify"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ws-opts-path": {
@@ -1259,6 +1490,9 @@
                 },
                 "stash": {
                     "origin": "ws-opts.path"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ws-opts-headers": {
@@ -1277,6 +1511,9 @@
                 "stash": {
                     "origin": "ws-opts.headers",
                     "any-key-value": true
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ip-version": {
@@ -1290,6 +1527,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1305,6 +1545,9 @@
                 },
                 "stash": {
                     "origin": "network"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "alterid": {
@@ -1318,6 +1561,9 @@
                     "origin": "alterId"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1333,6 +1579,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "fingerprint": {
@@ -1346,6 +1595,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1367,6 +1619,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "servername": {
@@ -1380,6 +1635,9 @@
                     "origin": "servername"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1395,6 +1653,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "ws-opts-early-data-header-name": {
@@ -1408,6 +1669,9 @@
                     "origin": "ws-opts.early-data-header-name"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1423,6 +1687,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "h2-opts-path": {
@@ -1436,6 +1703,9 @@
                     "origin": "h2-opts.path"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1451,6 +1721,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "http-opts-path": {
@@ -1464,6 +1737,9 @@
                     "origin": "http-opts.path"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1482,6 +1758,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "grpc-opts-grpc-service-name": {
@@ -1496,6 +1775,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -1505,7 +1787,10 @@
             "surge": {},
             "clash-meta": {},
             "clash": {},
-            "stash": {}
+            "stash": {},
+            "dae": {
+                "policy": "unsupport"
+            }
         },
         "map": {
             "name": {
@@ -1520,6 +1805,9 @@
                 },
                 "stash": {
                     "origin": "name"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -1534,6 +1822,9 @@
                 },
                 "stash": {
                     "origin": "type"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "server": {
@@ -1548,6 +1839,9 @@
                 },
                 "stash": {
                     "origin": "server"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -1562,6 +1856,9 @@
                 },
                 "stash": {
                     "origin": "port"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "sni": {
@@ -1576,6 +1873,9 @@
                 },
                 "stash": {
                     "origin": "sni"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "password": {
@@ -1590,6 +1890,9 @@
                 },
                 "stash": {
                     "origin": "password"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ws-opts-path": {
@@ -1604,6 +1907,9 @@
                 },
                 "stash": {
                     "origin": "ws-opts.path"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ws-opts-headers": {
@@ -1622,6 +1928,9 @@
                 "stash": {
                     "origin": "ws-opts.headers",
                     "any-key-value": true
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -1636,6 +1945,9 @@
                 },
                 "stash": {
                     "origin": "udp"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "skip-cert-verify": {
@@ -1650,6 +1962,9 @@
                 },
                 "stash": {
                     "origin": "skip-cert-verify"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ip-version": {
@@ -1663,6 +1978,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1678,6 +1996,9 @@
                 },
                 "stash": {
                     "origin": "network"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "client-fingerprint": {
@@ -1692,6 +2013,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "fingerprint": {
@@ -1705,6 +2029,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1723,6 +2050,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "grpc-opts-grpc-service-name": {
@@ -1736,6 +2066,9 @@
                     "origin": "grpc-opts.grpc-service-name"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1756,6 +2089,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "flow-show": {
@@ -1770,6 +2106,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -1780,6 +2119,9 @@
             "clash-meta": {},
             "stash": {},
             "clash": {
+                "policy": "unsupport"
+            },
+            "dae": {
                 "policy": "unsupport"
             }
         },
@@ -1796,6 +2138,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -1809,6 +2154,9 @@
                     "origin": "type"
                 },
                 "clash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1824,6 +2172,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -1837,6 +2188,9 @@
                     "origin": "port"
                 },
                 "clash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1852,6 +2206,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "token": {
@@ -1865,6 +2222,9 @@
                     "origin": "token"
                 },
                 "clash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1882,6 +2242,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -1895,6 +2258,9 @@
                     "policy": "unsupport"
                 },
                 "stash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1910,6 +2276,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ip-version": {
@@ -1923,6 +2292,9 @@
                     "policy": "allow_skip"
                 },
                 "stash": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1938,6 +2310,9 @@
                 },
                 "clash": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "password": {
@@ -1951,6 +2326,9 @@
                     "origin": "password"
                 },
                 "clash": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -1966,6 +2344,9 @@
                 },
                 "clash-meta": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "ip": {
@@ -1979,6 +2360,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -1994,6 +2378,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "disable-sni": {
@@ -2007,6 +2394,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2022,6 +2412,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "request-timeout": {
@@ -2035,6 +2428,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2053,6 +2449,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2073,6 +2472,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "max-udp-relay-packet-size": {
@@ -2086,6 +2488,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2101,6 +2506,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "max-open-streams": {
@@ -2115,6 +2523,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             }
         }
@@ -2127,6 +2538,9 @@
                 "policy": "unsupport"
             },
             "surge": {
+                "policy": "unsupport"
+            },
+            "dae": {
                 "policy": "unsupport"
             }
         },
@@ -2143,6 +2557,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -2156,6 +2573,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2171,6 +2591,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -2184,6 +2607,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2199,6 +2625,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "network": {
@@ -2212,6 +2641,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2227,6 +2659,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "flow": {
@@ -2240,6 +2675,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2255,6 +2693,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "fingerprint": {
@@ -2268,6 +2709,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2290,6 +2734,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "tls": {
@@ -2303,6 +2750,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2318,6 +2768,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "reality-opts-public-key": {
@@ -2331,6 +2784,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2346,6 +2802,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "grpc-opts-grpc-service-name": {
@@ -2360,6 +2819,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ws-opts-path": {
@@ -2373,6 +2835,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2390,6 +2855,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "h2-opts-host": {
@@ -2403,6 +2871,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2418,6 +2889,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -2430,6 +2904,9 @@
                 "policy": "unsupport"
             },
             "surge": {
+                "policy": "unsupport"
+            },
+            "dae": {
                 "policy": "unsupport"
             }
         },
@@ -2446,6 +2923,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -2459,6 +2939,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2474,6 +2957,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -2487,6 +2973,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2502,6 +2991,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "auth_str": {
@@ -2515,6 +3007,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2530,6 +3025,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "obfs": {
@@ -2543,6 +3041,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2559,6 +3060,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2583,6 +3087,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "up": {
@@ -2596,6 +3103,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2611,6 +3121,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "sni": {
@@ -2624,6 +3137,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2639,6 +3155,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "recv_window_conn": {
@@ -2652,6 +3171,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2667,6 +3189,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "recv_window": {
@@ -2680,6 +3205,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2695,6 +3223,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ca": {
@@ -2708,6 +3239,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2723,6 +3257,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "ca-str": {
@@ -2736,6 +3273,9 @@
                     "policy": "unsupport"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2751,6 +3291,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "fingerprint": {
@@ -2764,6 +3307,9 @@
                     "policy": "allow_skip"
                 },
                 "surge": {
+                    "policy": "allow_skip"
+                },
+                "dae": {
                     "policy": "allow_skip"
                 }
             },
@@ -2779,6 +3325,9 @@
                 },
                 "surge": {
                     "policy": "allow_skip"
+                },
+                "dae": {
+                    "policy": "allow_skip"
                 }
             },
             "auth": {
@@ -2793,6 +3342,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             }
         }
@@ -2803,6 +3355,9 @@
             "clash": {},
             "stash": {},
             "surge": {
+                "policy": "unsupport"
+            },
+            "dae": {
                 "policy": "unsupport"
             }
         },
@@ -2819,6 +3374,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "type": {
@@ -2832,6 +3390,9 @@
                     "origin": "type"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2847,6 +3408,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "port": {
@@ -2860,6 +3424,9 @@
                     "origin": "port"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2875,6 +3442,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "password": {
@@ -2888,6 +3458,9 @@
                     "origin": "password"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2903,6 +3476,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "protocol": {
@@ -2916,6 +3492,9 @@
                     "origin": "protocol"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
@@ -2931,6 +3510,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "protocol-param": {
@@ -2945,6 +3527,9 @@
                 },
                 "surge": {
                     "policy": "unsupport"
+                },
+                "dae": {
+                    "policy": "unsupport"
                 }
             },
             "udp": {
@@ -2958,6 +3543,9 @@
                     "origin": "udp"
                 },
                 "surge": {
+                    "policy": "unsupport"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             }
