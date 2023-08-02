@@ -8,6 +8,9 @@ import json5
 import yaml
 import hashlib
 
+from subio.app.ruleset_transform import render_ruleset_in_clash
+from subio.app.ruleset_transform import render_ruleset_generic
+
 from .app import transform
 from .app import validate
 from .app import parse
@@ -141,32 +144,6 @@ def to_surge(data):
 def to_name(data):
     return list(map(lambda x: x['name'], data))
 
-
-def render_ruleset_generic(text):
-    lines = text.split('\n')
-
-    def trans(line):
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            return line
-    return '\n'.join(map(trans, lines))
-
-
-def render_ruleset_in_clash(text):
-    lines = text.split('\n')
-    def filter_rules(rule):
-        if 'USER-AGENT' in rule:
-            log.logger.warning(f"发现 USER-AGENT 规则，已经自动忽略，规则：{rule}")
-            return False
-        return True
-    lines = list(filter(filter_rules, lines))
-
-    def trans(line):
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            return line
-        return f"- {line}"
-    return '\n'.join(map(trans, lines))
 
 def filter_nodes(nodes, artifact, validate_map):
     all_nodes_for_artifact = [nodes[provider]
