@@ -1,5 +1,6 @@
 import yaml
 import re
+import base64
 
 from .common import _origin_to_unify_trans
 
@@ -14,5 +15,6 @@ def origin_to_unify_trans(lst, unify_map):
             # only keep numbers of up and down, remove unit
             node['up'] = int(re.sub(r'\D', '', node['up']))
             node['down'] = int(re.sub(r'\D', '', node['down']))
+
         return node
     return list(map(fix, common_trans))

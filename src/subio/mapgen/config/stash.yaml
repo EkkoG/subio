@@ -225,17 +225,3 @@ proxies:
     password: PASSWORD_1
     alpn:
       - h3
-
-  # - name: wireguard
-  #   type: wireguard
-  #   server: server # domain is supported
-  #   port: 51820
-  #   ip: 10.8.4.8
-  #   ipv6: fe80::e6bf:faff:fea0:9fae # optional
-  #   private-key: 0G6TTWwvgv8Gy5013/jv2GttkCLYYaNTArHV0NdNkGI= # client private key
-  #   public-key: 0ag+C+rINHBnvLJLUyJeYkMWvIAkBjQPPObicuBUn1U= # peer public key
-  #   preshared-key: # optional
-  #   dns: [1.0.0.1, 223.6.6.6] # optional
-  #   mtu: 1420 # optional
-  #   reserved: [0, 0, 0] # optional
-  #   keepalive: 45 # optional

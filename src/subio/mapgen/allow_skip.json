@@ -21,6 +21,9 @@
     "vless": [
         "servername"
     ],
+    "wireguard": [
+        "udp"
+    ],
     "tuic": [
         "ip",
         "heartbeat-interval",

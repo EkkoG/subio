@@ -18,7 +18,8 @@
     },
     "wireguard": {
         "surge": {
-            "peer": "peers"
+            "peer": "peers",
+            "dns-servers": "dns"
         }
     },
     "vmess": {

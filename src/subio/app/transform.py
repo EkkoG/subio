@@ -29,6 +29,13 @@ def tarnsform_to(nodes, dest, tansform_map):
             if dest == 'surge':
                 if 'alpn' in node:
                     node['alpn'] = node['alpn'][0]
+
+                if 'peers' in node:
+                    def fix(peer):
+                        if 'reserved' in peer:
+                            peer['reserved'] = '/'.join(peer['reserved'])
+                        return peer
+                    node['peers'] = list(map(fix, node['peers'])) 
         return node
     return list(map(lambda x: fix(x), to))
 
