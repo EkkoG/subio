@@ -1,19 +1,13 @@
 import json
 from collections import OrderedDict
-
-platform_map = {
-    'clash': 'Clash',
-    'clash-meta': 'Clash.Meta',
-    'stash': 'Stash',
-    'surge': 'Surge',
-}
+from subio.subio_platform import platform_map, supported_artifact
 
 markdown = ''
 with open('map.json', 'r') as f:
     validate_map = json.load(f)
     validate_map = OrderedDict(validate_map)
 
-    all_platform = ['surge', 'clash-meta', 'clash', 'stash']
+    all_platform = supported_artifact
 
     for k, v in validate_map.items():
         markdown += f'## {k} 协议\n'
