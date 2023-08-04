@@ -130,7 +130,7 @@ def run():
             os.mkdir('dist')
 
         with open('dist/' + artifact['name'], 'w') as f:
-            final_config = template.render(options=artifact['options'])
+            final_config = template.render(options=artifact.get('options'))
             f.write(final_config)
             log.logger.info(f"生成 {artifact['name']} 成功")
             upload.upload(final_config, artifact)
