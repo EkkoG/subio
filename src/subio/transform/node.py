@@ -17,23 +17,23 @@ def to_url(data):
             userinfo = ''
             if node['username'] and node['password']:
                 userinfo = f"{node['username']}:{node['password']}@"
-            return f"{scheme}://{userinfo}{node['server']}:{node['port']}"
+            return f"{node['name']} {scheme}://{userinfo}{node['server']}:{node['port']}"
         elif node['type'] == 'socks5':
             scheme = 'socks5'
             if 'tls' in node and node['tls']:
                 scheme = 'socks5-tls'
             userinfo = ''
             if node['username'] and node['password']:
-                userinfo = f"{node['username']}:{node['password']}@"
-            return f"{scheme}://{userinfo}{node['server']}:{node['port']}"
+                userinfo = f"{node['name']} {node['username']}:{node['password']}@"
+            return f"{node['name']} {scheme}://{userinfo}{node['server']}:{node['port']}"
         elif node['type'] == 'ss':
             if '2022' in node['cipher']:
-                return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}"
+                return f"{node['name']} ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}"
             else:
-                userinfo = f"{node['cipher']}:{node['password']}"
+                userinfo = f"{node['name']} {node['cipher']}:{node['password']}"
                 userinfo = base64.b64encode(userinfo.encode('utf-8')).decode('utf-8')
                 userinfo = userinfo.replace('=', '')
-                return f"ss://{userinfo}@{node['server']}:{node['port']}"
+                return f"{node['name']} ss://{userinfo}@{node['server']}:{node['port']}"
         return ''
     return '\n'.join(list(map(trans, data)))
 
