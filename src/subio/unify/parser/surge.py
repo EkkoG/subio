@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from .common import _origin_to_unify_trans
-from subio.app.log import logger
+from subio.log.log import logger
 import re
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']

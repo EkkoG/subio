@@ -1,12 +1,12 @@
 import yaml
 import json
-from subio.app.parser import surge
-from subio.tools import set_value
-from subio.app.parser import dae
-from subio.subio_platform import supported_artifact
+from subio.unify.parser import surge
+from subio.tools.tools import set_value
+from subio.unify.parser import dae
+from subio.const import supported_artifact
 
 cache = {}
-with open('mapgen/filed_name_map.json', 'r') as f:
+with open('filed_name_map.json', 'r') as f:
     filed_name_map = json.load(f)
 def gen_clash(file, ftype):
     if file.endswith('.yaml'):
@@ -101,11 +101,11 @@ def gen_dae(file, ftype):
         gen_with(proxies, ftype)
 
 def gen():
-    gen_surge_like('mapgen/config/surge.conf', 'surge')
-    gen_clash('mapgen/config/meta.yaml', 'clash-meta')
-    gen_clash('mapgen/config/clash.yaml', 'clash')
-    gen_clash('mapgen/config/stash.yaml', 'stash')
-    gen_dae('mapgen/config/dae.conf', 'dae')
+    gen_surge_like('config/surge.conf', 'surge')
+    gen_clash('config/meta.yaml', 'clash-meta')
+    gen_clash('config/clash.yaml', 'clash')
+    gen_clash('config/stash.yaml', 'stash')
+    gen_dae('config/dae.conf', 'dae')
 
     for ptype, config in cache.items():
         all_platform = supported_artifact
@@ -117,7 +117,7 @@ def gen():
                         'policy': 'unsupport',
                     }
 
-        with open('mapgen/allow_skip.json', 'r') as f:
+        with open('allow_skip.json', 'r') as f:
             allow_skip = json.load(f)
 
         common_allow_skip_keys = allow_skip['common'] if 'common' in allow_skip else []
@@ -140,7 +140,7 @@ def gen():
                             'policy': 'unsupport',
                         }
 
-    with open('mapgen/allow_values.json') as f:
+    with open('allow_values.json') as f:
         allow_values_obj = json.load(f)
         # merge cache and allow_values_obj only if the key is not in cache
         def merge(obj, allow_values_obj):
@@ -151,5 +151,8 @@ def gen():
                     merge(obj[k], v)
         merge(cache, allow_values_obj)
 
-    with open('map.json', 'w') as f:
+    with open('../map.json', 'w') as f:
         json.dump(cache, f, indent=4)
+
+if __name__ == '__main__':
+    gen()

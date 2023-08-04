@@ -1,9 +1,9 @@
 import json
 from collections import OrderedDict
-from subio.subio_platform import platform_map, supported_artifact
+from subio.const import platform_map, supported_artifact
 
 markdown = ''
-with open('map.json', 'r') as f:
+with open('../map.json', 'r') as f:
     validate_map = json.load(f)
     validate_map = OrderedDict(validate_map)
 
@@ -61,6 +61,6 @@ with open('map.json', 'r') as f:
                 markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '-')} |\n"
 
 
-with open('../../docs/protocol.md', 'w') as f:
+with open('../../../docs/protocol.md', 'w') as f:
     f.write(markdown)
     print('done')

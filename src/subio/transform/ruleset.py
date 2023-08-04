@@ -1,4 +1,4 @@
-from subio.app import log
+from subio.log import log
 
 # ### Built-in outbounds: block, direct, must_rules
 

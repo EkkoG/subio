@@ -1,18 +1,18 @@
 
 proxies:
-{{ get_proxies() | to_yaml }}
+{{ proxies }}
 proxy-groups:
 - type: select
   name: 默认出口
-  proxies: {{ to_name(get_proxies()) | to_json }}
+  proxies: {{ proxies_names | render }}
 
 - type: select
   name: 手动选择2
-  proxies: {{ filter.hk_filter(get_proxies_names()) }}
+  proxies: {{ filter.hk_filter(proxies_names) | render }}
 
 - type: select
   name: 手动选择3
-  proxies: {{ filter.combine(get_proxies_names(), filter.hk_filter, filter.keyWord_filter, None, 'us') }}
+  proxies: {{ filter.combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us') | render }}
 
 rules:
 {{ remote_telegram("DIRECT") | render }}

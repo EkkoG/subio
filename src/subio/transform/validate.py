@@ -1,5 +1,5 @@
-from . import log
-from ..subio_platform import platform_map
+from ..log import log
+from ..const import platform_map
 
 def validation(nodes, dest, validate_map):
 

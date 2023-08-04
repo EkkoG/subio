@@ -17,4 +17,4 @@ build-backend = "setuptools.build_meta"
 packages = "subio"
 
 [project.scripts]
-subio = "subio:main"
+subio = "subio:run"
