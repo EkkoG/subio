@@ -1,0 +1,12 @@
+rule
+DOMAIN-SUFFIX,audiences.me,{{ rule }}
+DOMAIN-SUFFIX,hhanclub.top,{{ rule }}
+DOMAIN-SUFFIX,52pt.site,{{ rule }}
+DOMAIN-SUFFIX,btschool.club,{{ rule }}
+DOMAIN-SUFFIX,m-team.cc,{{ rule }}
+DOMAIN-SUFFIX,hdchina.org,{{ rule }}
+DOMAIN-SUFFIX,hdfans.org,{{ rule }}
+DOMAIN-KEYWORD,tracker,{{ rule }}
+DOMAIN-KEYWORD,stun,{{ rule }}
+DOMAIN-KEYWORD,tracker,{{ rule }}
+
