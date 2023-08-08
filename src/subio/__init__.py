@@ -65,7 +65,7 @@ def run():
 
     log.logger.info('开始转换')
 
-    all_nodes = load_nodes(config)
+    all_nodes_of_providers = load_nodes(config)
     remote_ruleset = load_rulset(config)
 
     for artifact in config['artifact']:
@@ -73,7 +73,7 @@ def run():
         log.logger.info(f"使用 {artifact['providers']} 作为数据源")
         log.logger.info(f"使用 {artifact['template']} 作为模板")
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
-        all_nodes = nodes_of(artifact, config)
+        all_nodes = nodes_of(artifact, all_nodes_of_providers)
         log.logger.info(f"可用节点数量：{len(all_nodes)}")
         if len(all_nodes) == 0:
             log.logger.error(f"artifact {artifact['name']} 没有可用节点")

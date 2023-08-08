@@ -19,8 +19,7 @@ from ..const import supported_artifact, supported_provider
 map_path = '/'.join(__file__.split('/')[:-2]) + '/map.json'
 validate_map = json.load(open(map_path, 'r'))
 
-def nodes_of(artifact, config):
-    nodes = load_nodes(config)
+def nodes_of(artifact, nodes):
     all_nodes_for_artifact = [nodes[provider]
                                 for provider in artifact['providers']]
     all_nodes_for_artifact = reduce(
