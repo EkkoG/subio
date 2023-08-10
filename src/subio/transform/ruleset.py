@@ -140,6 +140,9 @@ def render_ruleset_in_clash(text):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             return line
+        if ',no-resolve' in line:
+            return f"- {line}".replace(',no-resolve', '')
+
         return f"- {line}"
     return '\n'.join(map(trans, lines))
 
