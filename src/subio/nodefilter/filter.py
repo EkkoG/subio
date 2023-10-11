@@ -4,7 +4,8 @@ import re
 def hk_filter(data):
     def isHK(s):
         # if s contains HK, what ever the case, it is HK
-        if re.search('hk', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('hk', name, re.IGNORECASE):
             return True
         if '香港' in s:
             return True
@@ -16,7 +17,8 @@ def hk_filter(data):
 def tw_filter(data):
     def isTW(s):
         # if s contains TW, what ever the case, it is TW
-        if re.search('tw', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('tw', name, re.IGNORECASE):
             return True
         if '台湾' in s:
             return True
@@ -28,7 +30,8 @@ def tw_filter(data):
 def sg_filter(data):
     def isSG(s):
         # if s contains SG, what ever the case, it is SG
-        if re.search('sg', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('sg', name, re.IGNORECASE):
             return True
         if '新加坡' in s:
             return True
@@ -40,7 +43,8 @@ def sg_filter(data):
 def jp_filter(data):
     def isJP(s):
         # if s contains JP, what ever the case, it is JP
-        if re.search('jp', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('jp', name, re.IGNORECASE):
             return True
         if '日本' in s:
             return True
@@ -52,7 +56,8 @@ def jp_filter(data):
 def kr_filter(data):
     def isKR(s):
         # if s contains KR, what ever the case, it is KR
-        if re.search('kr', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('kr', name, re.IGNORECASE):
             return True
         if '韩国' in s:
             return True
@@ -64,7 +69,8 @@ def kr_filter(data):
 def us_filter(data):
     def isUS(s):
         # if s contains US, what ever the case, it is US
-        if re.search('us', s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search('us', name, re.IGNORECASE):
             return True
         if '美国' in s:
             return True
@@ -76,7 +82,8 @@ def us_filter(data):
 def keyWord_filter(data, keyWord):
     def isKeyWord(s):
         # if s contains keyWord, what ever the case, it is keyWord
-        if re.search(keyWord, s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search(keyWord, name, re.IGNORECASE):
             return True
         return False
 
@@ -86,7 +93,8 @@ def keyWord_filter(data, keyWord):
 def regex_filter(data, regex):
     def isRegex(s):
         # if s contains regex, what ever the case, it is regex
-        if re.search(regex, s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search(regex, name, re.IGNORECASE):
             return True
         return False
 
@@ -95,7 +103,8 @@ def regex_filter(data, regex):
 def exclude(data, regex):
     def isRegex(s):
         # if s contains regex, what ever the case, it is regex
-        if re.search(regex, s, re.IGNORECASE):
+        name = s if isinstance(s, str) else s['name']
+        if re.search(regex, name, re.IGNORECASE):
             return False
         return True
 

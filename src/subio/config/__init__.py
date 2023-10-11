@@ -140,4 +140,7 @@ def laod_config():
     elif os.path.exists('config.json'):
         with open('config.json', 'r') as f:
             config = json5.load(f)
+    else:
+        log.logger.error('找不到配置文件')
+        exit(1)
     return config

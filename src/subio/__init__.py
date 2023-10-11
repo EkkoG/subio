@@ -96,14 +96,14 @@ def run():
 
             return render_ruleset_generic(*args, **kwargs)
 
-        def render_proxies():
+        def render_proxies(nodes):
             if artifact['type'] in clash_like:
-                return to_yaml(all_nodes)
+                return to_yaml(nodes)
             if artifact['type'] == 'dae':
-                return to_url(all_nodes)
+                return to_url(nodes)
             if artifact['type'] == 'surge':
-                return to_surge(all_nodes)
-            return to_json(all_nodes)
+                return to_surge(nodes)
+            return to_json(nodes)
 
         # 只接受字符串数组参数
         def render_proxies_names(*args, **kwargs):
@@ -118,10 +118,12 @@ def run():
 
         env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
         env.filters['render'] = render
+        env.filters['render_proxies'] = render_proxies
         template = env.from_string(template_text)
 
-        rendered_proxied = render_proxies()
+        rendered_proxied = render_proxies(all_nodes)
         env.globals['proxies'] = rendered_proxied
+        env.globals['proxies_obj'] = all_nodes
         env.globals['proxies_names'] = to_name(all_nodes)
         env.globals['filter'] = all_filters
         env.globals['remote_ruleset'] = remote_ruleset
