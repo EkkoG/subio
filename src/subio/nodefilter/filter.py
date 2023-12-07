@@ -91,7 +91,6 @@ def keyWord_filter(data, keyWord):
 
 
 def regex_filter(data, regex):
-    print("ahhh", regex, type(regex))
     def isRegex(s):
         # if s contains regex, what ever the case, it is regex
         name = s if isinstance(s, str) else s['name']
