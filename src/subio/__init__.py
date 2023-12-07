@@ -136,7 +136,7 @@ def run():
             final_config = template.render(options=artifact.get('options'))
             f.write(final_config)
             log.logger.info(f"生成 {artifact['name']} 成功")
-            upload.upload(final_config, artifact)
+            upload.upload(final_config, artifact, config.get('uploader'))
 
 
 if __name__ == '__main__':
