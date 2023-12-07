@@ -127,7 +127,7 @@ def run():
         env.globals['proxies_names'] = to_name(all_nodes)
         env.globals['filter'] = all_filters
         env.globals['remote_ruleset'] = remote_ruleset
-        env.globals['global_options'] = config['options']
+        env.globals['global_options'] = config.get('options')
 
         if not os.path.exists('dist'):
             os.mkdir('dist')
