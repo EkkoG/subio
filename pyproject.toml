@@ -8,6 +8,7 @@ dependencies = [
     "pyyaml>=5.4.1",
     "toml>=0.10.2",
     "json5>=0.9.6",
+    "dacite"
 ]
 [build-system]
 requires = ["setuptools"]

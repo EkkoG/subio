@@ -1,4 +1,4 @@
-log-level = "DEBUG"
+log_level = "DEBUG"
 
 [[provider]]
 name = "主力机场"
@@ -15,7 +15,7 @@ name = "Surge 测试"
 type = "surge"
 url = "https://gist.github.com/EkkoG/623bfd3be62a68b831c29007305ebbc2/raw/surge.conf"
 [provider.rename]
-add-prefix = "备用机场-"
+add_prefix = "备用机场-"
 replace = [
   {old = "节点", new = "机场"}
 ]
