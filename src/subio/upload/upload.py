@@ -18,10 +18,11 @@ def upload(content, artifact, uploaders):
                 continue
             if uploader[0]['type'] == 'gist':
                 
-                logger.info(f"开始上传 {artifact['name']}")
-                logger.info(f"上传 {artifact['name']} 到 {upload_info['to']}")
+                if 'file_name' not in upload_info:
+                    upload_info['file_name'] = artifact['name']
+
+                logger.info(f"开始上传 {upload_info['file_name']} 到 {upload_info['to']}")
                 upload_info['description'] = 'subio'
-                upload_info['file_name'] = artifact['name']
                 upload_info['content'] = content
                 upload_info['id'] = uploader[0]['id']
                 upload_info['token'] = uploader[0]['token']
