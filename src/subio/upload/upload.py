@@ -2,16 +2,8 @@ import requests
 from subio.log.log import logger
 from subio.config.model import Artifact, Uploader
 
-def check(config):
-    for index, up in enumerate(config):
-        if up.to is None:
-            logger.error(f"upload {index} 没有配置 to")
-            return False
-    return True
-
-
 def upload(content: str, artifact: Artifact, uploaders: Uploader):
-    if artifact.upload is not None and len(artifact.upload) > 0 and check(artifact.upload):
+    if artifact.upload is not None and len(artifact.upload) > 0:
         for upload_info in artifact.upload:
             uploader = list(filter(lambda uploader: uploader.name == upload_info.to, uploaders))
             if len(uploader) == 0:

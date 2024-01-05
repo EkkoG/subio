@@ -51,6 +51,15 @@ def check(config: Config):
         if artifact.template is None:
             log.logger.error(f"artifact {artifact.name} 没有 template")
             return False
+        if artifact.upload is not None:
+            for index, up in enumerate(artifact.upload):
+                if up.to is None:
+                    log.logger.error(f"upload {index} 没有配置 to")
+                else:
+                    if list(filter(lambda x: x.name == up.to, config.uploader)) == []:
+                        log.logger.error(f"artifact {artifact.name} 的 upload {up.to} 不存在")
+                        return False
+                return False
     return True
 
 def load_nodes(config: Config):
