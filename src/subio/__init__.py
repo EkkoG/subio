@@ -23,6 +23,7 @@ from .log import log
 from .const import clash_like
 
 from .nodefilter.filter import all_filters
+import sys
 
 def get_snippets():
     final_snippet_text = ''
@@ -59,6 +60,8 @@ def run():
 
     log.logger.setLevel(config.log_level)
     if not check(config):
+        log.logger.error('配置文件不合法')
+        sys.exit(1)
         return
 
     log.logger.info('配置文件检查通过')

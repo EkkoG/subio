@@ -55,6 +55,7 @@ def check(config: Config):
             for index, up in enumerate(artifact.upload):
                 if up.to is None:
                     log.logger.error(f"upload {index} 没有配置 to")
+                    return False
                 else:
                     if list(filter(lambda x: x.name == up.to, config.uploader)) == []:
                         log.logger.error(f"artifact {artifact.name} 的 upload {up.to} 不存在")
