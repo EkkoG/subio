@@ -5,7 +5,7 @@ import json
 import yaml
 
 from subio.unify.parser.surge import surge_anonymous_keys
-from ..const import clash_like
+from ..const import SubIOPlatform
 
 
 def to_url(data):
@@ -91,7 +91,7 @@ def to_name(data):
     return list(map(lambda x: x['name'], data))
 # 只接受字符串数组参数
 def list_to_names(type, nodelist):
-    if type in clash_like:
+    if type in SubIOPlatform.clash_like():
         return nodelist
     if type == 'dae':
         return ', '.join(map(lambda x: f"\'{x}\'", nodelist))

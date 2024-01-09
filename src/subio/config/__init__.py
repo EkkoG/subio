@@ -14,7 +14,7 @@ from ..unify import parse
 
 from ..transform import transform
 from ..transform import validate
-from ..const import supported_artifact, supported_provider
+from ..const import SubIOPlatform
 from .model import Config, Rename, Artifact
 
 map_path = '/'.join(__file__.split('/')[:-2]) + '/map.json'
@@ -34,11 +34,11 @@ def check(config: Config):
     # 检查配置文件
     log.logger.info('检查配置文件')
     for provider in config.provider:
-        if provider.type not in supported_provider:
+        if provider.type not in SubIOPlatform.supported_provider():
             log.logger.error(f"不支持的 provider 类型 {provider.type}")
             return False
     for artifact in config.artifact:
-        if artifact.type not in supported_artifact:
+        if artifact.type not in SubIOPlatform.supported_artifact():
             log.logger.error(f"不支持的 artifact 类型 {artifact.type}")
             return False
         if artifact.providers is None or len(artifact.providers) == 0:

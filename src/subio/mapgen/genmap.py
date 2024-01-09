@@ -1,9 +1,8 @@
 import yaml
 import json
 from subio.unify.parser import surge
-from subio.tools.tools import set_value
 from subio.unify.parser import dae
-from subio.const import supported_artifact
+from subio.const import SubIOPlatform
 
 cache = {}
 with open('filed_name_map.json', 'r') as f:
@@ -108,7 +107,7 @@ def gen():
     gen_dae('config/dae.conf', 'dae')
 
     for ptype, config in cache.items():
-        all_platform = supported_artifact
+        all_platform = SubIOPlatform.supported_artifact()
         protocol = config['protocol'].copy()
         for k, v in protocol.items():
             for platform in all_platform:
