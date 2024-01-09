@@ -25,8 +25,8 @@ def nodes_of(artifact: Artifact, nodes):
                                 for provider in artifact.providers]
     all_nodes_for_artifact = reduce(
         lambda x, y: x + y, all_nodes_for_artifact)
-    all_nodes_for_artifact = validate.validation(all_nodes_for_artifact, artifact.type, validate_map)
-    all_nodes_for_artifact = transform.tarnsform_to(all_nodes_for_artifact, artifact.type, validate_map)
+    all_nodes_for_artifact = validate.validation(all_nodes_for_artifact, artifact._type(), validate_map)
+    all_nodes_for_artifact = transform.tarnsform_to(all_nodes_for_artifact, artifact._type(), validate_map)
     return all_nodes_for_artifact
 
 

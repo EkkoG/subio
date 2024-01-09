@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass
 from typing import List, Optional
+from subio.const import SubIOPlatform
 
 @dataclass
 class Replace:
@@ -27,6 +28,9 @@ class Artifact:
     type: str
     upload: Optional[List[ArtifactUpload]] = None
     options: Optional[dict] = None
+
+    def _type(self):
+        return SubIOPlatform(self.type)
 
 @dataclass
 class Provider:

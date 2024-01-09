@@ -1,6 +1,6 @@
 import json
 from collections import OrderedDict
-from subio.const import platform_map, SubIOPlatform 
+from subio.const import SubIOPlatform 
 
 markdown = ''
 with open('../map.json', 'r') as f:
@@ -18,7 +18,7 @@ with open('../map.json', 'r') as f:
             support = v['protocol'][platform] if platform in v['protocol'] else {}
             # gen a table
             support_symbol = '❌' if 'policy' in support and support['policy'] == 'unsupport' else '✅'
-            markdown += f'| {platform_map[platform]} | {support_symbol} |\n'
+            markdown += f'| {platform} | {support_symbol} |\n'
 
         markdown += '\n'
         markdown += '### 字段\n'
@@ -58,7 +58,7 @@ with open('../map.json', 'r') as f:
                     allow_values_str = '-'
 
 
-                markdown += f"| {platform_map[platform]} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '-')} |\n"
+                markdown += f"| {platform} | {support_symbol} | {allow_values_str} | {info[platform].get('origin', '-')} |\n"
 
 
 with open('../../../docs/protocol.md', 'w') as f:

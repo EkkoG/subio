@@ -1,5 +1,4 @@
 from ..log import log
-from ..const import platform_map
 
 def validation(nodes, dest, validate_map):
 
@@ -11,23 +10,23 @@ def validation(nodes, dest, validate_map):
             return validate_map.get(node_type, {})['protocol'].get(dest, {}).get(key, default_value)
 
         if node_type not in validate_map:
-            log.logger.warning(f"目标平台 {platform_map[dest]} 不支持协议 {node_type}，忽略 {node['name']}")
+            log.logger.warning(f"目标平台 {dest} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
         if get_protocol_value('policy', None) == 'unsupport':
-            log.logger.warning(f"目标平台 {platform_map[dest]} 不支持协议 {node_type}，忽略 {node['name']}")
+            log.logger.warning(f"目标平台 {dest} 不支持协议 {node_type}，忽略 {node['name']}")
             return False
 
 
         for k, v in node.items():
             if get_map_value('policy', k, None) == 'unsupport':
-                log.logger.warning(f"目标平台 {platform_map[dest]} 不支持配置 {node_type} 的 {k} 字段，忽略 {node['name']}")
+                log.logger.warning(f"目标平台 {dest} 不支持配置 {node_type} 的 {k} 字段，忽略 {node['name']}")
                 return False
             if get_map_value('policy', k, None) == 'allow_skip':
                 pass
 
             def value_allowed(allow_values, v):
                 if len(allow_values) > 0 and (v not in allow_values and str(v) not in allow_values):
-                    log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
+                    log.logger.warning(f"目标平台 {dest} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                     return False
                 return True
 
@@ -46,10 +45,10 @@ def validation(nodes, dest, validate_map):
                 return False
 
             if get_map_value('any-key-value', k, False) and not isinstance(v, dict):
-                log.logger.warning(f"目标平台 {platform_map[dest]} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
+                log.logger.warning(f"目标平台 {dest} 不支持 {node_type} 的 {k} 字段的值为 {v}，忽略 {node['name']}")
                 return False
 
-        log.logger.info(f"目标平台 {platform_map[dest]} 可以使用 {node['name']}")
+        log.logger.info(f"目标平台 {dest} 可以使用 {node['name']}")
         return True
 
 

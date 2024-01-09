@@ -9,6 +9,7 @@ version = "0.1.0"
 authors = [{ name = "EkkoG", email = "beijiu572@gmail.com" }]
 description = "A simple command line tool for convert proxy subscription links."
 readme = "README.md"
+requires-python = ">= 3.11"
 
 dependencies = [
     "requests",
