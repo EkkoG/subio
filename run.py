@@ -1,3 +1,0 @@
-import subio
-
-subio.run()

@@ -1,7 +1,7 @@
 
 from .parser import clash, surge
 from . import tools
-from ..const import surge_like, clash_like
+from ..const import SubIOPlatform
 import toml
 import json
 import yaml
@@ -23,11 +23,11 @@ def parse(config, origin, sub_text):
                     return []
 
     unify_map = tools.build_map(origin)
-    if origin in clash_like: 
+    if origin in SubIOPlatform.clash_like(): 
         nodes = clash.parse(config, sub_text)
 
         return clash.origin_to_unify_trans(nodes, unify_map)
-    elif origin in surge_like:
+    elif origin in SubIOPlatform.surge_like():
         nodes = surge.parse(sub_text)
 
         return surge.origin_to_unify_trans(nodes, unify_map)
