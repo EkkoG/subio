@@ -1,6 +1,7 @@
 import requests
 from subio.log.log import logger
 from subio.config.model import Artifact, Uploader
+import os
 
 def upload(content: str, artifact: Artifact, uploaders: Uploader):
     if artifact.upload is not None and len(artifact.upload) > 0:
@@ -31,11 +32,14 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
 
 
 def upload_to_gist(args):
+    token = args.token
+    if token.startswith('ENV_'):
+        token = os.getenv(token)
     resp = requests.patch(
         f"https://api.github.com/gists/{args.id}",
         headers={
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {args.token}",
+            "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         json={
