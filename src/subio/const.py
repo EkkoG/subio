@@ -6,13 +6,9 @@ platform_map = {
     'dae': 'Dae'
 }
 
-from enum import EnumMeta
+from enum import StrEnum
 
-class MyEnumMeta(EnumMeta): 
-    def __contains__(cls, item): 
-        return isinstance(item, cls) or item in [v.value for v in cls.__members__.values()] 
-
-class SubIOPlatform(MyEnumMeta):
+class SubIOPlatform(StrEnum):
     CLASH = 'clash'
     CLASH_META = 'clash-meta'
     STASH = 'stash'
