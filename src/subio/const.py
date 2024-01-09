@@ -17,6 +17,9 @@ class SubIOPlatform(StrEnum):
     CUSTOM = 'custom'
     SUBIO = 'subio'
 
+    def __str__(self):
+        return platform_map[self.value]
+
     @staticmethod
     def supported_provider():
         return [SubIOPlatform.CLASH, SubIOPlatform.CLASH_META, SubIOPlatform.STASH, SubIOPlatform.CUSTOM, SubIOPlatform.SURGE, SubIOPlatform.DAE, SubIOPlatform.SUBIO]
