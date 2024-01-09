@@ -10,6 +10,9 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
             if len(uploader) == 0:
                 logger.error(f"artifact {artifact.name} 没有找到上传器 {upload_info.to}")
                 continue
+            if len(uploader) > 1:
+                logger.error(f"artifact {artifact.name} 有多个上传器 {upload_info.to}")
+                continue
             if uploader[0].type == 'gist':
                 
                 if upload_info.file_name is None or len(upload_info.file_name) == 0:
