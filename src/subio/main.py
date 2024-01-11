@@ -53,9 +53,10 @@ def build_template(artifact, remote_ruleset):
     return template_text_with_macro
 
 def run():
-    if os.getenv('DEBUG'):
+    if os.getenv('RUN_EXAMPLE'):
         os.chdir('./example')
 
+    log.logger.setLevel('INFO')
     config = laod_config()
     if not config:
         log.logger.error('配置文件不存在或者格式错误')
