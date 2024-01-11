@@ -2,33 +2,20 @@
 from .parser import clash, surge
 from . import tools
 from ..const import SubIOPlatform
-import toml
-import json
-import yaml
+from ..tools.tools import load_with_ext
 
-def parse(config, origin, sub_text):
+def parse(origin, file):
     if origin == 'subio':
-        try:
-            nodes = toml.loads(sub_text)
-            return nodes['nodes']
-        except:
-            try:
-                nodes = json.loads(sub_text)
-                return nodes['nodes']
-            except:
-                try:
-                    nodes = yaml.safe_load(sub_text)
-                    return nodes['nodes']
-                except:
-                    return []
+        d = load_with_ext(file)
+        return d['nodes']
 
     unify_map = tools.build_map(origin)
     if origin in SubIOPlatform.clash_like(): 
-        nodes = clash.parse(config, sub_text)
+        nodes = clash.parse(file)
 
         return clash.origin_to_unify_trans(nodes, unify_map)
     elif origin in SubIOPlatform.surge_like():
-        nodes = surge.parse(sub_text)
+        nodes = surge.parse(file)
 
         return surge.origin_to_unify_trans(nodes, unify_map)
     return []

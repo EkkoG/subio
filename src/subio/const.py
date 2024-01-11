@@ -14,7 +14,6 @@ class SubIOPlatform(StrEnum):
     STASH = 'stash'
     SURGE = 'surge'
     DAE = 'dae'
-    CUSTOM = 'custom'
     SUBIO = 'subio'
 
     def __str__(self):
@@ -22,7 +21,7 @@ class SubIOPlatform(StrEnum):
 
     @staticmethod
     def supported_provider():
-        return [SubIOPlatform.CLASH, SubIOPlatform.CLASH_META, SubIOPlatform.STASH, SubIOPlatform.CUSTOM, SubIOPlatform.SURGE, SubIOPlatform.DAE, SubIOPlatform.SUBIO]
+        return [SubIOPlatform.CLASH, SubIOPlatform.CLASH_META, SubIOPlatform.STASH, SubIOPlatform.SURGE, SubIOPlatform.DAE, SubIOPlatform.SUBIO]
 
     @staticmethod
     def supported_artifact():

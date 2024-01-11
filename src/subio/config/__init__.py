@@ -1,9 +1,6 @@
-import json5
 import requests
 from functools import reduce
 
-import toml
-import yaml
 import json
 
 import hashlib
@@ -11,11 +8,13 @@ import os
 
 from ..log import log
 from ..unify import parse
+from ..tools.tools import load
 
 from ..transform import transform
 from ..transform import validate
 from ..const import SubIOPlatform
 from .model import Config, Rename, Artifact
+import tempfile
 
 map_path = '/'.join(__file__.split('/')[:-2]) + '/map.json'
 validate_map = json.load(open(map_path, 'r'))
@@ -66,13 +65,16 @@ def load_nodes(config: Config):
     all_nodes = {}
     for provider in config.provider:
         log.logger.info(f"加载 {provider.name} 节点")
-        if provider.file is not None:
-            sub_text = open(f"provider/{provider.file}", 'r').read()
-        else:
+        if provider.file is None:
             sub_text = load_remote_resource(provider.url, provider.user_agent)
+            with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+                f.write(sub_text)
+                file = f.name
+        else:
+            file = f"provider/{provider.file}"
         log.logger.info(f"加载 {provider.name} 节点成功, 开始解析")
         try:
-            all_nodes[provider.name] = parse.parse(config, provider.type, sub_text)
+            all_nodes[provider.name] = parse.parse(provider.type, file)
         except Exception as e:
             log.logger.error(f"解析 {provider.name} 节点失败，错误信息：{e}")
             exit(1)
@@ -141,24 +143,10 @@ def load_rulset(config: Config):
 
 from dacite import from_dict
 
-def laod_config() -> Config:
-    all_format = ['toml', 'yaml', 'yml', 'json', 'json5']
-    config = None
-    for format in all_format:
-        path = f'config.{format}'
-        if not os.path.exists(path):
-            continue
-        log.logger.info(f"发现 {path}， 使用 {path} 文件作为配置文件")
-        with open(path, 'r') as f:
-            if format == 'toml':
-                config = toml.load(f)
-            elif format == 'yaml' or format == 'yml':
-                config = yaml.safe_load(f)
-            elif format == 'json':
-                config = json.load(f)
-            elif format == 'json5':
-                config = json5.load(f)
-        break
+def load_config() -> Config:
+    config, file = load('config')
+
+    log.logger.info(f"发现 {file}， 使用 {file} 文件作为配置文件")
 
     if config is None:
         log.logger.error(f"没有找到配置文件")

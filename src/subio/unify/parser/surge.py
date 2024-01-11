@@ -5,7 +5,10 @@ import re
 
 surge_anonymous_keys = ['type', 'server', 'port', 'username', 'password']
 
-def parse(sub_text):
+def parse(file):
+    with open(file, 'r') as f:
+        sub_text = f.read()
+
     config = ConfigParser()
     config.optionxform=str
     config.read_string(sub_text)
