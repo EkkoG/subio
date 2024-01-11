@@ -75,6 +75,8 @@ def load_nodes(config: Config):
         log.logger.info(f"加载 {provider.name} 节点成功, 开始解析")
         try:
             all_nodes[provider.name] = parse.parse(provider.type, file)
+            if provider.file is None:
+                os.remove(file)
         except Exception as e:
             log.logger.error(f"解析 {provider.name} 节点失败，错误信息：{e}")
             exit(1)
