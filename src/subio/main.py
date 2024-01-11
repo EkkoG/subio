@@ -3,7 +3,7 @@ import os
 
 from subio.config import load_nodes
 from subio.config import load_rulset
-from subio.config import laod_config
+from subio.config import load_config
 from subio.config import check
 from subio.config import nodes_of
 
@@ -57,7 +57,7 @@ def run():
         os.chdir('./example')
 
     log.logger.setLevel('INFO')
-    config = laod_config()
+    config = load_config()
     if not config:
         log.logger.error('配置文件不存在或者格式错误')
         return
