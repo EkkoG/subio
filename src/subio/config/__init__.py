@@ -142,17 +142,27 @@ def load_rulset(config: Config):
 from dacite import from_dict
 
 def laod_config() -> Config:
-    if os.path.exists('config.toml'):
-        with open('config.toml', 'r') as f:
-            config = toml.load(f)
-    elif os.path.exists('config.yaml'):
-        with open('config.yaml', 'r') as f:
-            config = yaml.safe_load(f)
-    elif os.path.exists('config.json'):
-        with open('config.json', 'r') as f:
-            config = json5.load(f)
-    else:
-        log.logger.error('找不到配置文件')
-        exit(1)
+    all_format = ['toml', 'yaml', 'yml', 'json', 'json5']
+    config = None
+    for format in all_format:
+        path = f'config.{format}'
+        if not os.path.exists(path):
+            continue
+        log.logger.info(f"发现 {path}， 使用 {path} 文件作为配置文件")
+        with open(path, 'r') as f:
+            if format == 'toml':
+                config = toml.load(f)
+            elif format == 'yaml' or format == 'yml':
+                config = yaml.safe_load(f)
+            elif format == 'json':
+                config = json.load(f)
+            elif format == 'json5':
+                config = json5.load(f)
+        break
+
+    if config is None:
+        log.logger.error(f"没有找到配置文件")
+        return None
+            
 
     return from_dict(data_class=Config, data=config)
