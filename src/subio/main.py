@@ -26,52 +26,56 @@ from .nodefilter.filter import all_filters
 import sys
 import re
 
+
 def get_snippets():
-    final_snippet_text = ''
-    if os.path.exists('snippet'):
-        for snippet_file in os.listdir('snippet'):
-            snippet_text = open(os.path.join('snippet', snippet_file), 'r').read()
-            args = snippet_text.split('\n')[0].strip()
-            if args == '':
+    final_snippet_text = ""
+    if os.path.exists("snippet"):
+        for snippet_file in os.listdir("snippet"):
+            snippet_text = open(os.path.join("snippet", snippet_file), "r").read()
+            args = snippet_text.split("\n")[0].strip()
+            if args == "":
                 log.logger.error(f"snippet {snippet_file} 缺少参数")
                 exit(1)
-            content = '\n'.join(snippet_text.split('\n')[1:])
+            content = "\n".join(snippet_text.split("\n")[1:])
             # {% macro apple(default_rule, api_rule, cdn_rule, location_rule, apple_news_rule) -%}
             final_snippet_text += f"{{% macro {snippet_file}({args}) -%}}\n{content}\n{{%- endmacro -%}}\n"
     return final_snippet_text
 
 
 def build_template(artifact, remote_ruleset):
-    template_text = open(f"template/{artifact.template}", 'r').read()
+    template_text = open(f"template/{artifact.template}", "r").read()
 
     final_snippet_text = get_snippets()
 
-    final_ruleset_text = ''
+    final_ruleset_text = ""
     for name, ruleset in remote_ruleset.items():
-        final_ruleset_text += ruleset + '\n'
+        final_ruleset_text += ruleset + "\n"
 
-    template_text_with_macro = final_ruleset_text + '\n' + final_snippet_text + template_text
+    template_text_with_macro = (
+        final_ruleset_text + "\n" + final_snippet_text + template_text
+    )
     return template_text_with_macro
 
-def run():
-    if os.getenv('RUN_EXAMPLE'):
-        os.chdir('./example')
 
-    log.logger.setLevel('INFO')
+def run():
+    if os.getenv("RUN_EXAMPLE"):
+        os.chdir("./example")
+
+    log.logger.setLevel("INFO")
     config = load_config()
     if not config:
-        log.logger.error('配置文件不存在或者格式错误')
+        log.logger.error("配置文件不存在或者格式错误")
         return
 
     log.logger.setLevel(config.log_level)
     if not check(config):
-        log.logger.error('配置文件不合法')
+        log.logger.error("配置文件不合法")
         sys.exit(1)
         return
 
-    log.logger.info('配置文件检查通过')
+    log.logger.info("配置文件检查通过")
 
-    log.logger.info('开始转换')
+    log.logger.info("开始转换")
 
     all_nodes_of_providers = load_nodes(config)
     remote_ruleset = load_rulset(config)
@@ -83,12 +87,26 @@ def run():
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
         all_nodes = nodes_of(artifact, all_nodes_of_providers)
         if config.filters:
-            if 'include' in config.filters:
+            if "include" in config.filters:
                 # 过滤节点, 只保留 include 中的节点，使用 re
-                all_nodes = list(filter(lambda x: re.search(config.filters['include'], x['name'], re.IGNORECASE), all_nodes))
-            if 'exclude' in config.filters:
+                all_nodes = list(
+                    filter(
+                        lambda x: re.search(
+                            config.filters["include"], x["name"], re.IGNORECASE
+                        ),
+                        all_nodes,
+                    )
+                )
+            if "exclude" in config.filters:
                 # 过滤节点, 排除 exclude 中的节点，使用 re
-                all_nodes = list(filter(lambda x: not re.search(config.filters['exclude'], x['name'], re.IGNORECASE), all_nodes))
+                all_nodes = list(
+                    filter(
+                        lambda x: not re.search(
+                            config.filters["exclude"], x["name"], re.IGNORECASE
+                        ),
+                        all_nodes,
+                    )
+                )
         log.logger.info(f"可用节点数量：{len(all_nodes)}")
         if len(all_nodes) == 0:
             log.logger.error(f"artifact {artifact.name} 没有可用节点")
@@ -106,7 +124,7 @@ def run():
         def render_rules(*args, **kwargs):
             if artifact.type in SubIOPlatform.clash_like():
                 return render_ruleset_in_clash(*args, **kwargs)
-            if artifact.type == 'dae':
+            if artifact.type == "dae":
                 return render_ruleset_in_dae(*args, **kwargs)
 
             return render_ruleset_generic(*args, **kwargs)
@@ -114,9 +132,9 @@ def run():
         def render_proxies(nodes):
             if artifact.type in SubIOPlatform.clash_like():
                 return to_yaml(nodes)
-            if artifact.type == 'dae':
+            if artifact.type == "dae":
                 return to_url(nodes)
-            if artifact.type == 'surge':
+            if artifact.type == "surge":
                 return to_surge(nodes)
             return to_json(nodes)
 
@@ -130,29 +148,28 @@ def run():
             else:
                 return render_proxies_names(*args, **kwargs)
 
-
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader('./'))
-        env.filters['render'] = render
-        env.filters['render_proxies'] = render_proxies
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
+        env.filters["render"] = render
+        env.filters["render_proxies"] = render_proxies
         template = env.from_string(template_text)
 
         rendered_proxied = render_proxies(all_nodes)
-        env.globals['proxies'] = rendered_proxied
-        env.globals['proxies_obj'] = all_nodes
-        env.globals['proxies_names'] = to_name(all_nodes)
-        env.globals['filter'] = all_filters
-        env.globals['remote_ruleset'] = remote_ruleset
-        env.globals['global_options'] = config.options
+        env.globals["proxies"] = rendered_proxied
+        env.globals["proxies_obj"] = all_nodes
+        env.globals["proxies_names"] = to_name(all_nodes)
+        env.globals["filter"] = all_filters
+        env.globals["remote_ruleset"] = remote_ruleset
+        env.globals["global_options"] = config.options
 
-        if not os.path.exists('dist'):
-            os.mkdir('dist')
+        if not os.path.exists("dist"):
+            os.mkdir("dist")
 
-        with open('dist/' + artifact.name, 'w') as f:
+        with open("dist/" + artifact.name, "w") as f:
             final_config = template.render(options=artifact.options)
             f.write(final_config)
             log.logger.info(f"生成 {artifact.name} 成功")
             upload.upload(final_config, artifact, config.uploader)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

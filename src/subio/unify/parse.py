@@ -1,16 +1,16 @@
-
 from .parser import clash, surge
 from . import tools
 from ..const import SubIOPlatform
 from ..tools.tools import load_with_ext
 
+
 def parse(origin, file):
-    if origin == 'subio':
+    if origin == "subio":
         d = load_with_ext(file)
-        return d['nodes']
+        return d["nodes"]
 
     unify_map = tools.build_map(origin)
-    if origin in SubIOPlatform.clash_like(): 
+    if origin in SubIOPlatform.clash_like():
         nodes = clash.parse(file)
 
         return clash.origin_to_unify_trans(nodes, unify_map)
