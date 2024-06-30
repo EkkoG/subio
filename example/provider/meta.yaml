@@ -1,4 +1,28 @@
 proxies:
+  - name: "剩余流量 100G"
+    type: socks5
+    server: server
+    port: 443
+    username: username
+    password: password
+    tls: true
+    fingerprint: xxxx
+    skip-cert-verify: true
+    udp: true
+    ip-version: ipv6
+
+
+  - name: "套餐到期 2024-10-10"
+    type: socks5
+    server: server
+    port: 443
+    username: username
+    password: password
+    tls: true
+    fingerprint: xxxx
+    skip-cert-verify: true
+    udp: true
+    ip-version: ipv6
 
   - name: "socks"
     type: socks5

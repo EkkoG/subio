@@ -24,6 +24,7 @@ from .const import SubIOPlatform
 
 from .nodefilter.filter import all_filters
 import sys
+import re
 
 def get_snippets():
     final_snippet_text = ''
@@ -81,6 +82,13 @@ def run():
         log.logger.info(f"使用 {artifact.template} 作为模板")
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
         all_nodes = nodes_of(artifact, all_nodes_of_providers)
+        if config.filters:
+            if 'include' in config.filters:
+                # 过滤节点, 只保留 include 中的节点，使用 re
+                all_nodes = list(filter(lambda x: re.search(config.filters['include'], x['name'], re.IGNORECASE), all_nodes))
+            if 'exclude' in config.filters:
+                # 过滤节点, 排除 exclude 中的节点，使用 re
+                all_nodes = list(filter(lambda x: not re.search(config.filters['exclude'], x['name'], re.IGNORECASE), all_nodes))
         log.logger.info(f"可用节点数量：{len(all_nodes)}")
         if len(all_nodes) == 0:
             log.logger.error(f"artifact {artifact.name} 没有可用节点")
