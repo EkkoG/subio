@@ -62,6 +62,7 @@ class Config:
     ruleset: Optional[List[Ruleset]] = None
     uploader: Optional[List[Uploader]] = None
     options: Optional[dict] = None
+    filters: Optional[dict] = None
 
 
 
