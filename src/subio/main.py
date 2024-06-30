@@ -86,23 +86,24 @@ def run():
         log.logger.info(f"使用 {artifact.template} 作为模板")
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
         all_nodes = nodes_of(artifact, all_nodes_of_providers)
-        if config.filters:
-            if "include" in config.filters:
+        filters = artifact.filters if artifact.filters else config.filters
+        if filters:
+            if "include" in filters:
                 # 过滤节点, 只保留 include 中的节点，使用 re
                 all_nodes = list(
                     filter(
                         lambda x: re.search(
-                            config.filters["include"], x["name"], re.IGNORECASE
+                            filters["include"], x["name"], re.IGNORECASE
                         ),
                         all_nodes,
                     )
                 )
-            if "exclude" in config.filters:
+            if "exclude" in filters:
                 # 过滤节点, 排除 exclude 中的节点，使用 re
                 all_nodes = list(
                     filter(
                         lambda x: not re.search(
-                            config.filters["exclude"], x["name"], re.IGNORECASE
+                            filters["exclude"], x["name"], re.IGNORECASE
                         ),
                         all_nodes,
                     )
