@@ -3,23 +3,27 @@ from subio.log.log import logger
 from subio.config.model import Artifact, Uploader
 import os
 
+
 def upload(content: str, artifact: Artifact, uploaders: Uploader):
     if artifact.upload is not None and len(artifact.upload) > 0:
         for upload_info in artifact.upload:
-            uploader = list(filter(lambda uploader: uploader.name == upload_info.to, uploaders))
+            uploader = list(
+                filter(lambda uploader: uploader.name == upload_info.to, uploaders)
+            )
             if len(uploader) == 0:
-                logger.error(f"artifact {artifact.name} 没有找到上传器 {upload_info.to}")
+                logger.error(
+                    f"artifact {artifact.name} 没有找到上传器 {upload_info.to}"
+                )
                 continue
             if len(uploader) > 1:
                 logger.error(f"artifact {artifact.name} 有多个上传器 {upload_info.to}")
                 continue
-            if uploader[0].type == 'gist':
-                
+            if uploader[0].type == "gist":
                 if upload_info.file_name is None or len(upload_info.file_name) == 0:
                     upload_info.file_name = artifact.name
 
                 logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
-                upload_info.description = 'subio'
+                upload_info.description = "subio"
                 upload_info.content = content
                 upload_info.id = uploader[0].id
                 upload_info.token = uploader[0].token
@@ -36,7 +40,7 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
 
 def upload_to_gist(args):
     token = args.token
-    if token.startswith('ENV_'):
+    if token.startswith("ENV_"):
         token = os.getenv(token)
     resp = requests.patch(
         f"https://api.github.com/gists/{args.id}",
@@ -51,8 +55,8 @@ def upload_to_gist(args):
                 args.file_name: {
                     "content": args.content,
                 }
-            }
-        }
+            },
+        },
     )
     if resp.status_code == 200:
         return True

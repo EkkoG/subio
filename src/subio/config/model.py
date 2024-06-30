@@ -1,12 +1,13 @@
-
 from dataclasses import dataclass
 from typing import List, Optional
 from subio.const import SubIOPlatform
+
 
 @dataclass
 class Replace:
     old: str
     new: str
+
 
 @dataclass
 class Rename:
@@ -20,6 +21,7 @@ class ArtifactUpload:
     to: str
     file_name: Optional[str] = None
 
+
 @dataclass
 class Artifact:
     name: str
@@ -32,6 +34,7 @@ class Artifact:
     def _type(self):
         return SubIOPlatform(self.type)
 
+
 @dataclass
 class Provider:
     name: str
@@ -41,11 +44,13 @@ class Provider:
     user_agent: Optional[str] = None
     rename: Optional[Rename] = None
 
+
 @dataclass
 class Ruleset:
     name: str
     url: str
     user_agent: Optional[str] = None
+
 
 @dataclass
 class Uploader:
@@ -53,6 +58,7 @@ class Uploader:
     name: str
     token: str
     type: str
+
 
 @dataclass
 class Config:
@@ -63,6 +69,3 @@ class Config:
     uploader: Optional[List[Uploader]] = None
     options: Optional[dict] = None
     filters: Optional[dict] = None
-
-
-
