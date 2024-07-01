@@ -30,6 +30,7 @@ class Artifact:
     type: str
     upload: Optional[List[ArtifactUpload]] = None
     options: Optional[dict] = None
+    filters: Optional[dict] = None
 
     def _type(self):
         return SubIOPlatform(self.type)
