@@ -2,93 +2,33 @@ import re
 
 
 def hk_filter(data):
-    def isHK(s):
-        # if s contains HK, what ever the case, it is HK
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("hk", name, re.IGNORECASE):
-            return True
-        if "香港" in s:
-            return True
-        return False
-
-    return list(filter(isHK, data))
-
+    r = "香港|hk|Hong Kong|HongKong|Hong-Kong|Hong_Kong|Hong-Kong|Hong_Kong|HongKong|HK|hk|HK-|HK_|HK-_|HK_|HK-"
+    return regex_filter(data, r)
 
 def tw_filter(data):
-    def isTW(s):
-        # if s contains TW, what ever the case, it is TW
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("tw", name, re.IGNORECASE):
-            return True
-        if "台湾" in s:
-            return True
-        return False
-
-    return list(filter(isTW, data))
-
+    r = "台湾|tw|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|TW|tw|TW-|TW_|TW-_|TW_|TW-"
+    return regex_filter(data, r)
 
 def sg_filter(data):
-    def isSG(s):
-        # if s contains SG, what ever the case, it is SG
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("sg", name, re.IGNORECASE):
-            return True
-        if "新加坡" in s:
-            return True
-        return False
-
-    return list(filter(isSG, data))
-
+    r = "新加坡|sg|Singapore|Singapore|Singapore|Singapore|Singapore|Singapore|Singapore|SG|sg|SG-|SG_|SG-_|SG_|SG-"
+    return regex_filter(data, r)
 
 def jp_filter(data):
-    def isJP(s):
-        # if s contains JP, what ever the case, it is JP
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("jp", name, re.IGNORECASE):
-            return True
-        if "日本" in s:
-            return True
-        return False
-
-    return list(filter(isJP, data))
+    r = "日本|jp|Japan|Japan|Japan|Japan|Japan|Japan|Japan|JP|jp|JP-|JP_|JP-_|JP_|JP-"
+    return regex_filter(data, r)
 
 
 def kr_filter(data):
-    def isKR(s):
-        # if s contains KR, what ever the case, it is KR
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("kr", name, re.IGNORECASE):
-            return True
-        if "韩国" in s:
-            return True
-        return False
-
-    return list(filter(isKR, data))
-
+    r = "韩国|kr|Korea|Korea|Korea|Korea|Korea|Korea|Korea|KR|kr|KR-|KR_|KR-_|KR_|KR-"
+    return regex_filter(data, r)
 
 def us_filter(data):
-    def isUS(s):
-        # if s contains US, what ever the case, it is US
-        name = s if isinstance(s, str) else s["name"]
-        if re.search("us", name, re.IGNORECASE):
-            return True
-        if "美国" in s:
-            return True
-        return False
-
-    return list(filter(isUS, data))
+    r = "美国|us|America|America|America|America|America|America|America|US|us|US-|US_|US-_|US_|US-"
+    return regex_filter(data, r)
 
 
 def keyWord_filter(data, keyWord):
-    def isKeyWord(s):
-        # if s contains keyWord, what ever the case, it is keyWord
-        name = s if isinstance(s, str) else s["name"]
-        if re.search(keyWord, name, re.IGNORECASE):
-            return True
-        return False
-
-    return list(filter(isKeyWord, data))
-
+    return regex_filter(data, keyWord)
 
 def regex_filter(data, regex):
     def isRegex(s):
