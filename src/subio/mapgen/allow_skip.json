@@ -16,7 +16,8 @@
     ],
     "ss": [
         "plugin",
-        "plugin-opts-fingerprint"
+        "plugin-opts-fingerprint",
+        "udp"
     ],
     "vless": [
         "servername"

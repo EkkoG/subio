@@ -1,5 +1,8 @@
 import base64
 import urllib
+import urllib.parse
+from .ss import line_to_proxy as ss_line_to_proxy
+from .common import _origin_to_unify_trans
 
 
 def line_to_proxy(line):
@@ -13,9 +16,6 @@ def line_to_proxy(line):
     str_before_at = netloc.split("@")[0]
     q = urllib.parse.parse_qs(url.query)
 
-    print(url)
-    print(server, port, password, str_before_at, q)
-
     if url.scheme == "http" or url.scheme == "https":
         p = {}
         p["type"] = "http"
@@ -25,6 +25,7 @@ def line_to_proxy(line):
         p["port"] = port
         p["password"] = password
         p["username"] = username
+        p['name'] = url.fragment if url.fragment else f"{server}:{port}"
 
         return p
     elif url.scheme == "socks5" or url.scheme == "socks5-tls":
@@ -38,25 +39,22 @@ def line_to_proxy(line):
         p["username"] = username
         return p
     elif url.scheme == "ss":
-        p = {}
-        p["type"] = "ss"
-        p["server"] = server
-        p["port"] = port
-        # ss2022
-        if ":" in str_before_at:
-            p["cipher"] = username
-            p["password"] = password
-        else:
-            # padding
-            str_before_a = str_before_at + "=" * (4 - len(str_before_at) % 4)
-            t = base64.b64decode(str_before_a).decode("utf-8")
-            method = t.split(":")[0]
-            password = t.split(":")[1]
-            p["password"] = password
-            p["cipher"] = method
-        if url.fragment:
-            tag = urllib.parse.unquote(url.fragment)
-            p["name"] = tag
-        return p
+        return ss_line_to_proxy(line)
 
     return None
+
+def parse(file):
+    with open(file, "r") as f:
+        sub_text = f.read()
+        plain_text = base64.b64decode(sub_text).decode("utf-8")
+    all = []
+    for line in plain_text.split("\n"):
+        line = line.strip()
+        if line:
+            proxy = line_to_proxy(line)
+            if proxy:
+                all.append(proxy)
+    return all
+
+def origin_to_unify_trans(lst, unify_map):
+    return _origin_to_unify_trans(lst, unify_map)

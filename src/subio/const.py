@@ -4,6 +4,7 @@ platform_map = {
     "stash": "Stash",
     "surge": "Surge",
     "dae": "Dae",
+    "v2rayn": "v2rayN",
 }
 
 from enum import StrEnum
@@ -16,6 +17,7 @@ class SubIOPlatform(StrEnum):
     SURGE = "surge"
     DAE = "dae"
     SUBIO = "subio"
+    V2RAYN = "v2rayn"
 
     def __str__(self):
         return platform_map[self.value]
@@ -29,6 +31,7 @@ class SubIOPlatform(StrEnum):
             SubIOPlatform.SURGE,
             SubIOPlatform.DAE,
             SubIOPlatform.SUBIO,
+            SubIOPlatform.V2RAYN,
         ]
 
     @staticmethod
@@ -39,6 +42,7 @@ class SubIOPlatform(StrEnum):
             SubIOPlatform.STASH,
             SubIOPlatform.SURGE,
             SubIOPlatform.DAE,
+            SubIOPlatform.V2RAYN,
         ]
 
     @staticmethod

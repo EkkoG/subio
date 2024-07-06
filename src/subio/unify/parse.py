@@ -1,4 +1,4 @@
-from .parser import clash, surge
+from .parser import clash, surge, v2rayn
 from . import tools
 from ..const import SubIOPlatform
 from ..tools.tools import load_with_ext
@@ -18,4 +18,7 @@ def parse(origin, file):
         nodes = surge.parse(file)
 
         return surge.origin_to_unify_trans(nodes, unify_map)
+    elif origin == SubIOPlatform.V2RAYN:
+        nodes = v2rayn.parse(file)
+        return v2rayn.origin_to_unify_trans(nodes, unify_map)
     return []
