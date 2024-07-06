@@ -23,7 +23,7 @@ def kr_filter(data):
     return regex_filter(data, r)
 
 def us_filter(data):
-    r = "美国|us|America|America|America|America|America|America|America|US|us|US-|US_|US-_|US_|US-|United States|UnitedStates|United-States|United_States|United-States|United_States|UnitedStates|United States|USA|usa|USA-|USA_|USA-_|USA_|USA-"
+    r = "美国|us|America|US|United States|UnitedStates|United-States|United_States|USA"
     return regex_filter(data, r)
 
 

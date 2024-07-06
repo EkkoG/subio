@@ -24,6 +24,11 @@ type = "surge"
 file = 'surge.conf'
 
 [[provider]]
+name = "v2rayn"
+type = "v2rayn"
+file = 'v2rayn.txt'
+
+[[provider]]
 name = "Surge 测试"
 type = "surge"
 url = "https://gist.github.com/EkkoG/623bfd3be62a68b831c29007305ebbc2/raw/surge.conf"
@@ -83,6 +88,12 @@ template = "dae.conf"
 providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
 [artifact.options]
 work = true
+
+[[artifact]]
+name = "v2rayn.conf"
+type = "v2rayn"
+template = "v2rayn.conf"
+providers = ["v2rayn"]
 
 [[ruleset]]
 name = "telegram"

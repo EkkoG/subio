@@ -1,46 +1,65 @@
 import base64
 import hashlib
 import json
+import urllib
 
 import yaml
 
 from subio.unify.parser.surge import surge_anonymous_keys
 from ..const import SubIOPlatform
 
+def to_dae(data):
+    def dae_trans(d):
+        name = d["name"]
+        return f"{name} {_trans(d)}"
+    return "\n".join(list(map(dae_trans, data)))
 
-def to_url(data):
-    def trans(node):
-        if node["type"] == "http":
-            scheme = "http"
-            if "tls" in node and node["tls"]:
-                scheme = "https"
-            userinfo = ""
-            if node["username"] and node["password"]:
-                userinfo = f"{node['username']}:{node['password']}@"
-            return (
-                f"{node['name']} {scheme}://{userinfo}{node['server']}:{node['port']}"
-            )
-        elif node["type"] == "socks5":
-            scheme = "socks5"
-            if "tls" in node and node["tls"]:
-                scheme = "socks5-tls"
-            userinfo = ""
-            if node["username"] and node["password"]:
-                userinfo = f"{node['name']} {node['username']}:{node['password']}@"
-            return (
-                f"{node['name']} {scheme}://{userinfo}{node['server']}:{node['port']}"
-            )
-        elif node["type"] == "ss":
-            if "2022" in node["cipher"]:
-                return f"{node['name']} ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}"
-            else:
-                userinfo = f"{node['name']} {node['cipher']}:{node['password']}"
-                userinfo = base64.b64encode(userinfo.encode("utf-8")).decode("utf-8")
-                userinfo = userinfo.replace("=", "")
-                return f"{node['name']} ss://{userinfo}@{node['server']}:{node['port']}"
-        return ""
+def _trans(node):
+    if node["type"] == "http":
+        scheme = "http"
+        if "tls" in node and node["tls"]:
+            scheme = "https"
+        userinfo = ""
+        if node["username"] and node["password"]:
+            userinfo = f"{node['username']}:{node['password']}@"
+        return (
+            f"{scheme}://{userinfo}{node['server']}:{node['port']}#{urllib.parse.quote(node['name'])}"
+        )
+    elif node["type"] == "socks5":
+        scheme = "socks5"
+        if "tls" in node and node["tls"]:
+            scheme = "socks5-tls"
+        userinfo = ""
+        if node["username"] and node["password"]:
+            userinfo = f"{node['username']}:{node['password']}@"
+        return (
+            f"{scheme}://{userinfo}{node['server']}:{node['port']}"
+        )
+    elif node["type"] == "ss":
+        plugin = ""
+        print(node)
+        if "obfs" in node:
+            mode = node["obfs"]
+            if mode == "tls":
+                if "obfs-host" in node:
+                    host = node["obfs-host"]
+                    plugin = f"/?plugin=obfs-local;obfs={mode};obfs-host={host}"
+            plugin = urllib.parse.quote(plugin)
 
-    return "\n".join(list(map(trans, data)))
+
+        if "2022" in node["cipher"]:
+            return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}{plugin}#{urllib.parse.quote(node['name'])}"
+        else:
+            userinfo = f"{node['cipher']}:{node['password']}"
+            userinfo = base64.b64encode(userinfo.encode("utf-8")).decode("utf-8")
+            userinfo = userinfo.replace("=", "")
+            return f"ss://{userinfo}@{node['server']}:{node['port']}{plugin}#{urllib.parse.quote(node['name'])}"
+    return ""
+
+def to_v2rayn(data):
+
+    all_text = "\n".join(list(map(_trans, data)))
+    return base64.b64encode(all_text.encode("utf-8")).decode("utf-8")
 
 
 def to_surge(data):
@@ -64,7 +83,7 @@ def to_surge(data):
             map(lambda x: f"{x}={trans_values(node[x])}", other_keys)
         )
 
-        return f"{node['name']} = {anonymous_key_text}, {other_text}"
+        return f"= {anonymous_key_text}, {other_text}"
 
     return "\n".join(list(map(trans, data)))
 

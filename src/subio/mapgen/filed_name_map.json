@@ -14,6 +14,11 @@
             "obfs-uri": "plugin-opts-uri",
             "shadow-tls-password": "plugin-opts-password",
             "shadow-tls-sni": "plugin-opts-host"
+        },
+        "v2rayn": {
+            "obfs": "plugin-opts-mode",
+            "obfs-host": "plugin-opts-host",
+            "obfs-uri": "plugin-opts-uri"
         }
     },
     "wireguard": {

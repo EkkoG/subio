@@ -7,7 +7,8 @@ from subio.config import load_config
 from subio.config import check
 from subio.config import nodes_of
 
-from subio.transform.node import to_url
+from subio.transform.node import to_v2rayn
+from subio.transform.node import to_dae
 from subio.transform.node import to_surge
 from subio.transform.node import to_yaml
 from subio.transform.node import to_json
@@ -133,9 +134,11 @@ def run():
         def render_proxies(nodes):
             if artifact.type in SubIOPlatform.clash_like():
                 return to_yaml(nodes)
-            if artifact.type == "dae":
-                return to_url(nodes)
-            if artifact.type == "surge":
+            if artifact.type == SubIOPlatform.V2RAYN:
+                return to_v2rayn(nodes)
+            if artifact.type == SubIOPlatform.DAE:
+                return to_dae(nodes)
+            if artifact.type == SubIOPlatform.SURGE:
                 return to_surge(nodes)
             return to_json(nodes)
 

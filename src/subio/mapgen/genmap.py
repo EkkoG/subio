@@ -2,6 +2,7 @@ import yaml
 import json
 from subio.unify.parser import surge
 from subio.unify.parser import dae
+from subio.unify.parser import v2rayn
 from subio.const import SubIOPlatform
 
 cache = {}
@@ -89,9 +90,7 @@ def gen_with(proxies, ftype):
 
 
 def gen_surge_like(file, ftype):
-    with open(file, "r") as f:
-        text = f.read()
-    proxies = surge.parse(text)
+    proxies = surge.parse(file)
 
     gen_with(proxies, ftype)
 
@@ -102,13 +101,19 @@ def gen_dae(file, ftype):
         proxies = dae.parse(text)
         gen_with(proxies, ftype)
 
+def gen_ss(file, ftype):
+    proxies = v2rayn.parse(file)
+    print(proxies)
+    gen_with(proxies, ftype)
+
 
 def gen():
-    gen_surge_like("config/surge.conf", "surge")
-    gen_clash("config/meta.yaml", "clash-meta")
-    gen_clash("config/clash.yaml", "clash")
-    gen_clash("config/stash.yaml", "stash")
-    gen_dae("config/dae.conf", "dae")
+    gen_surge_like("config/surge.conf", SubIOPlatform.SURGE)
+    gen_clash("config/meta.yaml", SubIOPlatform.CLASH_META)
+    gen_clash("config/clash.yaml", SubIOPlatform.CLASH)
+    gen_clash("config/stash.yaml", SubIOPlatform.STASH)
+    gen_dae("config/dae.conf", SubIOPlatform.DAE)
+    gen_ss("config/v2rayn.txt", SubIOPlatform.V2RAYN)
 
     for ptype, config in cache.items():
         all_platform = SubIOPlatform.supported_artifact()
