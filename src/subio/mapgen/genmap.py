@@ -103,7 +103,6 @@ def gen_dae(file, ftype):
 
 def gen_ss(file, ftype):
     proxies = v2rayn.parse(file)
-    print(proxies)
     gen_with(proxies, ftype)
 
 
