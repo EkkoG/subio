@@ -37,7 +37,6 @@ def _trans(node):
         )
     elif node["type"] == "ss":
         plugin = ""
-        print(node)
         if "obfs" in node:
             mode = node["obfs"]
             if mode == "tls":
