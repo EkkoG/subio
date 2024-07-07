@@ -43,6 +43,9 @@
             "server-cert-fingerprint-sha256": "fingerprint",
             "ws-path": "ws-opts-path",
             "ws-headers": "ws-opts-headers"
+        },
+        "v2rayn": {
+            "allowInsecure": "skip-cert-verify"
         }
     },
     "snell": {

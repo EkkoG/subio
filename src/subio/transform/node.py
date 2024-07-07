@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import json
-import urllib
+from urllib.parse import quote, urlencode
 
 import yaml
 
@@ -23,7 +23,7 @@ def _trans(node):
         if node["username"] and node["password"]:
             userinfo = f"{node['username']}:{node['password']}@"
         return (
-            f"{scheme}://{userinfo}{node['server']}:{node['port']}#{urllib.parse.quote(node['name'])}"
+            f"{scheme}://{userinfo}{node['server']}:{node['port']}#{quote(node['name'])}"
         )
     elif node["type"] == "socks5":
         scheme = "socks5"
@@ -44,16 +44,25 @@ def _trans(node):
                 if "obfs-host" in node:
                     host = node["obfs-host"]
                     plugin = f"/?plugin=obfs-local;obfs={mode};obfs-host={host}"
-            plugin = urllib.parse.quote(plugin)
+            plugin = quote(plugin)
 
 
         if "2022" in node["cipher"]:
-            return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}{plugin}#{urllib.parse.quote(node['name'])}"
+            return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}{plugin}#{quote(node['name'])}"
         else:
             userinfo = f"{node['cipher']}:{node['password']}"
             userinfo = base64.b64encode(userinfo.encode("utf-8")).decode("utf-8")
             userinfo = userinfo.replace("=", "")
-            return f"ss://{userinfo}@{node['server']}:{node['port']}{plugin}#{urllib.parse.quote(node['name'])}"
+            return f"ss://{userinfo}@{node['server']}:{node['port']}{plugin}#{quote(node['name'])}"
+    elif node["type"] == "trojan":
+        options = ""
+        if "allowInsecure" in node:
+            value = 1 if node["allowInsecure"] else 0
+            options += f"allowInsecure={value};"
+        if options != "":
+            options = f"?{options}"
+
+        return f"trojan://{node['password']}@{node['server']}:{node['port']}?{options}#{quote(node['name'])}"
     return ""
 
 def to_v2rayn(data):
