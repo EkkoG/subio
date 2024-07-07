@@ -40,6 +40,22 @@ def line_to_proxy(line):
         return p
     elif url.scheme == "ss":
         return ss_line_to_proxy(line)
+    elif url.scheme == 'trojan':
+        # trojan://ahh@example.com:1111?allowInsecure=1&tfo=0#ahh
+        str_before_at = netloc.split("@")[0]
+        p = {}
+        p["type"] = "trojan"
+        p["server"] = server
+        p["port"] = port
+        p["password"] = str_before_at
+        p["name"] = url.fragment
+        if q:
+            if 'tfo' in q:
+                q.pop('tfo')
+            if 'allowInsecure' in q:
+                q["allowInsecure"] = True if q["allowInsecure"] == 1 else False
+            p.update(q)
+        return p
 
     return None
 

@@ -2072,12 +2072,8 @@
             "clash-meta": {},
             "clash": {},
             "stash": {},
-            "dae": {
-                "policy": "unsupport"
-            },
-            "v2rayn": {
-                "policy": "unsupport"
-            }
+            "dae": {},
+            "v2rayn": {}
         },
         "map": {
             "name": {
@@ -2094,10 +2090,10 @@
                     "origin": "name"
                 },
                 "dae": {
-                    "policy": "unsupport"
+                    "origin": "name"
                 },
                 "v2rayn": {
-                    "policy": "unsupport"
+                    "origin": "name"
                 }
             },
             "type": {
@@ -2114,10 +2110,10 @@
                     "origin": "type"
                 },
                 "dae": {
-                    "policy": "unsupport"
+                    "origin": "type"
                 },
                 "v2rayn": {
-                    "policy": "unsupport"
+                    "origin": "type"
                 }
             },
             "server": {
@@ -2134,10 +2130,10 @@
                     "origin": "server"
                 },
                 "dae": {
-                    "policy": "unsupport"
+                    "origin": "server"
                 },
                 "v2rayn": {
-                    "policy": "unsupport"
+                    "origin": "server"
                 }
             },
             "port": {
@@ -2154,10 +2150,10 @@
                     "origin": "port"
                 },
                 "dae": {
-                    "policy": "unsupport"
+                    "origin": "port"
                 },
                 "v2rayn": {
-                    "policy": "unsupport"
+                    "origin": "port"
                 }
             },
             "sni": {
@@ -2194,10 +2190,10 @@
                     "origin": "password"
                 },
                 "dae": {
-                    "policy": "unsupport"
+                    "origin": "password"
                 },
                 "v2rayn": {
-                    "policy": "unsupport"
+                    "origin": "password"
                 }
             },
             "ws-opts-path": {
@@ -2277,10 +2273,10 @@
                 "stash": {
                     "origin": "skip-cert-verify"
                 },
-                "dae": {
-                    "policy": "unsupport"
-                },
                 "v2rayn": {
+                    "origin": "allowInsecure"
+                },
+                "dae": {
                     "policy": "unsupport"
                 }
             },
