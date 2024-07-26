@@ -22,16 +22,41 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 if upload_info.file_name is None or len(upload_info.file_name) == 0:
                     upload_info.file_name = artifact.name
 
-                logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
-                upload_info.description = "subio"
-                upload_info.content = content
-                upload_info.id = uploader[0].id
-                upload_info.token = uploader[0].token
-                success = upload_to_gist(upload_info)
-                if success:
-                    logger.info(f"上传 {artifact.name} 到 {upload_info.to} 成功")
+                # git clone https://gist.github.com/${id}.git gist_dist
+                # cp -r dist/* gist_dist
+                # cd gist_dist
+                # git add .
+                # git commit -m "update"
+                # git push
+
+                dir = f"{uploaders[0].id}"
+                if os.path.exists(dir):
+                    os.system(f"git -C {dir} pull")
                 else:
-                    logger.error(f"上传 {artifact.name} 到 {upload_info.to} 失败")
+                    os.system(f"git clone https://{uploader[0].token}@gist.github.com/{uploader[0].id}.git {dir}")
+
+                with open(f"{dir}/{upload_info.file_name}", "w") as f:
+                    f.write(content)
+                # change cwd to dir
+                os.system(f"cd {dir}")
+                # check if there is any change
+                ret = os.system(f"git -C {dir} diff --quiet")
+                if ret != 0:
+                    os.system(f"git -C {dir} add .")
+                    os.system(f"git -C {dir} commit -m 'update'")
+                    os.system(f"git -C {dir} push")
+
+
+                # logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
+                # upload_info.description = "subio"
+                # upload_info.content = content
+                # upload_info.id = uploader[0].id
+                # upload_info.token = uploader[0].token
+                # success = upload_to_gist(upload_info)
+                # if success:
+                #     logger.info(f"上传 {artifact.name} 到 {upload_info.to} 成功")
+                # else:
+                #     logger.error(f"上传 {artifact.name} 到 {upload_info.to} 失败")
             else:
                 logger.error(f"artifact {artifact.name} 不支持上传到 {upload_info.to}")
     else:
