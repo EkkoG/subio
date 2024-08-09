@@ -42,8 +42,8 @@ def _trans(node):
             if mode == "tls":
                 if "obfs-host" in node:
                     host = node["obfs-host"]
-                    plugin = f"/?plugin=obfs-local;obfs={mode};obfs-host={host}"
-            plugin = quote(plugin)
+                    plugin = f";obfs={mode};obfs-host={host}"
+            plugin = f"/?plugin=obfs-local{quote(plugin)}"
 
 
         if "2022" in node["cipher"]:
