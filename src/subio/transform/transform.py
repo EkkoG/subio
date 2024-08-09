@@ -5,9 +5,9 @@ def tarnsform_to(nodes, dest, tansform_map):
     to = _tarnsform_to(nodes, dest, tansform_map)
 
     def fix(node):
-        if node["type"] in ["ss"]:
-            if "plugin" in node:
-                node.pop("plugin", None)
+        # if node["type"] in ["ss"]:
+        #     if "plugin" in node:
+        #         node.pop("plugin", None)
 
         if node["type"] in ["vmess", "trojan"]:
             if "network" in node and node["network"] == "ws":

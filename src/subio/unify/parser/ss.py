@@ -34,11 +34,18 @@ def line_to_proxy(line):
             tag = urllib.parse.unquote(url.fragment)
             p["name"] = tag
         if q:
+            # q = {'plugin': ['obfs-local;obfs=tls;obfs-host=9d4054e.wns.windows.com'], 'group': ['RGxlc']}
             if "plugin" in q:
+                # plugin = obfs-local;obfs=tls;obfs-host=9d4054e.wns.windows.com
                 plugin = q["plugin"][0]
+                # plugin = obfs-local;obfs=tls;obfs-host=9d4054e.wns.windows.com
                 plugin = urllib.parse.unquote(plugin)
+                # 
                 plugin = plugin.split(";")
-                p["plugin"] = plugin[0]
+                if plugin[0] == "obfs-local":
+                    p["plugin"] = "obfs"
+                else:
+                    p["plugin"] = plugin[0]
                 for opt in plugin[1:]:
                     k, v = opt.split("=")
                     p[k] = v
