@@ -35,6 +35,7 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 else:
                     os.system(f"git clone https://{uploader[0].token}@gist.github.com/{uploader[0].id}.git {dir}")
 
+                logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
                 with open(f"{dir}/{upload_info.file_name}", "w") as f:
                     f.write(content)
                 # change cwd to dir
@@ -44,7 +45,13 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 if ret != 0:
                     os.system(f"git -C {dir} add .")
                     os.system(f"git -C {dir} commit -m 'update'")
-                    os.system(f"git -C {dir} push")
+                    ret = os.system(f"git -C {dir} push")
+                    if ret == 0:
+                        logger.info(f"上传 {artifact.name} 到 {upload_info.to} 成功")
+                    else:
+                        logger.error(f"上传 {artifact.name} 到 {upload_info.to} 失败")
+                else:
+                    logger.info(f"artifact {upload_info.file_name} 没有变化，无需上传")
 
 
                 # logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
