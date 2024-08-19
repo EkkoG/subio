@@ -29,7 +29,7 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 # git commit -m "update"
                 # git push
 
-                dir = f"{uploaders[0].id}"
+                dir = f"/tmp/subio-JTbNgDTmbqNMNj1qncwrSg/gist/{uploaders[0].id}"
                 if os.path.exists(dir):
                     os.system(f"git -C {dir} pull")
                 else:
