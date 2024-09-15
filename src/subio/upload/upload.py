@@ -33,7 +33,9 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 if os.path.exists(dir):
                     os.system(f"git -C {dir} pull")
                 else:
-                    os.system(f"git clone https://{uploader[0].token}@gist.github.com/{uploader[0].id}.git {dir}")
+                    os.system(
+                        f"git clone https://{uploader[0].token}@gist.github.com/{uploader[0].id}.git {dir}"
+                    )
 
                 logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
                 with open(f"{dir}/{upload_info.file_name}", "w") as f:
@@ -52,7 +54,6 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                         logger.error(f"上传 {artifact.name} 到 {upload_info.to} 失败")
                 else:
                     logger.info(f"artifact {upload_info.file_name} 没有变化，无需上传")
-
 
                 # logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
                 # upload_info.description = "subio"

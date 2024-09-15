@@ -1,24 +1,23 @@
-from .parser import clash, surge, v2rayn
-from . import tools
+from .parser import clash, v2rayn, subio
 from ..const import SubIOPlatform
-from ..tools.tools import load_with_ext
+from subio.model import Base
+from subio.log import log
 
 
-def parse(origin, file):
+def parse(origin: SubIOPlatform, file: str) -> list[Base]:
     if origin == "subio":
-        d = load_with_ext(file)
-        return d["nodes"]
+        return subio.parse(file)
 
-    unify_map = tools.build_map(origin)
-    if origin in SubIOPlatform.clash_like():
+    if origin == "clash" or origin == "clash-meta" or origin == "stash":
         nodes = clash.parse(file)
-
-        return clash.origin_to_unify_trans(nodes, unify_map)
-    elif origin in SubIOPlatform.surge_like():
-        nodes = surge.parse(file)
-
-        return surge.origin_to_unify_trans(nodes, unify_map)
-    elif origin == SubIOPlatform.V2RAYN:
+        return nodes
+    if origin == "v2rayn":
         nodes = v2rayn.parse(file)
-        return v2rayn.origin_to_unify_trans(nodes, unify_map)
+        return nodes
+    if origin == "surge":
+        log.logger.error("Surge format is not supported yet")
+    if origin == "quantumultx":
+        log.logger.error("QuantumultX format is not supported yet")
+    if origin == "dae":
+        log.logger.error("Dae format is not supported yet")
     return []

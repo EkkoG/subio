@@ -361,9 +361,9 @@ proxies:
     fingerprint: xxxx
     udp: true
     ws-opts:
-    path: /path
-    headers:
-      Host: example.com
+      path: /path
+      headers:
+        Host: example.com
   
   - name: "trojan-xtls"
     type: trojan

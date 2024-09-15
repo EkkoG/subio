@@ -1,3 +1,11 @@
+from typing import Dict
+import json5
+import toml
+import yaml
+import json
+import os
+
+
 def set_value(node, level, value, dest_key):
     all_level = dest_key.split(".")
     if level == len(all_level) - 1:
@@ -6,14 +14,6 @@ def set_value(node, level, value, dest_key):
     if all_level[level] not in node:
         node[all_level[level]] = {}
     set_value(node[all_level[level]], level + 1, value, dest_key)
-
-
-from typing import Dict
-import json5
-import toml
-import yaml
-import json
-import os
 
 
 def load(file: str) -> Dict:

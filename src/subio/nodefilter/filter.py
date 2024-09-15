@@ -2,25 +2,29 @@ import re
 
 
 def hk_filter(data):
-    r = "香港|hk|Hong Kong|HongKong|Hong-Kong|Hong_Kong|Hong-Kong|Hong_Kong|HongKong|HK|hk|HK-|HK_|HK-_|HK_|HK-"
+    r = "香港|hk|Hong Kong|Hong-Kong|Hong_Kong|HongKong|HK|HK-|HK_|HK-_|HK_|HK-"
     return regex_filter(data, r)
+
 
 def tw_filter(data):
-    r = "台湾|tw|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|Taiwan|TW|tw|TW-|TW_|TW-_|TW_|TW-"
+    r = "台湾|tw|Taiwan||TW|tw|TW-|TW_|TW-_|TW_|TW-"
     return regex_filter(data, r)
+
 
 def sg_filter(data):
-    r = "新加坡|sg|Singapore|Singapore|Singapore|Singapore|Singapore|Singapore|Singapore|SG|sg|SG-|SG_|SG-_|SG_|SG-"
+    r = "新加坡|sg|Singapore|SG|sg|SG-|SG_|SG-_|SG_|SG-"
     return regex_filter(data, r)
 
+
 def jp_filter(data):
-    r = "日本|jp|Japan|Japan|Japan|Japan|Japan|Japan|Japan|JP|jp|JP-|JP_|JP-_|JP_|JP-"
+    r = "日本|jp|Japan|JP|jp|JP-|JP_|JP-_|JP_|JP-"
     return regex_filter(data, r)
 
 
 def kr_filter(data):
-    r = "韩国|kr|Korea|Korea|Korea|Korea|Korea|Korea|Korea|KR|kr|KR-|KR_|KR-_|KR_|KR-"
+    r = "韩国|kr|Korea|KR|kr|KR-|KR_|KR-_|KR_|KR-"
     return regex_filter(data, r)
+
 
 def us_filter(data):
     r = "美国|us|America|US|United States|UnitedStates|United-States|United_States|USA"
@@ -30,10 +34,11 @@ def us_filter(data):
 def keyWord_filter(data, keyWord):
     return regex_filter(data, keyWord)
 
+
 def regex_filter(data, regex):
     def isRegex(s):
         # if s contains regex, what ever the case, it is regex
-        name = s if isinstance(s, str) else s["name"]
+        name = s if isinstance(s, str) else s.name
         if re.search(regex, name, re.IGNORECASE):
             return True
         return False
@@ -44,7 +49,7 @@ def regex_filter(data, regex):
 def exclude(data, regex):
     def isRegex(s):
         # if s contains regex, what ever the case, it is regex
-        name = s if isinstance(s, str) else s["name"]
+        name = s if isinstance(s, str) else s.name
         if re.search(regex, name, re.IGNORECASE):
             return False
         return True

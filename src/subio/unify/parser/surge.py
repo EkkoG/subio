@@ -1,5 +1,4 @@
 from configparser import ConfigParser
-from .common import _origin_to_unify_trans
 from subio.log.log import logger
 import re
 
@@ -119,15 +118,3 @@ def parse(file):
         all_proxies.append(node)
 
     return all_proxies
-
-
-def origin_to_unify_trans(lst, unify_map):
-    common_trans = _origin_to_unify_trans(lst, unify_map)
-
-    def fix(node):
-        if node["type"] == "ss":
-            if "plugin-opts-mode" in node:
-                node["plugin"] = "obfs"
-        return node
-
-    return list(map(fix, common_trans))

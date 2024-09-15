@@ -1,7 +1,7 @@
+from dacite import from_dict
+from dacite import Config as DaciteConfig
 import requests
 from functools import reduce
-
-import json
 
 import hashlib
 import os
@@ -10,26 +10,50 @@ from ..log import log
 from ..unify import parse
 from ..tools.tools import load
 
-from ..transform import transform
-from ..transform import validate
 from ..const import SubIOPlatform
 from .model import Config, Rename, Artifact
 import tempfile
-
-map_path = "/".join(__file__.split("/")[:-2]) + "/map.json"
-validate_map = json.load(open(map_path, "r"))
+from subio.model import Base
 
 
-def nodes_of(artifact: Artifact, nodes):
+def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
     all_nodes_for_artifact = [nodes[provider] for provider in artifact.providers]
     all_nodes_for_artifact = reduce(lambda x, y: x + y, all_nodes_for_artifact)
-    all_nodes_for_artifact = validate.validation(
-        all_nodes_for_artifact, artifact._type(), validate_map
-    )
-    all_nodes_for_artifact = transform.tarnsform_to(
-        all_nodes_for_artifact, artifact._type(), validate_map
-    )
-    return all_nodes_for_artifact
+    all_valid_nodes = []
+    for node in all_nodes_for_artifact:
+        if artifact.type in SubIOPlatform.clash_like():
+            try:
+                node.to_clash_meta()
+                all_valid_nodes.append(node)
+            except Exception as e:
+                log.logger.error(
+                    f"节点 {node.name} 无法转换为 clash 格式，错误信息：{e}"
+                )
+        elif artifact.type == SubIOPlatform.DAE:
+            try:
+                node.to_dae()
+                all_valid_nodes.append(node)
+            except Exception as e:
+                log.logger.error(f"节点 {node.name} 无法转换为 dae 格式，错误信息：{e}")
+        elif artifact.type == SubIOPlatform.SURGE:
+            try:
+                node.to_surge()
+                all_valid_nodes.append(node)
+            except Exception as e:
+                log.logger.error(
+                    f"节点 {node.name} 无法转换为 surge 格式，错误信息：{e}"
+                )
+        elif artifact.type == SubIOPlatform.V2RAYN:
+            try:
+                node.to_v2rayn()
+                all_valid_nodes.append(node)
+            except Exception as e:
+                log.logger.error(
+                    f"节点 {node.name} 无法转换为 v2rayn 格式，错误信息：{e}"
+                )
+        else:
+            log.logger.error(f"不支持的 artifact 类型 {artifact.type}")
+    return all_valid_nodes
 
 
 def check(config: Config):
@@ -69,7 +93,7 @@ def check(config: Config):
     return True
 
 
-def load_nodes(config: Config):
+def load_nodes(config: Config) -> list[Base]:
     all_nodes = {}
     for provider in config.provider:
         log.logger.info(f"加载 {provider.name} 节点")
@@ -101,7 +125,7 @@ def load_nodes(config: Config):
     return all_nodes
 
 
-def load_remote_resource(url, ua=None):
+def load_remote_resource(url: str, ua=None) -> str:
     headers = {"User-Agent": ua}
     if os.getenv("DEBUG"):
         file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
@@ -121,12 +145,12 @@ def load_remote_resource(url, ua=None):
 
 def rename_node(node, rename: Rename):
     if rename.add_prefix:
-        node["name"] = rename.add_prefix + node["name"]
+        node.name = rename.add_prefix + node.name
     if rename.add_suffix:
-        node["name"] = node["name"] + rename.add_suffix
+        node.name = node.name + rename.add_suffix
     if rename.replace:
         for r in rename.replace:
-            node["name"] = node["name"].replace(r.old, r.new)
+            node.name = node.name.replace(r.old, r.new)
 
     return node
 
@@ -152,16 +176,13 @@ def wrap_with_jinja2_macro(text, name):
     )
 
 
-def load_rulset(config: Config):
+def load_rulset(config: Config) -> dict[str, str]:
     all_rule_set = {}
     for ruleset in config.ruleset:
         all_rule_set[ruleset.name] = wrap_with_jinja2_macro(
             load_remote_resource(ruleset.url, ruleset.user_agent), ruleset.name
         )
     return all_rule_set
-
-
-from dacite import from_dict
 
 
 def load_config() -> Config:
@@ -173,4 +194,6 @@ def load_config() -> Config:
         log.logger.error("没有找到配置文件")
         return None
 
-    return from_dict(data_class=Config, data=config)
+    return from_dict(
+        data_class=Config, data=config, config=DaciteConfig(cast=[SubIOPlatform])
+    )
