@@ -14,52 +14,6 @@ class Unsupport(Exception):
     pass
 
 
-# def _trans(node):
-#     if node["type"] == "http":
-#         scheme = "http"
-#         if "tls" in node and node["tls"]:
-#             scheme = "https"
-#         userinfo = ""
-#         if node["username"] and node["password"]:
-#             userinfo = f"{node['username']}:{node['password']}@"
-#         return f"{scheme}://{userinfo}{node['server']}:{node['port']}#{quote(node['name'])}"
-#     elif node["type"] == "socks5":
-#         scheme = "socks5"
-#         if "tls" in node and node["tls"]:
-#             scheme = "socks5-tls"
-#         userinfo = ""
-#         if node["username"] and node["password"]:
-#             userinfo = f"{node['username']}:{node['password']}@"
-#         return f"{scheme}://{userinfo}{node['server']}:{node['port']}"
-#     elif node["type"] == "ss":
-#         plugin = ""
-#         if "obfs" in node:
-#             mode = node["obfs"]
-#             if mode == "tls":
-#                 if "obfs-host" in node:
-#                     host = node["obfs-host"]
-#                     plugin = f";obfs={mode};obfs-host={host}"
-#             plugin = f"/?plugin=obfs-local{quote(plugin)}"
-
-#         if "2022" in node["cipher"]:
-#             return f"ss://{node['cipher']}:{node['password']}@{node['server']}:{node['port']}{plugin}#{quote(node['name'])}"
-#         else:
-#             userinfo = f"{node['cipher']}:{node['password']}"
-#             userinfo = base64.b64encode(userinfo.encode("utf-8")).decode("utf-8")
-#             userinfo = userinfo.replace("=", "")
-#             return f"ss://{userinfo}@{node['server']}:{node['port']}{plugin}#{quote(node['name'])}"
-#     elif node["type"] == "trojan":
-#         options = ""
-#         if "allowInsecure" in node:
-#             value = 1 if node["allowInsecure"] else 0
-#             options += f"allowInsecure={value};"
-#         if options != "":
-#             options = f"?{options}"
-
-#         return f"trojan://{node['password']}@{node['server']}:{node['port']}?{options}#{quote(node['name'])}"
-#     return ""
-
-
 class TLSBase:
     @dataclass
     class RealityOpts:
