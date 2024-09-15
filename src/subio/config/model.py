@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 from subio.const import SubIOPlatform
 
 
@@ -11,15 +11,15 @@ class Replace:
 
 @dataclass
 class Rename:
-    add_prefix: Optional[str] = None
-    add_suffix: Optional[str] = None
-    replace: Optional[List[Replace]] = None
+    add_prefix: str | None
+    add_suffix: str | None
+    replace: List[Replace] | None
 
 
 @dataclass
 class ArtifactUpload:
     to: str
-    file_name: Optional[str] = None
+    file_name: str | None
 
 
 @dataclass
@@ -28,9 +28,9 @@ class Artifact:
     providers: List[str]
     template: str
     type: str
-    upload: Optional[List[ArtifactUpload]] = None
-    options: Optional[dict] = None
-    filters: Optional[dict] = None
+    upload: List[ArtifactUpload] | None
+    options: dict | None
+    filters: dict | None
 
     def _type(self):
         return SubIOPlatform(self.type)
@@ -39,18 +39,18 @@ class Artifact:
 @dataclass
 class Provider:
     name: str
-    type: str
-    url: Optional[str] = None
-    file: Optional[str] = None
-    user_agent: Optional[str] = None
-    rename: Optional[Rename] = None
+    type: SubIOPlatform
+    url: str | None
+    file: str | None
+    user_agent: str | None
+    rename: Rename | None
 
 
 @dataclass
 class Ruleset:
     name: str
     url: str
-    user_agent: Optional[str] = None
+    user_agent: str | None
 
 
 @dataclass
@@ -66,7 +66,7 @@ class Config:
     log_level: str
     artifact: List[Artifact]
     provider: List[Provider]
-    ruleset: Optional[List[Ruleset]] = None
-    uploader: Optional[List[Uploader]] = None
-    options: Optional[dict] = None
-    filters: Optional[dict] = None
+    ruleset: List[Ruleset] | None
+    uploader: List[Uploader] | None
+    options: dict | None
+    filters: dict | None

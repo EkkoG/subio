@@ -8,24 +8,25 @@ from subio.config import check
 from subio.config import nodes_of
 
 from subio.transform.node import to_v2rayn
-from subio.transform.node import to_dae
 from subio.transform.node import to_surge
-from subio.transform.node import to_yaml
-from subio.transform.node import to_json
+from subio.transform.node import to_clash_meta
 from subio.transform.node import to_name
 from subio.transform.node import list_to_names
+from subio.transform.node import to_dae
+
 
 from subio.transform.ruleset import render_ruleset_in_clash
 from subio.transform.ruleset import render_ruleset_generic
 from subio.transform.ruleset import render_ruleset_in_dae
 
-from .upload import upload
-from .log import log
-from .const import SubIOPlatform
+from subio.upload import upload
+from subio.log import log
+from subio.const import SubIOPlatform
 
-from .nodefilter.filter import all_filters
+from subio.nodefilter.filter import all_filters
 import sys
 import re
+from subio.model import Base
 
 
 def get_snippets():
@@ -86,31 +87,29 @@ def run():
         log.logger.info(f"使用 {artifact.providers} 作为数据源")
         log.logger.info(f"使用 {artifact.template} 作为模板")
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
-        all_nodes = nodes_of(artifact, all_nodes_of_providers)
+        nodes_of_artifact = nodes_of(artifact, all_nodes_of_providers)
         filters = artifact.filters if artifact.filters else config.filters
         if filters:
             if "include" in filters:
                 # 过滤节点, 只保留 include 中的节点，使用 re
-                all_nodes = list(
+                nodes_of_artifact = list(
                     filter(
-                        lambda x: re.search(
-                            filters["include"], x["name"], re.IGNORECASE
-                        ),
-                        all_nodes,
+                        lambda x: re.search(filters["include"], x.name, re.IGNORECASE),
+                        nodes_of_artifact,
                     )
                 )
             if "exclude" in filters:
                 # 过滤节点, 排除 exclude 中的节点，使用 re
-                all_nodes = list(
+                nodes_of_artifact = list(
                     filter(
                         lambda x: not re.search(
-                            filters["exclude"], x["name"], re.IGNORECASE
+                            filters["exclude"], x.name, re.IGNORECASE
                         ),
-                        all_nodes,
+                        nodes_of_artifact,
                     )
                 )
-        log.logger.info(f"可用节点数量：{len(all_nodes)}")
-        if len(all_nodes) == 0:
+        log.logger.info(f"可用节点数量：{len(nodes_of_artifact)}")
+        if len(nodes_of_artifact) == 0:
             log.logger.error(f"artifact {artifact.name} 没有可用节点")
             return
 
@@ -118,7 +117,7 @@ def run():
 
         log.logger.info(f"开始生成 {artifact.name}")
         # check if node names are duplicated
-        node_names = to_name(all_nodes)
+        node_names = to_name(nodes_of_artifact)
         if len(node_names) != len(set(node_names)):
             log.logger.error(f"artifact {artifact.name} 有重复的节点名")
             return
@@ -126,21 +125,21 @@ def run():
         def render_rules(*args, **kwargs):
             if artifact.type in SubIOPlatform.clash_like():
                 return render_ruleset_in_clash(*args, **kwargs)
-            if artifact.type == "dae":
+            if artifact.type == SubIOPlatform.DAE:
                 return render_ruleset_in_dae(*args, **kwargs)
 
             return render_ruleset_generic(*args, **kwargs)
 
-        def render_proxies(nodes):
+        def render_proxies(nodes: list[Base]) -> str | None:
             if artifact.type in SubIOPlatform.clash_like():
-                return to_yaml(nodes)
+                return to_clash_meta(nodes)
             if artifact.type == SubIOPlatform.V2RAYN:
                 return to_v2rayn(nodes)
-            if artifact.type == SubIOPlatform.DAE:
-                return to_dae(nodes)
             if artifact.type == SubIOPlatform.SURGE:
                 return to_surge(nodes)
-            return to_json(nodes)
+            if artifact.type == SubIOPlatform.DAE:
+                return to_dae(nodes)
+            return None
 
         # 只接受字符串数组参数
         def render_proxies_names(*args, **kwargs):
@@ -157,10 +156,10 @@ def run():
         env.filters["render_proxies"] = render_proxies
         template = env.from_string(template_text)
 
-        rendered_proxied = render_proxies(all_nodes)
+        rendered_proxied = render_proxies(nodes_of_artifact)
         env.globals["proxies"] = rendered_proxied
-        env.globals["proxies_obj"] = all_nodes
-        env.globals["proxies_names"] = to_name(all_nodes)
+        env.globals["proxies_obj"] = nodes_of_artifact
+        env.globals["proxies_names"] = to_name(nodes_of_artifact)
         env.globals["filter"] = all_filters
         env.globals["remote_ruleset"] = remote_ruleset
         env.globals["global_options"] = config.options

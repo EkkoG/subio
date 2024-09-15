@@ -1,24 +1,38 @@
 import yaml
-import re
 
-from .common import _origin_to_unify_trans
+from subio.model import Shadowsocks, Vmess, Vless, Trojan, Socks5, Http, Wireguard
+from subio.log import log
 
 
-def parse(file):
+def parse(file: str):
     with open(file, "r") as f:
         nodes = yaml.safe_load(f)["proxies"]
-        return nodes
+        parsed_nodes = []
+        for node in nodes:
+            try:
+                if node["type"] == "ss":
+                    parsed_nodes.append(Shadowsocks.from_clash_meta(node))
+                elif node["type"] == "vmess":
+                    parsed_nodes.append(Vmess.from_clash_meta(node))
+                elif node["type"] == "vless":
+                    parsed_nodes.append(Vless.from_clash_meta(node))
+                elif node["type"] == "trojan":
+                    parsed_nodes.append(Trojan.from_clash_meta(node))
+                elif node["type"] == "socks5":
+                    parsed_nodes.append(Socks5.from_clash_meta(node))
+                elif node["type"] == "http":
+                    parsed_nodes.append(Http.from_clash_meta(node))
+                elif node["type"] == "wireguard":
+                    parsed_nodes.append(Wireguard.from_clash_meta(node))
+                else:
+                    log.logger.error(
+                        f"Unsupport node type: {node['type']} in clash format"
+                    )
+                    continue
+            except Exception as e:
+                # import traceback
+                # traceback.print_exc()
+                log.logger.error(f"解析节点失败，错误信息：{e}")
+                continue
 
-
-def origin_to_unify_trans(lst, unify_map):
-    common_trans = _origin_to_unify_trans(lst, unify_map)
-
-    def fix(node):
-        if node["type"] == "hysteria":
-            # only keep numbers of up and down, remove unit
-            node["up"] = int(re.sub(r"\D", "", node["up"]))
-            node["down"] = int(re.sub(r"\D", "", node["down"]))
-
-        return node
-
-    return list(map(fix, common_trans))
+        return parsed_nodes
