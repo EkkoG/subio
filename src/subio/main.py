@@ -120,6 +120,12 @@ def run():
         node_names = to_name(nodes_of_artifact)
         if len(node_names) != len(set(node_names)):
             log.logger.error(f"artifact {artifact.name} 有重复的节点名")
+            # print diff
+            from collections import Counter
+            counter = Counter(node_names)
+            for name, count in counter.items():
+                if count > 1:
+                    log.logger.error(f"{name} 重复 {count} 次")
             return
 
         def render_rules(*args, **kwargs):

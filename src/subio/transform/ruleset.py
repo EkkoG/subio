@@ -33,6 +33,9 @@ def render_ruleset_in_clash(text):
         if "USER-AGENT" in rule:
             log.logger.warning(f"发现 USER-AGENT 规则，已经自动忽略，规则：{rule}")
             return False
+        if "IP-ASN" in rule:
+            log.logger.warning(f"发现 IP-ASN 规则，已经自动忽略，规则：{rule}")
+            return False
         return True
 
     lines = list(filter(filter_rules, lines))
