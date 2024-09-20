@@ -43,10 +43,10 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 # change cwd to dir
                 os.system(f"cd {dir}")
                 # check if there is any change
-                ret = os.system(f"git -C {dir} diff --quiet")
+                os.system(f"git -C {dir} add .")
+                ret = os.system(f"git -C {dir} diff --cached --quiet")
                 if ret != 0:
-                    os.system(f"git -C {dir} add .")
-                    os.system(f"git -C {dir} commit -m 'update'")
+                    os.system(f"git -C {dir} commit -m 'update {upload_info.file_name}'")
                     ret = os.system(f"git -C {dir} push")
                     if ret == 0:
                         logger.info(f"上传 {artifact.name} 到 {upload_info.to} 成功")
