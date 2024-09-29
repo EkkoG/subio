@@ -44,6 +44,7 @@ class Provider:
     file: str | None
     user_agent: str | None
     rename: Rename | None
+    privacy_endpoint: str | None
 
 
 @dataclass
