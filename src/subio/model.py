@@ -283,6 +283,8 @@ class Base:
     tfo: bool
     ip_version: str
     mptcp: bool
+    privacy_endpoint: str = None
+    dialer_proxy: str = None
 
     def __hash__(self) -> int:
         if isinstance(self.node, dict):
@@ -422,6 +424,7 @@ class Base:
             "tfo": self.tfo,
             "ip-version": self.ip_version,
             "mptcp": self.mptcp,
+            "dialer-proxy": self.dialer_proxy,
         }
 
     def to_surge_base(self) -> str:
@@ -646,7 +649,7 @@ class Shadowsocks(Base, SmuxBase):
 
     # to
 
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {
             "cipher": self.cipher.value,
@@ -659,7 +662,7 @@ class Shadowsocks(Base, SmuxBase):
         ret.update(self.smux_to_clash_meta())
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_surge(self) -> str:
         ret = f"{self.to_surge_base()}, encrypt-method={self.cipher}, password={self.password}, udp-relay={"true" if self.udp else "false"}"
         if self.plugin:
@@ -673,7 +676,7 @@ class Shadowsocks(Base, SmuxBase):
                 )
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_v2rayn(self) -> str:
         def plugin_text() -> str | None:
             if self.plugin == Shadowsocks.Plugin.obfs:
@@ -701,7 +704,7 @@ class Shadowsocks(Base, SmuxBase):
         all.append(f"#{urllib.parse.quote(self.name)}")
         return "/?".join(all)
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 
@@ -730,7 +733,7 @@ class Vmess(Base, TLSBase, TransportBase, SmuxBase, PacketEncodingBase):
             .setup_type(SubIOProtocol.VMESS)
         )
 
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {
             "uuid": self.uuid,
@@ -745,7 +748,7 @@ class Vmess(Base, TLSBase, TransportBase, SmuxBase, PacketEncodingBase):
         ret.update(self.to_clash_meta_base())
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_surge(self) -> str:
         ret = f"{self.to_surge_base()}, username={self.uuid}, encryption={self.cipher}"
         if self.network:
@@ -757,7 +760,7 @@ class Vmess(Base, TLSBase, TransportBase, SmuxBase, PacketEncodingBase):
                 )
         return ", ".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 
@@ -796,7 +799,7 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
         )
 
     # to
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {"password": self.password}
         ret.update(self.tls_to_clash_meta())
@@ -804,7 +807,7 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
         ret.update(self.to_clash_meta_base())
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_surge(self) -> str:
         ret = self.to_surge_base() + f", password={self.password}"
         if self.network:
@@ -816,7 +819,7 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
                 )
         return ", ".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
-    @lru_cache
+    #@lru_cache
     def to_v2rayn(self) -> str:
         def tls_text() -> list[str]:
             all = []
@@ -833,7 +836,7 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
 
         return f"trojan://{self.password}@{self.server}:{self.port}?{'&'.join(tls_text())}#{self.name}"
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 
@@ -855,7 +858,7 @@ class Socks5(Base, TLSBase):
             .setup_type(SubIOProtocol.SOCKS5)
         )
 
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {
             "username": self.username,
@@ -865,7 +868,7 @@ class Socks5(Base, TLSBase):
         ret.update(self.to_clash_meta_base())
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_surge(self) -> str:
         ret = (
             self.to_surge_base()
@@ -873,11 +876,11 @@ class Socks5(Base, TLSBase):
         )
         return ",".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
-    @lru_cache
+    #@lru_cache
     def to_v2rayn(self) -> str:
         return f"socks5://{self.username}:{self.password}@{self.server}:{self.port}#{self.name}"
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 
@@ -901,7 +904,7 @@ class Http(Base, TLSBase):
             .setup_type(SubIOProtocol.HTTP)
         )
 
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {
             "username": self.username,
@@ -942,16 +945,16 @@ class Http(Base, TLSBase):
             .setup_type(SubIOProtocol.HTTP)
         )
 
-    @lru_cache
+    #@lru_cache
     def to_surge(self) -> str:
         ret = self.to_surge_base() + f", {self.username}, {self.password}"
         return ",".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
-    @lru_cache
+    #@lru_cache
     def to_v2rayn(self) -> str:
         return f"http://{self.username}:{self.password}@{self.server}:{self.port}#{self.name}"
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 
@@ -978,7 +981,7 @@ class Vless(Base, SmuxBase, TransportBase, PacketEncodingBase, TLSBase):
             .setup_type(SubIOProtocol.VLESS)
         )
 
-    @lru_cache
+    #@lru_cache
     def to_clash_meta(self) -> dict:
         ret = {
             "uuid": self.uuid,
@@ -991,7 +994,7 @@ class Vless(Base, SmuxBase, TransportBase, PacketEncodingBase, TLSBase):
         ret.update(self.to_clash_meta_base())
         return ret
 
-    @lru_cache
+    #@lru_cache
     def to_dae(self) -> str:
         return self.to_v2rayn()
 

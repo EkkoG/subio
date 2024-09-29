@@ -1,7 +1,7 @@
 import jinja2
 import os
 
-from subio.config import load_nodes
+from subio.config import load_nodes, append_privacy_node
 from subio.config import load_rulset
 from subio.config import load_config
 from subio.config import check
@@ -12,7 +12,7 @@ from subio.transform.node import to_surge
 from subio.transform.node import to_clash_meta
 from subio.transform.node import to_name
 from subio.transform.node import list_to_names
-from subio.transform.node import to_dae
+from subio.transform.node import to_dae, to_dae_subscription
 
 
 from subio.transform.ruleset import render_ruleset_in_clash
@@ -113,6 +113,8 @@ def run():
             log.logger.error(f"artifact {artifact.name} 没有可用节点")
             return
 
+        if artifact.type == SubIOPlatform.CLASH_META:
+            nodes_of_artifact = append_privacy_node(nodes_of_artifact)
         template_text = build_template(artifact, remote_ruleset)
 
         log.logger.info(f"开始生成 {artifact.name}")
@@ -147,6 +149,11 @@ def run():
                 return to_dae(nodes)
             return None
 
+        def render_subsctiption(nodes: list[Base]) -> str | None:
+            if artifact.type == SubIOPlatform.DAE:
+                return to_dae_subscription(nodes)
+            return render_proxies(nodes)
+
         # 只接受字符串数组参数
         def render_proxies_names(*args, **kwargs):
             return list_to_names(artifact.type, *args, **kwargs)
@@ -164,6 +171,7 @@ def run():
 
         rendered_proxied = render_proxies(nodes_of_artifact)
         env.globals["proxies"] = rendered_proxied
+        env.globals["subscription"] = render_subsctiption(nodes_of_artifact)
         env.globals["proxies_obj"] = nodes_of_artifact
         env.globals["proxies_names"] = to_name(nodes_of_artifact)
         env.globals["filter"] = all_filters

@@ -14,6 +14,7 @@ from ..const import SubIOPlatform
 from .model import Config, Rename, Artifact
 import tempfile
 from subio.model import Base
+import copy
 
 
 def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
@@ -55,6 +56,23 @@ def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
             log.logger.error(f"不支持的 artifact 类型 {artifact.type}")
     return all_valid_nodes
 
+def append_privacy_node(data: list[Base]) -> list[Base]:
+    privacy_endpoints = list(filter(lambda x: x.privacy_endpoint is not None, data))
+    all_privacy_endpoints = list(map(lambda x: x.privacy_endpoint, privacy_endpoints))
+    cache: dict[str: Base] = {}
+    for x in data:
+        if x.name in all_privacy_endpoints:
+            cache[x.name] = x
+    privacy_nodes: list[Base] = []
+    for x in privacy_endpoints:
+        if x.privacy_endpoint not in cache:
+            raise ValueError(f"找不到 {x.privacy_endpoint}")
+        # deepcopy, to avoid cache
+        privacy_node = copy.copy(cache[x.privacy_endpoint])
+        privacy_node.dialer_proxy = x.name
+        privacy_node.name = f"{x.name} -> {privacy_node.name}"
+        privacy_nodes.append(privacy_node)
+    return data + privacy_nodes
 
 def check(config: Config):
     # 检查配置文件
@@ -94,7 +112,7 @@ def check(config: Config):
 
 
 def load_nodes(config: Config) -> list[Base]:
-    all_nodes = {}
+    all_nodes: dict[str, list[Base]] = {}
     for provider in config.provider:
         log.logger.info(f"加载 {provider.name} 节点")
         if provider.file is None:
@@ -119,6 +137,17 @@ def load_nodes(config: Config) -> list[Base]:
         log.logger.info(
             f"解析 {provider.name} 节点成功，数量：{len(all_nodes[provider.name])}"
         )
+        if provider.privacy_endpoint is not None:
+            log.logger.info(f"使用 {provider.privacy_endpoint} 作为隐私节点")
+            def use_privacy_endpoint(proxy: Base):
+                proxy.privacy_endpoint = provider.privacy_endpoint
+                return proxy
+            all_nodes[provider.name] = list(
+                map(
+                    lambda x: use_privacy_endpoint(x),
+                    all_nodes[provider.name],
+                )
+            )
     log.logger.info(
         f"加载节点成功，总数量：{reduce(lambda x, y: x + len(y), all_nodes.values(), 0)}"
     )
