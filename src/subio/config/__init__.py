@@ -108,6 +108,18 @@ def check(config: Config):
                             f"artifact {artifact.name} 的 upload {up.to} 不存在"
                         )
                         return False
+        # check articate name duplication
+        artifact_names = list(map(lambda x: x.name, config.artifact))
+        if len(artifact_names) != len(set(artifact_names)):
+            # find duplicated names
+            duplicated_names = set(
+                [x for x in artifact_names if artifact_names.count(x) > 1]
+            )
+            # log.logger.error(f"artifact 名称重复：{duplicated_names}")
+            for name in duplicated_names:
+                log.logger.error(f"artifact 名称重复：{name}, 重复次数：{artifact_names.count(name)}")
+        
+            return False
     return True
 
 
