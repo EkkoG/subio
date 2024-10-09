@@ -526,6 +526,8 @@ class Shadowsocks(Base, SmuxBase):
 
     cipher: Cipher
     password: str
+    udp_over_tcp: bool
+    udp_over_tcp_version: int
     plugin: Plugin = None
     plugin_opts: ObfsOptions | V2rayOptions | ShadowTLSOptions | RestlsOptions = None
 
@@ -573,6 +575,8 @@ class Shadowsocks(Base, SmuxBase):
                 password=node["password"],
                 plugin=node.get("plugin", None),
                 plugin_opts=options,
+                udp_over_tcp=node.get("udp-over-tcp", False),
+                udp_over_tcp_version=node.get("udp-over-tcp-version", 1),
             )
             .sumux_from_clash_meta(node)
             .setup_general_from_clash_meta(node)
@@ -655,6 +659,8 @@ class Shadowsocks(Base, SmuxBase):
             "cipher": self.cipher.value,
             "password": self.password,
             "plugin": self.plugin,
+            "udp-over-tcp": self.udp_over_tcp,
+            "udp-over-tcp-version": self.udp_over_tcp_version,
         }
         if self.plugin_opts:
             ret["plugin-opts"] = self.plugin_opts.to_clash_meta()
