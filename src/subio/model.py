@@ -640,6 +640,8 @@ class Shadowsocks(Base, SmuxBase):
             Shadowsocks(
                 cipher=Shadowsocks.Cipher(cipher),
                 password=password,
+                udp_over_tcp=False
+                udp_over_tcp_version=1
                 plugin=plugin,
                 plugin_opts=obfs_opts,
             )
