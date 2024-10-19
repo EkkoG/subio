@@ -17,6 +17,9 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
             if privacy_node is None:
                 raise ValueError(f"找不到 {x.privacy_endpoint}")
             privacy_node = copy.copy(privacy_node)
+            name = f"{x.name} -> {privacy_node.name}"
+            privacy_node.name = name
+
             x.privacy_endpoint_node = privacy_node
 
         if x.dialer_proxy:
@@ -66,7 +69,6 @@ def to_clash_meta(data: list[Base]) -> str:
         new = None
         if x.privacy_endpoint and x.privacy_endpoint_node:
             new = copy.copy(x.privacy_endpoint_node)
-            new.name = f"{x.name} -> {new.name}"
             new.dialer_proxy = x.name
         else:
             new = copy.copy(x)
