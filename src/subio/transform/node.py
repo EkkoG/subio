@@ -16,9 +16,10 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
             privacy_node = cache.get(x.privacy_endpoint)
             if privacy_node is None:
                 raise ValueError(f"找不到 {x.privacy_endpoint}")
-            privacy_node = copy.copy(privacy_node)
-            name = f"{x.name} -> {privacy_node.name}"
-            privacy_node.name = name
+            if type in SubIOPlatform.clash_like():
+                privacy_node = copy.copy(privacy_node)
+                name = f"{x.name} -> {privacy_node.name}"
+                privacy_node.name = name
 
             x.privacy_endpoint_node = privacy_node
 
