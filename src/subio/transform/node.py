@@ -62,6 +62,7 @@ def convert_privacy_node(data: list[Base]) -> list[Base]:
         # copy, to avoid cache
         privacy_node: Base = copy.copy(privacy_cache[x.privacy_endpoint])
         privacy_node.dialer_proxy = x.name
+        privacy_node.name = f"{x.name} -> {privacy_node.name}"
         return privacy_node
     return list(map(mm, data))
 
