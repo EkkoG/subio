@@ -286,6 +286,14 @@ class Base:
     privacy_endpoint: str = None
     dialer_proxy: str = None
 
+    @property
+    def show_name(self):
+        if self.privacy_endpoint:
+            return f"{self.dialer_proxy} -> {self.name}"
+        if self.dialer_proxy:
+            return f"{self.name} -> {self.privacy_endpoint}"
+        return self.name
+
     def __hash__(self) -> int:
         if isinstance(self.node, dict):
             return hash(json.dumps(self.node, sort_keys=True))

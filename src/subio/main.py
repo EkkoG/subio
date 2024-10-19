@@ -13,6 +13,7 @@ from subio.transform.node import to_clash_meta
 from subio.transform.node import to_name
 from subio.transform.node import list_to_names
 from subio.transform.node import to_dae, to_dae_subscription
+from subio.transform.node import convert_privacy_node
 
 
 from subio.transform.ruleset import render_ruleset_in_clash
@@ -88,6 +89,7 @@ def run():
         log.logger.info(f"使用 {artifact.template} 作为模板")
         log.logger.info("过滤可用节点，并转换为当前平台的格式")
         nodes_of_artifact = nodes_of(artifact, all_nodes_of_providers)
+        nodes_of_artifact = convert_privacy_node(nodes_of_artifact, artifact.type)
         filters = artifact.filters if artifact.filters else config.filters
         if filters:
             if "include" in filters:
@@ -116,6 +118,7 @@ def run():
         template_text = build_template(artifact, remote_ruleset)
 
         log.logger.info(f"开始生成 {artifact.name}")
+
         # check if node names are duplicated
         node_names = to_name(nodes_of_artifact)
         if len(node_names) != len(set(node_names)):
