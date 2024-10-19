@@ -58,12 +58,12 @@ def exclude(data, regex):
 
 
 def combine(data, left, right, left_args=None, right_args=None, relation=False):
-    if left_args is not None:
+    if left_args:
         left_result = left(data, left_args)
     else:
         left_result = left(data)
 
-    if right_args is not None:
+    if right_args:
         right_result = right(data, right_args)
     else:
         right_result = right(data)

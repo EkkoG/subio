@@ -6,3 +6,12 @@ port = 4443
 tls = true
 username = 'ekko'
 password = 'ahh'
+
+[[nodes]]
+type = 'http'
+name = 'ekko-https-ahhh2222'
+server = 'example.com'
+port = 4443
+tls = true
+username = 'ekko'
+password = 'ahh'

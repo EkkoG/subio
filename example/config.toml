@@ -53,7 +53,7 @@ privacy_endpoint = 'ss1'
 name = "ekko-meta.yaml"
 type = "clash-meta"
 template = "clash.yaml"
-providers = ["自建节点-隐私", "主力机场", "Surge 测试"]
+providers = ["自建节点-隐私", "自建节点", "主力机场", "Surge 测试"]
 [artifact.options]
 work = true
 
