@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Self
+import urllib.parse
 from .const import SubIOProtocol
 from dataclasses import dataclass
 from typing import Any
-import urllib
 import base64
 from functools import lru_cache
 import json
@@ -704,7 +704,7 @@ class Shadowsocks(Base, SmuxBase):
                     Shadowsocks.ObfsOptions.Mode.http,
                 ]:
                     plugin = f"obfs-local;obfs={self.plugin_opts.mode};obfs-host={self.plugin_opts.host}"
-                    return f"plugin={plugin}"
+                    return f"plugin={urllib.parse.quote(plugin)}"
             return None
 
         def cipher_and_password() -> str:
@@ -722,7 +722,8 @@ class Shadowsocks(Base, SmuxBase):
             all.append("/?")
             all.append(plugin_text())
         all.append(f"#{urllib.parse.quote(self.name)}")
-        return "".join(all)
+        url = "".join(all)
+        return url
 
     #@lru_cache
     def to_dae(self) -> str:
