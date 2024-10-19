@@ -14,6 +14,173 @@ import enum
 class Unsupport(Exception):
     pass
 
+class Base:
+    type: SubIOProtocol
+    node: Any
+    name: str
+    server: str
+    port: int
+    udp: bool
+    tfo: bool
+    ip_version: str
+    mptcp: bool
+    privacy_endpoint: str = None
+    privacy_endpoint_node: Base 
+    dialer_proxy: str = None
+    dialer_proxy_node: Base
+
+    @property
+    def show_name(self):
+        if self.privacy_endpoint:
+            return f"{self.dialer_proxy} -> {self.name}"
+        if self.dialer_proxy:
+            return f"{self.name} -> {self.privacy_endpoint}"
+        return self.name
+
+    def __hash__(self) -> int:
+        if isinstance(self.node, dict):
+            return hash(json.dumps(self.node, sort_keys=True))
+        elif isinstance(self.node, str):
+            return self.node.__hash__()
+        else:
+            raise Unsupport(f"Unsupport {self.__class__.__name__} hash")
+
+    @classmethod
+    def __post_init__(cls):
+        cls.__hash__ = Base.__hash__
+
+    def setup_type(self, type: SubIOProtocol) -> Self:
+        self.type = type
+        return self
+
+    def setup_general_from_clash_meta(self, node: dict) -> Self:
+        self.node = node
+        self.name = node["name"]
+        self.server = node["server"]
+        self.port = node["port"]
+        self.udp = node.get("udp", False)
+        self.tfo = node.get("tfo", False)
+        self.ip_version = node.get("ip-version", "dual")
+        self.mptcp = node.get("mptcp", False)
+        return self
+
+    def setup_general_from_ss_url(self, node: str) -> Self:
+        url = urllib.parse.urlparse(node)
+        self.node = node
+        if url.fragment:
+            # url decode
+            self.name = urllib.parse.unquote(url.fragment)
+        else:
+            self.name = f"{url.hostname}:{url.port}"
+        self.server = url.hostname
+        self.port = url.port
+        self.udp = True
+        self.tfo = False
+        self.ip_version = "dual"
+        self.mptcp = False
+        return self
+
+    def setup_general_from_trojan_url(self, node: str) -> Self:
+        url = urllib.parse.urlparse(node)
+        self.node = node
+        self.name = url.fragment if url.fragment else f"{url.hostname}:{url.port}"
+        self.server = url.hostname
+        self.port = url.port
+        self.udp = True
+        if url.query:
+            q = urllib.parse.parse_qs(url.query)
+            if "tfo" in q:
+                self.tfo = True if q["tfo"] == 1 else False
+        self.ip_version = "dual"
+        self.mptcp = False
+        return self
+
+    def setup_general_from_http_url(self, node: str) -> Self:
+        url = urllib.parse.urlparse(node)
+        self.node = node
+        self.name = url.fragment if url.fragment else f"{url.hostname}:{url.port}"
+        self.server = url.hostname
+        self.port = url.port
+        self.udp = False
+        self.tfo = False
+        self.ip_version = "dual"
+        self.mptcp = False
+        return self
+
+    # from
+    @classmethod
+    def from_surge(cls, text: str) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from Surge")
+
+    @classmethod
+    def from_clash(cls, node: dict) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from Clash")
+
+    @classmethod
+    def from_v2rayn(cls, node: str) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from V2rayN")
+
+    @classmethod
+    def from_dae(cls, node: str) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from Dae")
+
+    @classmethod
+    def from_subio(cls, node: dict) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from SubIO")
+
+    @classmethod
+    def from_quantumultx(cls, node: str) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from QuantumultX")
+
+    @classmethod
+    def from_stash(cls, node: dict) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from Stash")
+
+    @classmethod
+    def from_clash_meta(cls, node: dict) -> Self:
+        raise Unsupport(f"Unsupport {cls.__name__} from Clash.Meta")
+
+    # to
+    def to_surge(self) -> str:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to Surge")
+
+    def to_clash(self) -> dict:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to Clash")
+
+    def to_v2rayn(self) -> str:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to V2rayN")
+
+    def to_dae(self) -> str:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to Dae")
+
+    def to_subio(self) -> dict:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to SubIO")
+
+    def to_quantumultx(self) -> str:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to QuantumultX")
+
+    def to_stash(self) -> dict:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to Stash")
+
+    def to_clash_meta(self) -> dict:
+        raise Unsupport(f"Unsupport {self.__class__.__name__} to Clash.Meta")
+
+    def to_clash_meta_base(self) -> dict:
+        return {
+            "type": self.type.meta_type,
+            "name": self.name,
+            "server": self.server,
+            "port": self.port,
+            "udp": self.udp,
+            "tfo": self.tfo,
+            "ip-version": self.ip_version,
+            "mptcp": self.mptcp,
+            "dialer-proxy": self.dialer_proxy,
+        }
+
+    def to_surge_base(self) -> str:
+        return f"{self.name} = {self.type}, {self.server}, {self.port}"
+
 
 class TLSBase:
     @dataclass
@@ -272,175 +439,6 @@ class PacketEncodingBase:
 
     def packet_encoding_to_clash_meta(self) -> dict:
         return {"packet-encoding": self.packet_encoding}
-
-
-class Base:
-    type: SubIOProtocol
-    node: Any
-    name: str
-    server: str
-    port: int
-    udp: bool
-    tfo: bool
-    ip_version: str
-    mptcp: bool
-    privacy_endpoint: str = None
-    privacy_endpoint_node: Base 
-    dialer_proxy: str = None
-    dialer_proxy_node: Base
-
-    @property
-    def show_name(self):
-        if self.privacy_endpoint:
-            return f"{self.dialer_proxy} -> {self.name}"
-        if self.dialer_proxy:
-            return f"{self.name} -> {self.privacy_endpoint}"
-        return self.name
-
-    def __hash__(self) -> int:
-        if isinstance(self.node, dict):
-            return hash(json.dumps(self.node, sort_keys=True))
-        elif isinstance(self.node, str):
-            return self.node.__hash__()
-        else:
-            raise Unsupport(f"Unsupport {self.__class__.__name__} hash")
-
-    @classmethod
-    def __post_init__(cls):
-        cls.__hash__ = Base.__hash__
-
-    def setup_type(self, type: SubIOProtocol) -> Self:
-        self.type = type
-        return self
-
-    def setup_general_from_clash_meta(self, node: dict) -> Self:
-        self.node = node
-        self.name = node["name"]
-        self.server = node["server"]
-        self.port = node["port"]
-        self.udp = node.get("udp", False)
-        self.tfo = node.get("tfo", False)
-        self.ip_version = node.get("ip-version", "dual")
-        self.mptcp = node.get("mptcp", False)
-        return self
-
-    def setup_general_from_ss_url(self, node: str) -> Self:
-        url = urllib.parse.urlparse(node)
-        self.node = node
-        if url.fragment:
-            # url decode
-            self.name = urllib.parse.unquote(url.fragment)
-        else:
-            self.name = f"{url.hostname}:{url.port}"
-        self.server = url.hostname
-        self.port = url.port
-        self.udp = True
-        self.tfo = False
-        self.ip_version = "dual"
-        self.mptcp = False
-        return self
-
-    def setup_general_from_trojan_url(self, node: str) -> Self:
-        url = urllib.parse.urlparse(node)
-        self.node = node
-        self.name = url.fragment if url.fragment else f"{url.hostname}:{url.port}"
-        self.server = url.hostname
-        self.port = url.port
-        self.udp = True
-        if url.query:
-            q = urllib.parse.parse_qs(url.query)
-            if "tfo" in q:
-                self.tfo = True if q["tfo"] == 1 else False
-        self.ip_version = "dual"
-        self.mptcp = False
-        return self
-
-    def setup_general_from_http_url(self, node: str) -> Self:
-        url = urllib.parse.urlparse(node)
-        self.node = node
-        self.name = url.fragment if url.fragment else f"{url.hostname}:{url.port}"
-        self.server = url.hostname
-        self.port = url.port
-        self.udp = False
-        self.tfo = False
-        self.ip_version = "dual"
-        self.mptcp = False
-        return self
-
-    # from
-    @classmethod
-    def from_surge(cls, text: str) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from Surge")
-
-    @classmethod
-    def from_clash(cls, node: dict) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from Clash")
-
-    @classmethod
-    def from_v2rayn(cls, node: str) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from V2rayN")
-
-    @classmethod
-    def from_dae(cls, node: str) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from Dae")
-
-    @classmethod
-    def from_subio(cls, node: dict) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from SubIO")
-
-    @classmethod
-    def from_quantumultx(cls, node: str) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from QuantumultX")
-
-    @classmethod
-    def from_stash(cls, node: dict) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from Stash")
-
-    @classmethod
-    def from_clash_meta(cls, node: dict) -> Self:
-        raise Unsupport(f"Unsupport {cls.__name__} from Clash.Meta")
-
-    # to
-    def to_surge(self) -> str:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to Surge")
-
-    def to_clash(self) -> dict:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to Clash")
-
-    def to_v2rayn(self) -> str:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to V2rayN")
-
-    def to_dae(self) -> str:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to Dae")
-
-    def to_subio(self) -> dict:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to SubIO")
-
-    def to_quantumultx(self) -> str:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to QuantumultX")
-
-    def to_stash(self) -> dict:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to Stash")
-
-    def to_clash_meta(self) -> dict:
-        raise Unsupport(f"Unsupport {self.__class__.__name__} to Clash.Meta")
-
-    def to_clash_meta_base(self) -> dict:
-        return {
-            "type": self.type.meta_type,
-            "name": self.name,
-            "server": self.server,
-            "port": self.port,
-            "udp": self.udp,
-            "tfo": self.tfo,
-            "ip-version": self.ip_version,
-            "mptcp": self.mptcp,
-            "dialer-proxy": self.dialer_proxy,
-        }
-
-    def to_surge_base(self) -> str:
-        return f"{self.name} = {self.type}, {self.server}, {self.port}"
-
 
 @dataclass
 class Shadowsocks(Base, SmuxBase):
