@@ -66,6 +66,7 @@ def to_clash_meta(data: list[Base]) -> str:
         new = None
         if x.privacy_endpoint and x.privacy_endpoint_node:
             new = copy.copy(x.privacy_endpoint_node)
+            new.name = f"{x.name} -> {new.name}"
             new.dialer_proxy = x.name
         else:
             new = copy.copy(x)
