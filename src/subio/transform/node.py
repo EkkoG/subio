@@ -13,7 +13,7 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
             raise ValueError(f"节点 {x.name} 不能同时指定 privacy_endpoint 和 dialer_proxy")
 
         if x.privacy_endpoint:
-            privacy_node = cache.get(x.privacy_endpoint)
+            privacy_node: Base = cache.get(x.privacy_endpoint)
             if privacy_node is None:
                 raise ValueError(f"找不到 {x.privacy_endpoint}")
             privacy_node = copy.copy(privacy_node)
@@ -25,7 +25,7 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
 
 
         if x.dialer_proxy:
-            dialer_node = cache.get(x.dialer_proxy)
+            dialer_node: Base = cache.get(x.dialer_proxy)
             if dialer_node is None:
                 raise ValueError(f"找不到 {x.dialer_proxy}")
             dialer_node = copy.copy(dialer_node)
