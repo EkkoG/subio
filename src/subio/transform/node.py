@@ -10,11 +10,16 @@ def to_v2rayn(data: list[Base]) -> str:
 
 def _to_dae_line(x: Base, data: list[Base]) -> str:
     line = x.to_v2rayn()
+    if x.dialer_proxy is not None:
+        dialer_proxy = list(filter(lambda y: y.name == x.dialer_proxy, data))
+        if len(dialer_proxy) == 0:
+            raise ValueError(f"找不到 {x.dialer_proxy}")
+        line = f"{line} -> {dialer_proxy[0].to_v2rayn()}"
     if x.privacy_endpoint is not None:
-        underlying = list(filter(lambda y: y.name == x.privacy_endpoint, data))
-        if len(underlying) == 0:
+        privacy_proxy = list(filter(lambda y: y.name == x.privacy_endpoint, data))
+        if len(privacy_proxy) == 0:
             raise ValueError(f"找不到 {x.privacy_endpoint}")
-        line = f"{underlying[0].to_v2rayn()} -> {line}"
+        line = f"{privacy_proxy[0].to_v2rayn()} -> {line}"
     return line
     
 
