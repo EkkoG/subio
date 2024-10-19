@@ -719,9 +719,10 @@ class Shadowsocks(Base, SmuxBase):
 
         all = [f"ss://{cipher_and_password()}@{self.server}:{self.port}"]
         if self.plugin:
+            all.append("/?")
             all.append(plugin_text())
         all.append(f"#{urllib.parse.quote(self.name)}")
-        return "/?".join(all)
+        return "".join(all)
 
     #@lru_cache
     def to_dae(self) -> str:
