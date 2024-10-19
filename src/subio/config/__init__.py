@@ -77,7 +77,7 @@ def check(config: Config):
         if artifact.template is None:
             log.logger.error(f"artifact {artifact.name} 没有 template")
             return False
-        if artifact.upload is not None:
+        if artifact.upload:
             for index, up in enumerate(artifact.upload):
                 if up.to is None:
                     log.logger.error(f"upload {index} 没有配置 to")
@@ -122,14 +122,14 @@ def load_nodes(config: Config) -> list[Base]:
         except Exception as e:
             log.logger.error(f"解析 {provider.name} 节点失败，错误信息：{e}")
             exit(1)
-        if provider.rename is not None:
+        if provider.rename:
             all_nodes[provider.name] = list(
                 map(lambda x: rename_node(x, provider.rename), all_nodes[provider.name])
             )
         log.logger.info(
             f"解析 {provider.name} 节点成功，数量：{len(all_nodes[provider.name])}"
         )
-        if provider.privacy_endpoint is not None:
+        if provider.privacy_endpoint:
             log.logger.info(f"使用 {provider.privacy_endpoint} 作为隐私节点")
             def use_privacy_endpoint(proxy: Base):
                 proxy.privacy_endpoint = provider.privacy_endpoint

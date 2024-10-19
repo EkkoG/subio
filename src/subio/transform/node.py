@@ -6,40 +6,40 @@ from subio.tools.tools import build_proxy_cache
 import copy
 
 def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
-    privacy_cache = build_proxy_cache(data)
+    cache = build_proxy_cache(data)
 
     def mm(x: Base) -> Base:
-        if x.privacy_endpoint is None:
-            return x
+        if x.privacy_endpoint and x.dialer_proxy:
+            raise ValueError(f"节点 {x.name} 不能同时指定 privacy_endpoint 和 dialer_proxy")
 
-        if x.privacy_endpoint not in privacy_cache:
-            raise ValueError(f"找不到 {x.privacy_endpoint}")
-        # copy, to avoid cache
-        privacy_node: Base = copy.copy(privacy_cache[x.privacy_endpoint])
-        privacy_node.dialer_proxy = x.name
-        if type in SubIOPlatform.clash_like():
-            privacy_node.name = f"{x.name} -> {privacy_node.name}"
-        return privacy_node
+        if x.privacy_endpoint:
+            privacy_node = cache.get(x.privacy_endpoint)
+            if privacy_node is None:
+                raise ValueError(f"找不到 {x.privacy_endpoint}")
+            privacy_node = copy.copy(privacy_node)
+            x.privacy_endpoint_node = privacy_node
+
+        if x.dialer_proxy:
+            dialer_node = cache.get(x.dialer_proxy)
+            if dialer_node is None:
+                raise ValueError(f"找不到 {x.dialer_proxy}")
+            dialer_node = copy.copy(dialer_node)
+            x.dialer_proxy_node = dialer_node
+
+        return x
     return list(map(mm, data))
 
 def to_v2rayn(data: list[Base]) -> str:
     return "\n".join(map(lambda x: x.to_v2rayn(), data))
 
 def _to_dae_line(x: Base, data: list[Base]) -> str:
-    proxy_cache = build_proxy_cache(data)
 
     line = x.to_v2rayn()
-    if x.dialer_proxy is not None:
-        dialer_proxy: Base = proxy_cache.get(x.dialer_proxy)
-        if dialer_proxy is None:
-            raise ValueError(f"找不到 {x.dialer_proxy}")
-        line = f"{line} -> {dialer_proxy.to_v2rayn()}"
+    if x.dialer_proxy and x.dialer_proxy_node:
+        line = f"{line} -> {x.dialer_proxy_node.to_v2rayn()}"
 
-    if x.privacy_endpoint is not None:
-        privacy_proxy: Base = proxy_cache.get(x.privacy_endpoint)
-        if privacy_proxy is None:
-            raise ValueError(f"找不到 {x.privacy_endpoint}")
-        line = f"{privacy_proxy.to_v2rayn()} -> {line}"
+    if x.privacy_endpoint and x.privacy_endpoint_node:
+        line = f"{x.privacy_endpoint_node.to_v2rayn()} -> {line}"
     return line
     
 
@@ -63,7 +63,14 @@ class NoAliasDumper(yaml.SafeDumper):
 
 def to_clash_meta(data: list[Base]) -> str:
     def mm(x: Base) -> dict:
-        return {k: v for k, v in x.to_clash_meta().items() if v is not None}
+        new = None
+        if x.privacy_endpoint and x.privacy_endpoint_node:
+            new = copy.copy(x.privacy_endpoint_node)
+            new.dialer_proxy = x.name
+        else:
+            new = copy.copy(x)
+            
+        return {k: v for k, v in new.to_clash_meta().items() if v}
     dict_data = list(map(mm, data))
     return yaml.dump(dict_data, Dumper=NoAliasDumper, allow_unicode=True)
 

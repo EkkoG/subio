@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Self
 from .const import SubIOProtocol
 from dataclasses import dataclass
@@ -284,7 +285,9 @@ class Base:
     ip_version: str
     mptcp: bool
     privacy_endpoint: str = None
+    privacy_endpoint_node: Base 
     dialer_proxy: str = None
+    dialer_proxy_node: Base
 
     @property
     def show_name(self):
@@ -845,7 +848,7 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
                 all.append("allowInsecure=1")
             return all
 
-        if self.network is not None and self.ws_opts is not TransportBase.Network.tcp:
+        if self.network and self.ws_opts is not TransportBase.Network.tcp:
             raise Unsupport(
                 f"Unsupport network: {self.network} of {self.__class__.__name__}"
             )
