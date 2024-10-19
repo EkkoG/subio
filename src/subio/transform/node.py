@@ -16,12 +16,13 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
             privacy_node = cache.get(x.privacy_endpoint)
             if privacy_node is None:
                 raise ValueError(f"找不到 {x.privacy_endpoint}")
+            privacy_node = copy.copy(privacy_node)
+            privacy_node.dialer_proxy = x.name
+            privacy_node.dialer_proxy_node = x
             if type in SubIOPlatform.clash_like():
-                privacy_node = copy.copy(privacy_node)
-                name = f"{x.name} -> {privacy_node.name}"
-                privacy_node.name = name
+                privacy_node.name = f"{x.name} -> {privacy_node.name}"
+            return privacy_node
 
-            x.privacy_endpoint_node = privacy_node
 
         if x.dialer_proxy:
             dialer_node = cache.get(x.dialer_proxy)
@@ -29,6 +30,7 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
                 raise ValueError(f"找不到 {x.dialer_proxy}")
             dialer_node = copy.copy(dialer_node)
             x.dialer_proxy_node = dialer_node
+            return x
 
         return x
     return list(map(mm, data))
@@ -66,15 +68,8 @@ class NoAliasDumper(yaml.SafeDumper):
         return True
 
 def to_clash_meta(data: list[Base]) -> str:
-    def mm(x: Base) -> dict:
-        new = None
-        if x.privacy_endpoint and x.privacy_endpoint_node:
-            new = copy.copy(x.privacy_endpoint_node)
-            new.dialer_proxy = x.name
-        else:
-            new = copy.copy(x)
-            
-        return {k: v for k, v in new.to_clash_meta().items() if v}
+    def mm(x: Base) -> dict: 
+        return {k: v for k, v in x.to_clash_meta().items() if v}
     dict_data = list(map(mm, data))
     return yaml.dump(dict_data, Dumper=NoAliasDumper, allow_unicode=True)
 
