@@ -56,28 +56,6 @@ def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
             log.logger.error(f"不支持的 artifact 类型 {artifact.type}")
     return all_valid_nodes
 
-def convert_privacy_node(data: list[Base]) -> list[Base]:
-    privacy_endpoints = list(filter(lambda x: x.privacy_endpoint is not None, data))
-    all_privacy_endpoints = set(map(lambda x: x.privacy_endpoint, privacy_endpoints))
-    
-    cache: dict[str: Base] = {}
-    for x in data:
-        if x.name in all_privacy_endpoints:
-            cache[x.name] = x
-
-    def mm(x: Base) -> Base:
-        if x.privacy_endpoint is None:
-            return x
-
-        if x.privacy_endpoint not in cache:
-            raise ValueError(f"找不到 {x.privacy_endpoint}")
-        # copy, to avoid cache
-        privacy_node = copy.copy(cache[x.privacy_endpoint])
-        privacy_node.dialer_proxy = x.name
-        privacy_node.name = f"{x.name} -> {privacy_node.name}"
-        return privacy_node
-    return list(map(mm, data))
-
 def check(config: Config):
     # 检查配置文件
     log.logger.info("检查配置文件")

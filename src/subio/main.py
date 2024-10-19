@@ -1,7 +1,7 @@
 import jinja2
 import os
 
-from subio.config import load_nodes, convert_privacy_node
+from subio.config import load_nodes
 from subio.config import load_rulset
 from subio.config import load_config
 from subio.config import check
@@ -113,7 +113,6 @@ def run():
             log.logger.error(f"artifact {artifact.name} 没有可用节点")
             return
 
-        nodes_of_artifact = convert_privacy_node(nodes_of_artifact)
         template_text = build_template(artifact, remote_ruleset)
 
         log.logger.info(f"开始生成 {artifact.name}")
