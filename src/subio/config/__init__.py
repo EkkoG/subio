@@ -14,8 +14,6 @@ from ..const import SubIOPlatform
 from .model import Config, Rename, Artifact
 import tempfile
 from subio.model import Base
-import copy
-
 
 def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
     all_nodes_for_artifact = [nodes[provider] for provider in artifact.providers]
