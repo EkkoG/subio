@@ -21,6 +21,15 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
             privacy_node.dialer_proxy_node = x
             if type in SubIOPlatform.clash_like():
                 privacy_node.name = f"{x.name} -> {privacy_node.name}"
+            # 为什么要返回 privacy_node 而不是 x？
+            # 对于 dae 来说，只要不改变节点的 name 和 privacy_node.name 就行，因为改了以后，会和 dae 本身的节点名组合重复
+            # dae 既可以处理 privacy_node 也可以处理 dialer_proxy_node，只是一个顺序问题
+            # 
+            # 对于 clash 来说，需要转换成 privacy_node
+            # clash 需要解决的问题
+            # 1. 如果这里不转换，而延迟到渲染时转换, 中间还有一个节点名的转换，会导致渲染的节点信息和策略组中的节点名不一致
+            #    解决这个问题，需要在节点名的转换中实现相同的逻辑，容易出错
+            # 
             return privacy_node
 
 
@@ -69,7 +78,7 @@ class NoAliasDumper(yaml.SafeDumper):
 
 def to_clash_meta(data: list[Base]) -> str:
     def mm(x: Base) -> dict: 
-        return {k: v for k, v in x.to_clash_meta().items() if v}
+        return {k: v for k, v in x.to_clash_meta().items() if v is not None}
     dict_data = list(map(mm, data))
     return yaml.dump(dict_data, Dumper=NoAliasDumper, allow_unicode=True)
 
