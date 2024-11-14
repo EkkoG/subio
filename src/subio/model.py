@@ -702,7 +702,7 @@ class Shadowsocks(Base, SmuxBase):
                     Shadowsocks.ObfsOptions.Mode.http,
                 ]:
                     plugin = f"obfs-local;obfs={self.plugin_opts.mode};obfs-host={self.plugin_opts.host}"
-                    return f"plugin={urllib.parse.quote(plugin)}"
+                    return f"{urllib.parse.quote(plugin)}"
             return None
 
         def cipher_and_password() -> str:
@@ -717,7 +717,7 @@ class Shadowsocks(Base, SmuxBase):
 
         all = [f"ss://{cipher_and_password()}@{self.server}:{self.port}"]
         if self.plugin:
-            all.append("/?")
+            all.append("/?plugin=")
             all.append(plugin_text())
         all.append(f"#{urllib.parse.quote(self.name)}")
         url = "".join(all)
