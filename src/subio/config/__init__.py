@@ -2,6 +2,7 @@ from dacite import from_dict
 from dacite import Config as DaciteConfig
 import requests
 from functools import reduce
+import traceback
 
 import hashlib
 import os
@@ -25,6 +26,7 @@ def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
                 node.to_clash_meta()
                 all_valid_nodes.append(node)
             except Exception as e:
+                traceback.print_exc()
                 log.logger.error(
                     f"节点 {node.name} 无法转换为 clash 格式，错误信息：{e}"
                 )
