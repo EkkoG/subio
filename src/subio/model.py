@@ -83,7 +83,7 @@ class Base:
     def setup_general_from_trojan_url(self, node: str) -> Self:
         url = urllib.parse.urlparse(node)
         self.node = node
-        self.name = url.fragment if urllib.parse.unquote(url.fragment) else f"{url.hostname}:{url.port}"
+        self.name = urllib.parse.unquote(url.fragment) if url.fragment else f"{url.hostname}:{url.port}"
         self.server = url.hostname
         self.port = url.port
         self.udp = True
