@@ -91,6 +91,8 @@ class Base:
             q = urllib.parse.parse_qs(url.query)
             if "tfo" in q:
                 self.tfo = True if q["tfo"] == 1 else False
+            else:
+                self.tfo = False
         self.ip_version = "dual"
         self.mptcp = False
         return self
