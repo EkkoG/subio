@@ -3,6 +3,7 @@ from dacite import Config as DaciteConfig
 import requests
 from functools import reduce
 import traceback
+import sys
 
 import hashlib
 import os
@@ -123,7 +124,7 @@ def load_nodes(config: Config) -> list[Base]:
                 os.remove(file)
         except Exception as e:
             log.logger.error(f"解析 {provider.name} 节点失败，错误信息：{e}")
-            exit(1)
+            sys.exit(1)
         if provider.rename:
             all_nodes[provider.name] = list(
                 map(lambda x: rename_node(x, provider.rename), all_nodes[provider.name])
@@ -155,10 +156,11 @@ def load_remote_resource(url: str, ua=None) -> str:
         if not os.path.exists("cache"):
             os.mkdir("cache")
         if os.path.exists(file_name):
-            text = open(file_name, "r").read()
+            with open(file_name, "r", encoding="utf-8") as f:
+                text = f.read()
         else:
             text = requests.get(url, headers=headers).text
-            with open(file_name, "w") as f:
+            with open(file_name, "w", encoding="utf-8") as f:
                 f.write(text)
     else:
         text = requests.get(url, headers=headers).text

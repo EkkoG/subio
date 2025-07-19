@@ -34,11 +34,22 @@ def get_snippets():
     final_snippet_text = ""
     if os.path.exists("snippet"):
         for snippet_file in os.listdir("snippet"):
-            snippet_text = open(os.path.join("snippet", snippet_file), "r").read()
+            # Validate filename to prevent path traversal
+            if '..' in snippet_file or '/' in snippet_file or '\\' in snippet_file:
+                log.logger.error(f"Invalid snippet filename: {snippet_file}")
+                continue
+            
+            snippet_path = os.path.join("snippet", snippet_file)
+            try:
+                with open(snippet_path, "r", encoding="utf-8") as f:
+                    snippet_text = f.read()
+            except (OSError, UnicodeDecodeError) as e:
+                log.logger.error(f"Failed to read snippet {snippet_file}: {e}")
+                continue
             args = snippet_text.split("\n")[0].strip()
             if args == "":
                 log.logger.error(f"snippet {snippet_file} 缺少参数")
-                exit(1)
+                sys.exit(1)
             content = "\n".join(snippet_text.split("\n")[1:])
             # {% macro apple(default_rule, api_rule, cdn_rule, location_rule, apple_news_rule) -%}
             final_snippet_text += f"{{% macro {snippet_file}({args}) -%}}\n{content}\n{{%- endmacro -%}}\n"
@@ -46,7 +57,19 @@ def get_snippets():
 
 
 def build_template(artifact, remote_ruleset):
-    template_text = open(f"template/{artifact.template}", "r").read()
+    # Validate template filename to prevent path traversal
+    template_name = artifact.template
+    if '..' in template_name or '/' in template_name or '\\' in template_name:
+        log.logger.error(f"Invalid template filename: {template_name}")
+        return ""
+    
+    template_path = os.path.join("template", template_name)
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            template_text = f.read()
+    except (OSError, UnicodeDecodeError) as e:
+        log.logger.error(f"Failed to read template {template_name}: {e}")
+        return ""
 
     final_snippet_text = get_snippets()
 

@@ -5,7 +5,8 @@ def build_map(t):
     m = {}
     # remove the last two element of the path
     map_path = "/".join(__file__.split("/")[:-2]) + "/map.json"
-    transform_map = json.load(open(map_path, "r"))
+    with open(map_path, "r", encoding="utf-8") as f:
+        transform_map = json.load(f)
     for k, v in transform_map.items():
         for k1, v1 in v["map"].items():
             if t in v1:
