@@ -864,15 +864,15 @@ class Trojan(Base, TLSBase, SmuxBase, TransportBase):
 
 @dataclass
 class Socks5(Base, TLSBase):
-    username: str
-    password: str
+    username: str | None = None
+    password: str | None = None
 
     @classmethod
     def from_clash_meta(cls, node: dict) -> Self:
         return (
             Socks5(
-                username=node["username"],
-                password=node["password"],
+                username=node.get("username") or None,
+                password=node.get("password") or None,
             )
             .setup_tls_from_clash_meta(node)
             .setup_general_from_clash_meta(node)
@@ -893,13 +893,13 @@ class Socks5(Base, TLSBase):
     def to_surge(self) -> str:
         ret = (
             self.to_surge_base()
-            + f", {self.username}, {self.password}, udp-relay={"true" if self.udp else "false"}"
+            + f", {self.username or ''}, {self.password or ''}, udp-relay={"true" if self.udp else "false"}"
         )
         return ",".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
     #@lru_cache
     def to_v2rayn(self) -> str:
-        return f"socks5://{self.username}:{self.password}@{self.server}:{self.port}#{self.name}"
+        return f"socks5://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
 
     #@lru_cache
     def to_dae(self) -> str:
@@ -908,16 +908,16 @@ class Socks5(Base, TLSBase):
 
 @dataclass
 class Http(Base, TLSBase):
-    username: str
-    password: str
     headers: dict
+    username: str | None = None
+    password: str | None = None
 
     @classmethod
     def from_clash_meta(cls, node: dict) -> Self:
         return (
             Http(
-                username=node["username"],
-                password=node["password"],
+                username=node.get("username") or None,
+                password=node.get("password") or None,
                 headers=node.get("headers", None),
             )
             .setup_tls_from_clash_meta(node)
@@ -939,8 +939,8 @@ class Http(Base, TLSBase):
     @classmethod
     def from_v2rayn(cls, node: str) -> Self:
         url = urllib.parse.urlparse(node)
-        username = url.username
-        password = url.password
+        username = url.username or None
+        password = url.password or None
 
         return (
             Http(
@@ -957,8 +957,8 @@ class Http(Base, TLSBase):
     def from_subio(cls, node: dict) -> Self:
         return (
             Http(
-                username=node["username"],
-                password=node["password"],
+                username=node.get("username") or None,
+                password=node.get("password") or None,
                 headers=node.get("headers", None),
             )
             .setup_tls_from_clash_meta(node)
@@ -968,12 +968,12 @@ class Http(Base, TLSBase):
 
     #@lru_cache
     def to_surge(self) -> str:
-        ret = self.to_surge_base() + f", {self.username}, {self.password}"
+        ret = self.to_surge_base() + f", {self.username or ''}, {self.password or ''}"
         return ",".join([x for x in [ret, self.tls_to_surge_base()] if x])
 
     #@lru_cache
     def to_v2rayn(self) -> str:
-        return f"http://{self.username}:{self.password}@{self.server}:{self.port}#{self.name}"
+        return f"http://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
 
     #@lru_cache
     def to_dae(self) -> str:
