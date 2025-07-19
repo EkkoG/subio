@@ -2,6 +2,7 @@ import yaml
 
 from subio.model import Shadowsocks, Vmess, Vless, Trojan, Socks5, Http, Wireguard
 from subio.log import log
+import traceback
 
 
 def parse(file: str):
@@ -30,8 +31,7 @@ def parse(file: str):
                     )
                     continue
             except Exception as e:
-                # import traceback
-                # traceback.print_exc()
+                traceback.print_exc()
                 log.logger.error(f"解析节点失败，错误信息：{e}")
                 continue
 
