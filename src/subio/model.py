@@ -899,7 +899,10 @@ class Socks5(Base, TLSBase):
 
     #@lru_cache
     def to_v2rayn(self) -> str:
-        return f"socks5://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
+        if self.username or self.password:
+            return f"socks5://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
+        else:
+            return f"socks5://{self.server}:{self.port}#{self.name}"
 
     #@lru_cache
     def to_dae(self) -> str:
@@ -973,7 +976,10 @@ class Http(Base, TLSBase):
 
     #@lru_cache
     def to_v2rayn(self) -> str:
-        return f"http://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
+        if self.username or self.password:
+            return f"http://{self.username or ''}:{self.password or ''}@{self.server}:{self.port}#{self.name}"
+        else:
+            return f"http://{self.server}:{self.port}#{self.name}"
 
     #@lru_cache
     def to_dae(self) -> str:
