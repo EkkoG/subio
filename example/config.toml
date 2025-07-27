@@ -112,4 +112,4 @@ providers = ["v2rayn"]
 
 [[ruleset]]
 name = "telegram"
-url = "https://github.com/DivineEngine/Profiles/raw/master/Surge/Ruleset/Extra/Telegram/Telegram.list"
+url = "https://cdn.jsdelivr.net/gh/Loyalsoldier/surge-rules@release/ruleset/apple.txt"
