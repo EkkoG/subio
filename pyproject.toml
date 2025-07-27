@@ -1,23 +1,30 @@
-[tool.poetry]
+[project]
 name = "subio"
 version = "0.1.0"
 description = "A simple command line tool for convert proxy subscription links."
-authors = ["Ekko <beijiu572@gmail.com>"]
-license = "MIT"
+authors = [
+    {name = "Ekko", email = "beijiu572@gmail.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dacite>=1.7.0",
+    "jinja2>=3.1.2",
+    "json5>=0.9.6",
+    "requests>=2.26.0",
+    "toml>=0.10.2",
+    "pyyaml>=6.0.2",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-dacite = "^1.7.0"
-jinja2 = "^3.1.2"
-json5 = "^0.9.6"
-requests = "^2.26.0"
-toml = "^0.10.2"
-pyyaml = "^6.0.2"
+[project.scripts]
+subio = "subio.main:run"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.scripts]
-subio = "subio.main:run"
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.1.0",
+]
