@@ -63,7 +63,16 @@ class DAERenderer(BaseRenderer):
             
             # Use Jinja2 template rendering
             if self.env:
-                jinja_template = self.env.get_template(template)
+                # Load template with snippet and ruleset prepended
+                template_source = self.env.loader.get_source(self.env, template)[0]
+                prepend_text = ""
+                if self._ruleset_text:
+                    prepend_text += self._ruleset_text + '\n'
+                if self._snippet_text:
+                    prepend_text += self._snippet_text + '\n'
+                if prepend_text:
+                    template_source = prepend_text + template_source
+                jinja_template = self.env.from_string(template_source)
                 return jinja_template.render(context)
             else:
                 return '\\n'.join(dae_urls)
@@ -114,7 +123,11 @@ class DAERenderer(BaseRenderer):
     
     def _render_filter(self, value):
         """Render a value (list or string) in appropriate format."""
-        if isinstance(value, list):
+        if isinstance(value, str) and ('DOMAIN' in value or 'IP-CIDR' in value):
+            # This is likely ruleset text from a macro
+            from ...utils.ruleset_render import render_ruleset_in_dae
+            return render_ruleset_in_dae(value)
+        elif isinstance(value, list):
             return '\\n'.join(str(v) for v in value)
         elif isinstance(value, str):
             return value

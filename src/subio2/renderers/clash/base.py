@@ -70,11 +70,27 @@ class ClashRenderer(BaseRenderer):
     def _render_with_template(self, nodes: List[Node], template: str, context: Dict[str, Any]) -> str:
         """Render using Jinja2 template."""
         try:
-            tmpl = self.env.get_template(template)
+            # Load template with snippet and ruleset prepended
+            template_source = self.env.loader.get_source(self.env, template)[0]
+            prepend_text = ""
+            if self._ruleset_text:
+                prepend_text += self._ruleset_text + '\n'
+            if self._snippet_text:
+                prepend_text += self._snippet_text + '\n'
+            if prepend_text:
+                template_source = prepend_text + template_source
+            tmpl = self.env.from_string(template_source)
             
             # Prepare context
             full_context = context.copy()
-            full_context['proxies'] = nodes
+            # Render nodes to YAML-compatible dicts
+            proxies_list = []
+            for node in nodes:
+                if isinstance(node, CompositeNode):
+                    proxy_dict = self._render_node(node)
+                    if proxy_dict:
+                        proxies_list.append(proxy_dict)
+            full_context['proxies'] = yaml.dump(proxies_list, allow_unicode=True, sort_keys=False)
             full_context['proxies_names'] = [node.name for node in nodes]
             
             return tmpl.render(**full_context)
@@ -127,7 +143,17 @@ class ClashRenderer(BaseRenderer):
         return f'"{text}"'
     
     def _render_filter(self, items):
-        """Render items as inline array."""
-        if not items:
-            return '[]'
-        return '[' + ', '.join(f"'{item}'" for item in items) + ']'
+        """Render items based on context - arrays or rulesets."""
+        if isinstance(items, str):
+            # This is likely ruleset text from a macro
+            from ...utils.ruleset_render import render_ruleset_in_clash
+            return render_ruleset_in_clash(items)
+        elif isinstance(items, list):
+            # This is a list of proxy names
+            if not items:
+                return '[]'
+            # Return YAML inline list format with unicode support
+            return yaml.dump(items, default_flow_style=True, allow_unicode=True).strip()
+        else:
+            # Fallback - convert to string
+            return str(items)

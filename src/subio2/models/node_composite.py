@@ -1,7 +1,7 @@
 """Composite pattern for node models - recommended approach."""
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from abc import ABC, abstractmethod
 
 
@@ -163,8 +163,8 @@ class HysteriaProtocol(ProtocolConfig):
     auth: Optional[str] = None
     auth_str: Optional[str] = None
     protocol: str = "udp"
-    up_mbps: Optional[int] = None
-    down_mbps: Optional[int] = None
+    up_mbps: Optional[Union[int, str]] = None
+    down_mbps: Optional[Union[int, str]] = None
     obfs: Optional[str] = None
     recv_window: Optional[int] = None
     recv_window_conn: Optional[int] = None
@@ -185,6 +185,8 @@ class Hysteria2Protocol(ProtocolConfig):
     password: str
     obfs: Optional[str] = None
     obfs_password: Optional[str] = None
+    up_mbps: Optional[Union[int, str]] = None
+    down_mbps: Optional[Union[int, str]] = None
     
     def validate(self) -> None:
         if not self.password:

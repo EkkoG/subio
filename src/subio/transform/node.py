@@ -12,34 +12,34 @@ def convert_privacy_node(data: list[Base], type: SubIOPlatform) -> list[Base]:
         if x.privacy_endpoint and x.dialer_proxy:
             raise ValueError(f"节点 {x.name} 不能同时指定 privacy_endpoint 和 dialer_proxy")
 
-        if x.privacy_endpoint:
-            privacy_node: Base = cache.get(x.privacy_endpoint)
-            if privacy_node is None:
-                raise ValueError(f"找不到 {x.privacy_endpoint}")
-            privacy_node = copy.copy(privacy_node)
-            privacy_node.dialer_proxy = x.name
-            privacy_node.dialer_proxy_node = x
-            if type in SubIOPlatform.clash_like():
-                privacy_node.name = f"{x.name} -> {privacy_node.name}"
-            # 为什么要返回 privacy_node 而不是 x？
-            # 对于 dae 来说，只要不改变节点的 name 和 privacy_node.name 就行，因为改了以后，会和 dae 本身的节点名组合重复
-            # dae 既可以处理 privacy_node 也可以处理 dialer_proxy_node，只是一个顺序问题
-            # 
-            # 对于 clash 来说，需要转换成 privacy_node
-            # clash 需要解决的问题
-            # 1. 如果这里不转换，而延迟到渲染时转换, 中间还有一个节点名的转换，会导致渲染的节点信息和策略组中的节点名不一致
-            #    解决这个问题，需要在节点名的转换中实现相同的逻辑，容易出错
-            # 
-            return privacy_node
+        # if x.privacy_endpoint:
+        #     privacy_node: Base = cache.get(x.privacy_endpoint)
+        #     if privacy_node is None:
+        #         raise ValueError(f"找不到 {x.privacy_endpoint}")
+        #     privacy_node = copy.copy(privacy_node)
+        #     privacy_node.dialer_proxy = x.name
+        #     privacy_node.dialer_proxy_node = x
+        #     if type in SubIOPlatform.clash_like():
+        #         privacy_node.name = f"{x.name} -> {privacy_node.name}"
+        #     # 为什么要返回 privacy_node 而不是 x？
+        #     # 对于 dae 来说，只要不改变节点的 name 和 privacy_node.name 就行，因为改了以后，会和 dae 本身的节点名组合重复
+        #     # dae 既可以处理 privacy_node 也可以处理 dialer_proxy_node，只是一个顺序问题
+        #     # 
+        #     # 对于 clash 来说，需要转换成 privacy_node
+        #     # clash 需要解决的问题
+        #     # 1. 如果这里不转换，而延迟到渲染时转换, 中间还有一个节点名的转换，会导致渲染的节点信息和策略组中的节点名不一致
+        #     #    解决这个问题，需要在节点名的转换中实现相同的逻辑，容易出错
+        #     # 
+        #     return privacy_node
 
 
-        if x.dialer_proxy:
-            dialer_node: Base = cache.get(x.dialer_proxy)
-            if dialer_node is None:
-                raise ValueError(f"找不到 {x.dialer_proxy}")
-            dialer_node = copy.copy(dialer_node)
-            x.dialer_proxy_node = dialer_node
-            return x
+        # if x.dialer_proxy:
+        #     dialer_node: Base = cache.get(x.dialer_proxy)
+        #     if dialer_node is None:
+        #         raise ValueError(f"找不到 {x.dialer_proxy}")
+        #     dialer_node = copy.copy(dialer_node)
+        #     x.dialer_proxy_node = dialer_node
+        #     return x
 
         return x
     return list(map(mm, data))
