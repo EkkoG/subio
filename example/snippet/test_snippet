@@ -1,0 +1,3 @@
+msg
+# Test snippet macro
+This is a test snippet with message: {{ msg }}

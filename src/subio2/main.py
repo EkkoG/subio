@@ -191,6 +191,9 @@ class SubIO2:
                 if not renderer:
                     raise ValueError(f"No renderer found for type: {artifact.type}")
                 
+                # Set rulesets for the renderer
+                renderer.set_rulesets(self._rulesets)
+                
                 # Merge options: artifact options override global options
                 merged_options = {}
                 if self.config.options:
