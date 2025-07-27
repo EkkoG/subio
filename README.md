@@ -10,8 +10,27 @@ SubIO 和 Surgio 一样，主要有两部分组成，一部分是解析器，负
 
 ### 安装
 
+#### 使用 pip 安装
+
 ```shell
 pip3 install -e git+https://github.com/ekkog/subio#egg=subio
+```
+
+#### 从源码安装（使用 uv）
+
+```shell
+# 克隆仓库
+git clone https://github.com/ekkog/subio.git
+cd subio
+
+# 安装 uv（如果尚未安装）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 安装依赖并创建虚拟环境
+uv sync
+
+# 运行 subio
+uv run subio
 ```
 
 ### 使用
