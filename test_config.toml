@@ -1,0 +1,34 @@
+[general]
+cache_dir = "example/cache"
+
+[[providers]]
+name = "test-clash"
+url = "file://example/dist-subio2/ekko-meta.yaml"
+parser = "clash"
+
+[[artifacts]]
+name = "test-clash-output"
+provider = "test-clash"
+renderer = "clash"
+path = "test_output/test_clash_output.yaml"
+template = "clash.yaml"
+
+[[artifacts]]
+name = "test-v2rayn-output"
+provider = "test-clash"
+renderer = "v2rayn"
+path = "test_output/test_v2rayn_output.txt"
+
+[[artifacts]]
+name = "test-surge-output"
+provider = "test-clash"
+renderer = "surge"
+path = "test_output/test_surge_output.conf"
+template = "surge.conf"
+
+[[artifacts]]
+name = "test-dae-output"
+provider = "test-clash"
+renderer = "dae"
+path = "test_output/test_dae_output.conf"
+template = "dae.conf"
