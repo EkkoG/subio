@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(diff:*)",
+      "Bash(mkdir:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": []
+  }
+}
