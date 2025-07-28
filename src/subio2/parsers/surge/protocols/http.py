@@ -1,6 +1,6 @@
 """HTTP/HTTPS proxy parser for Surge format."""
 from typing import List, Optional
-from ....models.node_composite import CompositeNode, HttpProtocol, BasicAuth, TLSConfig
+from ....models.node import CompositeNode, HttpProtocol, BasicAuth, TLSConfig
 from .registry import surge_protocol_registry
 
 

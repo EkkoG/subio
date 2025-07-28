@@ -1,6 +1,6 @@
 """Data models for SubIO2."""
 # Use composite pattern for better extensibility
-from .node_composite import (
+from .node import (
     CompositeNode as Node,
     NodeType,
     # Protocol configurations

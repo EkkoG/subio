@@ -3,7 +3,7 @@ import base64
 import json
 from typing import Optional
 from urllib.parse import unquote
-from ....models.node_composite import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport
+from ....models.node import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport
 
 
 def parse(url: str) -> Optional[CompositeNode]:

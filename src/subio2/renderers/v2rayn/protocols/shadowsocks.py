@@ -1,7 +1,7 @@
 """Shadowsocks renderer for V2rayN format."""
 import base64
 from urllib.parse import quote, urlencode
-from ....models.node_composite import CompositeNode, ShadowsocksProtocol
+from ....models.node import CompositeNode, ShadowsocksProtocol
 from .registry import v2rayn_protocol_registry
 
 

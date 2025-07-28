@@ -1,6 +1,6 @@
 """Shadowsocks protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node_composite import CompositeNode, ShadowsocksProtocol, TLSConfig
+from ....models.node import CompositeNode, ShadowsocksProtocol, TLSConfig
 from .registry import clash_protocol_registry
 
 

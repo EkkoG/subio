@@ -3,7 +3,7 @@ import base64
 from typing import List, Dict, Any, Optional, Callable
 from urllib.parse import urlparse, parse_qs, unquote
 from ...core.registry import parser_registry
-from ...models.node_composite import CompositeNode
+from ...models.node import CompositeNode
 from ..base import BaseParser
 
 

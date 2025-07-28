@@ -151,7 +151,7 @@ class SubIO2:
                 result_nodes.append(node)
             else:
                 # Create a new node with privacy endpoint
-                from .models.node_composite import CompositeNode
+                from .models.node import CompositeNode
                 if isinstance(node, CompositeNode):
                     # Clone the node and add dialer-proxy
                     node_dict = node.to_dict()

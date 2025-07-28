@@ -1,6 +1,6 @@
 """HTTP renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, HttpProtocol
+from ....models.node import CompositeNode, HttpProtocol
 from .registry import dae_protocol_registry
 
 

@@ -1,7 +1,7 @@
 """HTTP proxy URL parser for V2rayN format."""
 from typing import Optional
 from urllib.parse import urlparse, unquote
-from ....models.node_composite import CompositeNode, HttpProtocol, BasicAuth
+from ....models.node import CompositeNode, HttpProtocol, BasicAuth
 
 
 def parse(url: str) -> Optional[CompositeNode]:

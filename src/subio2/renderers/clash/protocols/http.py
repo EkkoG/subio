@@ -1,6 +1,6 @@
 """HTTP protocol renderer for Clash format."""
 from typing import Dict, Any
-from ....models.node_composite import CompositeNode
+from ....models.node import CompositeNode
 from .registry import clash_renderer_registry
 
 

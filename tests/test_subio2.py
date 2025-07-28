@@ -5,7 +5,7 @@ import yaml
 import json
 
 from subio2.models import Node, NodeType, ProtocolConfig
-from subio2.models.node_composite import (
+from subio2.models.node import (
     CompositeNode, ShadowsocksProtocol, VmessProtocol, TrojanProtocol, VlessProtocol,
     HttpProtocol, Socks5Protocol, HysteriaProtocol, Hysteria2Protocol,
     TLSConfig, BasicAuth, Transport, WebSocketTransport, TransportType
@@ -17,7 +17,7 @@ from subio2.renderers.clash import ClashRenderer
 from subio2.renderers.v2rayn import V2rayNRenderer
 from subio2.renderers.surge import SurgeRenderer
 from subio2.renderers.dae import DAERenderer
-from subio2.filters import node_filter
+from subio2.filters import filter
 
 
 class TestProtocolConfigs:
@@ -312,7 +312,7 @@ class TestFilters:
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test"))
         ]
         
-        filtered = node_filter.hk_filter(nodes)
+        filtered = filter.hk_filter(nodes)
         assert len(filtered) == 2
         assert all("HK" in node.name or "香港" in node.name for node in filtered)
     
@@ -327,7 +327,7 @@ class TestFilters:
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test"))
         ]
         
-        filtered = node_filter.keyWord_filter(nodes, "Premium")
+        filtered = filter.keyWord_filter(nodes, "Premium")
         assert len(filtered) == 2
         assert all("Premium" in node.name for node in filtered)
     
@@ -343,7 +343,7 @@ class TestFilters:
         ]
         
         # 组合 HK 过滤器和关键词过滤器
-        filtered = node_filter.combine(nodes, node_filter.hk_filter, node_filter.keyWord_filter, None, "Premium")
+        filtered = filter.combine(nodes, filter.hk_filter, filter.keyWord_filter, None, "Premium")
         assert len(filtered) == 1
         assert filtered[0].name == "Premium-HK-01"
 
@@ -478,7 +478,7 @@ class TestEdgeCases:
         )
         
         # 测试过滤器能正确处理特殊字符
-        filtered = node_filter.hk_filter([node])
+        filtered = filter.hk_filter([node])
         assert len(filtered) == 1
         
         # 测试渲染器能正确处理特殊字符

@@ -1,6 +1,6 @@
 """SOCKS5 protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node_composite import CompositeNode, Socks5Protocol, BasicAuth, TLSConfig
+from ....models.node import CompositeNode, Socks5Protocol, BasicAuth, TLSConfig
 from .registry import clash_protocol_registry
 
 

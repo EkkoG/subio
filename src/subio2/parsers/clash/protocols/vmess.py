@@ -1,6 +1,6 @@
 """VMess protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node_composite import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 from .registry import clash_protocol_registry
 
 

@@ -1,6 +1,6 @@
 """Surge renderer implementation."""
 from typing import List, Optional, Dict, Any
-from ...models.node_composite import CompositeNode
+from ...models.node import CompositeNode
 from ..base import BaseRenderer
 import os
 from pathlib import Path

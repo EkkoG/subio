@@ -1,5 +1,5 @@
 """VMess renderer for Surge format."""
-from ....models.node_composite import CompositeNode, VmessProtocol
+from ....models.node import CompositeNode, VmessProtocol
 from .registry import surge_protocol_registry
 
 

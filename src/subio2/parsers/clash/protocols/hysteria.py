@@ -1,6 +1,6 @@
 """Hysteria protocol parsers for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node_composite import CompositeNode, HysteriaProtocol, Hysteria2Protocol, TLSConfig
+from ....models.node import CompositeNode, HysteriaProtocol, Hysteria2Protocol, TLSConfig
 from .registry import clash_protocol_registry
 
 

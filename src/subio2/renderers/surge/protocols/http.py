@@ -1,5 +1,5 @@
 """HTTP proxy renderer for Surge format."""
-from ....models.node_composite import CompositeNode, HttpProtocol
+from ....models.node import CompositeNode, HttpProtocol
 from .registry import surge_protocol_registry
 
 

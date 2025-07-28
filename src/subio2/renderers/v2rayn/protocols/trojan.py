@@ -1,6 +1,6 @@
 """Trojan renderer for V2rayN format."""
 from urllib.parse import quote, urlencode
-from ....models.node_composite import CompositeNode, TrojanProtocol
+from ....models.node import CompositeNode, TrojanProtocol
 from .registry import v2rayn_protocol_registry
 
 

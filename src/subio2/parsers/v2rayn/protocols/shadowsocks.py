@@ -2,7 +2,7 @@
 import base64
 from typing import Optional
 from urllib.parse import urlparse, unquote, parse_qs
-from ....models.node_composite import CompositeNode, ShadowsocksProtocol
+from ....models.node import CompositeNode, ShadowsocksProtocol
 
 
 def parse(url: str) -> Optional[CompositeNode]:

@@ -1,6 +1,6 @@
 """Trojan renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, TrojanProtocol
+from ....models.node import CompositeNode, TrojanProtocol
 from .registry import dae_protocol_registry
 
 

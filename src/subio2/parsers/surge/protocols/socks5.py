@@ -1,6 +1,6 @@
 """SOCKS5 proxy parser for Surge format."""
 from typing import List, Optional
-from ....models.node_composite import CompositeNode, Socks5Protocol, BasicAuth
+from ....models.node import CompositeNode, Socks5Protocol, BasicAuth
 from .registry import surge_protocol_registry
 
 
