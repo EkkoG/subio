@@ -5,7 +5,7 @@ import json
 import json5
 from typing import List, Dict, Any
 from ...core.registry import parser_registry
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseParser
 from .protocols import parse_node
 
@@ -14,7 +14,7 @@ from .protocols import parse_node
 class SubIOParser(BaseParser):
     """Parser for SubIO native format (TOML/YAML/JSON)."""
     
-    def parse(self, content: str) -> List[CompositeNode]:
+    def parse(self, content: str) -> List[Proxy]:
         """Parse SubIO native format."""
         try:
             # Try to detect format

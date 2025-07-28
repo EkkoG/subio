@@ -1,6 +1,6 @@
 """Registry for Surge protocol renderers."""
 from typing import Callable, Dict, Optional
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 
 
 class SurgeProtocolRegistry:

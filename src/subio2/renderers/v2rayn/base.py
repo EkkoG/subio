@@ -1,7 +1,7 @@
 """V2rayN renderer implementation."""
 import base64
 from typing import List, Optional, Dict, Any
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseRenderer
 from ...core.registry import renderer_registry
 from .protocols.registry import v2rayn_protocol_registry
@@ -16,7 +16,7 @@ class V2rayNRenderer(BaseRenderer):
         # Trigger protocol registration
         from . import protocols  # noqa
     
-    def render(self, nodes: List[CompositeNode], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
+    def render(self, nodes: List[Proxy], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
         """Render nodes to V2rayN format."""
         urls = []
         

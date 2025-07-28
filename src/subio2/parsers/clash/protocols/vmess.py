@@ -1,11 +1,11 @@
 """VMess protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import Proxy, VmessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('vmess')
-def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse VMess proxy from Clash format."""
     try:
         # Extract basic info
@@ -25,7 +25,7 @@ def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

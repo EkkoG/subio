@@ -1,12 +1,12 @@
 """Shadowsocks renderer for DAE format."""
 import base64
 from urllib.parse import quote
-from ....models.node import CompositeNode, ShadowsocksProtocol
+from ....models.node import Proxy, ShadowsocksProtocol
 from .registry import dae_protocol_registry
 
 
 @dae_protocol_registry.register('ss', 'shadowsocks')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render Shadowsocks node to DAE URL format (same as V2rayN)."""
     protocol = node.protocol
     if not isinstance(protocol, ShadowsocksProtocol):

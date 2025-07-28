@@ -1,12 +1,12 @@
 """Trojan protocol parser for SubIO format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, TrojanProtocol, TLSConfig
+from ....models.node import Proxy, TrojanProtocol, TLSConfig
 from .common import parse_transport
 from . import register_parser
 
 
 @register_parser('trojan')
-def parse_trojan(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_trojan(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Trojan node."""
     # Get basic info
     name = node_data.get('name', 'Unnamed')
@@ -22,7 +22,7 @@ def parse_trojan(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
     )
     
     # Create composite node
-    node = CompositeNode(
+    node = Proxy(
         name=name,
         server=server,
         port=port,

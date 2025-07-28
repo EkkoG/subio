@@ -1,10 +1,10 @@
 """Trojan URL parser for V2rayN format."""
 from typing import Optional
 from urllib.parse import parse_qs, urlparse, unquote
-from ....models.node import CompositeNode, TrojanProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import Proxy, TrojanProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 
 
-def parse(url: str) -> Optional[CompositeNode]:
+def parse(url: str) -> Optional[Proxy]:
     """Parse Trojan URL: trojan://password@server:port?sni=xxx&type=ws&path=/&host=xxx"""
     try:
         parsed = urlparse(url)
@@ -33,7 +33,7 @@ def parse(url: str) -> Optional[CompositeNode]:
         protocol = TrojanProtocol(password=password)
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

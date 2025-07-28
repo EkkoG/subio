@@ -1,11 +1,11 @@
 """HTTP renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node import CompositeNode, HttpProtocol
+from ....models.node import Proxy, HttpProtocol
 from .registry import dae_protocol_registry
 
 
 @dae_protocol_registry.register('http')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render HTTP node to DAE URL format."""
     protocol = node.protocol
     if not isinstance(protocol, HttpProtocol):

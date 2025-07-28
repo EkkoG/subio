@@ -1,10 +1,10 @@
 """HTTP proxy URL parser for V2rayN format."""
 from typing import Optional
 from urllib.parse import urlparse, unquote
-from ....models.node import CompositeNode, HttpProtocol, BasicAuth
+from ....models.node import Proxy, HttpProtocol, BasicAuth
 
 
-def parse(url: str) -> Optional[CompositeNode]:
+def parse(url: str) -> Optional[Proxy]:
     """Parse HTTP proxy URL: http://user:pass@server:port"""
     try:
         parsed = urlparse(url)
@@ -34,7 +34,7 @@ def parse(url: str) -> Optional[CompositeNode]:
             name = unquote(parsed.fragment)
         
         # Create node
-        return CompositeNode(
+        return Proxy(
             name=name,
             server=server,
             port=port,

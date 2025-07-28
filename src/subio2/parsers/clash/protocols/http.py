@@ -1,11 +1,11 @@
 """HTTP protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, HttpProtocol, BasicAuth, TLSConfig
+from ....models.node import Proxy, HttpProtocol, BasicAuth, TLSConfig
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('http')
-def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse HTTP proxy from Clash format."""
     try:
         # Extract basic info
@@ -20,7 +20,7 @@ def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         protocol = HttpProtocol()
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

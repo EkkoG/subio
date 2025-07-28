@@ -1,11 +1,11 @@
 """Stash-specific Hysteria2 protocol renderer."""
 from typing import Dict, Any
-from ....models.node import CompositeNode, Hysteria2Protocol
+from ....models.node import Proxy, Hysteria2Protocol
 from ...clash.protocols.registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('hysteria2')
-def render_hysteria2_stash(node: CompositeNode) -> Dict[str, Any]:
+def render_hysteria2_stash(node: Proxy) -> Dict[str, Any]:
     """Render Hysteria2 node in Stash-specific format.
     
     Stash might have different requirements for Hysteria2 format.

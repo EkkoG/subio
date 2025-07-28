@@ -151,14 +151,14 @@ class SubIO2:
                 result_nodes.append(node)
             else:
                 # Create a new node with privacy endpoint
-                from .models.node import CompositeNode
-                if isinstance(node, CompositeNode):
+                from .models.node import Proxy
+                if isinstance(node, Proxy):
                     # Clone the node and add dialer-proxy
                     node_dict = node.to_dict()
                     node_dict['dialer-proxy'] = endpoint
                     # Update the name to show the chain
                     node_dict['name'] = f"{endpoint} -> {node.name}"
-                    new_node = CompositeNode.from_dict(node_dict)
+                    new_node = Proxy.from_dict(node_dict)
                     result_nodes.append(new_node)
                 else:
                     # For old-style nodes

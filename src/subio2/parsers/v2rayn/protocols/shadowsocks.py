@@ -2,10 +2,10 @@
 import base64
 from typing import Optional
 from urllib.parse import urlparse, unquote, parse_qs
-from ....models.node import CompositeNode, ShadowsocksProtocol
+from ....models.node import Proxy, ShadowsocksProtocol
 
 
-def parse(url: str) -> Optional[CompositeNode]:
+def parse(url: str) -> Optional[Proxy]:
     """Parse Shadowsocks URL: ss://base64(method:password)@server:port#name"""
     try:
         parsed = urlparse(url)
@@ -60,7 +60,7 @@ def parse(url: str) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

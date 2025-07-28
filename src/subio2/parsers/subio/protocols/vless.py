@@ -1,12 +1,12 @@
 """VLESS protocol parser for SubIO format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, VlessProtocol, TLSConfig
+from ....models.node import Proxy, VlessProtocol, TLSConfig
 from .common import parse_transport
 from . import register_parser
 
 
 @register_parser('vless')
-def parse_vless(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_vless(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse VLESS node."""
     # Get basic info
     name = node_data.get('name', 'Unnamed')
@@ -23,7 +23,7 @@ def parse_vless(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
     )
     
     # Create composite node
-    node = CompositeNode(
+    node = Proxy(
         name=name,
         server=server,
         port=port,

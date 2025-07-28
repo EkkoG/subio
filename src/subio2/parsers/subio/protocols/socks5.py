@@ -1,13 +1,13 @@
 """SOCKS5 protocol parser for SubIO format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, Socks5Protocol, BasicAuth, TLSConfig
+from ....models.node import Proxy, Socks5Protocol, BasicAuth, TLSConfig
 from .common import parse_transport, add_common_fields
 from . import register_parser
 
 
 @register_parser('socks5')
 @register_parser('socks')
-def parse_socks5(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_socks5(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse SOCKS5 proxy node."""
     # Get basic info
     name = node_data.get('name', 'Unnamed')
@@ -23,7 +23,7 @@ def parse_socks5(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
     )
     
     # Create composite node
-    node = CompositeNode(
+    node = Proxy(
         name=name,
         server=server,
         port=port,

@@ -1,11 +1,11 @@
 """SOCKS5 renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node import CompositeNode, Socks5Protocol
+from ....models.node import Proxy, Socks5Protocol
 from .registry import dae_protocol_registry
 
 
 @dae_protocol_registry.register('socks5')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render SOCKS5 node to DAE URL format."""
     protocol = node.protocol
     if not isinstance(protocol, Socks5Protocol):

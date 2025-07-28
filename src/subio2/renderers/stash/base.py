@@ -1,7 +1,7 @@
 """Stash renderer - extends Clash renderer with Stash-specific protocol handling."""
 from typing import Dict, Any, Optional
 from ...core.registry import renderer_registry
-from ...models.node import CompositeNode, HysteriaProtocol, Hysteria2Protocol
+from ...models.node import Proxy, HysteriaProtocol, Hysteria2Protocol
 from ..clash.base import ClashRenderer
 
 
@@ -30,7 +30,7 @@ class StashRenderer(ClashRenderer):
         from ..clash.protocols.registry import clash_protocol_registry
         return clash_protocol_registry
     
-    def render_node(self, node: CompositeNode) -> Dict[str, Any]:
+    def render_node(self, node: Proxy) -> Dict[str, Any]:
         """Render a single node to Stash format."""
         # For most protocols, use Clash rendering
         result = super().render_node(node)
@@ -51,7 +51,7 @@ class StashRenderer(ClashRenderer):
         
         return result
     
-    def _render_hysteria_stash(self, node: CompositeNode, base_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_hysteria_stash(self, node: Proxy, base_result: Dict[str, Any]) -> Dict[str, Any]:
         """Render Hysteria protocol in Stash-specific format."""
         # Example: Stash might use different field names
         protocol = node.protocol
@@ -80,7 +80,7 @@ class StashRenderer(ClashRenderer):
         
         return result
     
-    def _render_hysteria2_stash(self, node: CompositeNode, base_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_hysteria2_stash(self, node: Proxy, base_result: Dict[str, Any]) -> Dict[str, Any]:
         """Render Hysteria2 protocol in Stash-specific format."""
         protocol = node.protocol
         

@@ -1,11 +1,11 @@
 """Trojan protocol renderer for Clash format."""
 from typing import Dict, Any
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 from .registry import clash_renderer_registry
 
 
 @clash_renderer_registry.register('trojan')
-def render(node: CompositeNode) -> Dict[str, Any]:
+def render(node: Proxy) -> Dict[str, Any]:
     """Render Trojan node to Clash format."""
     result = {
         'name': node.name,

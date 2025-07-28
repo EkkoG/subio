@@ -1,12 +1,12 @@
 """VMess protocol parser for SubIO format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, VmessProtocol, TLSConfig
+from ....models.node import Proxy, VmessProtocol, TLSConfig
 from .common import parse_transport
 from . import register_parser
 
 
 @register_parser('vmess')
-def parse_vmess(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_vmess(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse VMess node."""
     # Get basic info
     name = node_data.get('name', 'Unnamed')
@@ -24,7 +24,7 @@ def parse_vmess(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
     )
     
     # Create composite node
-    node = CompositeNode(
+    node = Proxy(
         name=name,
         server=server,
         port=port,

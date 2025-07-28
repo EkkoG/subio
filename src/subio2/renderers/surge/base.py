@@ -1,6 +1,6 @@
 """Surge renderer implementation."""
 from typing import List, Optional, Dict, Any
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseRenderer
 import os
 from pathlib import Path
@@ -30,7 +30,7 @@ class SurgeRenderer(BaseRenderer):
         else:
             self.env = None
     
-    def render(self, nodes: List[CompositeNode], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
+    def render(self, nodes: List[Proxy], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
         """Render nodes to Surge format."""
         # If template is provided, use template rendering
         if template:
@@ -72,7 +72,7 @@ class SurgeRenderer(BaseRenderer):
         
         return '\n'.join(lines)
     
-    def _render_node(self, node: CompositeNode) -> Optional[str]:
+    def _render_node(self, node: Proxy) -> Optional[str]:
         """Render a single node to Surge proxy line."""
         protocol_type = node.protocol.get_type().value
         renderer = surge_protocol_registry.get_renderer(protocol_type)

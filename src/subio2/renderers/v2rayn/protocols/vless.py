@@ -1,11 +1,11 @@
 """VLESS renderer for V2rayN format."""
 from urllib.parse import quote, urlencode
-from ....models.node import CompositeNode, VlessProtocol
+from ....models.node import Proxy, VlessProtocol
 from .registry import v2rayn_protocol_registry
 
 
 @v2rayn_protocol_registry.register('vless')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render VLESS node to V2rayN URL format."""
     protocol = node.protocol
     if not isinstance(protocol, VlessProtocol):

@@ -1,11 +1,11 @@
 """Trojan renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node import CompositeNode, TrojanProtocol
+from ....models.node import Proxy, TrojanProtocol
 from .registry import dae_protocol_registry
 
 
 @dae_protocol_registry.register('trojan')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render Trojan node to DAE URL format."""
     protocol = node.protocol
     if not isinstance(protocol, TrojanProtocol):

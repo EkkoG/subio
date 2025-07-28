@@ -1,6 +1,6 @@
 """DAE renderer implementation."""
 from typing import List, Optional, Dict, Any
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseRenderer
 from ...core.registry import renderer_registry
 from .protocols.registry import dae_protocol_registry
@@ -30,7 +30,7 @@ class DAERenderer(BaseRenderer):
         else:
             self.env = None
     
-    def render(self, nodes: List[CompositeNode], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
+    def render(self, nodes: List[Proxy], template: Optional[str] = None, context: Dict[str, Any] = None) -> str:
         """Render nodes to DAE format."""
         # If template is provided, use template rendering
         if template:
@@ -86,7 +86,7 @@ class DAERenderer(BaseRenderer):
         
         return '\\n'.join(urls)
     
-    def _render_node(self, node: CompositeNode) -> Optional[str]:
+    def _render_node(self, node: Proxy) -> Optional[str]:
         """Render a single node to DAE URL."""
         protocol_type = node.protocol.get_type().value
         renderer = dae_protocol_registry.get_renderer(protocol_type)

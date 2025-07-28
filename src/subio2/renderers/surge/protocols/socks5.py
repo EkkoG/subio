@@ -1,10 +1,10 @@
 """SOCKS5 proxy renderer for Surge format."""
-from ....models.node import CompositeNode, Socks5Protocol
+from ....models.node import Proxy, Socks5Protocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('socks5')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render SOCKS5 proxy node to Surge format."""
     protocol = node.protocol
     if not isinstance(protocol, Socks5Protocol):

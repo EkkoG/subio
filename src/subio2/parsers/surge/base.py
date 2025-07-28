@@ -2,7 +2,7 @@
 import re
 from typing import List, Dict, Any, Optional
 from ...core.registry import parser_registry
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseParser
 
 
@@ -15,7 +15,7 @@ class SurgeParser(BaseParser):
         # Trigger protocol registration
         from . import protocols  # noqa
     
-    def parse(self, content: str) -> List[CompositeNode]:
+    def parse(self, content: str) -> List[Proxy]:
         """Parse Surge configuration."""
         nodes = []
         
@@ -43,7 +43,7 @@ class SurgeParser(BaseParser):
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
         return match.group(1).strip() if match else None
     
-    def _parse_proxy_line(self, line: str) -> Optional[CompositeNode]:
+    def _parse_proxy_line(self, line: str) -> Optional[Proxy]:
         """Parse a single proxy line."""
         try:
             # Format: ProxyName = protocol, server, port, ...params

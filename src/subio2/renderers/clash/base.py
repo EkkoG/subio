@@ -5,7 +5,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from ...core.registry import renderer_registry
 from ...models import Node
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseRenderer
 
 
@@ -86,7 +86,7 @@ class ClashRenderer(BaseRenderer):
             # Render nodes to YAML-compatible dicts
             proxies_list = []
             for node in nodes:
-                if isinstance(node, CompositeNode):
+                if isinstance(node, Proxy):
                     proxy_dict = self._render_node(node)
                     if proxy_dict:
                         proxies_list.append(proxy_dict)
@@ -103,7 +103,7 @@ class ClashRenderer(BaseRenderer):
         proxies = []
         
         for node in nodes:
-            if isinstance(node, CompositeNode):
+            if isinstance(node, Proxy):
                 proxy_dict = self._render_node(node)
                 if proxy_dict:
                     proxies.append(proxy_dict)
@@ -111,7 +111,7 @@ class ClashRenderer(BaseRenderer):
         result = {'proxies': proxies}
         return yaml.dump(result, allow_unicode=True, sort_keys=False)
     
-    def _render_node(self, node: CompositeNode) -> Optional[Dict[str, Any]]:
+    def _render_node(self, node: Proxy) -> Optional[Dict[str, Any]]:
         """Render a single node using protocol-specific renderer."""
         try:
             protocol_type = node.protocol.get_type().value

@@ -1,11 +1,11 @@
 """VMess parser for Surge format."""
 from typing import List, Optional
-from ....models.node import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport
+from ....models.node import Proxy, VmessProtocol, TLSConfig, Transport, WebSocketTransport
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('vmess')
-def parse(name: str, server: str, port: int, params: List[str]) -> Optional[CompositeNode]:
+def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Proxy]:
     """Parse VMess proxy from Surge format.
     
     Format: ProxyName = vmess, server, port, username=, [ws=true], [tls=true], [ws-path=/], [ws-headers=...]
@@ -50,7 +50,7 @@ def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Comp
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

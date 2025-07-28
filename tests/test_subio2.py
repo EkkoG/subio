@@ -6,7 +6,7 @@ import json
 
 from subio2.models import Node, NodeType, ProtocolConfig
 from subio2.models.node import (
-    CompositeNode, ShadowsocksProtocol, VmessProtocol, TrojanProtocol, VlessProtocol,
+    Proxy, ShadowsocksProtocol, VmessProtocol, TrojanProtocol, VlessProtocol,
     HttpProtocol, Socks5Protocol, HysteriaProtocol, Hysteria2Protocol,
     TLSConfig, BasicAuth, Transport, WebSocketTransport, TransportType
 )
@@ -59,7 +59,7 @@ class TestCompositeNode:
     
     def test_basic_node_creation(self):
         """测试基础节点创建"""
-        node = CompositeNode(
+        node = Proxy(
             name="test-ss",
             server="example.com",
             port=8388,
@@ -76,7 +76,7 @@ class TestCompositeNode:
     
     def test_node_with_components(self):
         """测试带组件的节点"""
-        node = CompositeNode(
+        node = Proxy(
             name="test-http",
             server="proxy.com",
             port=8080,
@@ -95,7 +95,7 @@ class TestCompositeNode:
     
     def test_node_to_dict(self):
         """测试节点转换为字典"""
-        node = CompositeNode(
+        node = Proxy(
             name="test-vmess",
             server="example.com",
             port=443,
@@ -238,7 +238,7 @@ class TestRenderers:
     def test_clash_renderer(self):
         """测试 Clash 渲染器"""
         nodes = [
-            CompositeNode(
+            Proxy(
                 name="test-ss",
                 server="example.com",
                 port=8388,
@@ -262,7 +262,7 @@ class TestRenderers:
     def test_v2rayn_renderer(self):
         """测试 V2rayN 渲染器"""
         nodes = [
-            CompositeNode(
+            Proxy(
                 name="test-vmess",
                 server="example.com",
                 port=443,
@@ -282,7 +282,7 @@ class TestRenderers:
     def test_surge_renderer(self):
         """测试 Surge 渲染器"""
         nodes = [
-            CompositeNode(
+            Proxy(
                 name="test-http",
                 server="proxy.com",
                 port=8080,
@@ -304,11 +304,11 @@ class TestFilters:
     def test_hk_filter(self):
         """测试香港节点过滤器"""
         nodes = [
-            CompositeNode(name="HK-01", server="hk1.com", port=443, 
+            Proxy(name="HK-01", server="hk1.com", port=443, 
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="US-01", server="us1.com", port=443,
+            Proxy(name="US-01", server="us1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="香港节点", server="hk2.com", port=443,
+            Proxy(name="香港节点", server="hk2.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test"))
         ]
         
@@ -319,11 +319,11 @@ class TestFilters:
     def test_keyword_filter(self):
         """测试关键词过滤器"""
         nodes = [
-            CompositeNode(name="Premium-HK", server="hk1.com", port=443,
+            Proxy(name="Premium-HK", server="hk1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="Free-US", server="us1.com", port=443,
+            Proxy(name="Free-US", server="us1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="Premium-JP", server="jp1.com", port=443,
+            Proxy(name="Premium-JP", server="jp1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test"))
         ]
         
@@ -334,11 +334,11 @@ class TestFilters:
     def test_combine_filter(self):
         """测试组合过滤器"""
         nodes = [
-            CompositeNode(name="Premium-HK-01", server="hk1.com", port=443,
+            Proxy(name="Premium-HK-01", server="hk1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="Free-HK-01", server="hk2.com", port=443,
+            Proxy(name="Free-HK-01", server="hk2.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test")),
-            CompositeNode(name="Premium-US-01", server="us1.com", port=443,
+            Proxy(name="Premium-US-01", server="us1.com", port=443,
                          protocol=ShadowsocksConfig(cipher="aes-256-gcm", password="test"))
         ]
         
@@ -387,7 +387,7 @@ class TestIntegration:
     def test_complex_node_conversion(self):
         """测试复杂节点的转换"""
         # 创建一个复杂的节点
-        node = CompositeNode(
+        node = Proxy(
             name="complex-vmess",
             server="example.com",
             port=443,
@@ -470,7 +470,7 @@ class TestEdgeCases:
     
     def test_special_characters_in_name(self):
         """测试名称中的特殊字符"""
-        node = CompositeNode(
+        node = Proxy(
             name="测试节点 | 香港 #01 (Premium)",
             server="hk.example.com",
             port=443,
