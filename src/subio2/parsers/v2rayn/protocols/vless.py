@@ -1,10 +1,10 @@
 """VLESS URL parser for V2rayN format."""
 from typing import Optional
 from urllib.parse import parse_qs, urlparse, unquote
-from ....models.node import CompositeNode, VlessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import Proxy, VlessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 
 
-def parse(url: str) -> Optional[CompositeNode]:
+def parse(url: str) -> Optional[Proxy]:
     """Parse VLESS URL: vless://uuid@server:port?security=tls&type=ws&path=/&host=xxx"""
     try:
         parsed = urlparse(url)
@@ -36,7 +36,7 @@ def parse(url: str) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

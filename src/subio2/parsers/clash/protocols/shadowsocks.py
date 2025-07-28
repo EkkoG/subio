@@ -1,11 +1,11 @@
 """Shadowsocks protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, ShadowsocksProtocol, TLSConfig
+from ....models.node import Proxy, ShadowsocksProtocol, TLSConfig
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('ss', 'shadowsocks')
-def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Shadowsocks proxy from Clash format."""
     try:
         # Extract basic info
@@ -33,7 +33,7 @@ def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
                 protocol.plugin_opts = proxy['plugin-opts']
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

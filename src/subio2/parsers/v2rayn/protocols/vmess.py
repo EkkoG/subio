@@ -3,10 +3,10 @@ import base64
 import json
 from typing import Optional
 from urllib.parse import unquote
-from ....models.node import CompositeNode, VmessProtocol, TLSConfig, Transport, WebSocketTransport
+from ....models.node import Proxy, VmessProtocol, TLSConfig, Transport, WebSocketTransport
 
 
-def parse(url: str) -> Optional[CompositeNode]:
+def parse(url: str) -> Optional[Proxy]:
     """Parse VMess URL: vmess://base64(json)"""
     try:
         # Remove vmess:// prefix
@@ -35,7 +35,7 @@ def parse(url: str) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=unquote(name),
             server=server,
             port=port,

@@ -1,12 +1,12 @@
 """Shadowsocks protocol parser for SubIO format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, ShadowsocksProtocol
+from ....models.node import Proxy, ShadowsocksProtocol
 from . import register_parser
 
 
 @register_parser('shadowsocks')
 @register_parser('ss')
-def parse_shadowsocks(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_shadowsocks(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Shadowsocks node."""
     # Get basic info
     name = node_data.get('name', 'Unnamed')
@@ -23,7 +23,7 @@ def parse_shadowsocks(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
     )
     
     # Create composite node
-    node = CompositeNode(
+    node = Proxy(
         name=name,
         server=server,
         port=port,

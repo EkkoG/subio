@@ -1,11 +1,11 @@
 """SOCKS5 protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, Socks5Protocol, BasicAuth, TLSConfig
+from ....models.node import Proxy, Socks5Protocol, BasicAuth, TLSConfig
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('socks5', 'socks')
-def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse SOCKS5 proxy from Clash format."""
     try:
         # Extract basic info
@@ -20,7 +20,7 @@ def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         protocol = Socks5Protocol()
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

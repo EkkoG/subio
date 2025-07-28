@@ -1,10 +1,10 @@
 """HTTP proxy renderer for Surge format."""
-from ....models.node import CompositeNode, HttpProtocol
+from ....models.node import Proxy, HttpProtocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('http')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render HTTP proxy node to Surge format."""
     protocol = node.protocol
     if not isinstance(protocol, HttpProtocol):

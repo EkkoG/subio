@@ -1,6 +1,6 @@
 """Registry for V2rayN protocol renderers."""
 from typing import Callable, Dict, Optional
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 
 
 class V2rayNProtocolRegistry:

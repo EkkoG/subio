@@ -1,6 +1,6 @@
 """Common utilities for SubIO protocol parsers."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, BasicAuth, TLSConfig, WebSocketTransport, GRPCTransport
+from ....models.node import Proxy, BasicAuth, TLSConfig, WebSocketTransport, GRPCTransport
 
 
 def parse_transport(transport_type: str, node_data: Dict[str, Any]) -> Optional[Any]:
@@ -19,7 +19,7 @@ def parse_transport(transport_type: str, node_data: Dict[str, Any]) -> Optional[
     return None
 
 
-def add_common_fields(node: CompositeNode, node_data: Dict[str, Any]):
+def add_common_fields(node: Proxy, node_data: Dict[str, Any]):
     """Add common fields like auth, transport, TLS to a node."""
     node_type = node_data.get('type', '').lower()
     

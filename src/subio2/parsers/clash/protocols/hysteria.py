@@ -1,11 +1,11 @@
 """Hysteria protocol parsers for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, HysteriaProtocol, Hysteria2Protocol, TLSConfig
+from ....models.node import Proxy, HysteriaProtocol, Hysteria2Protocol, TLSConfig
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('hysteria')
-def parse_hysteria1(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_hysteria1(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Hysteria v1 proxy from Clash format."""
     try:
         # Extract basic info
@@ -25,7 +25,7 @@ def parse_hysteria1(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,
@@ -50,7 +50,7 @@ def parse_hysteria1(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
 
 
 @clash_protocol_registry.register('hysteria2')
-def parse_hysteria2(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_hysteria2(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Hysteria v2 proxy from Clash format."""
     try:
         # Extract basic info
@@ -71,7 +71,7 @@ def parse_hysteria2(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         )
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

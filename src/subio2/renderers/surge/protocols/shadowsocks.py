@@ -1,10 +1,10 @@
 """Shadowsocks renderer for Surge format."""
-from ....models.node import CompositeNode, ShadowsocksProtocol
+from ....models.node import Proxy, ShadowsocksProtocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('ss', 'shadowsocks')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render Shadowsocks node to Surge format."""
     protocol = node.protocol
     if not isinstance(protocol, ShadowsocksProtocol):

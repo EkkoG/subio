@@ -2,12 +2,12 @@
 import base64
 import json
 from urllib.parse import quote
-from ....models.node import CompositeNode, VmessProtocol, WebSocketTransport
+from ....models.node import Proxy, VmessProtocol, WebSocketTransport
 from .registry import v2rayn_protocol_registry
 
 
 @v2rayn_protocol_registry.register('vmess')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render VMess node to V2rayN URL format."""
     protocol = node.protocol
     if not isinstance(protocol, VmessProtocol):

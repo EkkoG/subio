@@ -1,11 +1,11 @@
 """Shadowsocks parser for Surge format."""
 from typing import List, Optional
-from ....models.node import CompositeNode, ShadowsocksProtocol
+from ....models.node import Proxy, ShadowsocksProtocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('ss', 'custom')
-def parse(name: str, server: str, port: int, params: List[str]) -> Optional[CompositeNode]:
+def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Proxy]:
     """Parse Shadowsocks proxy from Surge format.
     
     Format: ProxyName = ss, server, port, encrypt-method=, password=, [optional params]
@@ -54,7 +54,7 @@ def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Comp
                 protocol.plugin_opts['host'] = obfs_host
         
         # Create node
-        return CompositeNode(
+        return Proxy(
             name=name,
             server=server,
             port=port,

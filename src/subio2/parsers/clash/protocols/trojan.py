@@ -1,11 +1,11 @@
 """Trojan protocol parser for Clash format."""
 from typing import Dict, Any, Optional
-from ....models.node import CompositeNode, TrojanProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import Proxy, TrojanProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 from .registry import clash_protocol_registry
 
 
 @clash_protocol_registry.register('trojan')
-def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse(proxy: Dict[str, Any]) -> Optional[Proxy]:
     """Parse Trojan proxy from Clash format."""
     try:
         # Extract basic info
@@ -21,7 +21,7 @@ def parse(proxy: Dict[str, Any]) -> Optional[CompositeNode]:
         protocol = TrojanProtocol(password=password)
         
         # Create node
-        node = CompositeNode(
+        node = Proxy(
             name=name,
             server=server,
             port=port,

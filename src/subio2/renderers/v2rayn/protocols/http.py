@@ -1,11 +1,11 @@
 """HTTP proxy renderer for V2rayN format."""
 from urllib.parse import quote
-from ....models.node import CompositeNode, HttpProtocol
+from ....models.node import Proxy, HttpProtocol
 from .registry import v2rayn_protocol_registry
 
 
 @v2rayn_protocol_registry.register('http')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render HTTP proxy node to V2rayN URL format."""
     protocol = node.protocol
     if not isinstance(protocol, HttpProtocol):

@@ -3,18 +3,18 @@ import pytest
 import time
 from typing import List
 
-from subio2.models.node import CompositeNode, ShadowsocksProtocol
+from subio2.models.node import Proxy, ShadowsocksProtocol
 from subio2.filters.filter import hk_filter, combine, all_filters
 
 
-def create_test_nodes(count: int = 100) -> List[CompositeNode]:
+def create_test_nodes(count: int = 100) -> List[Proxy]:
     """创建测试节点"""
     nodes = []
     regions = ["HK", "US", "JP", "SG", "UK"]
     
     for i in range(count):
         region = regions[i % len(regions)]
-        node = CompositeNode(
+        node = Proxy(
             name=f"{region}-{i:03d}",
             server=f"{region.lower()}{i}.example.com",
             port=443,

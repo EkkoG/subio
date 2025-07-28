@@ -1,11 +1,11 @@
 """VMess protocol renderer for Clash format."""
 from typing import Dict, Any
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 from .registry import clash_renderer_registry
 
 
 @clash_renderer_registry.register('vmess')
-def render(node: CompositeNode) -> Dict[str, Any]:
+def render(node: Proxy) -> Dict[str, Any]:
     """Render VMess node to Clash format."""
     result = {
         'name': node.name,

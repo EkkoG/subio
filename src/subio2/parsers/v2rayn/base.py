@@ -3,7 +3,7 @@ import base64
 from typing import List, Dict, Any, Optional, Callable
 from urllib.parse import urlparse, parse_qs, unquote
 from ...core.registry import parser_registry
-from ...models.node import CompositeNode
+from ...models.node import Proxy
 from ..base import BaseParser
 
 
@@ -30,7 +30,7 @@ class V2rayNParser(BaseParser):
         except ImportError as e:
             print(f"Warning: Failed to import V2rayN protocol parsers: {e}")
     
-    def parse(self, content: str) -> List[CompositeNode]:
+    def parse(self, content: str) -> List[Proxy]:
         """Parse V2rayN share URLs."""
         nodes = []
         
@@ -48,7 +48,7 @@ class V2rayNParser(BaseParser):
         
         return nodes
     
-    def _parse_url(self, url: str) -> Optional[CompositeNode]:
+    def _parse_url(self, url: str) -> Optional[Proxy]:
         """Parse a single share URL."""
         try:
             parsed = urlparse(url)

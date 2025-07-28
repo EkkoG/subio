@@ -1,10 +1,10 @@
 """Trojan renderer for Surge format."""
-from ....models.node import CompositeNode, TrojanProtocol
+from ....models.node import Proxy, TrojanProtocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('trojan')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render Trojan node to Surge format."""
     protocol = node.protocol
     if not isinstance(protocol, TrojanProtocol):

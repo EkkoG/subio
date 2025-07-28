@@ -1,18 +1,18 @@
 """SubIO protocol parsers."""
 from typing import Dict, Any, Optional, Callable
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 
 # Protocol parser registry
-PROTOCOL_PARSERS: Dict[str, Callable[[Dict[str, Any]], Optional[CompositeNode]]] = {}
+PROTOCOL_PARSERS: Dict[str, Callable[[Dict[str, Any]], Optional[Proxy]]] = {}
 
 def register_parser(protocol_type: str):
     """Decorator to register a protocol parser."""
-    def decorator(parser_func: Callable[[Dict[str, Any]], Optional[CompositeNode]]):
+    def decorator(parser_func: Callable[[Dict[str, Any]], Optional[Proxy]]):
         PROTOCOL_PARSERS[protocol_type] = parser_func
         return parser_func
     return decorator
 
-def parse_node(node_data: Dict[str, Any]) -> Optional[CompositeNode]:
+def parse_node(node_data: Dict[str, Any]) -> Optional[Proxy]:
     """Parse a node using the appropriate protocol parser."""
     if not isinstance(node_data, dict):
         return None

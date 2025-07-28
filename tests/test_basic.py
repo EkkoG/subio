@@ -7,7 +7,7 @@ def test_imports():
     """测试基础模块导入"""
     try:
         from subio2.models import Node, NodeType
-        from subio2.models.node import CompositeNode, ShadowsocksProtocol
+        from subio2.models.node import Proxy, ShadowsocksProtocol
         from subio2.parsers.clash import ClashParser
         from subio2.renderers.clash import ClashRenderer
         assert True
@@ -17,9 +17,9 @@ def test_imports():
 
 def test_node_creation():
     """测试节点创建"""
-    from subio2.models.node import CompositeNode, ShadowsocksProtocol
+    from subio2.models.node import Proxy, ShadowsocksProtocol
     
-    node = CompositeNode(
+    node = Proxy(
         name="test-node",
         server="example.com", 
         port=443,
@@ -60,10 +60,10 @@ def test_clash_parser():
 
 def test_clash_renderer():
     """测试 Clash 渲染器基础功能"""
-    from subio2.models.node import CompositeNode, ShadowsocksProtocol
+    from subio2.models.node import Proxy, ShadowsocksProtocol
     from subio2.renderers.clash import ClashRenderer
     
-    node = CompositeNode(
+    node = Proxy(
         name="test-node",
         server="example.com",
         port=443,

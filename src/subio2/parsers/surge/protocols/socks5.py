@@ -1,11 +1,11 @@
 """SOCKS5 proxy parser for Surge format."""
 from typing import List, Optional
-from ....models.node import CompositeNode, Socks5Protocol, BasicAuth
+from ....models.node import Proxy, Socks5Protocol, BasicAuth
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('socks5', 'socks5-tls')
-def parse(name: str, server: str, port: int, params: List[str]) -> Optional[CompositeNode]:
+def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Proxy]:
     """Parse SOCKS5 proxy from Surge format.
     
     Format: ProxyName = socks5/socks5-tls, server, port, username, password
@@ -29,7 +29,7 @@ def parse(name: str, server: str, port: int, params: List[str]) -> Optional[Comp
             auth = BasicAuth(username=username, password=password)
         
         # Create node
-        return CompositeNode(
+        return Proxy(
             name=name,
             server=server,
             port=port,

@@ -225,7 +225,7 @@ class Socks5Protocol(ProtocolConfig):
 # Main composite node
 
 @dataclass
-class CompositeNode:
+class Proxy:
     """Composite node combining all components."""
     # Basic info
     name: str
@@ -417,7 +417,7 @@ class CompositeNode:
         return result
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CompositeNode':
+    def from_dict(cls, data: Dict[str, Any]) -> 'Proxy':
         """Create node from dictionary."""
         node_type = data.get('type', '').lower()
         

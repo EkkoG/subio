@@ -1,11 +1,11 @@
 """Hysteria protocol renderers for Clash format."""
 from typing import Dict, Any
-from ....models.node import CompositeNode
+from ....models.node import Proxy
 from .registry import clash_renderer_registry
 
 
 @clash_renderer_registry.register('hysteria')
-def render_hysteria1(node: CompositeNode) -> Dict[str, Any]:
+def render_hysteria1(node: Proxy) -> Dict[str, Any]:
     """Render Hysteria v1 node to Clash format."""
     result = {
         'name': node.name,
@@ -36,7 +36,7 @@ def render_hysteria1(node: CompositeNode) -> Dict[str, Any]:
 
 
 @clash_renderer_registry.register('hysteria2')
-def render_hysteria2(node: CompositeNode) -> Dict[str, Any]:
+def render_hysteria2(node: Proxy) -> Dict[str, Any]:
     """Render Hysteria v2 node to Clash format."""
     result = {
         'name': node.name,

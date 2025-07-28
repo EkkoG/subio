@@ -1,10 +1,10 @@
 """VMess renderer for Surge format."""
-from ....models.node import CompositeNode, VmessProtocol
+from ....models.node import Proxy, VmessProtocol
 from .registry import surge_protocol_registry
 
 
 @surge_protocol_registry.register('vmess')
-def render(node: CompositeNode) -> str:
+def render(node: Proxy) -> str:
     """Render VMess node to Surge format."""
     protocol = node.protocol
     if not isinstance(protocol, VmessProtocol):
