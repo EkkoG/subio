@@ -1,6 +1,6 @@
 """HTTP proxy renderer for V2rayN format."""
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, HttpProtocol
+from ....models.node import CompositeNode, HttpProtocol
 from .registry import v2rayn_protocol_registry
 
 

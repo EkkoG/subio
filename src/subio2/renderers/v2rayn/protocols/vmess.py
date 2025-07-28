@@ -2,7 +2,7 @@
 import base64
 import json
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, VmessProtocol, WebSocketTransport
+from ....models.node import CompositeNode, VmessProtocol, WebSocketTransport
 from .registry import v2rayn_protocol_registry
 
 

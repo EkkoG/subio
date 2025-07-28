@@ -1,6 +1,6 @@
 """VLESS renderer for V2rayN format."""
 from urllib.parse import quote, urlencode
-from ....models.node_composite import CompositeNode, VlessProtocol
+from ....models.node import CompositeNode, VlessProtocol
 from .registry import v2rayn_protocol_registry
 
 

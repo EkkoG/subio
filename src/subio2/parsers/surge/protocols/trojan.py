@@ -1,6 +1,6 @@
 """Trojan parser for Surge format."""
 from typing import List, Optional
-from ....models.node_composite import CompositeNode, TrojanProtocol, TLSConfig
+from ....models.node import CompositeNode, TrojanProtocol, TLSConfig
 from .registry import surge_protocol_registry
 
 

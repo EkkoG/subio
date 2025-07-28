@@ -3,8 +3,8 @@ import pytest
 import time
 from typing import List
 
-from subio2.models.node_composite import CompositeNode, ShadowsocksProtocol
-from subio2.filters.node_filter import hk_filter, combine, all_filters
+from subio2.models.node import CompositeNode, ShadowsocksProtocol
+from subio2.filters.filter import hk_filter, combine, all_filters
 
 
 def create_test_nodes(count: int = 100) -> List[CompositeNode]:

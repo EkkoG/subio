@@ -1,6 +1,6 @@
 """Registry for Surge protocol parsers."""
 from typing import Callable, Dict, Optional, List
-from ....models.node_composite import CompositeNode
+from ....models.node import CompositeNode
 
 
 class SurgeProtocolRegistry:

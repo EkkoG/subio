@@ -1,6 +1,6 @@
 """SOCKS5 renderer for DAE format."""
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, Socks5Protocol
+from ....models.node import CompositeNode, Socks5Protocol
 from .registry import dae_protocol_registry
 
 

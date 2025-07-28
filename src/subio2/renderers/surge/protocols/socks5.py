@@ -1,5 +1,5 @@
 """SOCKS5 proxy renderer for Surge format."""
-from ....models.node_composite import CompositeNode, Socks5Protocol
+from ....models.node import CompositeNode, Socks5Protocol
 from .registry import surge_protocol_registry
 
 

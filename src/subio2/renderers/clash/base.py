@@ -5,7 +5,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from ...core.registry import renderer_registry
 from ...models import Node
-from ...models.node_composite import CompositeNode
+from ...models.node import CompositeNode
 from ..base import BaseRenderer
 
 

@@ -1,6 +1,6 @@
 """DAE renderer implementation."""
 from typing import List, Optional, Dict, Any
-from ...models.node_composite import CompositeNode
+from ...models.node import CompositeNode
 from ..base import BaseRenderer
 from ...core.registry import renderer_registry
 from .protocols.registry import dae_protocol_registry

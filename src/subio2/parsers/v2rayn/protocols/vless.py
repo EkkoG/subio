@@ -1,7 +1,7 @@
 """VLESS URL parser for V2rayN format."""
 from typing import Optional
 from urllib.parse import parse_qs, urlparse, unquote
-from ....models.node_composite import CompositeNode, VlessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
+from ....models.node import CompositeNode, VlessProtocol, TLSConfig, Transport, WebSocketTransport, GRPCTransport
 
 
 def parse(url: str) -> Optional[CompositeNode]:

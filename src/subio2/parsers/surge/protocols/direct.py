@@ -1,6 +1,6 @@
 """Direct/Reject proxy parser for Surge format."""
 from typing import List, Optional
-from ....models.node_composite import CompositeNode
+from ....models.node import CompositeNode
 from .registry import surge_protocol_registry
 
 

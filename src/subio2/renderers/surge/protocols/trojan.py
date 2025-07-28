@@ -1,5 +1,5 @@
 """Trojan renderer for Surge format."""
-from ....models.node_composite import CompositeNode, TrojanProtocol
+from ....models.node import CompositeNode, TrojanProtocol
 from .registry import surge_protocol_registry
 
 

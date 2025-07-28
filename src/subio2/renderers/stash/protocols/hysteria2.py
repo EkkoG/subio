@@ -1,6 +1,6 @@
 """Stash-specific Hysteria2 protocol renderer."""
 from typing import Dict, Any
-from ....models.node_composite import CompositeNode, Hysteria2Protocol
+from ....models.node import CompositeNode, Hysteria2Protocol
 from ...clash.protocols.registry import clash_protocol_registry
 
 

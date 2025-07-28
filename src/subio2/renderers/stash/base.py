@@ -1,7 +1,7 @@
 """Stash renderer - extends Clash renderer with Stash-specific protocol handling."""
 from typing import Dict, Any, Optional
 from ...core.registry import renderer_registry
-from ...models.node_composite import CompositeNode, HysteriaProtocol, Hysteria2Protocol
+from ...models.node import CompositeNode, HysteriaProtocol, Hysteria2Protocol
 from ..clash.base import ClashRenderer
 
 

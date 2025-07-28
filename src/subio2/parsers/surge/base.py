@@ -2,7 +2,7 @@
 import re
 from typing import List, Dict, Any, Optional
 from ...core.registry import parser_registry
-from ...models.node_composite import CompositeNode
+from ...models.node import CompositeNode
 from ..base import BaseParser
 
 

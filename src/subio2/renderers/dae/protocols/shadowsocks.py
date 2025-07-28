@@ -1,7 +1,7 @@
 """Shadowsocks renderer for DAE format."""
 import base64
 from urllib.parse import quote
-from ....models.node_composite import CompositeNode, ShadowsocksProtocol
+from ....models.node import CompositeNode, ShadowsocksProtocol
 from .registry import dae_protocol_registry
 
 

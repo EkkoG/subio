@@ -1,6 +1,6 @@
 """Shadowsocks parser for Surge format."""
 from typing import List, Optional
-from ....models.node_composite import CompositeNode, ShadowsocksProtocol
+from ....models.node import CompositeNode, ShadowsocksProtocol
 from .registry import surge_protocol_registry
 
 
