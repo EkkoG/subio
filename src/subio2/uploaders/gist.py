@@ -1,5 +1,5 @@
 """GitHub Gist uploader."""
-import json
+import os
 from typing import Dict, Any, Optional
 import requests
 from ..core.interfaces import Uploader
@@ -21,6 +21,14 @@ class GistUploader(Uploader):
         
         if not token:
             raise ValueError("GitHub token is required for Gist upload")
+
+        if token.startswith('ENV_'):
+            token = os.getenv(token[4:])
+
+        if not token:
+            raise ValueError("GitHub token is required for Gist upload")
+
+        print(f"Uploading to Gist with token: {token}")
         
         headers = {
             'Authorization': f'token {token}',

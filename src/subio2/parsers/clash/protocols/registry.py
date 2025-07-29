@@ -32,3 +32,6 @@ class ProtocolRegistry:
 
 # Global registry instance for Clash parsers
 clash_protocol_registry = ProtocolRegistry()
+
+# Alias for backward compatibility
+register_clash_parser = clash_protocol_registry.register

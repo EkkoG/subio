@@ -10,7 +10,7 @@ exclude = '.*剩余流量|距离下次|套餐到期.*'
 name = 'gist'
 type = 'gist'
 # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
-token = "ENV_GH_TOKEN"
+token = "ENV_GITHUB_TOKEN"
 id = "a188d6b32ddf7cf3bbc9554055e5e2a4"
 
 [[provider]]
