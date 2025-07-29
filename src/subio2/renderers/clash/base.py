@@ -112,7 +112,7 @@ class ClashRenderer(BaseRenderer):
                     if proxy_dict:
                         proxies_list.append(proxy_dict)
             full_context["proxies"] = yaml.dump(
-                proxies_list, allow_unicode=True, sort_keys=False
+                proxies_list, allow_unicode=True, sort_keys=False, Dumper=yaml.SafeDumper
             )
             full_context["proxies_names"] = [node.name for node in nodes]
 
@@ -132,7 +132,7 @@ class ClashRenderer(BaseRenderer):
                     proxies.append(proxy_dict)
 
         result = {"proxies": proxies}
-        return yaml.dump(result, allow_unicode=True, sort_keys=False)
+        return yaml.dump(result, allow_unicode=True, sort_keys=False, Dumper=yaml.SafeDumper)
 
     def _render_node(self, node: Proxy) -> Optional[Dict[str, Any]]:
         """Render a single node using protocol-specific renderer."""
@@ -154,7 +154,7 @@ class ClashRenderer(BaseRenderer):
     # Jinja2 filters
     def _to_yaml_filter(self, data):
         """Convert data to YAML format."""
-        return yaml.dump(data, allow_unicode=True, sort_keys=False)
+        return yaml.dump(data, allow_unicode=True, sort_keys=False, Dumper=yaml.SafeDumper)
 
     def _to_json_filter(self, data):
         """Convert data to JSON format."""
@@ -178,7 +178,8 @@ class ClashRenderer(BaseRenderer):
             if not items:
                 return "[]"
             # Return YAML inline list format with unicode support
-            return yaml.dump(items, default_flow_style=True, allow_unicode=True).strip()
+            # Use SafeDumper to avoid HTML entity encoding
+            return yaml.dump(items, default_flow_style=True, allow_unicode=True, Dumper=yaml.SafeDumper).strip()
         else:
             # Fallback - convert to string
             return str(items)
