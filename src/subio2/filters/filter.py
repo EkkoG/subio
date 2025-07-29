@@ -1,6 +1,7 @@
 """Node filter functions compatible with v1."""
+
 import re
-from typing import List, Union, Callable, Any, Optional
+from typing import List, Union
 from ..models import Node
 
 
@@ -40,13 +41,16 @@ def us_filter(data: List[Union[Node, str]]) -> List[Union[Node, str]]:
     return regex_filter(data, r)
 
 
-def keyWord_filter(data: List[Union[Node, str]], keyWord: str) -> List[Union[Node, str]]:
+def keyWord_filter(
+    data: List[Union[Node, str]], keyWord: str
+) -> List[Union[Node, str]]:
     """Filter nodes by keyword."""
     return regex_filter(data, keyWord)
 
 
 def regex_filter(data: List[Union[Node, str]], regex: str) -> List[Union[Node, str]]:
     """Filter nodes by regex pattern."""
+
     def isRegex(s: Union[Node, str]) -> bool:
         # if s contains regex, what ever the case, it is regex
         name = s if isinstance(s, str) else s.name
@@ -59,6 +63,7 @@ def regex_filter(data: List[Union[Node, str]], regex: str) -> List[Union[Node, s
 
 def exclude(data: List[Union[Node, str]], regex: str) -> List[Union[Node, str]]:
     """Exclude nodes matching regex pattern."""
+
     def isRegex(s: Union[Node, str]) -> bool:
         # if s contains regex, what ever the case, it is regex
         name = s if isinstance(s, str) else s.name
@@ -71,20 +76,20 @@ def exclude(data: List[Union[Node, str]], regex: str) -> List[Union[Node, str]]:
 
 def combine(data: List[Union[Node, str]], *filters_and_args) -> List[Union[Node, str]]:
     """Combine multiple filter results.
-    
+
     Usage patterns from v1:
     - combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us')
-    
+
     The pattern appears to be: filter1, filter2, ..., None, arg_for_last_filter
     """
     if not filters_and_args:
         return data
-        
+
     # Find where None appears - it separates filters from args
     filters = []
     args = []
     found_none = False
-    
+
     for item in filters_and_args:
         if item is None:
             found_none = True
@@ -92,7 +97,7 @@ def combine(data: List[Union[Node, str]], *filters_and_args) -> List[Union[Node,
             args.append(item)
         elif callable(item):
             filters.append(item)
-            
+
     # Apply filters
     result = data
     for i, filter_func in enumerate(filters):
@@ -102,13 +107,14 @@ def combine(data: List[Union[Node, str]], *filters_and_args) -> List[Union[Node,
         else:
             # Other filters get no arguments
             result = filter_func(result)
-    
+
     return result
 
 
 # Create a filter object that can be accessed with dot notation
 class FilterObject:
     """Filter object for template compatibility."""
+
     def __init__(self):
         self.hk_filter = hk_filter
         self.tw_filter = tw_filter

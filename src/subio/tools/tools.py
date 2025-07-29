@@ -6,11 +6,13 @@ import json
 import os
 from subio.model import Base
 
-def build_proxy_cache(data: list[Base]) -> dict[str: Base]:
-    cache: dict[str: Base] = {}
+
+def build_proxy_cache(data: list[Base]) -> dict[str:Base]:
+    cache: dict[str:Base] = {}
     for x in data:
         cache[x.name] = x
     return cache
+
 
 def set_value(node, level, value, dest_key):
     all_level = dest_key.split(".")

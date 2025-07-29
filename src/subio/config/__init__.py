@@ -17,6 +17,7 @@ from .model import Config, Rename, Artifact
 import tempfile
 from subio.model import Base
 
+
 def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
     all_nodes_for_artifact = [nodes[provider] for provider in artifact.providers]
     all_nodes_for_artifact = reduce(lambda x, y: x + y, all_nodes_for_artifact)
@@ -56,6 +57,7 @@ def nodes_of(artifact: Artifact, nodes: dict[str, list[Base]]) -> list[Base]:
         else:
             log.logger.error(f"不支持的 artifact 类型 {artifact.type}")
     return all_valid_nodes
+
 
 def check(config: Config):
     # 检查配置文件
@@ -100,8 +102,10 @@ def check(config: Config):
             )
             # log.logger.error(f"artifact 名称重复：{duplicated_names}")
             for name in duplicated_names:
-                log.logger.error(f"artifact 名称重复：{name}, 重复次数：{artifact_names.count(name)}")
-        
+                log.logger.error(
+                    f"artifact 名称重复：{name}, 重复次数：{artifact_names.count(name)}"
+                )
+
             return False
     return True
 
@@ -134,9 +138,11 @@ def load_nodes(config: Config) -> list[Base]:
         )
         if provider.privacy_endpoint:
             log.logger.info(f"使用 {provider.privacy_endpoint} 作为隐私节点")
+
             def use_privacy_endpoint(proxy: Base):
                 proxy.privacy_endpoint = provider.privacy_endpoint
                 return proxy
+
             all_nodes[provider.name] = list(
                 map(
                     lambda x: use_privacy_endpoint(x),

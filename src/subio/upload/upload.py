@@ -4,7 +4,6 @@ from subio.config.model import Artifact, Uploader
 import os
 import subprocess
 import tempfile
-import shlex
 
 
 def upload(content: str, artifact: Artifact, uploaders: Uploader):
@@ -36,50 +35,69 @@ def upload(content: str, artifact: Artifact, uploaders: Uploader):
                 temp_base = tempfile.mkdtemp(prefix="subio-gist-")
                 gist_id = uploader[0].id
                 # Validate gist_id to prevent injection
-                if not gist_id.replace('-', '').replace('_', '').isalnum():
+                if not gist_id.replace("-", "").replace("_", "").isalnum():
                     logger.error(f"Invalid gist ID: {gist_id}")
                     continue
-                
+
                 dir = os.path.join(temp_base, gist_id)
                 try:
                     if os.path.exists(dir):
-                        subprocess.run(["git", "-C", dir, "pull"], check=True, capture_output=True)
+                        subprocess.run(
+                            ["git", "-C", dir, "pull"], check=True, capture_output=True
+                        )
                     else:
-                        clone_url = f"https://{uploader[0].token}@gist.github.com/{gist_id}.git"
-                        subprocess.run(["git", "clone", clone_url, dir], check=True, capture_output=True)
+                        clone_url = (
+                            f"https://{uploader[0].token}@gist.github.com/{gist_id}.git"
+                        )
+                        subprocess.run(
+                            ["git", "clone", clone_url, dir],
+                            check=True,
+                            capture_output=True,
+                        )
                 except subprocess.CalledProcessError as e:
                     logger.error(f"Git operation failed: {e}")
                     continue
 
                 logger.info(f"开始上传 {upload_info.file_name} 到 {upload_info.to}")
-                
+
                 # Validate filename to prevent path traversal
                 safe_filename = os.path.basename(upload_info.file_name)
-                if safe_filename != upload_info.file_name or '..' in safe_filename:
+                if safe_filename != upload_info.file_name or ".." in safe_filename:
                     logger.error(f"Invalid filename: {upload_info.file_name}")
                     continue
-                
+
                 file_path = os.path.join(dir, safe_filename)
                 try:
                     with open(file_path, "w", encoding="utf-8") as f:
                         f.write(content)
-                    
+
                     # Add files to git
-                    subprocess.run(["git", "-C", dir, "add", "."], check=True, capture_output=True)
-                    
+                    subprocess.run(
+                        ["git", "-C", dir, "add", "."], check=True, capture_output=True
+                    )
+
                     # Check if there are changes
-                    result = subprocess.run(["git", "-C", dir, "diff", "--cached", "--quiet"], capture_output=True)
+                    result = subprocess.run(
+                        ["git", "-C", dir, "diff", "--cached", "--quiet"],
+                        capture_output=True,
+                    )
                     if result.returncode != 0:
                         # Commit changes
                         commit_msg = f"update {safe_filename}"
-                        subprocess.run(["git", "-C", dir, "commit", "-m", commit_msg], check=True, capture_output=True)
-                        
+                        subprocess.run(
+                            ["git", "-C", dir, "commit", "-m", commit_msg],
+                            check=True,
+                            capture_output=True,
+                        )
+
                         # Push changes
-                        subprocess.run(["git", "-C", dir, "push"], check=True, capture_output=True)
+                        subprocess.run(
+                            ["git", "-C", dir, "push"], check=True, capture_output=True
+                        )
                         logger.info(f"上传 {artifact.name} 到 {upload_info.to} 成功")
                     else:
                         logger.info(f"artifact {safe_filename} 没有变化，无需上传")
-                        
+
                 except (subprocess.CalledProcessError, OSError) as e:
                     logger.error(f"上传 {artifact.name} 到 {upload_info.to} 失败: {e}")
 

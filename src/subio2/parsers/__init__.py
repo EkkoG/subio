@@ -6,4 +6,4 @@ from .v2rayn import V2rayNParser
 from .surge import SurgeParser
 from .subio import SubIOParser
 
-__all__ = ['ClashParser', 'V2rayNParser', 'SurgeParser', 'SubIOParser']
+__all__ = ["ClashParser", "V2rayNParser", "SurgeParser", "SubIOParser"]
