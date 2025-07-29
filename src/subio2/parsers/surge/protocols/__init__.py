@@ -1,4 +1,4 @@
 """Surge protocol parsers."""
 
 # Import all protocol parsers to trigger registration
-from . import direct, shadowsocks, http, socks5, vmess, trojan
+from . import direct, shadowsocks, http, socks5, vmess, trojan  # noqa: F401

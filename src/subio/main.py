@@ -35,10 +35,10 @@ def get_snippets():
     if os.path.exists("snippet"):
         for snippet_file in os.listdir("snippet"):
             # Validate filename to prevent path traversal
-            if '..' in snippet_file or '/' in snippet_file or '\\' in snippet_file:
+            if ".." in snippet_file or "/" in snippet_file or "\\" in snippet_file:
                 log.logger.error(f"Invalid snippet filename: {snippet_file}")
                 continue
-            
+
             snippet_path = os.path.join("snippet", snippet_file)
             try:
                 with open(snippet_path, "r", encoding="utf-8") as f:
@@ -59,10 +59,10 @@ def get_snippets():
 def build_template(artifact, remote_ruleset):
     # Validate template filename to prevent path traversal
     template_name = artifact.template
-    if '..' in template_name or '/' in template_name or '\\' in template_name:
+    if ".." in template_name or "/" in template_name or "\\" in template_name:
         log.logger.error(f"Invalid template filename: {template_name}")
         return ""
-    
+
     template_path = os.path.join("template", template_name)
     try:
         with open(template_path, "r", encoding="utf-8") as f:

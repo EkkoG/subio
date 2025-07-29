@@ -7,4 +7,10 @@ from .surge import SurgeRenderer
 from .dae import DAERenderer
 from .stash import StashRenderer
 
-__all__ = ['ClashRenderer', 'V2rayNRenderer', 'SurgeRenderer', 'DAERenderer', 'StashRenderer']
+__all__ = [
+    "ClashRenderer",
+    "V2rayNRenderer",
+    "SurgeRenderer",
+    "DAERenderer",
+    "StashRenderer",
+]

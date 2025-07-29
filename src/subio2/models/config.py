@@ -1,4 +1,5 @@
 """Configuration models for SubIO2."""
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 
@@ -6,6 +7,7 @@ from typing import Dict, List, Optional, Any
 @dataclass
 class RenameRule:
     """Node rename rule."""
+
     add_prefix: Optional[str] = None
     add_suffix: Optional[str] = None
     replace: List[Dict[str, str]] = field(default_factory=list)
@@ -14,6 +16,7 @@ class RenameRule:
 @dataclass
 class Provider:
     """Provider configuration."""
+
     name: str
     type: str
     url: Optional[str] = None
@@ -27,6 +30,7 @@ class Provider:
 @dataclass
 class UploaderConfig:
     """Uploader configuration."""
+
     name: str
     type: str
     config: Dict[str, Any] = field(default_factory=dict)
@@ -35,6 +39,7 @@ class UploaderConfig:
 @dataclass
 class UploadTarget:
     """Upload target for artifact."""
+
     to: str
     file_name: Optional[str] = None
 
@@ -42,6 +47,7 @@ class UploadTarget:
 @dataclass
 class Artifact:
     """Artifact configuration."""
+
     name: str
     type: str
     template: str
@@ -54,6 +60,7 @@ class Artifact:
 @dataclass
 class Ruleset:
     """Ruleset configuration."""
+
     name: str
     url: str
     type: Optional[str] = None
@@ -62,6 +69,7 @@ class Ruleset:
 @dataclass
 class FilterConfig:
     """Filter configuration."""
+
     include: Optional[str] = None
     exclude: Optional[str] = None
 
@@ -69,6 +77,7 @@ class FilterConfig:
 @dataclass
 class Options:
     """Global options."""
+
     work_filter: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -76,6 +85,7 @@ class Options:
 @dataclass
 class Config:
     """Main configuration."""
+
     log_level: str = "INFO"
     options: Optional[Options] = None
     filter: Optional[FilterConfig] = None
