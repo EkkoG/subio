@@ -111,7 +111,7 @@ class SurgeRenderer(BaseRenderer):
         """Convert value to YAML."""
         import yaml
 
-        return yaml.dump(value, default_flow_style=False, allow_unicode=True)
+        return yaml.dump(value, default_flow_style=False, allow_unicode=True, Dumper=yaml.SafeDumper)
 
     def _render_filter(self, value):
         """Render a value (list or string) in appropriate format."""

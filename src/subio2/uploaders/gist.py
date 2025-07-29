@@ -31,8 +31,6 @@ class GistUploader(Uploader):
         if not token:
             raise ValueError("GitHub token is required for Gist upload")
 
-        print(f"Uploading to Gist with token: {token}")
-
         headers = {
             "Authorization": f"token {token}",
             "Accept": "application/vnd.github.v3+json",
