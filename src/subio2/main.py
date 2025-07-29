@@ -11,9 +11,10 @@ from .models import Node
 from .models.config import Config, Provider, Artifact
 from .filters import all_filters
 
-# Import all parsers and renderers to register them
+# Import all modules to register them
 from . import parsers
 from . import renderers
+from . import uploaders
 
 
 class SubIO2:

@@ -15,6 +15,12 @@ class NodeType(Enum):
     HYSTERIA2 = "hysteria2"
     SOCKS5 = "socks5"
     HTTP = "http"
+    WIREGUARD = "wireguard"
+    TUIC = "tuic"
+    SSH = "ssh"
+    SNELL = "snell"
+    MIERU = "mieru"
+    ANYTLS = "anytls"
 
 
 # Components for composition
@@ -31,6 +37,13 @@ class BasicAuth:
 
 
 @dataclass
+class ECHConfig:
+    """Encrypted Client Hello (ECH) configuration."""
+    enabled: bool = False
+    config: Optional[str] = None  # Base64 encoded ECH config
+
+
+@dataclass
 class TLSConfig:
     """TLS configuration component."""
     enabled: bool = False
@@ -38,6 +51,31 @@ class TLSConfig:
     skip_cert_verify: bool = False
     alpn: Optional[List[str]] = None
     fingerprint: Optional[str] = None
+    client_fingerprint: Optional[str] = None  # For utls: chrome, firefox, safari, ios, random
+    ech: Optional[ECHConfig] = None
+    ca: Optional[str] = None
+    ca_str: Optional[str] = None
+
+
+@dataclass  
+class RealityConfig:
+    """Reality configuration for VLESS."""
+    enabled: bool = False
+    public_key: Optional[str] = None
+    short_id: Optional[str] = None
+
+
+@dataclass
+class SmuxConfig:
+    """Sing-mux multiplexing configuration."""
+    enabled: bool = False
+    protocol: str = "smux"  # smux, yamux, h2mux
+    max_connections: Optional[int] = None
+    min_streams: Optional[int] = None
+    max_streams: Optional[int] = None
+    padding: bool = False
+    statistic: bool = False
+    only_tcp: bool = False
 
 
 @dataclass
@@ -57,17 +95,49 @@ class GRPCTransport:
 
 
 @dataclass
+class HTTPTransport:
+    """HTTP transport configuration."""
+    method: str = "GET"
+    path: Optional[List[str]] = None
+    headers: Dict[str, List[str]] = field(default_factory=dict)
+
+
+@dataclass
+class HTTP2Transport:
+    """HTTP/2 transport configuration."""
+    host: Optional[List[str]] = None
+    path: str = "/"
+
+
+@dataclass
+class QUICTransport:
+    """QUIC transport configuration."""
+    security: str = "none"  # none, aes-128-gcm, chacha20-poly1305
+    key: Optional[str] = None
+    header: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class Transport:
     """Transport layer configuration."""
-    type: str = "tcp"  # tcp, ws, http, grpc, quic
+    type: str = "tcp"  # tcp, ws, http, h2, grpc, quic
     ws: Optional[WebSocketTransport] = None
     grpc: Optional[GRPCTransport] = None
+    http: Optional[HTTPTransport] = None
+    h2: Optional[HTTP2Transport] = None
+    quic: Optional[QUICTransport] = None
     
     def validate(self) -> None:
         if self.type == "ws" and not self.ws:
             raise ValueError("WebSocket config required for ws transport")
         elif self.type == "grpc" and not self.grpc:
             raise ValueError("gRPC config required for grpc transport")
+        elif self.type == "http" and not self.http:
+            raise ValueError("HTTP config required for http transport")
+        elif self.type == "h2" and not self.h2:
+            raise ValueError("HTTP/2 config required for h2 transport")
+        elif self.type == "quic" and not self.quic:
+            raise ValueError("QUIC config required for quic transport")
 
 
 # Protocol configurations
@@ -97,13 +167,22 @@ class ShadowsocksProtocol(ProtocolConfig):
     plugin: Optional[str] = None
     plugin_opts: Dict[str, Any] = field(default_factory=dict)
     
+    # UDP over TCP
+    udp_over_tcp: bool = False
+    udp_over_tcp_version: int = 1
+    
     def validate(self) -> None:
         valid_methods = [
             'aes-128-gcm', 'aes-256-gcm', 'chacha20-ietf-poly1305',
-            'aes-128-cfb', 'aes-256-cfb', 'chacha20-ietf', 'xchacha20-ietf-poly1305'
+            'aes-128-cfb', 'aes-256-cfb', 'chacha20-ietf', 'xchacha20-ietf-poly1305',
+            '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm', '2022-blake3-chacha20-poly1305'
         ]
         if self.method not in valid_methods:
             raise ValueError(f"Invalid method: {self.method}")
+        
+        valid_plugins = ['obfs', 'v2ray-plugin', 'shadow-tls', 'restls']
+        if self.plugin and self.plugin not in valid_plugins:
+            raise ValueError(f"Invalid plugin: {self.plugin}")
     
     def get_type(self) -> NodeType:
         return NodeType.SHADOWSOCKS
@@ -144,13 +223,14 @@ class TrojanProtocol(ProtocolConfig):
 class VlessProtocol(ProtocolConfig):
     """VLESS protocol configuration."""
     uuid: str
-    flow: Optional[str] = None  # xtls-rprx-direct, xtls-rprx-vision
+    flow: Optional[str] = None  # xtls-rprx-direct, xtls-rprx-vision, xtls-rprx-vision-udp443
     encryption: str = "none"
     
     def validate(self) -> None:
         if not self.uuid:
             raise ValueError("UUID required")
-        if self.flow and not self.flow.startswith('xtls-'):
+        valid_flows = ['xtls-rprx-direct', 'xtls-rprx-vision', 'xtls-rprx-vision-udp443']
+        if self.flow and self.flow not in valid_flows:
             raise ValueError(f"Invalid flow: {self.flow}")
     
     def get_type(self) -> NodeType:
@@ -222,6 +302,136 @@ class Socks5Protocol(ProtocolConfig):
         return NodeType.SOCKS5
 
 
+@dataclass
+class WireGuardProtocol(ProtocolConfig):
+    """WireGuard protocol configuration."""
+    private_key: str
+    public_key: str
+    preshared_key: Optional[str] = None
+    ip: Optional[str] = None
+    ipv6: Optional[str] = None
+    reserved: Optional[List[int]] = None
+    mtu: Optional[int] = None
+    
+    def validate(self) -> None:
+        if not self.private_key:
+            raise ValueError("Private key required")
+        if not self.public_key:
+            raise ValueError("Public key required")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.WIREGUARD
+
+
+@dataclass
+class TuicProtocol(ProtocolConfig):
+    """TUIC protocol configuration."""
+    uuid: Optional[str] = None
+    password: Optional[str] = None
+    token: Optional[str] = None
+    congestion_control: str = "cubic"
+    udp_relay_mode: str = "native"
+    reduce_rtt: bool = False
+    heartbeat_interval: Optional[int] = None
+    alpn: Optional[List[str]] = None
+    disable_sni: bool = False
+    max_udp_relay_packet_size: Optional[int] = None
+    
+    def validate(self) -> None:
+        if not self.uuid and not self.token:
+            raise ValueError("Either uuid or token required")
+        if self.uuid and not self.password:
+            raise ValueError("Password required when using uuid")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.TUIC
+
+
+@dataclass
+class SSHProtocol(ProtocolConfig):
+    """SSH protocol configuration."""
+    username: str
+    password: Optional[str] = None
+    private_key: Optional[str] = None
+    private_key_passphrase: Optional[str] = None
+    host_key: Optional[List[str]] = None
+    host_key_algorithms: Optional[List[str]] = None
+    client_version: Optional[str] = None
+    
+    def validate(self) -> None:
+        if not self.username:
+            raise ValueError("Username required")
+        if not self.password and not self.private_key:
+            raise ValueError("Either password or private key required")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.SSH
+
+
+@dataclass
+class SnellProtocol(ProtocolConfig):
+    """Snell protocol configuration."""
+    psk: str
+    version: int = 2
+    obfs_mode: Optional[str] = None  # http or tls
+    obfs_host: Optional[str] = None
+    
+    def validate(self) -> None:
+        if not self.psk:
+            raise ValueError("PSK required")
+        if self.version not in [1, 2, 3]:
+            raise ValueError(f"Invalid version: {self.version}")
+        if self.obfs_mode and self.obfs_mode not in ['http', 'tls']:
+            raise ValueError(f"Invalid obfs mode: {self.obfs_mode}")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.SNELL
+
+
+@dataclass
+class MieruProtocol(ProtocolConfig):
+    """Mieru protocol configuration."""
+    username: str
+    password: str
+    transport: str = "TCP"
+    multiplexing: str = "MULTIPLEXING_LOW"
+    port_range: Optional[str] = None  # e.g., "2090-2099"
+    
+    def validate(self) -> None:
+        if not self.username:
+            raise ValueError("Username required")
+        if not self.password:
+            raise ValueError("Password required")
+        if self.transport != "TCP":
+            raise ValueError("Only TCP transport supported")
+        
+        valid_multiplexing = [
+            'MULTIPLEXING_OFF', 'MULTIPLEXING_LOW', 
+            'MULTIPLEXING_MIDDLE', 'MULTIPLEXING_HIGH'
+        ]
+        if self.multiplexing not in valid_multiplexing:
+            raise ValueError(f"Invalid multiplexing: {self.multiplexing}")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.MIERU
+
+
+@dataclass
+class AnyTLSProtocol(ProtocolConfig):
+    """AnyTLS protocol configuration."""
+    password: str
+    idle_session_check_interval: Optional[int] = None
+    idle_session_timeout: Optional[int] = None
+    min_idle_session: Optional[int] = None
+    
+    def validate(self) -> None:
+        if not self.password:
+            raise ValueError("Password required")
+    
+    def get_type(self) -> NodeType:
+        return NodeType.ANYTLS
+
+
 # Main composite node
 
 @dataclass
@@ -238,7 +448,9 @@ class Proxy:
     # Optional components
     auth: Optional[BasicAuth] = None
     tls: Optional[TLSConfig] = None
+    reality: Optional[RealityConfig] = None
     transport: Optional[Transport] = None
+    smux: Optional[SmuxConfig] = None
     
     # Metadata
     group: Optional[str] = None
@@ -308,9 +520,10 @@ class Proxy:
             result.update({
                 'cipher': self.protocol.method,
                 'password': self.protocol.password,
-                'udp-over-tcp': False,
-                'udp-over-tcp-version': 1
             })
+            if self.protocol.udp_over_tcp:
+                result['udp-over-tcp'] = True
+                result['udp-over-tcp-version'] = self.protocol.udp_over_tcp_version
             if self.protocol.plugin:
                 result['plugin'] = self.protocol.plugin
                 result['plugin-opts'] = self.protocol.plugin_opts
@@ -353,11 +566,93 @@ class Proxy:
                 result['obfs'] = self.protocol.obfs
                 if self.protocol.obfs_password:
                     result['obfs-password'] = self.protocol.obfs_password
+            if self.protocol.up_mbps:
+                result['up'] = str(self.protocol.up_mbps)
+            if self.protocol.down_mbps:
+                result['down'] = str(self.protocol.down_mbps)
         
         elif isinstance(self.protocol, (HttpProtocol, Socks5Protocol)):
             # Auth is handled by the auth component
             if isinstance(self.protocol, HttpProtocol) and self.protocol.tls:
                 result['tls'] = True
+        
+        elif isinstance(self.protocol, WireGuardProtocol):
+            result.update({
+                'private-key': self.protocol.private_key,
+                'public-key': self.protocol.public_key,
+            })
+            if self.protocol.preshared_key:
+                result['preshared-key'] = self.protocol.preshared_key
+            if self.protocol.ip:
+                result['ip'] = self.protocol.ip
+            if self.protocol.ipv6:
+                result['ipv6'] = self.protocol.ipv6
+            if self.protocol.reserved:
+                result['reserved'] = self.protocol.reserved
+            if self.protocol.mtu:
+                result['mtu'] = self.protocol.mtu
+        
+        elif isinstance(self.protocol, TuicProtocol):
+            if self.protocol.uuid:
+                result['uuid'] = self.protocol.uuid
+            if self.protocol.password:
+                result['password'] = self.protocol.password
+            if self.protocol.token:
+                result['token'] = self.protocol.token
+            result['congestion-controller'] = self.protocol.congestion_control
+            result['udp-relay-mode'] = self.protocol.udp_relay_mode
+            if self.protocol.reduce_rtt:
+                result['reduce-rtt'] = self.protocol.reduce_rtt
+            if self.protocol.heartbeat_interval:
+                result['heartbeat-interval'] = self.protocol.heartbeat_interval
+            if self.protocol.alpn:
+                result['alpn'] = self.protocol.alpn
+            if self.protocol.disable_sni:
+                result['disable-sni'] = self.protocol.disable_sni
+            if self.protocol.max_udp_relay_packet_size:
+                result['max-udp-relay-packet-size'] = self.protocol.max_udp_relay_packet_size
+        
+        elif isinstance(self.protocol, SSHProtocol):
+            result['username'] = self.protocol.username
+            if self.protocol.password:
+                result['password'] = self.protocol.password
+            if self.protocol.private_key:
+                result['private-key'] = self.protocol.private_key
+            if self.protocol.private_key_passphrase:
+                result['private-key-passphrase'] = self.protocol.private_key_passphrase
+            if self.protocol.host_key:
+                result['host-key'] = self.protocol.host_key
+            if self.protocol.host_key_algorithms:
+                result['host-key-algorithms'] = self.protocol.host_key_algorithms
+            if self.protocol.client_version:
+                result['client-version'] = self.protocol.client_version
+        
+        elif isinstance(self.protocol, SnellProtocol):
+            result['psk'] = self.protocol.psk
+            result['version'] = self.protocol.version
+            if self.protocol.obfs_mode:
+                result['obfs-opts'] = {
+                    'mode': self.protocol.obfs_mode,
+                    'host': self.protocol.obfs_host or 'bing.com'
+                }
+        
+        elif isinstance(self.protocol, MieruProtocol):
+            result['username'] = self.protocol.username
+            result['password'] = self.protocol.password
+            result['transport'] = self.protocol.transport
+            if self.protocol.port_range:
+                result['port-range'] = self.protocol.port_range
+            if self.protocol.multiplexing != "MULTIPLEXING_LOW":
+                result['multiplexing'] = self.protocol.multiplexing
+        
+        elif isinstance(self.protocol, AnyTLSProtocol):
+            result['password'] = self.protocol.password
+            if self.protocol.idle_session_check_interval:
+                result['idle-session-check-interval'] = self.protocol.idle_session_check_interval
+            if self.protocol.idle_session_timeout:
+                result['idle-session-timeout'] = self.protocol.idle_session_timeout
+            if self.protocol.min_idle_session:
+                result['min-idle-session'] = self.protocol.min_idle_session
         
         # Add auth if present
         if self.auth and self.auth.username:
@@ -375,6 +670,18 @@ class Proxy:
                 result['alpn'] = self.tls.alpn
             if self.tls.fingerprint:
                 result['fingerprint'] = self.tls.fingerprint
+            if self.tls.client_fingerprint:
+                result['client-fingerprint'] = self.tls.client_fingerprint
+            if self.tls.ech and self.tls.ech.enabled:
+                result['ech-opts'] = {
+                    'enable': True
+                }
+                if self.tls.ech.config:
+                    result['ech-opts']['config'] = self.tls.ech.config
+            if self.tls.ca:
+                result['ca'] = self.tls.ca
+            if self.tls.ca_str:
+                result['ca-str'] = self.tls.ca_str
         elif isinstance(self.protocol, (HttpProtocol, Socks5Protocol)):
             # Add explicit tls field for HTTP/SOCKS5
             if hasattr(self.protocol, 'tls'):
@@ -382,6 +689,14 @@ class Proxy:
         else:
             # For protocols that typically don't use TLS
             result['tls'] = False
+        
+        # Add Reality config
+        if self.reality and self.reality.enabled:
+            result['reality-opts'] = {}
+            if self.reality.public_key:
+                result['reality-opts']['public-key'] = self.reality.public_key
+            if self.reality.short_id:
+                result['reality-opts']['short-id'] = self.reality.short_id
         
         # Add transport
         if self.transport and self.transport.type != 'tcp':
@@ -400,6 +715,26 @@ class Proxy:
                 result['grpc-opts'] = {
                     'grpc-service-name': self.transport.grpc.service_name
                 }
+        
+        # Add smux config
+        if self.smux and self.smux.enabled:
+            smux_config = {
+                'enabled': True,
+                'protocol': self.smux.protocol
+            }
+            if self.smux.max_connections:
+                smux_config['max-connections'] = self.smux.max_connections
+            if self.smux.min_streams:
+                smux_config['min-streams'] = self.smux.min_streams
+            if self.smux.max_streams:
+                smux_config['max-streams'] = self.smux.max_streams
+            if self.smux.padding:
+                smux_config['padding'] = self.smux.padding
+            if self.smux.statistic:
+                smux_config['statistic'] = self.smux.statistic
+            if self.smux.only_tcp:
+                smux_config['only-tcp'] = self.smux.only_tcp
+            result['smux'] = smux_config
         
         # Add metadata
         if self.group:
@@ -467,6 +802,62 @@ class Proxy:
         elif node_type in ['socks5', 'socks']:
             protocol = Socks5Protocol(
                 tls=data.get('tls', False)
+            )
+        elif node_type in ['wireguard', 'wg']:
+            protocol = WireGuardProtocol(
+                private_key=data.get('private-key', ''),
+                public_key=data.get('public-key', ''),
+                preshared_key=data.get('pre-shared-key') or data.get('preshared-key'),
+                ip=data.get('ip'),
+                ipv6=data.get('ipv6'),
+                reserved=data.get('reserved'),
+                mtu=data.get('mtu')
+            )
+        elif node_type == 'tuic':
+            protocol = TuicProtocol(
+                uuid=data.get('uuid'),
+                password=data.get('password'),
+                token=data.get('token'),
+                congestion_control=data.get('congestion-controller', 'cubic'),
+                udp_relay_mode=data.get('udp-relay-mode', 'native'),
+                reduce_rtt=data.get('reduce-rtt', False),
+                heartbeat_interval=data.get('heartbeat-interval'),
+                alpn=data.get('alpn'),
+                disable_sni=data.get('disable-sni', False),
+                max_udp_relay_packet_size=data.get('max-udp-relay-packet-size')
+            )
+        elif node_type == 'ssh':
+            protocol = SSHProtocol(
+                username=data.get('username', 'root'),
+                password=data.get('password'),
+                private_key=data.get('private-key') or data.get('privateKey'),
+                private_key_passphrase=data.get('private-key-passphrase'),
+                host_key=data.get('host-key'),
+                host_key_algorithms=data.get('host-key-algorithms'),
+                client_version=data.get('client-version')
+            )
+        elif node_type == 'snell':
+            obfs_opts = data.get('obfs-opts', {})
+            protocol = SnellProtocol(
+                psk=data.get('psk', ''),
+                version=data.get('version', 2),
+                obfs_mode=obfs_opts.get('mode') if obfs_opts else None,
+                obfs_host=obfs_opts.get('host') if obfs_opts else None
+            )
+        elif node_type == 'mieru':
+            protocol = MieruProtocol(
+                username=data.get('username', ''),
+                password=data.get('password', ''),
+                transport=data.get('transport', 'TCP'),
+                multiplexing=data.get('multiplexing', 'MULTIPLEXING_LOW'),
+                port_range=data.get('port-range')
+            )
+        elif node_type == 'anytls':
+            protocol = AnyTLSProtocol(
+                password=data.get('password', ''),
+                idle_session_check_interval=data.get('idle-session-check-interval'),
+                idle_session_timeout=data.get('idle-session-timeout'),
+                min_idle_session=data.get('min-idle-session')
             )
         else:
             raise ValueError(f"Unsupported node type: {node_type}")

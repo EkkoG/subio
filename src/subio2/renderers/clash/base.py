@@ -48,7 +48,10 @@ class ClashRenderer(BaseRenderer):
         """Register protocol-specific renderers by importing modules."""
         try:
             # Import all protocol modules to trigger auto-registration
-            from .protocols import shadowsocks, vmess, trojan, vless, hysteria, http, socks5
+            from .protocols import (
+                shadowsocks, vmess, trojan, vless, hysteria, http, socks5,
+                wireguard, tuic, ssh, snell, mieru, anytls
+            )
             from .protocols.registry import clash_renderer_registry
             
             # Store reference to registry

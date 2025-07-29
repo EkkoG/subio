@@ -32,3 +32,6 @@ class ProtocolRendererRegistry:
 
 # Global registry instance for Clash renderers
 clash_renderer_registry = ProtocolRendererRegistry()
+
+# Alias for backward compatibility
+register_clash_renderer = clash_renderer_registry.register
