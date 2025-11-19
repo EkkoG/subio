@@ -3,7 +3,7 @@ from typing import List, Any, Dict
 from src.subio_v2.parser.base import BaseParser
 from src.subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
-    Socks5Node, HttpNode, WireguardNode, Protocol,
+    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Protocol,
     TLSSettings, TransportSettings, SmuxSettings, Network
 )
 
@@ -45,6 +45,8 @@ class ClashParser(BaseParser):
                 return self._parse_http(data)
             elif node_type == "wireguard":
                 return self._parse_wireguard(data)
+            elif node_type == "anytls":
+                return self._parse_anytls(data)
         except Exception as e:
             # Log error but continue
             print(f"Error parsing node {data.get('name')}: {e}")
@@ -181,3 +183,20 @@ class ClashParser(BaseParser):
             **self._base_fields(data)
         )
 
+    def _parse_anytls(self, data: Dict[str, Any]) -> AnyTLSNode:
+        # TLS is not nested in 'tls' key in example but mixed
+        # sni, alpn, skip-cert-verify are at root
+        # But client-fingerprint is also at root.
+        # My _parse_tls reads them from root (data.get("sni") etc), so it works.
+        tls = self._parse_tls(data)
+        tls.enabled = True # Implicit? Or check? Example implies TLS.
+        
+        return AnyTLSNode(
+            type=Protocol.ANYTLS,
+            password=data.get("password", ""),
+            tls=tls,
+            idle_session_check_interval=data.get("idle-session-check-interval"),
+            idle_session_timeout=data.get("idle-session-timeout"),
+            min_idle_session=data.get("min-idle-session"),
+            **self._base_fields(data)
+        )

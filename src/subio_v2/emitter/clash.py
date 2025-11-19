@@ -2,7 +2,7 @@ from typing import List, Any, Dict
 from src.subio_v2.emitter.base import BaseEmitter
 from src.subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
-    Socks5Node, HttpNode, WireguardNode, Protocol, Network
+    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Protocol, Network
 )
 
 class ClashEmitter(BaseEmitter):
@@ -100,6 +100,18 @@ class ClashEmitter(BaseEmitter):
             # Checking src/subio/model.py: Wireguard is simpler there.
             # Clash Meta docs: ip/ipv6 for interface address. 
             # Let's use what we have. 
+
+        elif isinstance(node, AnyTLSNode):
+            base.update({
+                "password": node.password,
+            })
+            self._add_tls(base, node.tls)
+            if node.idle_session_check_interval is not None:
+                base["idle-session-check-interval"] = node.idle_session_check_interval
+            if node.idle_session_timeout is not None:
+                base["idle-session-timeout"] = node.idle_session_timeout
+            if node.min_idle_session is not None:
+                base["min-idle-session"] = node.min_idle_session
             
         return base
 
@@ -110,8 +122,31 @@ class ClashEmitter(BaseEmitter):
     def _add_tls(self, base: Dict[str, Any], tls) -> None:
         if not tls or not tls.enabled:
             return
-        base["tls"] = True
-        if tls.server_name: base["servername"] = tls.server_name
+        # For anytls, example doesn't have 'tls: true' but fields are at root level.
+        # But Clash Meta usually groups them or puts at root depending on protocol.
+        # For standard protocols, 'tls: true' enables it.
+        # For 'anytls', let's check if 'tls' field is needed. The example doesn't show 'tls: true' explicitly but implies it.
+        # But my Parser logic set enabled=True.
+        # If I output 'tls: true', is it harmful?
+        # Example:
+        # - name: anytls
+        #   type: anytls
+        #   ...
+        #   sni: ...
+        #   skip-cert-verify: ...
+        # No 'tls: true' in example.
+        # But for vmess/trojan etc, it is needed.
+        # I'll add it if it's not AnyTLS? Or maybe AnyTLS ignores it.
+        
+        if base["type"] != "anytls":
+             base["tls"] = True
+             
+        if tls.server_name: 
+            if base["type"] in ["vmess", "vless"]:
+                 base["servername"] = tls.server_name
+            else:
+                 base["sni"] = tls.server_name # anytls uses 'sni'
+                 
         if tls.skip_cert_verify: base["skip-cert-verify"] = True
         if tls.fingerprint: base["fingerprint"] = tls.fingerprint
         if tls.client_fingerprint: base["client-fingerprint"] = tls.client_fingerprint
@@ -163,4 +198,3 @@ class ClashEmitter(BaseEmitter):
         }
         if smux.brutal_opts:
             base["smux"]["brutal-opts"] = smux.brutal_opts
-

@@ -14,6 +14,7 @@ class Protocol(StrEnum):
     HYSTERIA2 = "hysteria2"
     TUIC = "tuic"
     JUICITY = "juicity"
+    ANYTLS = "anytls" # Added
 
 @dataclass
 class TLSSettings:
@@ -153,6 +154,18 @@ class WireguardNode(BaseNode):
         if self.type != Protocol.WIREGUARD:
             self.type = Protocol.WIREGUARD
 
+@dataclass
+class AnyTLSNode(BaseNode):
+    password: str = ""
+    tls: TLSSettings = field(default_factory=TLSSettings)
+    idle_session_check_interval: Optional[int] = None
+    idle_session_timeout: Optional[int] = None
+    min_idle_session: Optional[int] = None
+    
+    def __post_init__(self):
+        if self.type != Protocol.ANYTLS:
+            self.type = Protocol.ANYTLS
+
 Node = Union[
     ShadowsocksNode, 
     VmessNode, 
@@ -160,6 +173,6 @@ Node = Union[
     TrojanNode, 
     Socks5Node, 
     HttpNode, 
-    WireguardNode
+    WireguardNode,
+    AnyTLSNode
 ]
-
