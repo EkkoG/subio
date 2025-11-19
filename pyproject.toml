@@ -19,7 +19,7 @@ dependencies = [
 
 [project.scripts]
 subio = "subio.main:run"
-subio2 = "subio2.main:main"
+subio2 = "subio_v2.main:main"
 
 [build-system]
 requires = ["hatchling"]

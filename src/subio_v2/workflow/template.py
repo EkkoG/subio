@@ -1,0 +1,101 @@
+import jinja2
+import yaml
+import json
+from typing import Any, List, Dict
+
+from src.subio_v2.workflow.filters import all_filters
+import os
+
+class TemplateRenderer:
+    def __init__(self, template_dir: str):
+        self.env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(template_dir),
+            undefined=jinja2.Undefined
+        )
+        self._register_base_filters()
+        self._register_globals()
+
+    def _register_base_filters(self):
+        def render(value):
+            if isinstance(value, list):
+                return json.dumps(value, ensure_ascii=False)
+            return str(value)
+        
+        def to_yaml_filter(value):
+            return yaml.dump(value, allow_unicode=True, sort_keys=False).strip()
+        
+        self.env.filters['render'] = render
+        self.env.filters['to_yaml'] = to_yaml_filter
+
+    def _register_globals(self):
+        self.env.globals['filter'] = all_filters
+
+    def _get_render_filter(self, artifact_type: str):
+        def default_render(value):
+            if isinstance(value, list):
+                return json.dumps(value, ensure_ascii=False)
+            if not isinstance(value, str):
+                return str(value)
+            return value
+
+        def clash_render(value):
+            if isinstance(value, list):
+                return json.dumps(value, ensure_ascii=False)
+            if not isinstance(value, str):
+                return str(value)
+            
+            # Process ruleset string for Clash
+            lines = value.split("\n")
+            filtered_lines = []
+            for line in lines:
+                line = line.strip()
+                if not line: continue
+                if "USER-AGENT" in line: continue
+                if "IP-ASN" in line: continue
+                
+                # V1 logic: check no-resolve
+                if ",no-resolve" in line:
+                    # V1 replaces ",no-resolve" with empty string? 
+                    # Checking V1 code: `return f"- {line}".replace(",no-resolve", "")`
+                    # But wait, standard Clash uses `no-resolve`. Maybe V1 removes it for compatibility?
+                    # Or maybe it adds it back differently?
+                    # Let's stick to V1 logic exactly.
+                    line = line.replace(",no-resolve", "")
+                
+                filtered_lines.append(f"- {line}")
+            
+            return "\n".join(filtered_lines)
+
+        if artifact_type in ["clash", "clash-meta", "stash"]:
+            return clash_render
+        return default_render
+
+    def render(self, template_name: str, context: Dict[str, Any], macros: str = "", artifact_type: str = None) -> str:
+        try:
+            # Read template file directly
+            with open(os.path.join(self.env.loader.searchpath[0], template_name), 'r', encoding='utf-8') as f:
+                template_source = f.read()
+            
+            # Prepend macros
+            full_source = f"{macros}\n{template_source}"
+            
+            # Create a temporary env or just modify filters?
+            # Modifying filters is easier but not thread safe.
+            # Since we run sequentially, it's fine.
+            original_render = self.env.filters['render']
+            if artifact_type:
+                self.env.filters['render'] = self._get_render_filter(artifact_type)
+            
+            try:
+                template = self.env.from_string(full_source)
+                return template.render(**context)
+            finally:
+                # Restore
+                self.env.filters['render'] = original_render
+
+        except FileNotFoundError:
+            print(f"Template not found: {template_name}")
+            return ""
+        except Exception as e:
+            print(f"Error rendering template {template_name}: {e}")
+            return ""

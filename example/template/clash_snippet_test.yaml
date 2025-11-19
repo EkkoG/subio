@@ -1,6 +1,0 @@
-{{ test_snippet('Hello from snippet!') }}
-
-proxies:
-{%- for proxy in proxies %}
-- {{ proxy | to_yaml | indent(2) }}
-{%- endfor %}
