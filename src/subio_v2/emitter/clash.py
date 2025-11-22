@@ -2,7 +2,7 @@ from typing import List, Any, Dict
 from src.subio_v2.emitter.base import BaseEmitter
 from src.subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
-    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Protocol, Network
+    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Hysteria2Node, Protocol, Network
 )
 
 class ClashEmitter(BaseEmitter):
@@ -100,7 +100,7 @@ class ClashEmitter(BaseEmitter):
             # Checking src/subio/model.py: Wireguard is simpler there.
             # Clash Meta docs: ip/ipv6 for interface address. 
             # Let's use what we have. 
-
+            
         elif isinstance(node, AnyTLSNode):
             base.update({
                 "password": node.password,
@@ -112,6 +112,19 @@ class ClashEmitter(BaseEmitter):
                 base["idle-session-timeout"] = node.idle_session_timeout
             if node.min_idle_session is not None:
                 base["min-idle-session"] = node.min_idle_session
+
+        elif isinstance(node, Hysteria2Node):
+            base.update({
+                "password": node.password,
+            })
+            if node.ports: base["ports"] = node.ports
+            if node.hop_interval is not None: base["hop-interval"] = node.hop_interval
+            if node.up: base["up"] = node.up
+            if node.down: base["down"] = node.down
+            if node.obfs: base["obfs"] = node.obfs
+            if node.obfs_password: base["obfs-password"] = node.obfs_password
+            
+            self._add_tls(base, node.tls)
             
         return base
 
@@ -137,21 +150,30 @@ class ClashEmitter(BaseEmitter):
         # No 'tls: true' in example.
         # But for vmess/trojan etc, it is needed.
         # I'll add it if it's not AnyTLS? Or maybe AnyTLS ignores it.
+        # Hysteria2 also implicitly uses TLS but doesn't need 'tls: true' in some versions or needs it?
+        # Clash Meta docs for Hysteria2 don't explicitly say 'tls: true' is required but sni/skip-cert-verify are at root.
+        # Let's exclude 'tls: true' for hysteria2 too if needed, or keep it if harmless.
+        # Usually Hysteria2 is TLS based.
         
-        if base["type"] != "anytls":
+        if base["type"] not in ["anytls", "hysteria2"]:
              base["tls"] = True
              
         if tls.server_name: 
             if base["type"] in ["vmess", "vless"]:
                  base["servername"] = tls.server_name
             else:
-                 base["sni"] = tls.server_name # anytls uses 'sni'
+                 base["sni"] = tls.server_name # anytls/hysteria2 uses 'sni'
                  
         if tls.skip_cert_verify: base["skip-cert-verify"] = True
         if tls.fingerprint: base["fingerprint"] = tls.fingerprint
         if tls.client_fingerprint: base["client-fingerprint"] = tls.client_fingerprint
         if tls.alpn: base["alpn"] = tls.alpn
         if tls.reality_opts: base["reality-opts"] = tls.reality_opts
+        if tls.ech_opts: base["ech-opts"] = tls.ech_opts
+        
+        # mTLS
+        if tls.certificate: base["certificate"] = tls.certificate
+        if tls.private_key: base["private-key"] = tls.private_key
 
     def _add_transport(self, base: Dict[str, Any], transport) -> None:
         if not transport or transport.network == Network.TCP:

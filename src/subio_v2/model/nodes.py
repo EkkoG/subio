@@ -14,7 +14,7 @@ class Protocol(StrEnum):
     HYSTERIA2 = "hysteria2"
     TUIC = "tuic"
     JUICITY = "juicity"
-    ANYTLS = "anytls" # Added
+    ANYTLS = "anytls"
 
 @dataclass
 class TLSSettings:
@@ -25,6 +25,9 @@ class TLSSettings:
     fingerprint: Optional[str] = None # chrome, firefox, randomize...
     client_fingerprint: Optional[str] = None # utls fingerprint
     reality_opts: Optional[Dict[str, str]] = None # public-key, short-id
+    ech_opts: Optional[Dict[str, Any]] = None # Hysteria2 ECH
+    certificate: Optional[str] = None # mTLS
+    private_key: Optional[str] = None # mTLS
 
 class Network(StrEnum):
     TCP = "tcp"
@@ -64,9 +67,6 @@ class BaseNode:
     ip_version: Optional[str] = None # ipv4, ipv6, dual
     tfo: bool = False
     mptcp: bool = False
-    
-    # Link to other nodes (chains) - store names or references?
-    # For v2 initial phase, we might skip complex chains, but let's keep fields.
     dialer_proxy: Optional[str] = None 
 
 @dataclass
@@ -123,7 +123,7 @@ class TrojanNode(BaseNode):
 class Socks5Node(BaseNode):
     username: Optional[str] = None
     password: Optional[str] = None
-    tls: TLSSettings = field(default_factory=TLSSettings) # Some variants support TLS
+    tls: TLSSettings = field(default_factory=TLSSettings) 
     
     def __post_init__(self):
         if self.type != Protocol.SOCKS5:
@@ -145,7 +145,7 @@ class WireguardNode(BaseNode):
     private_key: str = ""
     public_key: str = ""
     preshared_key: Optional[str] = None
-    endpoint: Optional[str] = None # Usually same as server:port, but can be separate
+    endpoint: Optional[str] = None 
     allowed_ips: List[str] = field(default_factory=lambda: ["0.0.0.0/0", "::/0"])
     reserved: Optional[List[int]] = None
     mtu: Optional[int] = None
@@ -166,6 +166,21 @@ class AnyTLSNode(BaseNode):
         if self.type != Protocol.ANYTLS:
             self.type = Protocol.ANYTLS
 
+@dataclass
+class Hysteria2Node(BaseNode):
+    password: str = ""
+    ports: Optional[str] = None
+    hop_interval: Optional[int] = None
+    up: Optional[str] = None
+    down: Optional[str] = None
+    obfs: Optional[str] = None
+    obfs_password: Optional[str] = None
+    tls: TLSSettings = field(default_factory=TLSSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.HYSTERIA2:
+            self.type = Protocol.HYSTERIA2
+
 Node = Union[
     ShadowsocksNode, 
     VmessNode, 
@@ -174,5 +189,6 @@ Node = Union[
     Socks5Node, 
     HttpNode, 
     WireguardNode,
-    AnyTLSNode
+    AnyTLSNode,
+    Hysteria2Node
 ]
