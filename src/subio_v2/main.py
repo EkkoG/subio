@@ -4,7 +4,7 @@ from subio_v2.workflow.engine import WorkflowEngine
 
 def main():
     # Default config path or arg
-    config_path = "example/config.toml"
+    config_path = "config.toml"
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
     
