@@ -87,23 +87,23 @@ to = "gist"
 to = "gist"
 file_name = 'clash-for-xx.yml'
 
-[[artifact]]
-name = "dae.conf"
-type = "dae"
-template = "dae.conf"
-providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-[artifact.options]
-work = true
+# [[artifact]]
+# name = "dae.conf"
+# type = "dae"
+# template = "dae.conf"
+# providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
+# [artifact.options]
+# work = true
 
-[[artifact]]
-name = "dae_subscription.txt"
-type = "dae"
-template = "dae_subscription.txt"
-providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-[artifact.options]
-work = true
-[[artifact.upload]]
-to = "gist"
+# [[artifact]]
+# name = "dae_subscription.txt"
+# type = "dae"
+# template = "dae_subscription.txt"
+# providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
+# [artifact.options]
+# work = true
+# [[artifact.upload]]
+# to = "gist"
 
 [[artifact]]
 name = "v2rayn.conf"
@@ -111,12 +111,9 @@ type = "v2rayn"
 template = "v2rayn.conf"
 providers = ["v2rayn"]
 
-[[artifact]]
-name = "clash_snippet_test.yaml"
-type = "clash"
-template = "clash_snippet_test.yaml"
-providers = ["自建节点"]
-
 [[ruleset]]
-name = "telegram"
-url = "https://cdn.jsdelivr.net/gh/Loyalsoldier/surge-rules@release/ruleset/apple.txt"
+name = 'netflix'
+url = 'https://github.com/blackmatrix7/ios_rule_script/raw/master/rule/Surge/Netflix/Netflix.list'
+[[ruleset]]
+name = 'apple_direct'
+url = 'https://cdn.jsdelivr.net/gh/Loyalsoldier/surge-rules@release/ruleset/apple.txt'
