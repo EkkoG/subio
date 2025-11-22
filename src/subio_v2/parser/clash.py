@@ -3,7 +3,7 @@ from typing import List, Any, Dict
 from src.subio_v2.parser.base import BaseParser
 from src.subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
-    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Protocol,
+    Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Hysteria2Node, Protocol,
     TLSSettings, TransportSettings, SmuxSettings, Network
 )
 
@@ -47,6 +47,8 @@ class ClashParser(BaseParser):
                 return self._parse_wireguard(data)
             elif node_type == "anytls":
                 return self._parse_anytls(data)
+            elif node_type == "hysteria2":
+                return self._parse_hysteria2(data)
         except Exception as e:
             # Log error but continue
             print(f"Error parsing node {data.get('name')}: {e}")
@@ -67,6 +69,11 @@ class ClashParser(BaseParser):
         }
 
     def _parse_tls(self, data: Dict[str, Any]) -> TLSSettings:
+        # Hysteria2 might have ech options
+        ech = None
+        if data.get("ech-opts"):
+            ech = data["ech-opts"]
+
         return TLSSettings(
             enabled=data.get("tls", False),
             server_name=data.get("servername") or data.get("sni"),
@@ -74,7 +81,10 @@ class ClashParser(BaseParser):
             skip_cert_verify=data.get("skip-cert-verify", False),
             fingerprint=data.get("fingerprint"),
             client_fingerprint=data.get("client-fingerprint"),
-            reality_opts=data.get("reality-opts")
+            reality_opts=data.get("reality-opts"),
+            ech_opts=ech,
+            certificate=data.get("certificate"),
+            private_key=data.get("private-key")
         )
 
     def _parse_transport(self, data: Dict[str, Any]) -> TransportSettings:
@@ -175,21 +185,14 @@ class ClashParser(BaseParser):
             private_key=data.get("private-key", ""),
             public_key=data.get("public-key", ""),
             preshared_key=data.get("preshared-key"),
-            endpoint=data.get("udp", False), # WG usually parses endpoint from server:port, but here it's separate in Node but combined in Clash?
-            # Clash puts everything in server/port.
-            allowed_ips=data.get("ip", []) if isinstance(data.get("ip"), list) else [], # Wait, clash uses 'ip' or 'allowed-ips'?
-            # Checking v1 impl: it just copies fields.
-            # Standard WG uses allowed-ips.
+            endpoint=data.get("udp", False), 
+            allowed_ips=data.get("ip", []) if isinstance(data.get("ip"), list) else [], 
             **self._base_fields(data)
         )
 
     def _parse_anytls(self, data: Dict[str, Any]) -> AnyTLSNode:
-        # TLS is not nested in 'tls' key in example but mixed
-        # sni, alpn, skip-cert-verify are at root
-        # But client-fingerprint is also at root.
-        # My _parse_tls reads them from root (data.get("sni") etc), so it works.
         tls = self._parse_tls(data)
-        tls.enabled = True # Implicit? Or check? Example implies TLS.
+        tls.enabled = True
         
         return AnyTLSNode(
             type=Protocol.ANYTLS,
@@ -198,5 +201,24 @@ class ClashParser(BaseParser):
             idle_session_check_interval=data.get("idle-session-check-interval"),
             idle_session_timeout=data.get("idle-session-timeout"),
             min_idle_session=data.get("min-idle-session"),
+            **self._base_fields(data)
+        )
+
+    def _parse_hysteria2(self, data: Dict[str, Any]) -> Hysteria2Node:
+        tls = self._parse_tls(data)
+        # Hysteria2 uses TLS implicitly usually, but can be disabled (not standard).
+        # The config fields (sni, skip-cert-verify, etc) are at root. _parse_tls handles them.
+        tls.enabled = True
+
+        return Hysteria2Node(
+            type=Protocol.HYSTERIA2,
+            password=data.get("password", ""),
+            ports=data.get("ports"),
+            hop_interval=data.get("hop-interval"),
+            up=data.get("up"),
+            down=data.get("down"),
+            obfs=data.get("obfs"),
+            obfs_password=data.get("obfs-password"),
+            tls=tls,
             **self._base_fields(data)
         )
