@@ -87,7 +87,11 @@ class WorkflowEngine:
         if "url" in conf:
             try:
                 # Simplified fetch
-                resp = requests.get(conf["url"], timeout=10)
+                headers = {}
+                if conf.get("user_agent"):
+                    headers["User-Agent"] = conf["user_agent"]
+                    
+                resp = requests.get(conf["url"], headers=headers, timeout=10)
                 resp.raise_for_status()
                 return resp.text
             except Exception as e:
