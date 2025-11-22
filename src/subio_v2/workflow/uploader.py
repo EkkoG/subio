@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 from typing import Any, Dict, List
+from subio_v2.utils.logger import logger
 
 def upload(content: str, artifact_config: Dict[str, Any], uploader_configs: List[Dict[str, Any]]):
     upload_list = artifact_config.get("upload", [])
@@ -11,19 +12,19 @@ def upload(content: str, artifact_config: Dict[str, Any], uploader_configs: List
     for upload_item in upload_list:
         uploader_name = upload_item.get("to")
         if not uploader_name:
-            print(f"  [Upload] Error: 'to' not specified in artifact {artifact_config.get('name')}")
+            logger.error(f"[Upload] 'to' not specified in artifact {artifact_config.get('name')}")
             continue
 
         # Find uploader config
         uploader = next((u for u in uploader_configs if u.get("name") == uploader_name), None)
         if not uploader:
-            print(f"  [Upload] Error: Uploader '{uploader_name}' not found")
+            logger.error(f"[Upload] Uploader '{uploader_name}' not found")
             continue
             
         if uploader.get("type") == "gist":
             _upload_to_gist(content, artifact_config, upload_item, uploader)
         else:
-            print(f"  [Upload] Unsupported uploader type: {uploader.get('type')}")
+            logger.error(f"[Upload] Unsupported uploader type: {uploader.get('type')}")
 
 
 def _upload_to_gist(content: str, artifact_config: Dict[str, Any], upload_item: Dict[str, Any], uploader: Dict[str, Any]):
@@ -33,27 +34,27 @@ def _upload_to_gist(content: str, artifact_config: Dict[str, Any], upload_item: 
         env_var = token[4:]
         token = os.getenv(env_var)
         if not token:
-            print(f"  [Upload] Error: Environment variable {env_var} not found")
+            logger.error(f"[Upload] Environment variable {env_var} not found")
             return
     
     gist_id = uploader.get("id")
     if not gist_id:
-        print("  [Upload] Error: Gist ID missing")
+        logger.error("[Upload] Gist ID missing")
         return
         
     # Validate gist_id
     if not gist_id.replace("-", "").replace("_", "").isalnum():
-         print(f"  [Upload] Invalid gist ID: {gist_id}")
+         logger.error(f"[Upload] Invalid gist ID: {gist_id}")
          return
 
     file_name = upload_item.get("file_name") or artifact_config.get("name")
     # Validate filename
     safe_filename = os.path.basename(file_name)
     if safe_filename != file_name or ".." in safe_filename:
-        print(f"  [Upload] Invalid filename: {file_name}")
+        logger.error(f"[Upload] Invalid filename: {file_name}")
         return
 
-    print(f"  [Upload] Uploading {safe_filename} to Gist {gist_id}...")
+    logger.step(f"Uploading [bold]{safe_filename}[/bold] to Gist {gist_id}...")
 
     # Use git operations
     temp_base = tempfile.mkdtemp(prefix="subio-v2-gist-")
@@ -90,20 +91,19 @@ def _upload_to_gist(content: str, artifact_config: Dict[str, Any], upload_item: 
                 ["git", "-C", repo_dir, "push"],
                 check=True, capture_output=True
             )
-            print(f"  [Upload] Success: {safe_filename} updated.")
+            logger.success(f"[Upload] {safe_filename} updated.")
         else:
-            print(f"  [Upload] No changes for {safe_filename}.")
+            logger.dim(f"[Upload] No changes for {safe_filename}.")
 
     except subprocess.CalledProcessError as e:
-        print(f"  [Upload] Git Error: {e}")
+        logger.error(f"[Upload] Git Error: {e}")
         if e.stderr:
-            print(f"  [Upload] Stderr: {e.stderr.decode()}")
+            logger.error(f"[Upload] Stderr: {e.stderr.decode()}")
     except Exception as e:
-        print(f"  [Upload] Error: {e}")
+        logger.error(f"[Upload] Error: {e}")
     finally:
         # Cleanup temp dir? 
         # Ideally yes, using shutil.rmtree
         import shutil
         if os.path.exists(temp_base):
             shutil.rmtree(temp_base, ignore_errors=True)
-
