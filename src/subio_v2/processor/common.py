@@ -1,7 +1,7 @@
 import re
 from typing import List, Dict
-from src.subio_v2.processor.base import Processor
-from src.subio_v2.model.nodes import Node
+from subio_v2.processor.base import Processor
+from subio_v2.model.nodes import Node
 
 class FilterProcessor(Processor):
     def __init__(self, include: str = None, exclude: str = None):

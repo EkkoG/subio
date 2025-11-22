@@ -1,9 +1,9 @@
 from typing import Dict
-from src.subio_v2.parser.base import BaseParser
-from src.subio_v2.parser.clash import ClashParser
-from src.subio_v2.parser.v2rayn import V2RayNParser
-from src.subio_v2.parser.surge import SurgeParser
-from src.subio_v2.parser.subio import SubioParser
+from subio_v2.parser.base import BaseParser
+from subio_v2.parser.clash import ClashParser
+from subio_v2.parser.v2rayn import V2RayNParser
+from subio_v2.parser.surge import SurgeParser
+from subio_v2.parser.subio import SubioParser
 
 class ParserFactory:
     _parsers: Dict[str, BaseParser] = {}

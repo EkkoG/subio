@@ -2,9 +2,9 @@ import toml
 import json
 import yaml
 from typing import Any, List, Dict
-from src.subio_v2.parser.base import BaseParser
-from src.subio_v2.parser.clash import ClashParser
-from src.subio_v2.model.nodes import Node
+from subio_v2.parser.base import BaseParser
+from subio_v2.parser.clash import ClashParser
+from subio_v2.model.nodes import Node
 
 class SubioParser(BaseParser):
     def __init__(self):

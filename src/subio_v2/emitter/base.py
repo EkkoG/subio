@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Any
-from src.subio_v2.model.nodes import Node
+from subio_v2.model.nodes import Node
 
 class BaseEmitter(ABC):
     @abstractmethod

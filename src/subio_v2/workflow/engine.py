@@ -3,13 +3,13 @@ import requests
 import os
 import re
 from typing import Dict, List, Any
-from src.subio_v2.model.nodes import Node
-from src.subio_v2.parser.factory import ParserFactory
-from src.subio_v2.emitter.factory import EmitterFactory
-from src.subio_v2.processor.common import FilterProcessor, RenameProcessor
-from src.subio_v2.workflow.template import TemplateRenderer
-from src.subio_v2.workflow.ruleset import load_rulesets, load_snippets
-from src.subio_v2.workflow.uploader import upload
+from subio_v2.model.nodes import Node
+from subio_v2.parser.factory import ParserFactory
+from subio_v2.emitter.factory import EmitterFactory
+from subio_v2.processor.common import FilterProcessor, RenameProcessor
+from subio_v2.workflow.template import TemplateRenderer
+from subio_v2.workflow.ruleset import load_rulesets, load_snippets
+from subio_v2.workflow.uploader import upload
 import yaml
 import json
 
