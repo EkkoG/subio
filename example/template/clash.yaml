@@ -15,7 +15,8 @@ proxy-groups:
   proxies: {{ filter.combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us') | render }}
 
 rules:
-{{ remote_telegram("DIRECT") | render }}
+{{ remote_netflix("DIRECT") | render }}
+{{ remote_apple_direct("DIRECT") | render }}
 {{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') | render }}
 
 - GEOIP,CN,DIRECT
