@@ -1,11 +1,12 @@
 import hashlib
 import os
 import requests
+import sys
 from typing import Dict, Any
+from subio_v2.utils.logger import logger
 
 def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) -> str:
     headers = {"User-Agent": user_agent}
-    # Simple cache logic similar to v1
     if debug or os.getenv("DEBUG"):
         if not os.path.exists("cache"):
             os.makedirs("cache")
@@ -22,41 +23,37 @@ def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) 
                     f.write(text)
                 return text
             except Exception as e:
-                print(f"Error fetching {url}: {e}")
-                return ""
+                logger.error(f"Error fetching {url}: {e}")
+                sys.exit(1)
     else:
         try:
             resp = requests.get(url, headers=headers, timeout=10)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
-            print(f"Error fetching {url}: {e}")
-            return ""
+            logger.error(f"Error fetching {url}: {e}")
+            sys.exit(1)
+
+def parse_rule_line(rule: str) -> str:
+    rule = rule.strip()
+    if rule == "":
+        return ""
+    if rule.startswith("#") or rule.startswith("//"):
+        return rule
+    
+    # Handle comments at end of line
+    if "//" in rule:
+        rule_part = rule.split("//")[0].strip()
+        return f"{rule_part},{{{{ rule }}}}"
+        
+    if ",no-resolve" in rule:
+        return rule.replace(",no-resolve", ",{{ rule }},no-resolve")
+    
+    return f"{rule},{{{{ rule }}}}"
 
 def wrap_with_jinja2_macro(text: str, name: str) -> str:
-    def append_rule(rule):
-        rule = rule.strip()
-        if rule == "":
-            return ""
-        if rule.startswith("#") or rule.startswith("//"):
-            return rule
-        
-        # Handle comments at end of line
-        if "//" in rule:
-            rule_part = rule.split("//")[0].strip()
-            # We don't preserve the comment in v1 logic effectively for the macro argument injection?
-            # v1: rule = rule.split("//")[0].strip(); return rule + ",{{ rule }}"
-            # The comment is lost in the output rule but that seems intended or acceptable.
-            return f"{rule_part},{{{{ rule }}}}"
-            
-        if ",no-resolve" in rule:
-            return rule.replace(",no-resolve", ",{{ rule }},no-resolve")
-        
-        return f"{rule},{{{{ rule }}}}"
-
     lines = text.split("\n")
-    new_lines = map(append_rule, lines)
-    # Filter out empty lines that might result from append_rule returning ""
+    new_lines = map(parse_rule_line, lines)
     new_text = "\n".join([l for l in new_lines if l])
     
     return "{{% macro {}(rule) -%}}\n{}\n{{%- endmacro -%}}".format(
@@ -71,7 +68,7 @@ def load_rulesets(ruleset_configs: list[Dict[str, Any]]) -> str:
         if not name or not url:
             continue
             
-        print(f"Loading ruleset: {name}")
+        logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
         content = load_remote_resource(url, conf.get("user_agent"))
         if content:
             macro = wrap_with_jinja2_macro(content, name)
@@ -100,14 +97,13 @@ def load_snippets(snippet_dir: str) -> str:
                 
             args = lines[0].strip()
             if not args:
-                print(f"Snippet {snippet_file} missing args")
+                logger.warning(f"Snippet {snippet_file} missing args")
                 continue
                 
             content = "\n".join(lines[1:])
             macro = f"{{% macro {snippet_file}({args}) -%}}\n{content}\n{{%- endmacro -%}}"
             macros.append(macro)
         except Exception as e:
-            print(f"Error loading snippet {snippet_file}: {e}")
+            logger.error(f"Error loading snippet {snippet_file}: {e}")
             
     return "\n".join(macros)
-
