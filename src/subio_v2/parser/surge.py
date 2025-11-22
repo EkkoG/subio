@@ -1,6 +1,6 @@
 from typing import List, Any, Dict
-from src.subio_v2.parser.base import BaseParser
-from src.subio_v2.model.nodes import (
+from subio_v2.parser.base import BaseParser
+from subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, TrojanNode, 
     Socks5Node, HttpNode, Protocol, TLSSettings, TransportSettings, Network
 )

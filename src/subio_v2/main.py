@@ -1,6 +1,6 @@
 import sys
 import os
-from src.subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.engine import WorkflowEngine
 
 def main():
     # Default config path or arg

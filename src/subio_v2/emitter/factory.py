@@ -1,8 +1,8 @@
 from typing import Dict
-from src.subio_v2.emitter.base import BaseEmitter
-from src.subio_v2.emitter.clash import ClashEmitter
-from src.subio_v2.emitter.surge import SurgeEmitter
-from src.subio_v2.emitter.v2rayn import V2RayNEmitter
+from subio_v2.emitter.base import BaseEmitter
+from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.emitter.v2rayn import V2RayNEmitter
 
 class EmitterFactory:
     _emitters: Dict[str, BaseEmitter] = {}

@@ -2,8 +2,8 @@ import base64
 import json
 import urllib.parse
 from typing import List, Any
-from src.subio_v2.emitter.base import BaseEmitter
-from src.subio_v2.model.nodes import (
+from subio_v2.emitter.base import BaseEmitter
+from subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
     Socks5Node, HttpNode, Protocol, Network
 )

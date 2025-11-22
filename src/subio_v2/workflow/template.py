@@ -3,7 +3,7 @@ import yaml
 import json
 from typing import Any, List, Dict
 
-from src.subio_v2.workflow.filters import all_filters
+from subio_v2.workflow.filters import all_filters
 import os
 
 class TemplateRenderer:
