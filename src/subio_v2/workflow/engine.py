@@ -4,12 +4,8 @@ import os
 import re
 from typing import Dict, List, Any
 from src.subio_v2.model.nodes import Node
-from src.subio_v2.parser.clash import ClashParser
-from src.subio_v2.parser.v2rayn import V2RayNParser
-from src.subio_v2.parser.surge import SurgeParser
-from src.subio_v2.emitter.clash import ClashEmitter
-from src.subio_v2.emitter.surge import SurgeEmitter
-from src.subio_v2.emitter.v2rayn import V2RayNEmitter
+from src.subio_v2.parser.factory import ParserFactory
+from src.subio_v2.emitter.factory import EmitterFactory
 from src.subio_v2.processor.common import FilterProcessor, RenameProcessor
 from src.subio_v2.workflow.template import TemplateRenderer
 from src.subio_v2.workflow.ruleset import load_rulesets, load_snippets
@@ -23,13 +19,7 @@ class WorkflowEngine:
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
         
-        self.clash_parser = ClashParser()
-        self.v2rayn_parser = V2RayNParser()
-        self.surge_parser = SurgeParser()
-        
-        self.clash_emitter = ClashEmitter()
-        self.surge_emitter = SurgeEmitter()
-        self.v2rayn_emitter = V2RayNEmitter()
+        # Parsers and Emitters are now managed by Factory
         
         # Template Renderer
         config_dir = os.path.dirname(self.config_path)
@@ -74,46 +64,12 @@ class WorkflowEngine:
                 continue
 
             nodes = []
-            if p_type in ["clash", "clash-meta"]:
-                nodes = self.clash_parser.parse(content)
-            elif p_type in ["v2rayn", "subio"]: # subio is basically v2rayn/clash mix? Check subio definition.
-                # In v1, subio seems to be a custom format or just used generic parser.
-                # Looking at model.py, subio nodes were objects.
-                # Let's assume for now it might be file-based toml/json or similar to clash. 
-                # The example uses 'self.toml'. 
-                # If it's TOML, it might be clash-like structure?
-                # Let's check 'example/provider/self.toml'.
-                if p_type == "subio":
-                     # subio format could be toml, json, or python dict in text?
-                     # V1 used automatic detection.
-                     # Let's try parsing as TOML first (as in example)
-                     try:
-                         data = toml.loads(content)
-                     except:
-                         # Try loading as JSON
-                         try:
-                             data = json.loads(content)
-                         except:
-                             # If failed, it might be python dict text? 
-                             # V1 subio parser used `eval` via `load_with_ext` if ext was `.py`?
-                             # Or if it's a custom format.
-                             # Given the error "Found invalid character in key name: ':'", it looks like YAML (key: value).
-                             try:
-                                 data = yaml.safe_load(content)
-                             except Exception as e:
-                                 print(f"  Error parsing subio provider {name}: {e}")
-                                 continue
-
-                     # Convert nodes list to a dict for ClashParser
-                     if isinstance(data, dict) and "nodes" in data:
-                        nodes = self.clash_parser.parse({"proxies": data["nodes"]})
-                     else:
-                        print(f"  Error: subio provider {name} does not contain 'nodes' list.")
-                         
-                elif p_type == "v2rayn":
-                    nodes = self.v2rayn_parser.parse(content)
-            elif p_type == "surge":
-                nodes = self.surge_parser.parse(content)
+            parser = ParserFactory.get_parser(p_type)
+            
+            if parser:
+                nodes = parser.parse(content)
+            else:
+                 print(f"  Unsupported provider type: {p_type}")
             
             # Apply Rename
             rename_conf = prov_conf.get("rename")
@@ -191,69 +147,54 @@ class WorkflowEngine:
 
             # Emit
             output = None
-            if a_type in ["clash", "clash-meta", "stash"]: # stash is similar to clash
-                output = self.clash_emitter.emit(nodes)
-                # TODO: Merge with template
-                self._write_clash_artifact(name, output, art_conf.get("template"), a_type, art_conf.get("options", {}), art_conf)
-            elif a_type == "surge":
-                output = self.surge_emitter.emit(nodes)
-                 # TODO: Merge with template
-                self._write_text_artifact(name, output, art_conf.get("template"), art_conf.get("options", {}), art_conf)
-            elif a_type == "v2rayn":
-                output = self.v2rayn_emitter.emit(nodes) # Returns Base64 string
-                self._write_text_artifact(name, output, art_conf.get("template"), art_conf.get("options", {}), art_conf)
+            emitter = EmitterFactory.get_emitter(a_type)
+            
+            if emitter:
+                output = emitter.emit(nodes)
+                # Use unified writer
+                self._write_artifact(name, output, art_conf.get("template"), a_type, art_conf.get("options", {}), art_conf)
             else:
                 print(f"  Unsupported artifact type: {a_type}")
 
-    def _write_clash_artifact(self, filename: str, proxies_data: Dict[str, Any], template_path: str, artifact_type: str = None, artifact_options: Dict[str, Any] = None, artifact_conf: Dict[str, Any] = None):
+    def _write_artifact(self, filename: str, content: str | Dict[str, Any], template_path: str, artifact_type: str = None, artifact_options: Dict[str, Any] = None, artifact_conf: Dict[str, Any] = None):
+        final_content = ""
+        
+        # If content is dict (Clash/Stash), dump to YAML string first
+        is_yaml_data = isinstance(content, dict)
+        raw_content_str = ""
+        
+        if is_yaml_data:
+             proxies_list = content.get("proxies", [])
+             raw_content_str = yaml.dump(proxies_list, allow_unicode=True, sort_keys=False)
+        else:
+             raw_content_str = content
+
         if template_path:
-            # Prepare context
-            proxies_list = proxies_data["proxies"]
-            proxies_names = [p["name"] for p in proxies_list]
-            
-            # Dump proxies list to YAML string
-            proxies_yaml = yaml.dump(proxies_list, allow_unicode=True, sort_keys=False)
-            
             context = {
-                "proxies": proxies_yaml,
-                "proxies_names": proxies_names,
+                "proxies": raw_content_str, # For Clash, this is the proxies list YAML. For Surge, this is the text block.
                 "global_options": self.config.get("options", {}),
                 "options": artifact_options or {}
             }
             
+            if is_yaml_data:
+                proxies_list = content.get("proxies", [])
+                context["proxies_names"] = [p["name"] for p in proxies_list]
+
             final_content = self.renderer.render(template_path, context, self.macros, artifact_type)
         else:
-            final_content = yaml.dump(proxies_data, allow_unicode=True, sort_keys=False)
-
-        with open(f"dist/{filename}", "w") as f:
-            f.write(final_content)
-            
-        # Upload
-        if artifact_conf and artifact_conf.get("upload"):
-            upload(final_content, artifact_conf, self.config.get("uploader", []))
-
-    def _write_text_artifact(self, filename: str, content: str, template_path: str, artifact_options: Dict[str, Any] = None, artifact_conf: Dict[str, Any] = None):
-        final_content = content
-        if template_path:
-            # For text artifacts, we might not have advanced context, 
-            # or maybe pass 'proxies' as the content string?
-            context = {
-                "proxies": content,
-                "global_options": self.config.get("options", {}),
-                "options": artifact_options or {}
-            }
-            rendered = self.renderer.render(template_path, context, self.macros)
-            if rendered:
-                final_content = rendered
+            if is_yaml_data:
+                final_content = yaml.dump(content, allow_unicode=True, sort_keys=False)
             else:
-                 pass
+                final_content = raw_content_str
+
+        # Fallback if render returns empty? No, let's trust render.
         
         with open(f"dist/{filename}", "w") as f:
             f.write(final_content)
             
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
-             upload(final_content, artifact_conf, self.config.get("uploader", []))
+            upload(final_content, artifact_conf, self.config.get("uploader", []))
 
     def _read_template(self, path: str) -> str | None:
         # Check 'template' dir

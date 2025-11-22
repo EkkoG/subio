@@ -1,0 +1,47 @@
+import toml
+import json
+import yaml
+from typing import Any, List, Dict
+from src.subio_v2.parser.base import BaseParser
+from src.subio_v2.parser.clash import ClashParser
+from src.subio_v2.model.nodes import Node
+
+class SubioParser(BaseParser):
+    def __init__(self):
+        self.clash_parser = ClashParser()
+
+    def parse(self, content: Any) -> List[Node]:
+        if not isinstance(content, str):
+            return []
+
+        data = None
+        # Try TOML first
+        try:
+            data = toml.loads(content)
+        except:
+            pass
+
+        # Try JSON
+        if data is None:
+            try:
+                data = json.loads(content)
+            except:
+                pass
+        
+        # Try YAML
+        if data is None:
+            try:
+                data = yaml.safe_load(content)
+            except:
+                pass
+
+        if data is None:
+            print("  Error parsing subio provider: Unknown format")
+            return []
+
+        if isinstance(data, dict) and "nodes" in data:
+            return self.clash_parser.parse({"proxies": data["nodes"]})
+        else:
+            print("  Error: subio provider does not contain 'nodes' list.")
+            return []
+
