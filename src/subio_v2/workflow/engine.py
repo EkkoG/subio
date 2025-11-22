@@ -1,3 +1,4 @@
+import sys
 import toml
 import requests
 import os
@@ -62,8 +63,8 @@ class WorkflowEngine:
                 
                 content = self._fetch_content(prov_conf)
                 if not content:
-                    logger.warning(f"Skipping {name}: No content")
-                    continue
+                    logger.error(f"Failed to load provider {name}: No content")
+                    sys.exit(1)
 
                 nodes = []
                 parser = ParserFactory.get_parser(p_type)
