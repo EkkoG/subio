@@ -1,4 +1,5 @@
 import yaml
+import sys
 from typing import List, Any, Dict
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
@@ -6,18 +7,21 @@ from subio_v2.model.nodes import (
     Socks5Node, HttpNode, WireguardNode, AnyTLSNode, Hysteria2Node, Protocol,
     TLSSettings, TransportSettings, SmuxSettings, Network
 )
+from subio_v2.utils.logger import logger
 
 class ClashParser(BaseParser):
     def parse(self, content: Any) -> List[Node]:
         if isinstance(content, str):
             try:
                 data = yaml.safe_load(content)
-            except yaml.YAMLError:
-                return []
+            except yaml.YAMLError as e:
+                logger.error(f"YAML parse error: {e}")
+                sys.exit(1)
         elif isinstance(content, dict):
             data = content
         else:
-            return []
+            logger.error("Invalid content type for ClashParser")
+            sys.exit(1)
 
         proxies = data.get("proxies", [])
         nodes = []
@@ -51,7 +55,7 @@ class ClashParser(BaseParser):
                 return self._parse_hysteria2(data)
         except Exception as e:
             # Log error but continue
-            print(f"Error parsing node {data.get('name')}: {e}")
+            logger.warning(f"Error parsing node {data.get('name')}: {e}")
             return None
         
         return None

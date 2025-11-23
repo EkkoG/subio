@@ -1,14 +1,17 @@
 from typing import List, Any, Dict
+import sys
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, TrojanNode, 
     Socks5Node, HttpNode, Protocol, TLSSettings, TransportSettings, Network
 )
+from subio_v2.utils.logger import logger
 
 class SurgeParser(BaseParser):
     def parse(self, content: Any) -> List[Node]:
         if not isinstance(content, str):
-            return []
+            logger.error("Invalid content type for SurgeParser")
+            sys.exit(1)
         
         lines = content.splitlines()
         nodes = []
@@ -102,115 +105,118 @@ class SurgeParser(BaseParser):
                         headers[hk.strip()] = hv.strip()
                 transport.headers = headers
 
-        if p_type == "ss":
-            # ss, server, port, encrypt-method=..., password=...
-            # or ss, server, port, encrypt-method, password
-            cipher = kv_args.get("encrypt-method")
-            password = kv_args.get("password")
-            
-            # Handle positional args for legacy SS format if needed?
-            # Surge typically uses kv args for SS now.
-            
-            plugin = None
-            plugin_opts = None
-            if kv_args.get("obfs"):
-                plugin = "obfs"
-                plugin_opts = {
-                    "mode": kv_args["obfs"],
-                    "host": kv_args.get("obfs-host", "")
-                }
-
-            return ShadowsocksNode(
-                name=name,
-                type=Protocol.SHADOWSOCKS,
-                server=server,
-                port=port,
-                cipher=cipher or "chacha20-ietf-poly1305",
-                password=password or "",
-                plugin=plugin,
-                plugin_opts=plugin_opts,
-                udp=get_bool("udp-relay", False)
-            )
-            
-        elif p_type == "vmess":
-            # vmess, server, port, username=..., encrypt-method=...
-            
-            # Check for TLS implicit
-            if kv_args.get("tls") == "true":
-                tls.enabled = True
-            
-            return VmessNode(
-                name=name,
-                type=Protocol.VMESS,
-                server=server,
-                port=port,
-                uuid=kv_args.get("username", ""),
-                cipher=kv_args.get("encrypt-method", "auto"),
-                tls=tls,
-                transport=transport,
-                udp=get_bool("udp-relay", False)
-            )
-            
-        elif p_type == "trojan":
-             # trojan, server, port, password=...
-             tls.enabled = True # Always TLS
-             
-             return TrojanNode(
-                name=name,
-                type=Protocol.TROJAN,
-                server=server,
-                port=port,
-                password=kv_args.get("password", ""),
-                tls=tls,
-                transport=transport,
-                udp=get_bool("udp-relay", False)
-             )
-             
-        elif p_type in ["socks5", "socks5-tls"]:
-            if p_type == "socks5-tls":
-                tls.enabled = True
-            
-            # socks5, server, port, username, password (optional positional)
-            username = kv_args.get("username")
-            password = kv_args.get("password")
-            
-            if not username and len(pos_args) > 0:
-                username = pos_args[0]
-            if not password and len(pos_args) > 1:
-                password = pos_args[1]
-
-            return Socks5Node(
-                name=name,
-                type=Protocol.SOCKS5,
-                server=server,
-                port=port,
-                username=username,
-                password=password,
-                tls=tls,
-                udp=get_bool("udp-relay", False)
-            )
-            
-        elif p_type in ["http", "https"]:
-            if p_type == "https":
-                tls.enabled = True
+        try:
+            if p_type == "ss":
+                # ss, server, port, encrypt-method=..., password=...
+                # or ss, server, port, encrypt-method, password
+                cipher = kv_args.get("encrypt-method")
+                password = kv_args.get("password")
                 
-            username = kv_args.get("username")
-            password = kv_args.get("password")
-            
-            if not username and len(pos_args) > 0:
-                username = pos_args[0]
-            if not password and len(pos_args) > 1:
-                password = pos_args[1]
+                # Handle positional args for legacy SS format if needed?
+                # Surge typically uses kv args for SS now.
                 
-            return HttpNode(
-                name=name,
-                type=Protocol.HTTP,
-                server=server,
-                port=port,
-                username=username,
-                password=password,
-                tls=tls
-            )
+                plugin = None
+                plugin_opts = None
+                if kv_args.get("obfs"):
+                    plugin = "obfs"
+                    plugin_opts = {
+                        "mode": kv_args["obfs"],
+                        "host": kv_args.get("obfs-host", "")
+                    }
+
+                return ShadowsocksNode(
+                    name=name,
+                    type=Protocol.SHADOWSOCKS,
+                    server=server,
+                    port=port,
+                    cipher=cipher or "chacha20-ietf-poly1305",
+                    password=password or "",
+                    plugin=plugin,
+                    plugin_opts=plugin_opts,
+                    udp=get_bool("udp-relay", False)
+                )
+                
+            elif p_type == "vmess":
+                # vmess, server, port, username=..., encrypt-method=...
+                
+                # Check for TLS implicit
+                if kv_args.get("tls") == "true":
+                    tls.enabled = True
+                
+                return VmessNode(
+                    name=name,
+                    type=Protocol.VMESS,
+                    server=server,
+                    port=port,
+                    uuid=kv_args.get("username", ""),
+                    cipher=kv_args.get("encrypt-method", "auto"),
+                    tls=tls,
+                    transport=transport,
+                    udp=get_bool("udp-relay", False)
+                )
+                
+            elif p_type == "trojan":
+                 # trojan, server, port, password=...
+                 tls.enabled = True # Always TLS
+                 
+                 return TrojanNode(
+                    name=name,
+                    type=Protocol.TROJAN,
+                    server=server,
+                    port=port,
+                    password=kv_args.get("password", ""),
+                    tls=tls,
+                    transport=transport,
+                    udp=get_bool("udp-relay", False)
+                 )
+                 
+            elif p_type in ["socks5", "socks5-tls"]:
+                if p_type == "socks5-tls":
+                    tls.enabled = True
+                
+                # socks5, server, port, username, password (optional positional)
+                username = kv_args.get("username")
+                password = kv_args.get("password")
+                
+                if not username and len(pos_args) > 0:
+                    username = pos_args[0]
+                if not password and len(pos_args) > 1:
+                    password = pos_args[1]
+
+                return Socks5Node(
+                    name=name,
+                    type=Protocol.SOCKS5,
+                    server=server,
+                    port=port,
+                    username=username,
+                    password=password,
+                    tls=tls,
+                    udp=get_bool("udp-relay", False)
+                )
+                
+            elif p_type in ["http", "https"]:
+                if p_type == "https":
+                    tls.enabled = True
+                    
+                username = kv_args.get("username")
+                password = kv_args.get("password")
+                
+                if not username and len(pos_args) > 0:
+                    username = pos_args[0]
+                if not password and len(pos_args) > 1:
+                    password = pos_args[1]
+                    
+                return HttpNode(
+                    name=name,
+                    type=Protocol.HTTP,
+                    server=server,
+                    port=port,
+                    username=username,
+                    password=password,
+                    tls=tls
+                )
+        except Exception as e:
+            logger.warning(f"Error parsing line: {line}, error: {e}")
+            return None
 
         return None
-

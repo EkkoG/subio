@@ -1,17 +1,20 @@
 import base64
 import json
 import urllib.parse
+import sys
 from typing import List, Any, Dict
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node, ShadowsocksNode, VmessNode, VlessNode, TrojanNode, 
     Socks5Node, HttpNode, Protocol, TLSSettings, TransportSettings, Network
 )
+from subio_v2.utils.logger import logger
 
 class V2RayNParser(BaseParser):
     def parse(self, content: Any) -> List[Node]:
         if not isinstance(content, str):
-            return []
+            logger.error("Invalid content type for V2RayNParser")
+            sys.exit(1)
         
         # Try decoding base64 if it looks like a subscription
         try:
@@ -80,7 +83,7 @@ class V2RayNParser(BaseParser):
                 tls=tls
             )
         except Exception as e:
-            print(f"Error parsing vmess: {e}")
+            logger.warning(f"Error parsing vmess: {e}")
             return None
 
     def _parse_ss(self, line: str) -> ShadowsocksNode | None:
@@ -146,7 +149,7 @@ class V2RayNParser(BaseParser):
             )
 
         except Exception as e:
-             print(f"Error parsing ss: {e}")
+             logger.warning(f"Error parsing ss: {e}")
              return None
 
     def _parse_trojan(self, line: str) -> TrojanNode | None:
@@ -173,7 +176,8 @@ class V2RayNParser(BaseParser):
                     skip_cert_verify=allow_insecure
                 )
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error parsing trojan: {e}")
             return None
 
     def _parse_vless(self, line: str) -> VlessNode | None:
@@ -213,6 +217,6 @@ class V2RayNParser(BaseParser):
                 tls=tls,
                 transport=transport
             )
-         except Exception:
+         except Exception as e:
+             logger.warning(f"Error parsing vless: {e}")
              return None
-
