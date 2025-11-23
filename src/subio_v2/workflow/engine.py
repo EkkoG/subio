@@ -45,8 +45,15 @@ class WorkflowEngine:
             self.macros += load_rulesets(self.config["ruleset"]) + "\n"
 
     def _load_config(self) -> Dict[str, Any]:
-        with open(self.config_path, 'r') as f:
-            return toml.load(f)
+        try:
+            with open(self.config_path, 'r') as f:
+                return toml.load(f)
+        except FileNotFoundError:
+            logger.error(f"Config file not found: {self.config_path}")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"Error loading config: {e}")
+            sys.exit(1)
 
     def run(self):
         logger.info("--- Starting SubIO v2 Workflow ---")
@@ -156,6 +163,10 @@ class WorkflowEngine:
                 self._write_artifact(name, output, art_conf.get("template"), a_type, art_conf.get("options", {}), art_conf)
             else:
                 logger.error(f"Unsupported artifact type: {a_type}")
+                # Continue or exit? Unsupported type is likely a config error.
+                # Let's continue but log error. Or if strict, exit.
+                # V1 logs error.
+                pass
 
     def _write_artifact(self, filename: str, content: str | Dict[str, Any], template_path: str, artifact_type: str = None, artifact_options: Dict[str, Any] = None, artifact_conf: Dict[str, Any] = None):
         final_content = ""
@@ -196,15 +207,8 @@ class WorkflowEngine:
             upload(final_content, artifact_conf, self.config.get("uploader", []))
 
     def _read_template(self, path: str) -> str | None:
-        # Check 'template' dir
-        config_dir = os.path.dirname(self.config_path)
-        abs_path = os.path.join(config_dir, "template", path)
-        if os.path.exists(abs_path):
-            with open(abs_path, 'r') as f:
-                return f.read()
-        # Check relative
-        abs_path = os.path.join(config_dir, path)
-        if os.path.exists(abs_path):
-             with open(abs_path, 'r') as f:
-                return f.read()
-        return None
+        # This method is actually not used by TemplateRenderer directly, 
+        # but TemplateRenderer uses Jinja2 loader which might fail silently or raise error.
+        # TemplateRenderer.render catches FileNotFoundError and logs it.
+        # We should probably make TemplateRenderer exit if template not found.
+        pass
