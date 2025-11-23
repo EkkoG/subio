@@ -104,7 +104,9 @@ class WorkflowEngine:
 
                 resp = requests.get(conf["url"], headers=headers, timeout=10)
                 resp.raise_for_status()
-                return resp.text
+                content = resp.text
+                logger.dim(f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}...")
+                return content
             except Exception as e:
                 logger.error(f"Fetch error: {e}")
                 return None
@@ -118,12 +120,16 @@ class WorkflowEngine:
             abs_path = os.path.join(config_dir, path)
             if os.path.exists(abs_path):
                 with open(abs_path, "r") as f:
-                    return f.read()
+                    content = f.read()
+                    logger.dim(f"Read file {path} (first 100 chars): {content[:100]}...")
+                    return content
             # Check 'provider' subfolder
             abs_path = os.path.join(config_dir, "provider", path)
             if os.path.exists(abs_path):
                 with open(abs_path, "r") as f:
-                    return f.read()
+                    content = f.read()
+                    logger.dim(f"Read file {path} (first 100 chars): {content[:100]}...")
+                    return content
 
             logger.error(f"File not found: {path}")
             return None
