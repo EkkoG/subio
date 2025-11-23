@@ -1,10 +1,12 @@
 import toml
 import json
 import yaml
+import sys
 from typing import Any, List, Dict
 from subio_v2.parser.base import BaseParser
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Node
+from subio_v2.utils.logger import logger
 
 class SubioParser(BaseParser):
     def __init__(self):
@@ -12,7 +14,8 @@ class SubioParser(BaseParser):
 
     def parse(self, content: Any) -> List[Node]:
         if not isinstance(content, str):
-            return []
+            logger.error("Invalid content type for SubioParser")
+            sys.exit(1)
 
         data = None
         # Try TOML first
@@ -36,12 +39,11 @@ class SubioParser(BaseParser):
                 pass
 
         if data is None:
-            print("  Error parsing subio provider: Unknown format")
-            return []
+            logger.error("Error parsing subio provider: Unknown format")
+            sys.exit(1)
 
         if isinstance(data, dict) and "nodes" in data:
             return self.clash_parser.parse({"proxies": data["nodes"]})
         else:
-            print("  Error: subio provider does not contain 'nodes' list.")
-            return []
-
+            logger.error("Error: subio provider does not contain 'nodes' list.")
+            sys.exit(1)
