@@ -36,7 +36,24 @@ class ClashParser(BaseParser):
             logger.error("Invalid content type for ClashParser")
             sys.exit(1)
 
-        proxies = data.get("proxies", [])
+        if not isinstance(data, dict):
+            logger.error(f"Invalid Clash config format: Expected dict, got {type(data)}. Content preview: {str(content)[:100]}")
+            sys.exit(1)
+
+        proxies = data.get("proxies")
+        if proxies is None:
+             # Some providers return just a list of proxies without "proxies" key?
+             # Or maybe it's a different format?
+             # If strict clash, it must have proxies.
+             # If it's just a list, maybe handle it?
+             # But standard clash config has "proxies".
+             logger.error("Clash config missing 'proxies' key")
+             sys.exit(1)
+             
+        if not isinstance(proxies, list):
+             logger.error("'proxies' is not a list")
+             sys.exit(1)
+
         nodes = []
         for proxy in proxies:
             node = self._parse_node(proxy)
