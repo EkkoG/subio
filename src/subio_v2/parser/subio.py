@@ -2,11 +2,12 @@ import toml
 import json
 import yaml
 import sys
-from typing import Any, List, Dict
+from typing import Any, List
 from subio_v2.parser.base import BaseParser
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Node
 from subio_v2.utils.logger import logger
+
 
 class SubioParser(BaseParser):
     def __init__(self):
@@ -21,21 +22,21 @@ class SubioParser(BaseParser):
         # Try TOML first
         try:
             data = toml.loads(content)
-        except:
+        except Exception:
             pass
 
         # Try JSON
         if data is None:
             try:
                 data = json.loads(content)
-            except:
+            except Exception:
                 pass
-        
+
         # Try YAML
         if data is None:
             try:
                 data = yaml.safe_load(content)
-            except:
+            except Exception:
                 pass
 
         if data is None:

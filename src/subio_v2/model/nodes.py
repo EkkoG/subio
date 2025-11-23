@@ -2,6 +2,7 @@ from enum import StrEnum
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Union
 
+
 class Protocol(StrEnum):
     SHADOWSOCKS = "shadowsocks"
     VMESS = "vmess"
@@ -16,18 +17,20 @@ class Protocol(StrEnum):
     JUICITY = "juicity"
     ANYTLS = "anytls"
 
+
 @dataclass
 class TLSSettings:
     enabled: bool = False
     server_name: Optional[str] = None  # sni
     alpn: Optional[List[str]] = None
     skip_cert_verify: bool = False
-    fingerprint: Optional[str] = None # chrome, firefox, randomize...
-    client_fingerprint: Optional[str] = None # utls fingerprint
-    reality_opts: Optional[Dict[str, str]] = None # public-key, short-id
-    ech_opts: Optional[Dict[str, Any]] = None # Hysteria2 ECH
-    certificate: Optional[str] = None # mTLS
-    private_key: Optional[str] = None # mTLS
+    fingerprint: Optional[str] = None  # chrome, firefox, randomize...
+    client_fingerprint: Optional[str] = None  # utls fingerprint
+    reality_opts: Optional[Dict[str, str]] = None  # public-key, short-id
+    ech_opts: Optional[Dict[str, Any]] = None  # Hysteria2 ECH
+    certificate: Optional[str] = None  # mTLS
+    private_key: Optional[str] = None  # mTLS
+
 
 class Network(StrEnum):
     TCP = "tcp"
@@ -36,26 +39,29 @@ class Network(StrEnum):
     H2 = "h2"
     GRPC = "grpc"
 
+
 @dataclass
 class TransportSettings:
     network: Network = Network.TCP
-    path: Optional[str] = None # ws/h2/http path
-    headers: Optional[Dict[str, str]] = None # ws/http headers
-    host: Optional[List[str]] = None # h2 host
-    method: Optional[str] = "GET" # http method
+    path: Optional[str] = None  # ws/h2/http path
+    headers: Optional[Dict[str, str]] = None  # ws/http headers
+    host: Optional[List[str]] = None  # h2 host
+    method: Optional[str] = "GET"  # http method
     grpc_service_name: Optional[str] = None
     max_early_data: Optional[int] = None
     early_data_header_name: Optional[str] = None
 
+
 @dataclass
 class SmuxSettings:
     enabled: bool = False
-    protocol: str = "smux" # smux, yamux, h2mux
+    protocol: str = "smux"  # smux, yamux, h2mux
     max_connections: int = 4
     min_streams: int = 4
     max_streams: int = 0
     padding: bool = False
     brutal_opts: Optional[Dict[str, Any]] = None
+
 
 @dataclass
 class BaseNode:
@@ -63,11 +69,12 @@ class BaseNode:
     type: Protocol
     server: str
     port: int
-    udp: bool = True # Default true for most modern proxies
-    ip_version: Optional[str] = None # ipv4, ipv6, dual
+    udp: bool = True  # Default true for most modern proxies
+    ip_version: Optional[str] = None  # ipv4, ipv6, dual
     tfo: bool = False
     mptcp: bool = False
-    dialer_proxy: Optional[str] = None 
+    dialer_proxy: Optional[str] = None
+
 
 @dataclass
 class ShadowsocksNode(BaseNode):
@@ -75,10 +82,11 @@ class ShadowsocksNode(BaseNode):
     password: str = ""
     plugin: Optional[str] = None
     plugin_opts: Optional[Dict[str, Any]] = None
-    
+
     def __post_init__(self):
         if self.type != Protocol.SHADOWSOCKS:
             self.type = Protocol.SHADOWSOCKS
+
 
 @dataclass
 class VmessNode(BaseNode):
@@ -95,10 +103,11 @@ class VmessNode(BaseNode):
         if self.type != Protocol.VMESS:
             self.type = Protocol.VMESS
 
+
 @dataclass
 class VlessNode(BaseNode):
     uuid: str = ""
-    flow: Optional[str] = None # xtls-rprx-vision
+    flow: Optional[str] = None  # xtls-rprx-vision
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -108,26 +117,29 @@ class VlessNode(BaseNode):
         if self.type != Protocol.VLESS:
             self.type = Protocol.VLESS
 
+
 @dataclass
 class TrojanNode(BaseNode):
     password: str = ""
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
-    
+
     def __post_init__(self):
         if self.type != Protocol.TROJAN:
             self.type = Protocol.TROJAN
+
 
 @dataclass
 class Socks5Node(BaseNode):
     username: Optional[str] = None
     password: Optional[str] = None
-    tls: TLSSettings = field(default_factory=TLSSettings) 
-    
+    tls: TLSSettings = field(default_factory=TLSSettings)
+
     def __post_init__(self):
         if self.type != Protocol.SOCKS5:
             self.type = Protocol.SOCKS5
+
 
 @dataclass
 class HttpNode(BaseNode):
@@ -135,24 +147,26 @@ class HttpNode(BaseNode):
     password: Optional[str] = None
     headers: Optional[Dict[str, str]] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
-    
+
     def __post_init__(self):
         if self.type != Protocol.HTTP:
             self.type = Protocol.HTTP
+
 
 @dataclass
 class WireguardNode(BaseNode):
     private_key: str = ""
     public_key: str = ""
     preshared_key: Optional[str] = None
-    endpoint: Optional[str] = None 
+    endpoint: Optional[str] = None
     allowed_ips: List[str] = field(default_factory=lambda: ["0.0.0.0/0", "::/0"])
     reserved: Optional[List[int]] = None
     mtu: Optional[int] = None
-    
+
     def __post_init__(self):
         if self.type != Protocol.WIREGUARD:
             self.type = Protocol.WIREGUARD
+
 
 @dataclass
 class AnyTLSNode(BaseNode):
@@ -161,10 +175,11 @@ class AnyTLSNode(BaseNode):
     idle_session_check_interval: Optional[int] = None
     idle_session_timeout: Optional[int] = None
     min_idle_session: Optional[int] = None
-    
+
     def __post_init__(self):
         if self.type != Protocol.ANYTLS:
             self.type = Protocol.ANYTLS
+
 
 @dataclass
 class Hysteria2Node(BaseNode):
@@ -181,14 +196,15 @@ class Hysteria2Node(BaseNode):
         if self.type != Protocol.HYSTERIA2:
             self.type = Protocol.HYSTERIA2
 
+
 Node = Union[
-    ShadowsocksNode, 
-    VmessNode, 
-    VlessNode, 
-    TrojanNode, 
-    Socks5Node, 
-    HttpNode, 
+    ShadowsocksNode,
+    VmessNode,
+    VlessNode,
+    TrojanNode,
+    Socks5Node,
+    HttpNode,
     WireguardNode,
     AnyTLSNode,
-    Hysteria2Node
+    Hysteria2Node,
 ]
