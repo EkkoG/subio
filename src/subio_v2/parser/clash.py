@@ -40,6 +40,9 @@ class ClashParser(BaseParser):
             logger.error(f"Invalid Clash config format: Expected dict, got {type(data)}. Content preview: {str(content)[:100]}")
             sys.exit(1)
 
+        # CRITICAL: PyYAML can parse simple strings with colons (e.g. "Error: 404 Not Found" or HTML tags)
+        # as dictionaries. For example, "Error: 404" becomes {"Error": "404"}.
+        # Checking for "proxies" key is essential to distinguish valid Clash config from error pages/messages.
         proxies = data.get("proxies")
         if proxies is None:
              # Some providers return just a list of proxies without "proxies" key?
