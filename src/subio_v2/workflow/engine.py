@@ -1,4 +1,6 @@
 import toml
+import json
+import json5
 import requests
 import os
 import sys
@@ -46,13 +48,61 @@ class WorkflowEngine:
     def _load_config(self) -> Dict[str, Any]:
         try:
             with open(self.config_path, "r") as f:
-                return toml.load(f)
+                content = f.read()
         except FileNotFoundError:
             logger.error(f"Config file not found: {self.config_path}")
             sys.exit(1)
         except Exception as e:
-            logger.error(f"Error loading config: {e}")
+            logger.error(f"Error reading config file: {e}")
             sys.exit(1)
+
+        # Determine format by file extension
+        ext = os.path.splitext(self.config_path)[1].lower()
+
+        try:
+            if ext == ".toml":
+                return toml.loads(content)
+            elif ext in (".yaml", ".yml"):
+                return yaml.safe_load(content)
+            elif ext == ".json":
+                return json.loads(content)
+            elif ext == ".json5":
+                return json5.loads(content)
+            else:
+                # Try to auto-detect format
+                return self._parse_config_auto(content)
+        except Exception as e:
+            logger.error(f"Error parsing config ({ext}): {e}")
+            sys.exit(1)
+
+    def _parse_config_auto(self, content: str) -> Dict[str, Any]:
+        """Try to parse config content by attempting multiple formats."""
+        # Try TOML first
+        try:
+            return toml.loads(content)
+        except Exception:
+            pass
+
+        # Try JSON
+        try:
+            return json.loads(content)
+        except Exception:
+            pass
+
+        # Try JSON5
+        try:
+            return json5.loads(content)
+        except Exception:
+            pass
+
+        # Try YAML last (most permissive)
+        try:
+            return yaml.safe_load(content)
+        except Exception:
+            pass
+
+        logger.error("Error parsing config: Unknown format (tried toml, json, json5, yaml)")
+        sys.exit(1)
 
     def run(self):
         logger.info("--- Starting SubIO v2 Workflow ---")
