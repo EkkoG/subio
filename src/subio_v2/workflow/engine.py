@@ -17,11 +17,12 @@ import yaml
 
 
 class WorkflowEngine:
-    def __init__(self, config_path: str, dry_run: bool = False):
+    def __init__(self, config_path: str, dry_run: bool = False, clean_gist: bool = False):
         self.config_path = config_path
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
         self.dry_run = dry_run
+        self.clean_gist = clean_gist
 
         # Parsers and Emitters are now managed by Factory
 
@@ -113,7 +114,7 @@ class WorkflowEngine:
         self._load_providers()
         self._generate_artifacts()
         # Flush all pending uploads (batch upload to gist)
-        flush_uploads(dry_run=self.dry_run)
+        flush_uploads(dry_run=self.dry_run, clean_gist=self.clean_gist)
         logger.success("--- Finished ---")
 
     def _load_providers(self):
@@ -320,7 +321,7 @@ class WorkflowEngine:
 
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
-            upload(final_content, artifact_conf, self.config.get("uploader", []), username, self.dry_run)
+            upload(final_content, artifact_conf, self.config.get("uploader", []), username, self.dry_run, self.clean_gist)
 
     def _read_template(self, path: str) -> str | None:
         # This method is actually not used by TemplateRenderer directly,

@@ -9,10 +9,11 @@ from subio_v2.utils.logger import logger
 class GistBatchUploader:
     """Batch uploader for Gist - collects files and uploads them in one git operation."""
 
-    def __init__(self, dry_run: bool = False):
-        # Structure: {gist_id: {"token": token, "files": {filename: content}}}
+    def __init__(self, dry_run: bool = False, clean_gist: bool = False):
+        # Structure: {gist_id: {"token": token, "files": {filename: content}, "clean": bool}}
         self._pending: Dict[str, Dict[str, Any]] = {}
         self.dry_run = dry_run
+        self.clean_gist = clean_gist
 
     def add(
         self,
@@ -56,7 +57,9 @@ class GistBatchUploader:
 
         # Add to pending
         if gist_id not in self._pending:
-            self._pending[gist_id] = {"token": token, "files": {}}
+            # CLI clean_gist overrides config clean setting
+            clean = self.clean_gist or uploader.get("clean", False)
+            self._pending[gist_id] = {"token": token, "files": {}, "clean": clean}
 
         self._pending[gist_id]["files"][safe_filename] = content
         logger.dim(f"[Upload] Queued {safe_filename} for Gist {gist_id}")
@@ -67,11 +70,11 @@ class GistBatchUploader:
             return
 
         for gist_id, data in self._pending.items():
-            self._upload_batch(gist_id, data["token"], data["files"])
+            self._upload_batch(gist_id, data["token"], data["files"], data.get("clean", False))
 
         self._pending.clear()
 
-    def _upload_batch(self, gist_id: str, token: str, files: Dict[str, str]):
+    def _upload_batch(self, gist_id: str, token: str, files: Dict[str, str], clean: bool = False):
         """Upload multiple files to a single gist in one git operation."""
         if not files:
             return
@@ -91,6 +94,18 @@ class GistBatchUploader:
             subprocess.run(
                 ["git", "clone", clone_url, repo_dir], check=True, capture_output=True
             )
+
+            # Clean existing files if requested
+            if clean:
+                logger.dim(f"[Upload] Cleaning existing files in Gist {gist_id}")
+                for item in os.listdir(repo_dir):
+                    if item == ".git":
+                        continue
+                    item_path = os.path.join(repo_dir, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+                    elif os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
 
             # Write all files
             for filename, content in files.items():
@@ -120,6 +135,7 @@ class GistBatchUploader:
                 # Push (skip in dry-run mode)
                 if self.dry_run:
                     logger.info(f"[Dry-run] Skipping push for Gist {gist_id} ({len(files)} file(s) committed locally)")
+                    logger.info(f"[Dry-run] Repository location: {repo_dir}")
                 else:
                     subprocess.run(
                         ["git", "-C", repo_dir, "push"], check=True, capture_output=True
@@ -143,19 +159,19 @@ class GistBatchUploader:
 _gist_batch_uploader: GistBatchUploader | None = None
 
 
-def get_gist_batch_uploader(dry_run: bool = False) -> GistBatchUploader:
+def get_gist_batch_uploader(dry_run: bool = False, clean_gist: bool = False) -> GistBatchUploader:
     """Get or create the global GistBatchUploader instance."""
     global _gist_batch_uploader
     if _gist_batch_uploader is None:
-        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run)
+        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
     return _gist_batch_uploader
 
 
-def flush_uploads(dry_run: bool = False):
+def flush_uploads(dry_run: bool = False, clean_gist: bool = False):
     """Flush all pending uploads."""
     global _gist_batch_uploader
     if _gist_batch_uploader is None:
-        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run)
+        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
     if _gist_batch_uploader:
         _gist_batch_uploader.flush()
         _gist_batch_uploader = None
@@ -167,6 +183,7 @@ def upload(
     uploader_configs: List[Dict[str, Any]],
     username: str = None,
     dry_run: bool = False,
+    clean_gist: bool = False,
 ):
     """Queue files for upload (will be uploaded when flush_uploads is called)."""
     upload_list = artifact_config.get("upload", [])
@@ -191,7 +208,7 @@ def upload(
 
         if uploader.get("type") == "gist":
             # Add to batch uploader instead of uploading immediately
-            batch_uploader = get_gist_batch_uploader(dry_run=dry_run)
+            batch_uploader = get_gist_batch_uploader(dry_run=dry_run, clean_gist=clean_gist)
             batch_uploader.add(content, artifact_config, upload_item, uploader, username)
         else:
             logger.error(f"[Upload] Unsupported uploader type: {uploader.get('type')}")
