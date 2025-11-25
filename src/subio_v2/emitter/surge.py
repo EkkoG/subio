@@ -24,7 +24,10 @@ class SurgeEmitter(BaseEmitter):
         config_parts = []
 
         if isinstance(node, ShadowsocksNode):
-            config_parts.extend(["ss", node.server, str(node.port)])
+            server = node.server
+            if isinstance(server, list):
+                server = str(server[0])
+            config_parts.extend(["ss", server, str(node.port)])
             config_parts.append(f"encrypt-method={node.cipher}")
             config_parts.append(f"password={node.password}")
             if node.plugin == "obfs":

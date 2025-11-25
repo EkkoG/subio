@@ -16,6 +16,7 @@ class Protocol(StrEnum):
     TUIC = "tuic"
     JUICITY = "juicity"
     ANYTLS = "anytls"
+    SSH = "ssh"
 
 
 @dataclass
@@ -200,6 +201,20 @@ class Hysteria2Node(BaseNode):
             self.type = Protocol.HYSTERIA2
 
 
+@dataclass
+class SSHNode(BaseNode):
+    username: str = ""
+    password: Optional[str] = None
+    private_key: Optional[str] = None
+    private_key_passphrase: Optional[str] = None
+    host_key: Optional[List[str]] = None
+    host_key_algorithms: Optional[List[str]] = None
+
+    def __post_init__(self):
+        if self.type != Protocol.SSH:
+            self.type = Protocol.SSH
+
+
 Node = Union[
     ShadowsocksNode,
     VmessNode,
@@ -210,6 +225,7 @@ Node = Union[
     WireguardNode,
     AnyTLSNode,
     Hysteria2Node,
+    SSHNode,
 ]
 
 
