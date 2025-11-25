@@ -74,6 +74,9 @@ class BaseNode:
     tfo: bool = False
     mptcp: bool = False
     dialer_proxy: Optional[str] = None
+    # Multi-user support: maps username to credential overrides
+    # e.g., {"lisa": {"password": "xxx"}, "vita": {"password": "yyy"}}
+    users: Optional[Dict[str, Dict[str, Any]]] = None
 
 
 @dataclass
@@ -208,3 +211,48 @@ Node = Union[
     AnyTLSNode,
     Hysteria2Node,
 ]
+
+
+def clone_node_for_user(node: Node, username: str) -> Node | None:
+    """
+    Clone a node and apply user-specific credential overrides.
+    Returns None if the node doesn't have the specified user.
+    """
+    if not node.users or username not in node.users:
+        return None
+
+    import copy
+    new_node = copy.deepcopy(node)
+    user_overrides = node.users[username]
+
+    # Apply overrides to the node
+    for key, value in user_overrides.items():
+        if hasattr(new_node, key):
+            setattr(new_node, key, value)
+
+    # Clear users field in the cloned node (no longer needed)
+    new_node.users = None
+
+    return new_node
+
+
+def get_nodes_for_user(nodes: List[Node], username: str) -> List[Node]:
+    """
+    Process a list of nodes for a specific user.
+    - Nodes with users config: clone with user-specific credentials
+    - Nodes without users config: include as-is (shared nodes)
+    """
+    result = []
+    for node in nodes:
+        if node.users:
+            # Multi-user node: clone for specific user
+            if username in node.users:
+                user_node = clone_node_for_user(node, username)
+                if user_node:
+                    result.append(user_node)
+            # If user not in this node's users, skip it
+        else:
+            # Regular node: include as-is
+            import copy
+            result.append(copy.deepcopy(node))
+    return result
