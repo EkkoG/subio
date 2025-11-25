@@ -111,6 +111,38 @@ type = "v2rayn"
 template = "v2rayn.conf"
 providers = ["v2rayn"]
 
+# ============ 多用户示例 ============
+# Multi-user example: 一个配置为多个用户批量生成
+
+[[provider]]
+name = "多用户节点"
+type = "subio"
+file = 'multiuser.yml'
+
+# 方式1: 批量生成多用户配置
+# 会生成: clash-for-alice.yml, clash-for-bob.yml, clash-for-charlie.yml
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "clash"
+template = "clash.yaml"
+providers = ["多用户节点"]
+users = ["alice", "bob", "charlie"]
+[artifact.options]
+work = false
+[[artifact.upload]]
+to = "gist"
+file_name = "clash-for-{user}.yml"
+
+# 方式2: 单用户配置 (混合多用户节点 + 机场节点)
+# [[artifact]]
+# name = "clash-alice-full.yml"
+# type = "clash"
+# template = "clash.yaml"
+# providers = ["多用户节点", "主力机场"]
+# user = "alice"
+# [artifact.options]
+# work = true
+
 [[ruleset]]
 name = 'netflix'
 url = 'https://github.com/blackmatrix7/ios_rule_script/raw/master/rule/Surge/Netflix/Netflix.list'

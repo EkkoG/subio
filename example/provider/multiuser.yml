@@ -1,0 +1,78 @@
+# 多用户节点示例
+# Multi-user nodes example
+
+nodes:
+  # ============ 多用户节点 ============
+  # 只有在 users 列表中的用户才能使用这个节点
+  # 每个用户会得到自己的密码
+  
+  - type: ss
+    name: premium-hk
+    server: hk.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: default_password  # 默认密码（会被覆盖）
+    users:
+      alice:
+        password: alice_hk_password
+      bob:
+        password: bob_hk_password
+      charlie:
+        password: charlie_hk_password
+
+  - type: ss
+    name: premium-jp
+    server: jp.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: default_password
+    users:
+      alice:
+        password: alice_jp_password
+      bob:
+        password: bob_jp_password
+      # 注意：charlie 没有日本节点权限
+
+  - type: trojan
+    name: premium-us
+    server: us.example.com
+    port: 443
+    password: default_password
+    users:
+      alice:
+        password: alice_trojan_pwd
+      bob:
+        password: bob_trojan_pwd
+      charlie:
+        password: charlie_trojan_pwd
+
+  - type: vmess
+    name: premium-sg
+    server: sg.example.com
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000000
+    users:
+      alice:
+        uuid: 11111111-1111-1111-1111-111111111111
+      bob:
+        uuid: 22222222-2222-2222-2222-222222222222
+      charlie:
+        uuid: 33333333-3333-3333-3333-333333333333
+
+  # ============ 共享节点 ============
+  # 没有 users 字段的节点，所有用户都能使用
+  
+  - type: ss
+    name: public-tw
+    server: tw.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: public_password
+
+  - type: http
+    name: public-proxy
+    server: proxy.example.com
+    port: 8080
+    username: guest
+    password: guest123
+
