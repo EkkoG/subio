@@ -1,4 +1,3 @@
-import sys
 import os
 import argparse
 from subio_v2.workflow.engine import WorkflowEngine
@@ -23,7 +22,12 @@ def main():
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Run without uploading (generate files only)",
+        help="Run without pushing to remote (clone, commit locally only)",
+    )
+    parser.add_argument(
+        "--clean-gist",
+        action="store_true",
+        help="Clean all existing files in gist before uploading",
     )
     args = parser.parse_args()
 
@@ -38,7 +42,7 @@ def main():
     if not os.path.exists("dist"):
         os.makedirs("dist")
 
-    engine = WorkflowEngine(config_path, dry_run=args.dry_run)
+    engine = WorkflowEngine(config_path, dry_run=args.dry_run, clean_gist=args.clean_gist)
     engine.run()
 
 if __name__ == "__main__":
