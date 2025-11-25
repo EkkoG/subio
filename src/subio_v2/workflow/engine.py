@@ -113,10 +113,7 @@ class WorkflowEngine:
         self._load_providers()
         self._generate_artifacts()
         # Flush all pending uploads (batch upload to gist)
-        if self.dry_run:
-            logger.info("[Dry-run] Skipping upload")
-        else:
-            flush_uploads()
+        flush_uploads(dry_run=self.dry_run)
         logger.success("--- Finished ---")
 
     def _load_providers(self):
@@ -323,7 +320,7 @@ class WorkflowEngine:
 
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
-            upload(final_content, artifact_conf, self.config.get("uploader", []), username)
+            upload(final_content, artifact_conf, self.config.get("uploader", []), username, self.dry_run)
 
     def _read_template(self, path: str) -> str | None:
         # This method is actually not used by TemplateRenderer directly,
