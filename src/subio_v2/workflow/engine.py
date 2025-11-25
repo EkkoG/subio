@@ -5,7 +5,7 @@ import requests
 import os
 import sys
 from typing import Dict, List, Any
-from subio_v2.model.nodes import Node
+from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.processor.common import FilterProcessor, RenameProcessor
@@ -188,8 +188,6 @@ class WorkflowEngine:
         return None
 
     def _generate_artifacts(self):
-        # options = self.config.get("options", {})
-
         global_filter = None
         if self.config.get("filter"):
             global_filter = FilterProcessor(
@@ -198,43 +196,70 @@ class WorkflowEngine:
             )
 
         for art_conf in self.config.get("artifact", []):
-            name = art_conf.get("name")
-            a_type = art_conf.get("type")
+            # Check for multi-user batch generation
+            users = art_conf.get("users", [])
+            single_user = art_conf.get("user")
 
-            # Gather nodes
-            nodes = []
-            for prov_name in art_conf.get("providers", []):
-                if prov_name in self.providers:
-                    nodes.extend(self.providers[prov_name])
-
-            # Apply Global Filter
-            if global_filter:
-                nodes = global_filter.process(nodes)
-
-            # Emit
-            output = None
-            emitter = EmitterFactory.get_emitter(a_type)
-
-            if emitter:
-                logger.info(
-                    f"Generating artifact: [bold cyan]{name}[/bold cyan] ({a_type}) - {len(nodes)} nodes"
-                )
-                output = emitter.emit(nodes)
-                # Use unified writer
-                self._write_artifact(
-                    name,
-                    output,
-                    art_conf.get("template"),
-                    a_type,
-                    art_conf.get("options", {}),
-                    art_conf,
-                )
+            if users:
+                # Batch generate for multiple users
+                for username in users:
+                    self._generate_single_artifact(art_conf, global_filter, username)
+            elif single_user:
+                # Single user specified
+                self._generate_single_artifact(art_conf, global_filter, single_user)
             else:
-                logger.error(f"Unsupported artifact type: {a_type}")
-                # Continue or exit? Unsupported type is likely a config error.
-                # Let's continue but log error. Or if strict, exit.
-                # V1 logs error.
-                pass
+                # No user specified, generate normally
+                self._generate_single_artifact(art_conf, global_filter, None)
+
+    def _generate_single_artifact(
+        self,
+        art_conf: Dict[str, Any],
+        global_filter: FilterProcessor | None,
+        username: str | None,
+    ):
+        name = art_conf.get("name")
+        a_type = art_conf.get("type")
+
+        # Gather nodes from providers
+        nodes = []
+        for prov_name in art_conf.get("providers", []):
+            if prov_name in self.providers:
+                nodes.extend(self.providers[prov_name])
+
+        # If username specified, process nodes for that user
+        if username:
+            nodes = get_nodes_for_user(nodes, username)
+
+        # Apply Global Filter
+        if global_filter:
+            nodes = global_filter.process(nodes)
+
+        # Emit
+        emitter = EmitterFactory.get_emitter(a_type)
+
+        if emitter:
+            # Determine display name and actual filename
+            display_name = name
+            if username:
+                display_name = f"{name} (user: {username})"
+
+            logger.info(
+                f"Generating artifact: [bold cyan]{display_name}[/bold cyan] ({a_type}) - {len(nodes)} nodes"
+            )
+            output = emitter.emit(nodes)
+
+            # Use unified writer
+            self._write_artifact(
+                name,
+                output,
+                art_conf.get("template"),
+                a_type,
+                art_conf.get("options", {}),
+                art_conf,
+                username,
+            )
+        else:
+            logger.error(f"Unsupported artifact type: {a_type}")
 
     def _write_artifact(
         self,
@@ -244,6 +269,7 @@ class WorkflowEngine:
         artifact_type: str = None,
         artifact_options: Dict[str, Any] = None,
         artifact_conf: Dict[str, Any] = None,
+        username: str = None,
     ):
         final_content = ""
 
@@ -264,6 +290,7 @@ class WorkflowEngine:
                 "proxies": raw_content_str,  # For Clash, this is the proxies list YAML. For Surge, this is the text block.
                 "global_options": self.config.get("options", {}),
                 "options": artifact_options or {},
+                "user": username,  # Add username to template context
             }
 
             if is_yaml_data:
@@ -279,12 +306,17 @@ class WorkflowEngine:
             else:
                 final_content = raw_content_str
 
-        with open(f"dist/{filename}", "w") as f:
+        # Replace {user} placeholder in filename
+        actual_filename = filename
+        if username:
+            actual_filename = filename.replace("{user}", username)
+
+        with open(f"dist/{actual_filename}", "w") as f:
             f.write(final_content)
 
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
-            upload(final_content, artifact_conf, self.config.get("uploader", []))
+            upload(final_content, artifact_conf, self.config.get("uploader", []), username)
 
     def _read_template(self, path: str) -> str | None:
         # This method is actually not used by TemplateRenderer directly,

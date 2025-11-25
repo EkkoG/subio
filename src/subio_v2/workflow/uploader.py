@@ -19,6 +19,7 @@ class GistBatchUploader:
         artifact_config: Dict[str, Any],
         upload_item: Dict[str, Any],
         uploader: Dict[str, Any],
+        username: str = None,
     ):
         """Add a file to the pending upload queue."""
         # Resolve Token
@@ -41,6 +42,11 @@ class GistBatchUploader:
             return
 
         file_name = upload_item.get("file_name") or artifact_config.get("name")
+        
+        # Replace {user} placeholder if username is provided
+        if username:
+            file_name = file_name.replace("{user}", username)
+        
         # Validate filename
         safe_filename = os.path.basename(file_name)
         if safe_filename != file_name or ".." in safe_filename:
@@ -153,6 +159,7 @@ def upload(
     content: str,
     artifact_config: Dict[str, Any],
     uploader_configs: List[Dict[str, Any]],
+    username: str = None,
 ):
     """Queue files for upload (will be uploaded when flush_uploads is called)."""
     upload_list = artifact_config.get("upload", [])
@@ -178,6 +185,6 @@ def upload(
         if uploader.get("type") == "gist":
             # Add to batch uploader instead of uploading immediately
             batch_uploader = get_gist_batch_uploader()
-            batch_uploader.add(content, artifact_config, upload_item, uploader)
+            batch_uploader.add(content, artifact_config, upload_item, uploader, username)
         else:
             logger.error(f"[Upload] Unsupported uploader type: {uploader.get('type')}")

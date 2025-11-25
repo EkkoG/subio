@@ -103,6 +103,7 @@ class ClashParser(BaseParser):
             "tfo": data.get("tfo", False),
             "mptcp": data.get("mptcp", False),
             "dialer_proxy": data.get("dialer-proxy"),
+            "users": data.get("users"),  # Multi-user support
         }
 
     def _parse_tls(self, data: Dict[str, Any]) -> TLSSettings:
