@@ -11,6 +11,7 @@ from subio_v2.model.nodes import (
     WireguardNode,
     AnyTLSNode,
     Hysteria2Node,
+    SSHNode,
     Protocol,
     Network,
 )
@@ -165,6 +166,19 @@ class ClashEmitter(BaseEmitter):
                 base["obfs-password"] = node.obfs_password
 
             self._add_tls(base, node.tls)
+
+        elif isinstance(node, SSHNode):
+            base["username"] = node.username
+            if node.password:
+                base["password"] = node.password
+            if node.private_key:
+                base["private-key"] = node.private_key
+            if node.private_key_passphrase:
+                base["private-key-passphrase"] = node.private_key_passphrase
+            if node.host_key:
+                base["host-key"] = node.host_key
+            if node.host_key_algorithms:
+                base["host-key-algorithms"] = node.host_key_algorithms
 
         return base
 

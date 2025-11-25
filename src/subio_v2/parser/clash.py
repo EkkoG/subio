@@ -13,6 +13,7 @@ from subio_v2.model.nodes import (
     WireguardNode,
     AnyTLSNode,
     Hysteria2Node,
+    SSHNode,
     Protocol,
     TLSSettings,
     TransportSettings,
@@ -86,6 +87,8 @@ class ClashParser(BaseParser):
                 return self._parse_anytls(data)
             elif node_type == "hysteria2":
                 return self._parse_hysteria2(data)
+            elif node_type == "ssh":
+                return self._parse_ssh(data)
         except Exception as e:
             # Log error but continue
             logger.warning(f"Error parsing node {data.get('name')}: {e}")
@@ -263,5 +266,17 @@ class ClashParser(BaseParser):
             obfs=data.get("obfs"),
             obfs_password=data.get("obfs-password"),
             tls=tls,
+            **self._base_fields(data),
+        )
+
+    def _parse_ssh(self, data: Dict[str, Any]) -> SSHNode:
+        return SSHNode(
+            type=Protocol.SSH,
+            username=data.get("username", ""),
+            password=data.get("password"),
+            private_key=data.get("private-key"),
+            private_key_passphrase=data.get("private-key-passphrase"),
+            host_key=data.get("host-key"),
+            host_key_algorithms=data.get("host-key-algorithms"),
             **self._base_fields(data),
         )
