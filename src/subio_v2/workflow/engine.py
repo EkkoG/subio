@@ -17,10 +17,11 @@ import yaml
 
 
 class WorkflowEngine:
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str, dry_run: bool = False):
         self.config_path = config_path
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
+        self.dry_run = dry_run
 
         # Parsers and Emitters are now managed by Factory
 
@@ -105,11 +106,17 @@ class WorkflowEngine:
         sys.exit(1)
 
     def run(self):
-        logger.info("--- Starting SubIO v2 Workflow ---")
+        if self.dry_run:
+            logger.info("--- Starting SubIO v2 Workflow (DRY-RUN) ---")
+        else:
+            logger.info("--- Starting SubIO v2 Workflow ---")
         self._load_providers()
         self._generate_artifacts()
         # Flush all pending uploads (batch upload to gist)
-        flush_uploads()
+        if self.dry_run:
+            logger.info("[Dry-run] Skipping upload")
+        else:
+            flush_uploads()
         logger.success("--- Finished ---")
 
     def _load_providers(self):
