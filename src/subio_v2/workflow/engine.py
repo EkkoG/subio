@@ -11,7 +11,7 @@ from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.processor.common import FilterProcessor, RenameProcessor
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.ruleset import load_rulesets, load_snippets
-from subio_v2.workflow.uploader import upload
+from subio_v2.workflow.uploader import upload, flush_uploads
 from subio_v2.utils.logger import logger
 import yaml
 
@@ -108,6 +108,8 @@ class WorkflowEngine:
         logger.info("--- Starting SubIO v2 Workflow ---")
         self._load_providers()
         self._generate_artifacts()
+        # Flush all pending uploads (batch upload to gist)
+        flush_uploads()
         logger.success("--- Finished ---")
 
     def _load_providers(self):
