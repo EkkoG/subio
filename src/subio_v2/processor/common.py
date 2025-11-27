@@ -12,9 +12,12 @@ class FilterProcessor(Processor):
     def process(self, nodes: List[Node]) -> List[Node]:
         result = []
         for node in nodes:
-            if self.exclude and self.exclude.search(node.name):
+            # Use original_name if available, otherwise use current name
+            name_to_match = node.original_name if node.original_name is not None else node.name
+
+            if self.exclude and self.exclude.search(name_to_match):
                 continue
-            if self.include and not self.include.search(node.name):
+            if self.include and not self.include.search(name_to_match):
                 continue
             result.append(node)
         return result
@@ -30,6 +33,10 @@ class RenameProcessor(Processor):
 
     def process(self, nodes: List[Node]) -> List[Node]:
         for node in nodes:
+            # Save original name before any modifications (only if not already saved)
+            if node.original_name is None:
+                node.original_name = node.name
+
             name = node.name
 
             # Replacements

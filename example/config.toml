@@ -2,7 +2,10 @@ log_level = "DEBUG"
 
 [options]
 work_filter = '.*(香港|Hong Kong|HK|Japan|美国|United States|US).*(?<!\.)(1|2|3|4)|work|home-trojan-v6|ekko.*|dler.*'
-[filter]
+[filters]
+# 过滤使用原始名称匹配（重命名前的名称）
+# 例如：原始名称 "剩余流量: 100GB" 被重命名为 "备用机场-剩余流量: 100GB"
+#       exclude 仍然匹配原始名称 "剩余流量: 100GB"
 exclude = '.*剩余流量|距离下次|套餐到期.*'
 # include = '.*'
 
