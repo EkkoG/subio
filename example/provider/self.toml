@@ -1,4 +1,4 @@
-[[nodes]]
+[[proxies]]
 type = 'http'
 name = 'ekko-https-ahhh'
 server = 'example.com'
@@ -7,7 +7,7 @@ tls = true
 username = 'ekko'
 password = 'ahh'
 
-[[nodes]]
+[[proxies]]
 type = 'http'
 name = 'ekko-https-ahhh2222'
 server = 'example.com'
