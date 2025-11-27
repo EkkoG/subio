@@ -4,20 +4,20 @@ proxies:
 proxy-groups:
 - type: select
   name: 默认出口
-  proxies: {{ proxies_names | render }}
+  proxies: {{ proxies_names }}
 
 - type: select
   name: 手动选择2
-  proxies: {{ filter.hk_filter(proxies_names) | render }}
+  proxies: {{ filter.hk_filter(proxies_names) }}
 
 - type: select
   name: 手动选择3
-  proxies: {{ filter.combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us') | render }}
+  proxies: {{ filter.combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us') }}
 
 rules:
-{{ remote_netflix("DIRECT") | render }}
-{{ remote_apple_direct("DIRECT") | render }}
-{{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') | render }}
+{{ remote_netflix("DIRECT") }}
+{{ remote_apple_direct("DIRECT") }}
+{{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') }}
 
 - GEOIP,CN,DIRECT
 - MATCH,默认出口
