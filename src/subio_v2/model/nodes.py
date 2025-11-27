@@ -78,6 +78,8 @@ class BaseNode:
     # Multi-user support: maps username to credential overrides
     # e.g., {"lisa": {"password": "xxx"}, "vita": {"password": "yyy"}}
     users: Optional[Dict[str, Dict[str, Any]]] = None
+    # Original name before any rename processing (for filtering)
+    original_name: Optional[str] = None
 
 
 @dataclass

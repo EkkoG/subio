@@ -194,10 +194,10 @@ class WorkflowEngine:
 
     def _generate_artifacts(self):
         global_filter = None
-        if self.config.get("filter"):
+        if self.config.get("filters"):
             global_filter = FilterProcessor(
-                include=self.config["filter"].get("include"),
-                exclude=self.config["filter"].get("exclude"),
+                include=self.config["filters"].get("include"),
+                exclude=self.config["filters"].get("exclude"),
             )
 
         for art_conf in self.config.get("artifact", []):
