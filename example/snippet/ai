@@ -1,0 +1,3 @@
+rule
+DOMAIN-KEYWORD,cursor,{{ rule }}
+

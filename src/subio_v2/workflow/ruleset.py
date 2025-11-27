@@ -54,13 +54,16 @@ def parse_rule_line(rule: str) -> str:
     return f"{rule},{{{{ rule }}}}"
 
 
+RULESET_MARKER = "__SUBIO_RULESET__"
+
+
 def wrap_with_jinja2_macro(text: str, name: str) -> str:
     lines = text.split("\n")
     new_lines = map(parse_rule_line, lines)
     new_text = "\n".join([line for line in new_lines if line])
 
-    return "{{% macro {}(rule) -%}}\n{}\n{{%- endmacro -%}}".format(
-        f"remote_{name}", new_text
+    return "{{% macro {}(rule) -%}}{}\n{}\n{{%- endmacro -%}}".format(
+        f"remote_{name}", RULESET_MARKER, new_text
     )
 
 
@@ -107,7 +110,7 @@ def load_snippets(snippet_dir: str) -> str:
 
             content = "\n".join(lines[1:])
             macro = (
-                f"{{% macro {snippet_file}({args}) -%}}\n{content}\n{{%- endmacro -%}}"
+                f"{{% macro {snippet_file}({args}) -%}}{RULESET_MARKER}\n{content}\n{{%- endmacro -%}}"
             )
             macros.append(macro)
         except Exception as e:

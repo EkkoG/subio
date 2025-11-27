@@ -5,6 +5,7 @@ import sys
 from typing import Any, Dict
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.filters import all_filters
+from subio_v2.workflow.ruleset import RULESET_MARKER
 import os
 
 
@@ -35,29 +36,12 @@ class TemplateRenderer:
         if not isinstance(value, str):
             return str(value)
 
-        # Check if it looks like a ruleset (multiline with rule patterns)
-        if "\n" in value and self._is_ruleset_content(value):
-            return self._render_ruleset(value)
+        # Check if it's a ruleset (marked by RULESET_MARKER from snippet/remote ruleset)
+        if value.startswith(RULESET_MARKER):
+            content = value[len(RULESET_MARKER):]
+            return self._render_ruleset(content)
 
         return value
-
-    def _is_ruleset_content(self, value: str) -> bool:
-        """Check if value looks like ruleset content."""
-        rule_prefixes = (
-            "DOMAIN,", "DOMAIN-SUFFIX,", "DOMAIN-KEYWORD,",
-            "IP-CIDR,", "IP-CIDR6,", "GEOIP,",
-            "USER-AGENT,", "PROCESS-NAME,", "IP-ASN,",
-            "URL-REGEX,", "AND,", "OR,", "NOT,",
-        )
-        lines = value.split("\n")
-        rule_count = 0
-        for line in lines:
-            line = line.strip()
-            if line.startswith(rule_prefixes):
-                rule_count += 1
-                if rule_count >= 2:
-                    return True
-        return False
 
     def _render_ruleset(self, value: str) -> str:
         """Render ruleset content based on artifact type."""
