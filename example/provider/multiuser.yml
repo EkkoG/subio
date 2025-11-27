@@ -76,3 +76,34 @@ proxies:
     username: guest
     password: guest123
 
+  - type: ssh
+    name: ssh-server
+    server: ssh.example.com
+    port: 22
+    username: admin
+    private-key: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtz
+      c2gtZWQyNTUxOQAAACBbKjASFKj2f8Jv3RLqN9H6D2EXAMPLE1234567890ABC==
+      AAAAQCiBBT8EXAMPLE1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
+      ijklmnopqrstuvwxyz1234567890+/EXAMPLE==
+      -----END OPENSSH PRIVATE KEY-----
+    private-key-passphrase: optional_passphrase
+
+  # SSH 节点也支持多用户（每个用户使用不同的私钥）
+  - type: ssh
+    name: ssh-multiuser
+    server: ssh2.example.com
+    port: 22
+    username: default_user
+    users:
+      alice:
+        username: alice
+        private-key: |
+          -----BEGIN OPENSSH PRIVATE KEY-----
+          alice_private_key_content_here
+          -----END OPENSSH PRIVATE KEY-----
+      bob:
+        username: bob
+        password: bob_ssh_password
+
