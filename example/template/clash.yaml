@@ -18,6 +18,7 @@ rules:
 {{ remote_netflix("DIRECT") }}
 {{ remote_apple_direct("DIRECT") }}
 {{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') }}
+{{ ai('DIRECT') }}
 
 - GEOIP,CN,DIRECT
 - MATCH,默认出口
