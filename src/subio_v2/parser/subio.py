@@ -43,8 +43,8 @@ class SubioParser(BaseParser):
             logger.error("Error parsing subio provider: Unknown format")
             sys.exit(1)
 
-        if isinstance(data, dict) and "nodes" in data:
-            return self.clash_parser.parse({"proxies": data["nodes"]})
+        if isinstance(data, dict) and "proxies" in data:
+            return self.clash_parser.parse({"proxies": data["proxies"]})
         else:
-            logger.error("Error: subio provider does not contain 'nodes' list.")
+            logger.error("Error: subio provider does not contain 'proxies' list.")
             sys.exit(1)

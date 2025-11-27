@@ -1,7 +1,7 @@
 # 多用户节点示例
 # Multi-user nodes example
 
-nodes:
+proxies:
   # ============ 多用户节点 ============
   # 只有在 users 列表中的用户才能使用这个节点
   # 每个用户会得到自己的密码
