@@ -291,10 +291,11 @@ class WorkflowEngine:
             raw_content_str = content
 
         if template_path:
+            # Merge global_options into options (artifact options override global)
+            merged_options = {**self.config.get("options", {}), **(artifact_options or {})}
             context = {
                 "proxies": raw_content_str,  # For Clash, this is the proxies list YAML. For Surge, this is the text block.
-                "global_options": self.config.get("options", {}),
-                "options": artifact_options or {},
+                "options": merged_options,
                 "user": username,  # Add username to template context
             }
 
