@@ -6,6 +6,7 @@ from typing import Any, Dict
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.filters import all_filters
 from subio_v2.workflow.ruleset import RULESET_MARKER
+from subio_v2.workflow.rules import parse_rules, render_rules
 import os
 
 
@@ -45,31 +46,9 @@ class TemplateRenderer:
 
     def _render_ruleset(self, value: str) -> str:
         """Render ruleset content based on artifact type."""
-        if self._artifact_type not in ["clash", "clash-meta", "stash"]:
-            return value
-
-        # Process ruleset string for Clash
-        lines = value.split("\n")
-        filtered_lines = []
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("#") or line.startswith("//"):
-                filtered_lines.append(line)
-                continue
-            if "USER-AGENT" in line:
-                continue
-            if "IP-ASN" in line:
-                continue
-
-            # V1 logic: check no-resolve
-            if ",no-resolve" in line:
-                line = line.replace(",no-resolve", "")
-
-            filtered_lines.append(f"- {line}")
-
-        return "\n".join(filtered_lines)
+        platform = self._artifact_type or "clash-meta"
+        rules = parse_rules(value)
+        return render_rules(rules, platform)
 
     def render(
         self,
