@@ -1,7 +1,7 @@
 """
 测试 filters.py 的过滤功能
 """
-import pytest
+
 from dataclasses import dataclass
 
 from subio_v2.workflow.filters import (
@@ -30,6 +30,7 @@ from subio_v2.workflow.filters import (
 @dataclass(frozen=True)
 class MockNode:
     """模拟节点对象（frozen 使其可哈希）"""
+
     name: str
 
 
@@ -237,7 +238,7 @@ class TestWithMockNodes:
             MockNode("日本-01"),
             MockNode("美国-01"),
         ]
-        
+
         # 过滤香港节点
         hk_nodes = hk_filter(nodes)
         assert len(hk_nodes) == 2
@@ -250,7 +251,7 @@ class TestWithMockNodes:
             MockNode("日本-01"),
             MockNode("剩余流量: 100GB"),
         ]
-        
+
         # 排除流量信息节点
         result = exclude(nodes, "剩余流量")
         assert len(result) == 2
@@ -264,7 +265,7 @@ class TestWithMockNodes:
             MockNode("日本-IPLC"),
             MockNode("日本-普通"),
         ]
-        
+
         # 香港 AND IPLC
         result = combine(
             nodes,
@@ -278,6 +279,7 @@ class TestWithMockNodes:
 
 
 # ============== 新 API 测试 ==============
+
 
 class TestFactoryFunctions:
     """测试工厂函数"""
@@ -429,4 +431,3 @@ class TestNewAPIWithMockNodes:
         result = chain(F.hk, excluding("普通"))(nodes)
         assert len(result) == 1
         assert result[0].name == "香港-IPLC"
-

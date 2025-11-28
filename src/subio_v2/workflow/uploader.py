@@ -44,11 +44,11 @@ class GistBatchUploader:
             return
 
         file_name = upload_item.get("file_name") or artifact_config.get("name")
-        
+
         # Replace {user} placeholder if username is provided
         if username:
             file_name = file_name.replace("{user}", username)
-        
+
         # Validate filename
         safe_filename = os.path.basename(file_name)
         if safe_filename != file_name or ".." in safe_filename:
@@ -70,11 +70,15 @@ class GistBatchUploader:
             return
 
         for gist_id, data in self._pending.items():
-            self._upload_batch(gist_id, data["token"], data["files"], data.get("clean", False))
+            self._upload_batch(
+                gist_id, data["token"], data["files"], data.get("clean", False)
+            )
 
         self._pending.clear()
 
-    def _upload_batch(self, gist_id: str, token: str, files: Dict[str, str], clean: bool = False):
+    def _upload_batch(
+        self, gist_id: str, token: str, files: Dict[str, str], clean: bool = False
+    ):
         """Upload multiple files to a single gist in one git operation."""
         if not files:
             return
@@ -134,13 +138,17 @@ class GistBatchUploader:
                 )
                 # Push (skip in dry-run mode)
                 if self.dry_run:
-                    logger.info(f"[Dry-run] Skipping push for Gist {gist_id} ({len(files)} file(s) committed locally)")
+                    logger.info(
+                        f"[Dry-run] Skipping push for Gist {gist_id} ({len(files)} file(s) committed locally)"
+                    )
                     logger.info(f"[Dry-run] Repository location: {repo_dir}")
                 else:
                     subprocess.run(
                         ["git", "-C", repo_dir, "push"], check=True, capture_output=True
                     )
-                    logger.success(f"[Upload] {len(files)} file(s) updated in Gist {gist_id}")
+                    logger.success(
+                        f"[Upload] {len(files)} file(s) updated in Gist {gist_id}"
+                    )
             else:
                 logger.dim(f"[Upload] No changes for Gist {gist_id}")
 
@@ -159,7 +167,9 @@ class GistBatchUploader:
 _gist_batch_uploader: GistBatchUploader | None = None
 
 
-def get_gist_batch_uploader(dry_run: bool = False, clean_gist: bool = False) -> GistBatchUploader:
+def get_gist_batch_uploader(
+    dry_run: bool = False, clean_gist: bool = False
+) -> GistBatchUploader:
     """Get or create the global GistBatchUploader instance."""
     global _gist_batch_uploader
     if _gist_batch_uploader is None:
@@ -208,7 +218,11 @@ def upload(
 
         if uploader.get("type") == "gist":
             # Add to batch uploader instead of uploading immediately
-            batch_uploader = get_gist_batch_uploader(dry_run=dry_run, clean_gist=clean_gist)
-            batch_uploader.add(content, artifact_config, upload_item, uploader, username)
+            batch_uploader = get_gist_batch_uploader(
+                dry_run=dry_run, clean_gist=clean_gist
+            )
+            batch_uploader.add(
+                content, artifact_config, upload_item, uploader, username
+            )
         else:
             logger.error(f"[Upload] Unsupported uploader type: {uploader.get('type')}")

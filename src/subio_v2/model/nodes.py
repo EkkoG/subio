@@ -240,6 +240,7 @@ def clone_node_for_user(node: Node, username: str) -> Node | None:
         return None
 
     import copy
+
     new_node = copy.deepcopy(node)
     user_overrides = node.users[username]
 
@@ -272,5 +273,6 @@ def get_nodes_for_user(nodes: List[Node], username: str) -> List[Node]:
         else:
             # Regular node: include as-is
             import copy
+
             result.append(copy.deepcopy(node))
     return result

@@ -10,14 +10,21 @@ from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.processor.common import FilterProcessor, RenameProcessor
 from subio_v2.workflow.template import TemplateRenderer
-from subio_v2.workflow.ruleset import load_rulesets, load_snippets, merge_stores, RuleSetStore
+from subio_v2.workflow.ruleset import (
+    load_rulesets,
+    load_snippets,
+    merge_stores,
+    RuleSetStore,
+)
 from subio_v2.workflow.uploader import upload, flush_uploads
 from subio_v2.utils.logger import logger
 import yaml
 
 
 class WorkflowEngine:
-    def __init__(self, config_path: str, dry_run: bool = False, clean_gist: bool = False):
+    def __init__(
+        self, config_path: str, dry_run: bool = False, clean_gist: bool = False
+    ):
         self.config_path = config_path
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
@@ -105,7 +112,9 @@ class WorkflowEngine:
         except Exception:
             pass
 
-        logger.error("Error parsing config: Unknown format (tried toml, json, json5, yaml)")
+        logger.error(
+            "Error parsing config: Unknown format (tried toml, json, json5, yaml)"
+        )
         sys.exit(1)
 
     def run(self):
@@ -164,7 +173,9 @@ class WorkflowEngine:
                 resp = requests.get(conf["url"], headers=headers, timeout=10)
                 resp.raise_for_status()
                 content = resp.text
-                logger.dim(f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}...")
+                logger.dim(
+                    f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                )
                 return content
             except Exception as e:
                 logger.error(f"Fetch error: {e}")
@@ -180,14 +191,18 @@ class WorkflowEngine:
             if os.path.exists(abs_path):
                 with open(abs_path, "r") as f:
                     content = f.read()
-                    logger.dim(f"Read file {path} (first 100 chars): {content[:100]}...")
+                    logger.dim(
+                        f"Read file {path} (first 100 chars): {content[:100]}..."
+                    )
                     return content
             # Check 'provider' subfolder
             abs_path = os.path.join(config_dir, "provider", path)
             if os.path.exists(abs_path):
                 with open(abs_path, "r") as f:
                     content = f.read()
-                    logger.dim(f"Read file {path} (first 100 chars): {content[:100]}...")
+                    logger.dim(
+                        f"Read file {path} (first 100 chars): {content[:100]}..."
+                    )
                     return content
 
             logger.error(f"File not found: {path}")
@@ -294,7 +309,10 @@ class WorkflowEngine:
 
         if template_path:
             # Merge global_options into options (artifact options override global)
-            merged_options = {**self.config.get("options", {}), **(artifact_options or {})}
+            merged_options = {
+                **self.config.get("options", {}),
+                **(artifact_options or {}),
+            }
             context = {
                 "proxies": raw_content_str,  # For Clash, this is the proxies list YAML. For Surge, this is the text block.
                 "options": merged_options,
@@ -324,7 +342,14 @@ class WorkflowEngine:
 
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
-            upload(final_content, artifact_conf, self.config.get("uploader", []), username, self.dry_run, self.clean_gist)
+            upload(
+                final_content,
+                artifact_conf,
+                self.config.get("uploader", []),
+                username,
+                self.dry_run,
+                self.clean_gist,
+            )
 
     def _read_template(self, path: str) -> str | None:
         # This method is actually not used by TemplateRenderer directly,

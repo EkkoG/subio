@@ -35,15 +35,20 @@ def main():
     config_path = args.config or find_default_config()
 
     if not config_path or not os.path.exists(config_path):
-        logger.error(f"Config file not found. Looked for: {', '.join(f'config{ext}' for ext in CONFIG_EXTENSIONS)}")
+        logger.error(
+            f"Config file not found. Looked for: {', '.join(f'config{ext}' for ext in CONFIG_EXTENSIONS)}"
+        )
         return
 
     # Ensure dist exists
     if not os.path.exists("dist"):
         os.makedirs("dist")
 
-    engine = WorkflowEngine(config_path, dry_run=args.dry_run, clean_gist=args.clean_gist)
+    engine = WorkflowEngine(
+        config_path, dry_run=args.dry_run, clean_gist=args.clean_gist
+    )
     engine.run()
+
 
 if __name__ == "__main__":
     main()

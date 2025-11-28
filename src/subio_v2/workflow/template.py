@@ -5,6 +5,7 @@
 
 macro 内容根据目标平台动态生成，由 Jinja2 完成渲染
 """
+
 import jinja2
 import yaml
 import sys
@@ -41,13 +42,13 @@ class TemplateRenderer:
     ) -> str:
         """
         渲染模板
-        
+
         Args:
             template_name: 模板文件名
             context: 模板上下文变量
             artifact_type: 目标平台类型
             rulesets: RuleSetStore 对象
-        
+
         Returns:
             渲染后的字符串
         """
@@ -64,7 +65,7 @@ class TemplateRenderer:
             macros = ""
             if rulesets:
                 macros = rulesets.generate_macros(platform)
-            
+
             # 将 macros 拼接到模板前面
             full_source = f"{macros}\n{template_source}" if macros else template_source
 
