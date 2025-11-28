@@ -128,7 +128,7 @@ file = 'multiuser.yml'
 name = "clash-for-{user}.yml"
 type = "clash"
 template = "clash.yaml"
-providers = ["多用户节点"]
+providers = ["多用户节点", "自建节点"]
 users = ["alice", "bob", "charlie"]
 [artifact.options]
 work = false
@@ -136,12 +136,12 @@ work = false
 to = "gist"
 file_name = "clash-for-{user}.yml"
 
-# 方式2: 单用户配置 (混合多用户节点 + 机场节点)
+# 方式2: 单用户配置 (混合多用户节点 + 自建节点 + 机场节点)
 [[artifact]]
 name = "clash-alice-full.yml"
 type = "clash"
 template = "clash.yaml"
-providers = ["多用户节点", "主力机场"]
+providers = ["多用户节点", "自建节点", "主力机场"]
 user = "alice"
 [artifact.options]
 work = true

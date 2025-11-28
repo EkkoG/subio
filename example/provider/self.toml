@@ -1,17 +1,129 @@
+# 自建节点示例
+# 包含多种地区和类型，用于演示过滤器功能
+
+# ============ 香港节点 ============
 [[proxies]]
-type = 'http'
-name = 'ekko-https-ahhh'
-server = 'example.com'
-port = 4443
-tls = true
-username = 'ekko'
-password = 'ahh'
+type = 'ss'
+name = '香港-IPLC-01'
+server = 'hk1.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
 
 [[proxies]]
+type = 'ss'
+name = '香港-普通-02'
+server = 'hk2.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'trojan'
+name = 'HK-Premium-03'
+server = 'hk3.example.com'
+port = 443
+password = 'trojan_password'
+
+# ============ 日本节点 ============
+[[proxies]]
+type = 'vmess'
+name = '日本-IPLC-01'
+server = 'jp1.example.com'
+port = 443
+uuid = '11111111-1111-1111-1111-111111111111'
+
+[[proxies]]
+type = 'ss'
+name = '日本-普通-02'
+server = 'jp2.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'trojan'
+name = 'JP-Premium-03'
+server = 'jp3.example.com'
+port = 443
+password = 'trojan_password'
+
+# ============ 美国节点 ============
+[[proxies]]
+type = 'ss'
+name = '美国-IPLC-01'
+server = 'us1.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'vmess'
+name = 'US-Standard-02'
+server = 'us2.example.com'
+port = 443
+uuid = '22222222-2222-2222-2222-222222222222'
+
+[[proxies]]
+type = 'trojan'
+name = 'United States-03'
+server = 'us3.example.com'
+port = 443
+password = 'trojan_password'
+
+# ============ 新加坡节点 ============
+[[proxies]]
+type = 'ss'
+name = '新加坡-IPLC-01'
+server = 'sg1.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'vmess'
+name = 'Singapore-02'
+server = 'sg2.example.com'
+port = 443
+uuid = '33333333-3333-3333-3333-333333333333'
+
+# ============ 台湾节点 ============
+[[proxies]]
+type = 'ss'
+name = '台湾-01'
+server = 'tw1.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'trojan'
+name = 'TW-Premium-02'
+server = 'tw2.example.com'
+port = 443
+password = 'trojan_password'
+
+# ============ 韩国节点 ============
+[[proxies]]
+type = 'ss'
+name = '韩国-01'
+server = 'kr1.example.com'
+port = 8388
+cipher = 'aes-256-gcm'
+password = 'password123'
+
+[[proxies]]
+type = 'vmess'
+name = 'Korea-Premium-02'
+server = 'kr2.example.com'
+port = 443
+uuid = '44444444-4444-4444-4444-444444444444'
+
+# ============ 特殊节点 ============
+[[proxies]]
 type = 'http'
-name = 'ekko-https-ahhh2222'
-server = 'example.com'
-port = 4443
-tls = true
-username = 'ekko'
-password = 'ahh'
+name = 'proxy-备用'
+server = 'backup.example.com'
+port = 8080
+username = 'user'
+password = 'pass'
