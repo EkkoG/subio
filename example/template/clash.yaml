@@ -7,12 +7,16 @@ proxy-groups:
   proxies: {{ proxies_names }}
 
 - type: select
-  name: 手动选择2
+  name: 香港节点
   proxies: {{ filter.hk_filter(proxies_names) }}
 
 - type: select
-  name: 手动选择3
-  proxies: {{ filter.combine(proxies_names, filter.hk_filter, filter.keyWord_filter, None, 'us') }}
+  name: 港日美
+  proxies: {{ filter.union(filter.hk_filter, filter.jp_filter, filter.us_filter)(proxies_names) }}
+
+- type: select
+  name: 香港IPLC
+  proxies: {{ filter.intersect(filter.hk_filter, filter.keyword('IPLC'))(proxies_names) }}
 
 rules:
 {{ remote_netflix("DIRECT") }}
