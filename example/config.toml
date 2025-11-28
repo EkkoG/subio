@@ -53,6 +53,11 @@ type = "subio"
 file = 'self.toml'
 privacy_endpoint = 'ss1'
 
+[[provider]]
+name = "JSON5节点"
+type = "subio"
+file = 'nodes.json5'
+
 [[artifact]]
 name = "ekko-meta.yaml"
 type = "clash-meta"
@@ -141,7 +146,7 @@ file_name = "clash-for-{user}.yml"
 name = "clash-alice-full.yml"
 type = "clash"
 template = "clash.yaml"
-providers = ["多用户节点", "自建节点", "主力机场"]
+providers = ["多用户节点", "自建节点", "JSON5节点", "主力机场"]
 user = "alice"
 [artifact.options]
 work = true

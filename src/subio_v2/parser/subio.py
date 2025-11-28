@@ -1,5 +1,6 @@
 import toml
 import json
+import json5
 import yaml
 import sys
 from typing import Any, List
@@ -10,6 +11,16 @@ from subio_v2.utils.logger import logger
 
 
 class SubioParser(BaseParser):
+    """
+    Subio 格式解析器
+    
+    支持的格式（按优先级）：
+    1. TOML
+    2. JSON
+    3. JSON5 (支持注释、尾逗号等)
+    4. YAML
+    """
+    
     def __init__(self):
         self.clash_parser = ClashParser()
 
@@ -19,6 +30,7 @@ class SubioParser(BaseParser):
             sys.exit(1)
 
         data = None
+        
         # Try TOML first
         try:
             data = toml.loads(content)
@@ -32,6 +44,13 @@ class SubioParser(BaseParser):
             except Exception:
                 pass
 
+        # Try JSON5 (supports comments, trailing commas, etc.)
+        if data is None:
+            try:
+                data = json5.loads(content)
+            except Exception:
+                pass
+
         # Try YAML
         if data is None:
             try:
@@ -40,7 +59,7 @@ class SubioParser(BaseParser):
                 pass
 
         if data is None:
-            logger.error("Error parsing subio provider: Unknown format")
+            logger.error("Error parsing subio provider: Unknown format (tried toml, json, json5, yaml)")
             sys.exit(1)
 
         if isinstance(data, dict) and "proxies" in data:

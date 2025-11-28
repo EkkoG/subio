@@ -1,0 +1,30 @@
+{
+  // JSON5 格式示例
+  // 支持注释、尾逗号、单引号等特性
+  "proxies": [
+    {
+      "type": "ss",
+      "name": "JSON5-香港-01",
+      "server": "hk.json5.example.com",
+      "port": 8388,
+      "cipher": "aes-256-gcm",
+      "password": "password123",
+    },
+    {
+      // 日本节点
+      'type': 'vmess',  // 单引号也支持
+      'name': 'JSON5-日本-01',
+      'server': 'jp.json5.example.com',
+      'port': 443,
+      'uuid': '55555555-5555-5555-5555-555555555555',
+    },
+    {
+      "type": "trojan",
+      "name": "JSON5-美国-01",
+      "server": "us.json5.example.com",
+      "port": 443,
+      "password": "trojan_password",
+    },
+  ],
+}
+
