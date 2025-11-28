@@ -1,3 +1,5 @@
 rule
 DOMAIN-KEYWORD,cursor,{{ rule }}
 
+IP-CIDR,100.24.211.130/32,{{ rule }},no-resolve
+IP-CIDR,100.24.211.131/32,no-resolve

@@ -17,7 +17,7 @@ proxy-groups:
 rules:
 {{ remote_netflix("DIRECT") }}
 {{ remote_apple_direct("DIRECT") }}
-{{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') }}
+{{ apple('DIRECT', 'Proxy1', 'Proxy2', 'Proxy3', 'Proxy4') }}
 {{ ai('DIRECT') }}
 
 - GEOIP,CN,DIRECT
