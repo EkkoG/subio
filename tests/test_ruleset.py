@@ -217,6 +217,20 @@ class TestRuleSet:
         assert "FINAL,{{ rule }}" in macro
         assert "MATCH" not in macro
 
+    def test_to_macro_dst_port_to_dest_port_surge(self):
+        """测试 Surge 中 DST-PORT 转为 DEST-PORT"""
+        rules = [RuleEntry(rule_type="DST-PORT", matcher="443", policy="")]
+        ruleset = RuleSet(name="test", args="rule", rules=rules)
+        
+        # Surge 应该转换为 DEST-PORT
+        macro = ruleset.to_macro("surge")
+        assert "DEST-PORT,443,{{ rule }}" in macro
+        assert "DST-PORT" not in macro
+        
+        # Clash 保持 DST-PORT
+        macro_clash = ruleset.to_macro("clash")
+        assert "- DST-PORT,443,{{ rule }}" in macro_clash
+
     def test_to_macro_with_no_resolve_option(self):
         """测试 no-resolve 选项保留"""
         rules = [

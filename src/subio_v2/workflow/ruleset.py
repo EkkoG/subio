@@ -65,7 +65,7 @@ PLATFORM_RULES: Dict[str, Set[str]] = {
     "surge": {
         "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
         "IP-CIDR", "IP-CIDR6", "IP-ASN", "GEOIP",
-        "DST-PORT", "SRC-PORT",
+        "DST-PORT", "DEST-PORT", "SRC-PORT",  # Surge 用 DEST-PORT，但也支持 DST-PORT 输入
         "IN-PORT",
         "PROCESS-NAME",
         "NETWORK",
@@ -200,6 +200,12 @@ def is_rule_supported(rule_type: str, platform: str) -> bool:
     if rule_type == "FINAL" and "MATCH" in supported:
         return True
     
+    # DST-PORT 和 DEST-PORT 互通
+    if rule_type == "DST-PORT" and "DEST-PORT" in supported:
+        return True
+    if rule_type == "DEST-PORT" and "DST-PORT" in supported:
+        return True
+    
     return rule_type in supported
 
 
@@ -236,9 +242,14 @@ class RuleSet:
         is_clash = platform in CLASH_PLATFORMS
         rule_type = rule.rule_type
         
-        # Surge: MATCH -> FINAL
-        if platform == "surge" and rule_type == "MATCH":
-            rule_type = "FINAL"
+        # Surge 平台特殊处理
+        if platform == "surge":
+            # MATCH -> FINAL
+            if rule_type == "MATCH":
+                rule_type = "FINAL"
+            # DST-PORT -> DEST-PORT
+            elif rule_type == "DST-PORT":
+                rule_type = "DEST-PORT"
         
         # 确定 policy
         # 如果原 policy 为空，使用默认占位符（取 args 的第一个参数）
