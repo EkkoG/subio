@@ -4,12 +4,6 @@
 uv run subio2 example/config.toml --dry-run
 ```
 
-示例项目运行结果
+示例项目运行结果在 `./dist` 目录下
 
-```bash
-dist/
-├── clash-for-alice.yml
-├── clash-for-bob.yml
-├── clash-for-charlie.yml
-└── clash-alice-full.yml
-```
+先测试 example 目录再更新测试用例

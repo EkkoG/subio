@@ -10,7 +10,7 @@ from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.processor.common import FilterProcessor, RenameProcessor
 from subio_v2.workflow.template import TemplateRenderer
-from subio_v2.workflow.ruleset import load_rulesets, load_snippets
+from subio_v2.workflow.ruleset import load_rulesets, load_snippets, merge_stores, RuleSetStore
 from subio_v2.workflow.uploader import upload, flush_uploads
 from subio_v2.utils.logger import logger
 import yaml
@@ -36,16 +36,18 @@ class WorkflowEngine:
             template_dir = config_dir
         self.renderer = TemplateRenderer(template_dir)
 
-        # Load Snippets & Rulesets
-        self.macros = ""
+        # Load Snippets & Rulesets into RuleSetStore
+        stores = []
 
         # Snippets
         if os.path.exists(snippet_dir):
-            self.macros += load_snippets(snippet_dir) + "\n"
+            stores.append(load_snippets(snippet_dir))
 
         # Rulesets
         if "ruleset" in self.config:
-            self.macros += load_rulesets(self.config["ruleset"]) + "\n"
+            stores.append(load_rulesets(self.config["ruleset"]))
+
+        self.rulesets = merge_stores(*stores) if stores else RuleSetStore()
 
     def _load_config(self) -> Dict[str, Any]:
         try:
@@ -304,7 +306,7 @@ class WorkflowEngine:
                 context["proxies_names"] = [p["name"] for p in proxies_list]
 
             final_content = self.renderer.render(
-                template_path, context, self.macros, artifact_type
+                template_path, context, artifact_type, self.rulesets
             )
         else:
             if is_yaml_data:
