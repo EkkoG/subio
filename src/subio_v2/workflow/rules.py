@@ -287,3 +287,45 @@ def render_rules(rules: List[RuleLine], platform: str) -> str:
             lines.append(rendered)
     return "\n".join(lines)
 
+
+def render_rule_template(rule: RuleLine, placeholder: str = "{{ rule }}") -> str | None:
+    """渲染规则为 Jinja2 模板格式（用于 ruleset）
+    
+    将不完整的规则（没有 policy）转换为带占位符的模板：
+    - DOMAIN,google.com -> DOMAIN,google.com,{{ rule }}
+    - IP-CIDR,192.168.0.0/16,no-resolve -> IP-CIDR,192.168.0.0/16,{{ rule }},no-resolve
+    """
+    # 空行
+    if rule is None:
+        return None
+    
+    # 注释行 - 原样保留
+    if isinstance(rule, Comment):
+        return rule.content
+    
+    # 规则行
+    if not isinstance(rule, Rule):
+        return None
+    
+    # 单参数规则 (MATCH -> {{ rule }})
+    if rule.rule_type in SINGLE_PARAM_RULES:
+        return f"{rule.rule_type},{placeholder}"
+    
+    # 标准规则
+    parts = [rule.rule_type, rule.matcher, placeholder]
+    
+    # 所有 options 都放在 placeholder 后面
+    parts.extend(rule.options)
+    
+    return ",".join(parts)
+
+
+def render_rules_template(rules: List[RuleLine], placeholder: str = "{{ rule }}") -> str:
+    """渲染多条规则为模板格式"""
+    lines = []
+    for rule in rules:
+        rendered = render_rule_template(rule, placeholder)
+        if rendered is not None:
+            lines.append(rendered)
+    return "\n".join(lines)
+

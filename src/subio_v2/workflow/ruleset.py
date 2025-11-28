@@ -4,6 +4,7 @@ import requests
 import sys
 from typing import Dict, Any
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.rules import parse_rules, render_rules_template
 
 
 def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) -> str:
@@ -36,31 +37,13 @@ def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) 
             sys.exit(1)
 
 
-def parse_rule_line(rule: str) -> str:
-    rule = rule.strip()
-    if rule == "":
-        return ""
-    if rule.startswith("#") or rule.startswith("//"):
-        return rule
-
-    # Handle comments at end of line
-    if "//" in rule:
-        rule_part = rule.split("//")[0].strip()
-        return f"{rule_part},{{{{ rule }}}}"
-
-    if ",no-resolve" in rule:
-        return rule.replace(",no-resolve", ",{{ rule }},no-resolve")
-
-    return f"{rule},{{{{ rule }}}}"
-
-
 RULESET_MARKER = "__SUBIO_RULESET__"
 
 
 def wrap_with_jinja2_macro(text: str, name: str) -> str:
-    lines = text.split("\n")
-    new_lines = map(parse_rule_line, lines)
-    new_text = "\n".join([line for line in new_lines if line])
+    """将规则集内容包装为 Jinja2 宏"""
+    rules = parse_rules(text)
+    new_text = render_rules_template(rules, "{{ rule }}")
 
     return "{{% macro {}(rule) -%}}{}\n{}\n{{%- endmacro -%}}".format(
         f"remote_{name}", RULESET_MARKER, new_text
