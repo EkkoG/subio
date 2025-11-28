@@ -1,7 +1,7 @@
 """
 测试 ruleset 的解析与渲染功能
 """
-import pytest
+
 import tempfile
 import os
 
@@ -15,7 +15,6 @@ from subio_v2.workflow.ruleset import (
     is_rule_supported,
     load_snippets,
     merge_stores,
-    CLASH_PLATFORMS,
 )
 from subio_v2.workflow.template import TemplateRenderer
 
@@ -149,7 +148,7 @@ class TestRuleSet:
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "{% macro test(rule) -%}" in macro
         assert "- DOMAIN,example.com,{{ rule }}" in macro
@@ -160,7 +159,7 @@ class TestRuleSet:
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("surge")
         assert "DOMAIN,example.com,{{ rule }}" in macro
         assert "- DOMAIN" not in macro
@@ -168,10 +167,12 @@ class TestRuleSet:
     def test_to_macro_with_existing_policy(self):
         """测试已有 policy（Jinja2 变量）的规则"""
         rules = [
-            RuleEntry(rule_type="DOMAIN", matcher="example.com", policy="{{ api_rule }}"),
+            RuleEntry(
+                rule_type="DOMAIN", matcher="example.com", policy="{{ api_rule }}"
+            ),
         ]
         ruleset = RuleSet(name="test", args="api_rule, cdn_rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "- DOMAIN,example.com,{{ api_rule }}" in macro
 
@@ -181,7 +182,7 @@ class TestRuleSet:
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="default_rule, api_rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "- DOMAIN,example.com,{{ default_rule }}" in macro
 
@@ -192,7 +193,7 @@ class TestRuleSet:
             RuleEntry(rule_type="USER-AGENT", matcher="*Safari*", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "DOMAIN" in macro
         assert "USER-AGENT" not in macro
@@ -204,7 +205,7 @@ class TestRuleSet:
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "# Test comment" in macro
 
@@ -212,7 +213,7 @@ class TestRuleSet:
         """测试 Surge 中 MATCH 转为 FINAL"""
         rules = [RuleEntry(rule_type="MATCH", matcher="", policy="")]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("surge")
         assert "FINAL,{{ rule }}" in macro
         assert "MATCH" not in macro
@@ -221,12 +222,12 @@ class TestRuleSet:
         """测试 Surge 中 DST-PORT 转为 DEST-PORT"""
         rules = [RuleEntry(rule_type="DST-PORT", matcher="443", policy="")]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         # Surge 应该转换为 DEST-PORT
         macro = ruleset.to_macro("surge")
         assert "DEST-PORT,443,{{ rule }}" in macro
         assert "DST-PORT" not in macro
-        
+
         # Clash 保持 DST-PORT
         macro_clash = ruleset.to_macro("clash")
         assert "- DST-PORT,443,{{ rule }}" in macro_clash
@@ -234,10 +235,15 @@ class TestRuleSet:
     def test_to_macro_with_no_resolve_option(self):
         """测试 no-resolve 选项保留"""
         rules = [
-            RuleEntry(rule_type="IP-CIDR", matcher="10.0.0.0/8", policy="", options=["no-resolve"]),
+            RuleEntry(
+                rule_type="IP-CIDR",
+                matcher="10.0.0.0/8",
+                policy="",
+                options=["no-resolve"],
+            ),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
-        
+
         macro = ruleset.to_macro("clash")
         assert "- IP-CIDR,10.0.0.0/8,{{ rule }},no-resolve" in macro
 
@@ -248,7 +254,7 @@ class TestRuleSetStore:
     def test_register_and_get(self):
         store = RuleSetStore()
         ruleset = RuleSet(name="test", args="rule", rules=[])
-        
+
         store.register("test", ruleset)
         assert store.get("test") is ruleset
         assert "test" in store
@@ -256,13 +262,17 @@ class TestRuleSetStore:
     def test_generate_macros(self):
         """测试生成所有 macro"""
         store = RuleSetStore()
-        
+
         rules1 = [RuleEntry(rule_type="DOMAIN", matcher="a.com", policy="")]
-        store.register("ruleset_a", RuleSet(name="ruleset_a", args="rule", rules=rules1))
-        
+        store.register(
+            "ruleset_a", RuleSet(name="ruleset_a", args="rule", rules=rules1)
+        )
+
         rules2 = [RuleEntry(rule_type="DOMAIN", matcher="b.com", policy="")]
-        store.register("ruleset_b", RuleSet(name="ruleset_b", args="rule", rules=rules2))
-        
+        store.register(
+            "ruleset_b", RuleSet(name="ruleset_b", args="rule", rules=rules2)
+        )
+
         macros = store.generate_macros("clash")
         assert "macro ruleset_a" in macros
         assert "macro ruleset_b" in macros
@@ -271,7 +281,7 @@ class TestRuleSetStore:
         store = RuleSetStore()
         store.register("a", RuleSet(name="a", args="rule", rules=[]))
         store.register("b", RuleSet(name="b", args="rule", rules=[]))
-        
+
         assert set(store.names) == {"a", "b"}
 
 
@@ -287,7 +297,7 @@ class TestLoadSnippets:
 
             store = load_snippets(tmpdir)
             assert "test_snippet" in store
-            
+
             ruleset = store.get("test_snippet")
             assert ruleset.args == "rule"
 
@@ -296,7 +306,9 @@ class TestLoadSnippets:
         with tempfile.TemporaryDirectory() as tmpdir:
             snippet_path = os.path.join(tmpdir, "apple")
             with open(snippet_path, "w") as f:
-                f.write("default_rule, api_rule\nDOMAIN,apple.com,{{ api_rule }}\nDOMAIN,icloud.com,{{ default_rule }}")
+                f.write(
+                    "default_rule, api_rule\nDOMAIN,apple.com,{{ api_rule }}\nDOMAIN,icloud.com,{{ default_rule }}"
+                )
 
             store = load_snippets(tmpdir)
             ruleset = store.get("apple")
@@ -315,10 +327,10 @@ class TestMergeStores:
     def test_merge_multiple(self):
         store1 = RuleSetStore()
         store1.register("a", RuleSet(name="a", args="rule", rules=[]))
-        
+
         store2 = RuleSetStore()
         store2.register("b", RuleSet(name="b", args="rule", rules=[]))
-        
+
         merged = merge_stores(store1, store2)
         assert "a" in merged
         assert "b" in merged
@@ -333,6 +345,7 @@ class TestTemplateRendererIntegration:
 
     def teardown_method(self):
         import shutil
+
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_render_with_rulesets_clash(self):
@@ -375,9 +388,13 @@ class TestTemplateRendererIntegration:
         store = RuleSetStore()
         rules = [
             RuleEntry(rule_type="DOMAIN", matcher="apple.com", policy="{{ api_rule }}"),
-            RuleEntry(rule_type="DOMAIN", matcher="icloud.com", policy="{{ default_rule }}"),
+            RuleEntry(
+                rule_type="DOMAIN", matcher="icloud.com", policy="{{ default_rule }}"
+            ),
         ]
-        store.register("apple", RuleSet(name="apple", args="default_rule, api_rule", rules=rules))
+        store.register(
+            "apple", RuleSet(name="apple", args="default_rule, api_rule", rules=rules)
+        )
 
         result = self.renderer.render(
             "test.yaml", {}, artifact_type="clash", rulesets=store
@@ -393,7 +410,12 @@ class TestTemplateRendererIntegration:
 
         store = RuleSetStore()
         rules = [
-            RuleEntry(rule_type="IP-CIDR", matcher="10.0.0.0/8", policy="", options=["no-resolve"]),
+            RuleEntry(
+                rule_type="IP-CIDR",
+                matcher="10.0.0.0/8",
+                policy="",
+                options=["no-resolve"],
+            ),
         ]
         store.register("test", RuleSet(name="test", args="rule", rules=rules))
 

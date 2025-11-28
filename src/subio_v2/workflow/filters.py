@@ -5,6 +5,7 @@
 1. 直接调用: hk_filter(data)
 2. 函数式组合: union(F.hk, F.jp)(data) 或 intersect(F.hk, keyword("IPLC"))(data)
 """
+
 import re
 from typing import List, Any, Callable
 
@@ -23,6 +24,7 @@ def _get_name(item: Any) -> str:
 
 # ============== 基础过滤器 ==============
 
+
 def regex_filter(data: List[Any], regex: str) -> List[Any]:
     """正则过滤"""
     pattern = re.compile(regex, re.IGNORECASE)
@@ -36,6 +38,7 @@ def exclude(data: List[Any], regex: str) -> List[Any]:
 
 
 # ============== 地区过滤器 ==============
+
 
 def hk_filter(data: List[Any]) -> List[Any]:
     """香港"""
@@ -69,47 +72,56 @@ def us_filter(data: List[Any]) -> List[Any]:
 
 # ============== 工厂函数（返回过滤器）==============
 
+
 def keyword(kw: str) -> FilterFunc:
     """
     创建关键词过滤器
-    
+
     用法: keyword("IPLC")(data) 或 intersect(F.hk, keyword("IPLC"))(data)
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         return regex_filter(data, kw)
+
     return _filter
 
 
 def regex(pattern: str) -> FilterFunc:
     r"""
     创建正则过滤器
-    
+
     用法: regex(r"node-\d+")(data)
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         return regex_filter(data, pattern)
+
     return _filter
 
 
 def excluding(pattern: str) -> FilterFunc:
     """
     创建排除过滤器
-    
+
     用法: excluding("剩余流量")(data)
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         return exclude(data, pattern)
+
     return _filter
 
 
 # ============== 组合器 ==============
 
+
 def union(*filters: FilterFunc) -> FilterFunc:
     """
     并集（OR）- 合并多个过滤器的结果
-    
+
     用法: union(F.hk, F.jp, F.us)(data)
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         if not filters:
             return data
@@ -117,15 +129,17 @@ def union(*filters: FilterFunc) -> FilterFunc:
         for f in filters:
             result |= set(f(data))
         return list(result)
+
     return _filter
 
 
 def intersect(*filters: FilterFunc) -> FilterFunc:
     """
     交集（AND）- 取多个过滤器结果的交集
-    
+
     用法: intersect(F.hk, keyword("IPLC"))(data)
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         if not filters:
             return data
@@ -133,36 +147,41 @@ def intersect(*filters: FilterFunc) -> FilterFunc:
         for f in filters[1:]:
             result &= set(f(data))
         return list(result)
+
     return _filter
 
 
 def chain(*filters: FilterFunc) -> FilterFunc:
     """
     链式过滤 - 依次应用过滤器（前一个的输出是后一个的输入）
-    
+
     用法: chain(F.hk, excluding("普通"))(data)
     等价于: excluding("普通")(hk_filter(data))
     """
+
     def _filter(data: List[Any]) -> List[Any]:
         result = data
         for f in filters:
             result = f(result)
         return result
+
     return _filter
 
 
 # ============== 过滤器集合（用于模板）==============
 
+
 class F:
     """
     过滤器快捷访问
-    
+
     用法:
         F.hk(data)                           # 直接过滤
         union(F.hk, F.jp)(data)              # 香港 OR 日本
         intersect(F.hk, keyword("IPLC"))(data)  # 香港 AND IPLC
         chain(F.hk, excluding("普通"))(data)    # 香港节点中排除"普通"
     """
+
     hk = staticmethod(hk_filter)
     tw = staticmethod(tw_filter)
     sg = staticmethod(sg_filter)
@@ -172,6 +191,7 @@ class F:
 
 
 # ============== 兼容旧 API ==============
+
 
 def keyWord_filter(data: List[Any], keyWord: str) -> List[Any]:
     """[兼容] 关键词过滤"""
@@ -187,6 +207,7 @@ def combine(
     relation=False,
 ) -> List[Any]:
     """[兼容] 组合过滤器"""
+
     def call_func(func, args):
         if args is not None:
             return func(data, args)
@@ -206,6 +227,7 @@ def combine(
 
 class FilterCollection:
     """[兼容] 过滤器集合"""
+
     def __init__(self):
         self.hk_filter = hk_filter
         self.tw_filter = tw_filter

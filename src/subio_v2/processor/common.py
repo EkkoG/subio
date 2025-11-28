@@ -13,7 +13,9 @@ class FilterProcessor(Processor):
         result = []
         for node in nodes:
             # Use original_name if available, otherwise use current name
-            name_to_match = node.original_name if node.original_name is not None else node.name
+            name_to_match = (
+                node.original_name if node.original_name is not None else node.name
+            )
 
             if self.exclude and self.exclude.search(name_to_match):
                 continue
