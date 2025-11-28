@@ -2,26 +2,71 @@
 proxies:
 {{ proxies }}
 proxy-groups:
+# 全部节点
 - type: select
   name: 默认出口
   proxies: {{ proxies_names }}
 
+# ============ 单一地区 ============
 - type: select
-  name: 香港节点
+  name: 🇭🇰 香港
   proxies: {{ filter.hk_filter(proxies_names) }}
 
 - type: select
-  name: 港日美
-  proxies: {{ filter.union(filter.hk_filter, filter.jp_filter, filter.us_filter)(proxies_names) }}
+  name: 🇯🇵 日本
+  proxies: {{ filter.jp_filter(proxies_names) }}
 
 - type: select
-  name: 香港IPLC
+  name: 🇺🇸 美国
+  proxies: {{ filter.us_filter(proxies_names) }}
+
+- type: select
+  name: 🇸🇬 新加坡
+  proxies: {{ filter.sg_filter(proxies_names) }}
+
+- type: select
+  name: 🇹🇼 台湾
+  proxies: {{ filter.tw_filter(proxies_names) }}
+
+- type: select
+  name: 🇰🇷 韩国
+  proxies: {{ filter.kr_filter(proxies_names) }}
+
+# ============ 组合过滤 ============
+# 并集: 香港 OR 日本 OR 美国
+- type: select
+  name: 🌏 港日美
+  proxies: {{ filter.union(filter.hk_filter, filter.jp_filter, filter.us_filter)(proxies_names) }}
+
+# 交集: 香港 AND IPLC
+- type: select
+  name: 🚀 香港IPLC
   proxies: {{ filter.intersect(filter.hk_filter, filter.keyword('IPLC'))(proxies_names) }}
+
+# 交集: 日本 AND IPLC
+- type: select
+  name: 🚀 日本IPLC
+  proxies: {{ filter.intersect(filter.jp_filter, filter.keyword('IPLC'))(proxies_names) }}
+
+# 链式: 香港节点中排除普通线路
+- type: select
+  name: 🔥 香港高级
+  proxies: {{ filter.chain(filter.hk_filter, filter.excluding('普通'))(proxies_names) }}
+
+# 关键词过滤: Premium 节点
+- type: select
+  name: ⭐ Premium
+  proxies: {{ filter.keyword('Premium')(proxies_names) }}
+
+# 排除: 排除备用节点
+- type: select
+  name: 🎯 主力节点
+  proxies: {{ filter.excluding('备用')(proxies_names) }}
 
 rules:
 {{ remote_netflix("DIRECT") }}
 {{ remote_apple_direct("DIRECT") }}
-{{ apple('DIRECT', 'Proxy1', 'Proxy2', 'Proxy3', 'Proxy4') }}
+{{ apple('DIRECT', 'DIRECT', 'DIRECT', 'DIRECT', 'DIRECT') }}
 {{ ai('DIRECT') }}
 
 - GEOIP,CN,DIRECT
