@@ -16,9 +16,14 @@ from subio_v2.model.nodes import (
 
 
 class SurgeEmitter(BaseEmitter):
+    platform = "surge"
+    
     def emit(self, nodes: List[Node]) -> str:
+        # Use capability check to filter unsupported nodes
+        supported_nodes, _ = self.emit_with_check(nodes)
+        
         lines = []
-        for node in nodes:
+        for node in supported_nodes:
             line = self._emit_node(node)
             if line:
                 lines.append(line)

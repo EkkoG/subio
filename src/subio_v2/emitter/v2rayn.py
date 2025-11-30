@@ -14,9 +14,14 @@ from subio_v2.model.nodes import (
 
 
 class V2RayNEmitter(BaseEmitter):
+    platform = "v2rayn"
+    
     def emit(self, nodes: List[Node]) -> str:
+        # Use capability check to filter unsupported nodes
+        supported_nodes, _ = self.emit_with_check(nodes)
+        
         lines = []
-        for node in nodes:
+        for node in supported_nodes:
             line = self._emit_node(node)
             if line:
                 lines.append(line)
@@ -26,8 +31,11 @@ class V2RayNEmitter(BaseEmitter):
 
     def emit_list(self, nodes: List[Node]) -> str:
         """Return plain list of links (for debugging or other formats)"""
+        # Use capability check to filter unsupported nodes
+        supported_nodes, _ = self.emit_with_check(nodes)
+        
         lines = []
-        for node in nodes:
+        for node in supported_nodes:
             line = self._emit_node(node)
             if line:
                 lines.append(line)
