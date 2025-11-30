@@ -206,8 +206,8 @@ class SurgeEmitter(BaseEmitter):
         if hasattr(node, "tfo") and node.tfo:
             config_parts.append("tfo=true")
 
-        # IP version
-        if hasattr(node, "ip_version") and node.ip_version:
+        # IP version (only output if not "dual", as "dual" is the default)
+        if hasattr(node, "ip_version") and node.ip_version and node.ip_version != "dual":
             config_parts.append(f"ip-version={node.ip_version}")
 
         return f"{node.name} = {', '.join(config_parts)}"
