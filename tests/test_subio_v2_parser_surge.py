@@ -53,13 +53,16 @@ vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
     assert nodes[1].vmess_aead is False
     assert nodes[2].vmess_aead is False  # Default is False
     
-    # Test emitter preserves vmess-aead parameter
+    # Test emitter preserves vmess-aead parameter and does not output encrypt-method
     emitter = SurgeEmitter()
     output = emitter.emit([nodes[0]])
     assert "vmess-aead=true" in output
+    assert "encrypt-method" not in output  # Should not output encrypt-method
     
     output2 = emitter.emit([nodes[1]])
     assert "vmess-aead=false" not in output2  # Should not output false
+    assert "encrypt-method" not in output2  # Should not output encrypt-method
     
     output3 = emitter.emit([nodes[2]])
     assert "vmess-aead" not in output3  # Should not output if False
+    assert "encrypt-method" not in output3  # Should not output encrypt-method
