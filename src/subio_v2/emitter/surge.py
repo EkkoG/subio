@@ -55,6 +55,10 @@ class SurgeEmitter(BaseEmitter):
                 if node.cipher != "auto"
                 else "encrypt-method=auto"
             )
+            
+            # Add vmess-aead parameter if enabled
+            if node.vmess_aead:
+                config_parts.append("vmess-aead=true")
 
             if node.transport.network == Network.WS:
                 config_parts.append("ws=true")

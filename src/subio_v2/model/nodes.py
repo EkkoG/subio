@@ -101,6 +101,7 @@ class VmessNode(BaseNode):
     alter_id: int = 0
     cipher: str = "auto"
     global_padding: bool = False
+    vmess_aead: bool = False  # Surge-specific: vmess-aead parameter
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)

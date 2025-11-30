@@ -184,7 +184,7 @@ class SurgeParser(BaseParser):
                 )
 
             elif p_type == "vmess":
-                # vmess, server, port, username=..., encrypt-method=...
+                # vmess, server, port, username=..., encrypt-method=..., vmess-aead=...
 
                 # Check for TLS implicit
                 if kv_args.get("tls") == "true":
@@ -197,6 +197,7 @@ class SurgeParser(BaseParser):
                     port=port,
                     uuid=kv_args.get("username", ""),
                     cipher=kv_args.get("encrypt-method", "auto"),
+                    vmess_aead=get_bool("vmess-aead", False),
                     tls=tls,
                     transport=transport,
                     udp=get_bool("udp-relay", False),
