@@ -1,5 +1,6 @@
 from typing import List, Any
 import sys
+import base64
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node,
@@ -294,21 +295,29 @@ class SurgeParser(BaseParser):
                 private_key = kv_args.get("private-key")
                 keystore_id = None
                 
-                # If private-key is a keystore ID, store the ID and extract base64
+                # If private-key is a keystore ID, store the ID and decode base64 to raw format
                 if private_key and private_key in keystore:
                     keystore_id = private_key
-                    # Extract base64 from keystore entry for backward compatibility
+                    # Extract base64 from keystore entry and decode to raw format
                     keystore_entry = keystore[private_key]
+                    base64_key = None
                     if isinstance(keystore_entry, dict) and "base64" in keystore_entry:
-                        private_key = keystore_entry["base64"]
+                        base64_key = keystore_entry["base64"]
                     elif isinstance(keystore_entry, str):
                         # Legacy format: "type = openssh-private-key, base64 = ..."
                         if "base64" in keystore_entry:
                             try:
-                                base64_part = keystore_entry.split("base64")[1].split("=")[1].strip()
-                                private_key = base64_part
+                                base64_key = keystore_entry.split("base64")[1].split("=")[1].strip()
                             except:
                                 pass
+                    
+                    # Decode base64 to raw format for internal storage
+                    if base64_key:
+                        try:
+                            private_key = base64.b64decode(base64_key).decode('utf-8')
+                        except Exception:
+                            # If decoding fails, keep the base64 value as fallback
+                            private_key = base64_key
 
                 return SSHNode(
                     name=name,

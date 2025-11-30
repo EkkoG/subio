@@ -1,4 +1,6 @@
 from typing import List
+import hashlib
+import base64
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
     Node,
@@ -22,21 +24,49 @@ class SurgeEmitter(BaseEmitter):
         super().__init__()
         self.keystore: dict = keystore or {}  # Keystore entries: {key_id: {"type": "...", "base64": "..."}}
     
+    def _encode_to_base64(self, private_key: str) -> str:
+        """Encode private_key to base64 for Surge Keystore"""
+        # private_key is stored in raw format internally, encode it to base64
+        return base64.b64encode(private_key.encode('utf-8')).decode('utf-8')
+    
+    def _generate_keystore_id(self, node: SSHNode) -> str:
+        """Generate a deterministic keystore ID based on node name and private_key"""
+        # Use hash of node name and private_key (raw format) to generate a deterministic ID
+        content = f"{node.name}:{node.private_key}"
+        hash_obj = hashlib.md5(content.encode('utf-8'))
+        return hash_obj.hexdigest()[:8]
+    
     def emit(self, nodes: List[Node]) -> str:
         # Use capability check to filter unsupported nodes
         supported_nodes, _ = self.emit_with_check(nodes)
         
         lines = []
         used_keystore_ids = set()
+        node_keystore_map = {}  # Map node to generated keystore_id for clash-like platforms
         
-        # Collect used keystore IDs from SSH nodes
+        # First pass: generate keystore IDs for SSH nodes without keystore_id
         for node in supported_nodes:
-            if isinstance(node, SSHNode) and node.keystore_id:
-                used_keystore_ids.add(node.keystore_id)
+            if isinstance(node, SSHNode):
+                if node.keystore_id:
+                    # Already has keystore_id from Surge parser
+                    used_keystore_ids.add(node.keystore_id)
+                elif node.private_key:
+                    # Generate keystore ID for clash-like platforms
+                    keystore_id = self._generate_keystore_id(node)
+                    used_keystore_ids.add(keystore_id)
+                    # Encode private_key (raw format) to base64 for Surge Keystore
+                    base64_key = self._encode_to_base64(node.private_key)
+                    # Store in keystore
+                    self.keystore[keystore_id] = {
+                        "type": "openssh-private-key",
+                        "base64": base64_key
+                    }
+                    # Store mapping for _emit_node to use
+                    node_keystore_map[id(node)] = keystore_id
         
         # Emit proxy nodes
         for node in supported_nodes:
-            line = self._emit_node(node)
+            line = self._emit_node(node, node_keystore_map)
             if line:
                 lines.append(line)
         
@@ -57,7 +87,9 @@ class SurgeEmitter(BaseEmitter):
         
         return "\n".join(lines)
 
-    def _emit_node(self, node: Node) -> str | None:
+    def _emit_node(self, node: Node, node_keystore_map: dict = None) -> str | None:
+        if node_keystore_map is None:
+            node_keystore_map = {}
         config_parts = []
 
         if isinstance(node, ShadowsocksNode):
@@ -147,11 +179,13 @@ class SurgeEmitter(BaseEmitter):
                 config_parts.append(f"username={node.username}")
             if node.password:
                 config_parts.append(f"password={node.password}")
-            if node.keystore_id:
+            # Check for keystore_id (from Surge parser) or generated one (from clash-like)
+            keystore_id = node.keystore_id or node_keystore_map.get(id(node))
+            if keystore_id:
                 # Use keystore ID reference
-                config_parts.append(f"private-key={node.keystore_id}")
+                config_parts.append(f"private-key={keystore_id}")
             elif node.private_key:
-                # Direct base64 key (will be output as-is)
+                # Direct base64 key (fallback, should not happen if keystore generation works)
                 config_parts.append(f"private-key={node.private_key}")
 
         elif isinstance(node, SnellNode):
