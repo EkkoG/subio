@@ -62,7 +62,8 @@ class SurgeEmitter(BaseEmitter):
 
             if node.transport.network == Network.WS:
                 config_parts.append("ws=true")
-                config_parts.append(f"ws-path={node.transport.path}")
+                if node.transport.path:
+                    config_parts.append(f"ws-path={node.transport.path}")
                 if node.transport.headers:
                     h = "|".join(
                         [f"{k}:{v}" for k, v in node.transport.headers.items()]
@@ -77,7 +78,8 @@ class SurgeEmitter(BaseEmitter):
             config_parts.append(f"password={node.password}")
             if node.transport.network == Network.WS:
                 config_parts.append("ws=true")
-                config_parts.append(f"ws-path={node.transport.path}")
+                if node.transport.path:
+                    config_parts.append(f"ws-path={node.transport.path}")
                 if node.transport.headers:
                     h = "|".join(
                         [f"{k}:{v}" for k, v in node.transport.headers.items()]
