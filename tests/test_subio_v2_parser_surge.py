@@ -118,3 +118,62 @@ def test_surge_emitter_obfs_tls_no_host():
     output3 = emitter.emit([node3])
     assert "obfs=http" in output3
     assert "obfs-host=bing.com" in output3  # Should output obfs-host for http mode
+
+
+def test_surge_emitter_ws_path_only_when_has_value():
+    """Test that Surge emitter only outputs ws-path when it has a value"""
+    from subio_v2.model.nodes import TrojanNode, VmessNode, Protocol, TransportSettings, Network
+    
+    emitter = SurgeEmitter()
+    
+    # Test trojan with ws-path=None
+    node1 = TrojanNode(
+        name='trojan-ws',
+        type=Protocol.TROJAN,
+        server='server',
+        port=443,
+        password='example',
+        transport=TransportSettings(network=Network.WS, path=None)
+    )
+    output1 = emitter.emit([node1])
+    assert "ws=true" in output1
+    assert "ws-path" not in output1  # Should not output ws-path when path is None
+    
+    # Test trojan with ws-path value
+    node2 = TrojanNode(
+        name='trojan-ws-path',
+        type=Protocol.TROJAN,
+        server='server',
+        port=443,
+        password='example',
+        transport=TransportSettings(network=Network.WS, path='/path')
+    )
+    output2 = emitter.emit([node2])
+    assert "ws=true" in output2
+    assert "ws-path=/path" in output2  # Should output ws-path when path has value
+    
+    # Test vmess with ws-path=None
+    node3 = VmessNode(
+        name='vmess-ws',
+        type=Protocol.VMESS,
+        server='server',
+        port=443,
+        uuid='test-uuid',
+        transport=TransportSettings(network=Network.WS, path=None)
+    )
+    output3 = emitter.emit([node3])
+    assert "ws=true" in output3
+    assert "ws-path" not in output3  # Should not output ws-path when path is None
+    
+    # Test vmess with ws-path value
+    node4 = VmessNode(
+        name='vmess-ws-path',
+        type=Protocol.VMESS,
+        server='server',
+        port=443,
+        uuid='test-uuid',
+        transport=TransportSettings(network=Network.WS, path='/ws-path')
+    )
+    output4 = emitter.emit([node4])
+    assert "ws=true" in output4
+    assert "ws-path=/ws-path" in output4  # Should output ws-path when path has value
