@@ -18,15 +18,43 @@ from subio_v2.model.nodes import (
 class SurgeEmitter(BaseEmitter):
     platform = "surge"
     
+    def __init__(self, keystore: dict = None):
+        super().__init__()
+        self.keystore: dict = keystore or {}  # Keystore entries: {key_id: {"type": "...", "base64": "..."}}
+    
     def emit(self, nodes: List[Node]) -> str:
         # Use capability check to filter unsupported nodes
         supported_nodes, _ = self.emit_with_check(nodes)
         
         lines = []
+        used_keystore_ids = set()
+        
+        # Collect used keystore IDs from SSH nodes
+        for node in supported_nodes:
+            if isinstance(node, SSHNode) and node.keystore_id:
+                used_keystore_ids.add(node.keystore_id)
+        
+        # Emit proxy nodes
         for node in supported_nodes:
             line = self._emit_node(node)
             if line:
                 lines.append(line)
+        
+        # Emit Keystore section if there are used keystore entries
+        if used_keystore_ids and self.keystore:
+            lines.append("")
+            lines.append("[Keystore]")
+            for key_id in sorted(used_keystore_ids):
+                if key_id in self.keystore:
+                    entry = self.keystore[key_id]
+                    if isinstance(entry, dict):
+                        # Format: key_id = type = openssh-private-key, base64 = ...
+                        parts = []
+                        for k, v in entry.items():
+                            parts.append(f"{k} = {v}")
+                        keystore_line = f"{key_id} = {', '.join(parts)}"
+                        lines.append(keystore_line)
+        
         return "\n".join(lines)
 
     def _emit_node(self, node: Node) -> str | None:
@@ -119,9 +147,11 @@ class SurgeEmitter(BaseEmitter):
                 config_parts.append(f"username={node.username}")
             if node.password:
                 config_parts.append(f"password={node.password}")
-            if node.private_key:
-                # If it's a base64 key, we might need to reference keystore
-                # For now, output directly (Surge will handle it)
+            if node.keystore_id:
+                # Use keystore ID reference
+                config_parts.append(f"private-key={node.keystore_id}")
+            elif node.private_key:
+                # Direct base64 key (will be output as-is)
                 config_parts.append(f"private-key={node.private_key}")
 
         elif isinstance(node, SnellNode):

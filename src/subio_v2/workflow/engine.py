@@ -8,6 +8,7 @@ from typing import Dict, List, Any
 from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
+from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.processor.common import FilterProcessor, RenameProcessor
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.ruleset import (
@@ -28,6 +29,7 @@ class WorkflowEngine:
         self.config_path = config_path
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
+        self.provider_parsers: Dict[str, Any] = {}  # Store parser instances for keystore access
         self.dry_run = dry_run
         self.clean_gist = clean_gist
 
@@ -145,6 +147,8 @@ class WorkflowEngine:
 
                 if parser:
                     nodes = parser.parse(content)
+                    # Store parser instance for keystore access (for Surge)
+                    self.provider_parsers[name] = parser
                 else:
                     logger.error(f"Unsupported provider type: {p_type}")
 
@@ -258,6 +262,18 @@ class WorkflowEngine:
 
         # Emit
         emitter = EmitterFactory.get_emitter(a_type)
+        
+        # For Surge, collect keystore from all Surge providers
+        if a_type == "surge" and isinstance(emitter, SurgeEmitter):
+            from subio_v2.parser.surge import SurgeParser
+            merged_keystore = {}
+            for prov_name in art_conf.get("providers", []):
+                if prov_name in self.provider_parsers:
+                    parser = self.provider_parsers[prov_name]
+                    if isinstance(parser, SurgeParser) and parser.keystore:
+                        merged_keystore.update(parser.keystore)
+            # Create new emitter with merged keystore
+            emitter = SurgeEmitter(keystore=merged_keystore)
 
         if emitter:
             # Determine display name and actual filename
