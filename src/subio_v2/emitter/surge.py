@@ -50,11 +50,6 @@ class SurgeEmitter(BaseEmitter):
 
             config_parts.extend(["vmess", str(server), str(node.port)])
             config_parts.append(f"username={node.uuid}")
-            config_parts.append(
-                f"encrypt-method={node.cipher}"
-                if node.cipher != "auto"
-                else "encrypt-method=auto"
-            )
             
             # Add vmess-aead parameter if enabled
             if node.vmess_aead:
