@@ -21,6 +21,9 @@ from subio_v2.utils.logger import logger
 
 
 class SurgeParser(BaseParser):
+    def __init__(self):
+        self.keystore: dict = {}  # Store Keystore entries for emitter: {key_id: {"type": "...", "base64": "..."}}
+    
     def parse(self, content: Any) -> List[Node]:
         if not isinstance(content, str):
             logger.error("Invalid content type for SurgeParser")
@@ -29,7 +32,7 @@ class SurgeParser(BaseParser):
         lines = content.splitlines()
         nodes = []
         in_proxy_section = False
-        keystore = {}  # Store SSH private keys from Keystore section
+        keystore = {}  # Store SSH private keys from Keystore section: {key_id: {"type": "...", "base64": "..."}}
 
         # Check if there are sections
         has_sections = any(line.strip().startswith("[Proxy]") for line in lines)
@@ -50,7 +53,18 @@ class SurgeParser(BaseParser):
                 # Parse Keystore entries: key_id = type = openssh-private-key, base64 = ...
                 key_id, key_config = line.split("=", 1)
                 key_id = key_id.strip()
-                keystore[key_id] = key_config.strip()
+                # Parse key_config: "type = openssh-private-key, base64 = ..."
+                keystore_entry = {}
+                parts = [p.strip() for p in key_config.split(",")]
+                for part in parts:
+                    if "=" in part:
+                        k, v = part.split("=", 1)
+                        k = k.strip()
+                        v = v.strip()
+                        keystore_entry[k] = v
+                keystore[key_id] = keystore_entry
+                # Also store in instance for emitter access
+                self.keystore[key_id] = keystore_entry
 
         # Second pass: parse proxy nodes
         for line in lines:
@@ -278,17 +292,23 @@ class SurgeParser(BaseParser):
                 username = kv_args.get("username", "")
                 password = kv_args.get("password")
                 private_key = kv_args.get("private-key")
-                # If private-key is a keystore ID, resolve it
+                keystore_id = None
+                
+                # If private-key is a keystore ID, store the ID and extract base64
                 if private_key and private_key in keystore:
-                    # Extract base64 from keystore entry
-                    key_config = keystore[private_key]
-                    # Format: type = openssh-private-key, base64 = ...
-                    if "base64" in key_config:
-                        try:
-                            base64_part = key_config.split("base64")[1].split("=")[1].strip()
-                            private_key = base64_part
-                        except:
-                            pass
+                    keystore_id = private_key
+                    # Extract base64 from keystore entry for backward compatibility
+                    keystore_entry = keystore[private_key]
+                    if isinstance(keystore_entry, dict) and "base64" in keystore_entry:
+                        private_key = keystore_entry["base64"]
+                    elif isinstance(keystore_entry, str):
+                        # Legacy format: "type = openssh-private-key, base64 = ..."
+                        if "base64" in keystore_entry:
+                            try:
+                                base64_part = keystore_entry.split("base64")[1].split("=")[1].strip()
+                                private_key = base64_part
+                            except:
+                                pass
 
                 return SSHNode(
                     name=name,
@@ -298,6 +318,7 @@ class SurgeParser(BaseParser):
                     username=username,
                     password=password,
                     private_key=private_key,
+                    keystore_id=keystore_id,
                 )
 
             elif p_type == "snell":

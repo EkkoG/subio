@@ -177,3 +177,38 @@ def test_surge_emitter_ws_path_only_when_has_value():
     output4 = emitter.emit([node4])
     assert "ws=true" in output4
     assert "ws-path=/ws-path" in output4  # Should output ws-path when path has value
+
+
+def test_surge_keystore_parse_and_emit():
+    """Test parsing and emitting Surge Keystore section"""
+    conf = """
+[Proxy]
+ssh1 = ssh, 1.1.1.1, 22, username=root, password=123
+ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
+
+[Keystore]
+111 = type = openssh-private-key, base64 = LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNEZmFQald3d2lEU28vdlJaeFdleHRCa1gxeUg0dkVjYTV1c0JkZ2pCNGtqQUFBQUppTGVMak1pM2k0CnpBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRGZhUGpXd3dpRFNvL3ZSWnhXZXh0QmtYMXlINHZFY2E1dXNCZGdqQjRrakEKQUFBRUNETFc5bWtRMzJpc1hLZEVOdW52SFUwLzc2eVZ1TjIyU3NGSjU3UXVZUVBkOW8rTmJEQ0lOS2orOUZuRlo3RzBHUgpmWElmaThSeHJtNndGMkNNSGlTTUFBQUFGSE56YUhCeWIzaDVRSFIxYm01bGJDMXZibXg1QVE9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K
+"""
+    parser = SurgeParser()
+    nodes = parser.parse(conf)
+    
+    # Check parsing
+    assert len(nodes) == 2
+    ssh1 = [n for n in nodes if n.name == "ssh1"][0]
+    ssh2 = [n for n in nodes if n.name == "ssh2"][0]
+    assert ssh1.keystore_id is None
+    assert ssh2.keystore_id == "111"
+    assert "111" in parser.keystore
+    assert parser.keystore["111"]["type"] == "openssh-private-key"
+    assert "base64" in parser.keystore["111"]
+    
+    # Test emitter
+    emitter = SurgeEmitter(keystore=parser.keystore)
+    output = emitter.emit(nodes)
+    
+    # Check output
+    assert "ssh1 = ssh, 1.1.1.1, 22, username=root, password=123" in output
+    assert "ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111" in output
+    assert "[Keystore]" in output
+    assert "111 = type = openssh-private-key" in output
+    assert "base64 = LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K" in output

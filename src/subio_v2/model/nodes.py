@@ -211,6 +211,7 @@ class SSHNode(BaseNode):
     password: Optional[str] = None
     private_key: Optional[str] = None
     private_key_passphrase: Optional[str] = None
+    keystore_id: Optional[str] = None  # Reference to Keystore entry ID
     host_key: Optional[List[str]] = None
     host_key_algorithms: Optional[List[str]] = None
 
