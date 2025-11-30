@@ -40,8 +40,13 @@ class SurgeEmitter(BaseEmitter):
             config_parts.append(f"encrypt-method={node.cipher}")
             config_parts.append(f"password={node.password}")
             if node.plugin == "obfs":
-                config_parts.append(f"obfs={node.plugin_opts.get('mode', 'http')}")
-                config_parts.append(f"obfs-host={node.plugin_opts.get('host', '')}")
+                obfs_mode = node.plugin_opts.get('mode', 'http') if node.plugin_opts else 'http'
+                config_parts.append(f"obfs={obfs_mode}")
+                # Surge does not support obfs-host when obfs mode is tls
+                if obfs_mode != "tls":
+                    obfs_host = node.plugin_opts.get('host', '') if node.plugin_opts else ''
+                    if obfs_host:
+                        config_parts.append(f"obfs-host={obfs_host}")
 
         elif isinstance(node, VmessNode):
             server = node.server

@@ -66,3 +66,55 @@ vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
     output3 = emitter.emit([nodes[2]])
     assert "vmess-aead" not in output3  # Should not output if False
     assert "encrypt-method" not in output3  # Should not output encrypt-method
+
+
+def test_surge_emitter_obfs_tls_no_host():
+    """Test that Surge emitter does not output obfs-host when obfs mode is tls"""
+    from subio_v2.model.nodes import ShadowsocksNode, Protocol
+    
+    emitter = SurgeEmitter()
+    
+    # Test obfs=tls without host
+    node1 = ShadowsocksNode(
+        name='ss-tls',
+        type=Protocol.SHADOWSOCKS,
+        server='server',
+        port=443,
+        cipher='aes-256-gcm',
+        password='password',
+        plugin='obfs',
+        plugin_opts={'mode': 'tls'}
+    )
+    output1 = emitter.emit([node1])
+    assert "obfs=tls" in output1
+    assert "obfs-host" not in output1  # Should not output obfs-host for tls mode
+    
+    # Test obfs=tls with host (should ignore host)
+    node2 = ShadowsocksNode(
+        name='ss-tls-host',
+        type=Protocol.SHADOWSOCKS,
+        server='server',
+        port=443,
+        cipher='aes-256-gcm',
+        password='password',
+        plugin='obfs',
+        plugin_opts={'mode': 'tls', 'host': 'bing.com'}
+    )
+    output2 = emitter.emit([node2])
+    assert "obfs=tls" in output2
+    assert "obfs-host" not in output2  # Should not output obfs-host for tls mode
+    
+    # Test obfs=http with host (should output host)
+    node3 = ShadowsocksNode(
+        name='ss-http-host',
+        type=Protocol.SHADOWSOCKS,
+        server='server',
+        port=443,
+        cipher='aes-256-gcm',
+        password='password',
+        plugin='obfs',
+        plugin_opts={'mode': 'http', 'host': 'bing.com'}
+    )
+    output3 = emitter.emit([node3])
+    assert "obfs=http" in output3
+    assert "obfs-host=bing.com" in output3  # Should output obfs-host for http mode
