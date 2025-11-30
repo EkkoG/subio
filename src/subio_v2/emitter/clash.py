@@ -18,9 +18,18 @@ from subio_v2.model.nodes import (
 
 
 class ClashEmitter(BaseEmitter):
+    platform = "clash-meta"  # Default to clash-meta, can be overridden
+    
+    def __init__(self, platform: str = "clash-meta"):
+        self.platform = platform
+        super().__init__()
+    
     def emit(self, nodes: List[Node]) -> Dict[str, Any]:
+        # Use capability check to filter unsupported nodes
+        supported_nodes, _ = self.emit_with_check(nodes)
+        
         proxies = []
-        for node in nodes:
+        for node in supported_nodes:
             proxy = self._emit_node(node)
             if proxy:
                 proxies.append(proxy)
