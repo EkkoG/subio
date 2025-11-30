@@ -17,6 +17,7 @@ class Protocol(StrEnum):
     JUICITY = "juicity"
     ANYTLS = "anytls"
     SSH = "ssh"
+    SNELL = "snell"
 
 
 @dataclass
@@ -217,6 +218,32 @@ class SSHNode(BaseNode):
             self.type = Protocol.SSH
 
 
+@dataclass
+class SnellNode(BaseNode):
+    psk: str = ""
+    version: Optional[int] = None
+    obfs: Optional[str] = None  # http, tls
+    obfs_host: Optional[str] = None
+    tls: TLSSettings = field(default_factory=TLSSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.SNELL:
+            self.type = Protocol.SNELL
+
+
+@dataclass
+class TUICNode(BaseNode):
+    token: Optional[str] = None  # TUIC v4 uses token
+    password: Optional[str] = None  # TUIC v5 uses password
+    uuid: Optional[str] = None  # TUIC v5 uses uuid
+    version: Optional[int] = None  # 4 or 5
+    tls: TLSSettings = field(default_factory=TLSSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.TUIC:
+            self.type = Protocol.TUIC
+
+
 Node = Union[
     ShadowsocksNode,
     VmessNode,
@@ -228,6 +255,8 @@ Node = Union[
     AnyTLSNode,
     Hysteria2Node,
     SSHNode,
+    SnellNode,
+    TUICNode,
 ]
 
 
