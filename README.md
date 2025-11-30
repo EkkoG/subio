@@ -16,6 +16,8 @@ SubIO 和 Surgio 一样，主要有两部分组成，一部分是解析器，负
 pip3 install -e git+https://github.com/ekkog/subio#egg=subio
 ```
 
+安装后使用 `subio2` 命令运行。
+
 #### 从源码安装（使用 uv）
 
 ```shell
@@ -29,8 +31,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 安装依赖并创建虚拟环境
 uv sync
 
-# 运行 subio
-uv run subio
+# 运行 subio2
+uv run subio2
 ```
 
 ### 使用
@@ -40,10 +42,20 @@ uv run subio
 - 可以在当前目录下创建 `snippet` 目录，用于存放一些公共的配置片段，参考 [snippet](./example/snippet)。 snippet 语法参考 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/#macros)。
 - 可以在模板中引用远程规则集，规则集需要在配置文件中定义
 
-然后执行 `subio` 命令即可。
+然后执行 `subio2` 命令即可。
 
 ```shell
-subio
+# 使用默认配置文件（自动查找 config.toml/yaml/yml/json/json5）
+subio2
+
+# 指定配置文件
+subio2 example/config.toml
+
+# 干运行模式（不推送到远程，仅本地生成）
+subio2 example/config.toml --dry-run
+
+# 清理 gist 中所有现有文件后再上传
+subio2 example/config.toml --clean-gist
 ```
 
 ### 致谢
