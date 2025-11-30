@@ -212,3 +212,115 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
     assert "[Keystore]" in output
     assert "111 = type = openssh-private-key" in output
     assert "base64 = LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K" in output
+
+
+def test_surge_emitter_ssh_auto_keystore_from_clash():
+    """Test that Surge emitter auto-generates keystore ID for SSH nodes from clash-like platforms"""
+    from subio_v2.model.nodes import SSHNode, Protocol
+    import base64
+    
+    # SSH node from clash-like platform (no keystore_id, but has private_key in raw format)
+    # private_key is stored in raw format internally (without base64)
+    raw_key = '''-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAYEAu3ZqXQyZTgqNTUxo8vRZxWextBkX1yH4vEca5usBdfjB4kjAAAIJ
+iLeLjMi3i4zAAtzc2g1AAAAB3NzaC1yc2EAAAGBALt2al0MmU4KjU1MaPL0WcVnsbQZF9ch
++LxHGubrAXX4weJIwAACCSi3iyzIt4uMwALc3NoOQAAAAdzc2gtcnNhAAABgQC7dmpdDJlOC
+o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
+-----END OPENSSH PRIVATE KEY-----'''
+    
+    node = SSHNode(
+        name='ssh-from-clash',
+        type=Protocol.SSH,
+        server='server.example.com',
+        port=22,
+        username='root',
+        private_key=raw_key  # Raw format (without base64)
+    )
+    
+    emitter = SurgeEmitter()
+    output = emitter.emit([node])
+    
+    # Check that node is not modified
+    assert node.keystore_id is None
+    
+    # Check output format
+    assert "ssh-from-clash = ssh, server.example.com, 22, username=root" in output
+    assert "private-key=" in output
+    # private-key should be a short ID, not the full base64
+    private_key_part = output.split("private-key=")[1].split(",")[0].split()[0]
+    assert len(private_key_part) < 20  # Should be a short ID
+    
+    # Check Keystore section
+    assert "[Keystore]" in output
+    assert f"{private_key_part} = type = openssh-private-key" in output
+    # Verify that the base64 in Keystore decodes to the original raw key
+    keystore_section = output.split("[Keystore]")[1]
+    base64_value = keystore_section.split("base64 = ")[1].strip().split("\n")[0]
+    decoded = base64.b64decode(base64_value).decode('utf-8')
+    assert decoded == raw_key
+    
+    # Test deterministic: same node should generate same keystore ID
+    emitter2 = SurgeEmitter()
+    output2 = emitter2.emit([node])
+    private_key_part2 = output2.split("private-key=")[1].split(",")[0].split()[0]
+    assert private_key_part == private_key_part2  # Should be deterministic
+
+
+def test_surge_emitter_ssh_base64_encoding():
+    """Test that Surge emitter correctly encodes raw private_key to base64 for Surge Keystore"""
+    from subio_v2.model.nodes import SSHNode, Protocol
+    import base64
+    
+    # private_key is stored in raw format internally (without base64)
+    raw_key1 = '''-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAYEAu3ZqXQyZTgqNTUxo8vRZxWextBkX1yH4vEca5usBdfjB4kjAAAIJ
+iLeLjMi3i4zAAtzc2g1AAAAB3NzaC1yc2EAAAGBALt2al0MmU4KjU1MaPL0WcVnsbQZF9ch
++LxHGubrAXX4weJIwAACCSi3iyzIt4uMwALc3NoOQAAAAdzc2gtcnNhAAABgQC7dmpdDJlOC
+o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
+-----END OPENSSH PRIVATE KEY-----'''
+    
+    node1 = SSHNode(
+        name='ssh-raw1',
+        type=Protocol.SSH,
+        server='server.example.com',
+        port=22,
+        username='root',
+        private_key=raw_key1  # Raw format
+    )
+    
+    # Another raw key
+    raw_key2 = '''-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAYEAu3ZqXQyZTgqNTUxo8vRZxWextBkX1yH4vEca5usBdfjB4kjAAAIJ
+iLeLjMi3i4zAAtzc2g1AAAAB3NzaC1yc2EAAAGBALt2al0MmU4KjU1MaPL0WcVnsbQZF9ch
++LxHGubrAXX4weJIwAACCSi3iyzIt4uMwALc3NoOQAAAAdzc2gtcnNhAAABgQC7dmpdDJlOC
+o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
+-----END OPENSSH PRIVATE KEY-----'''
+    
+    node2 = SSHNode(
+        name='ssh-raw2',
+        type=Protocol.SSH,
+        server='server.example.com',
+        port=22,
+        username='root',
+        private_key=raw_key2  # Raw format
+    )
+    
+    emitter = SurgeEmitter()
+    output = emitter.emit([node1, node2])
+    
+    # Check that both keys are base64 encoded in Keystore
+    assert "[Keystore]" in output
+    
+    # Verify that the base64 in Keystore decodes to the original raw keys
+    keystore_section = output.split("[Keystore]")[1]
+    base64_lines = [line for line in keystore_section.split('\n') if 'base64 = ' in line]
+    assert len(base64_lines) == 2
+    
+    for base64_line in base64_lines:
+        base64_value = base64_line.split('base64 = ')[1].strip()
+        decoded = base64.b64decode(base64_value).decode('utf-8')
+        # Should decode to one of the raw keys
+        assert decoded == raw_key1 or decoded == raw_key2
