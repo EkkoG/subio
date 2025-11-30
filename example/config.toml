@@ -26,6 +26,8 @@ url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml
 name = "Surge 测试本地"
 type = "surge"
 file = 'surge.conf'
+[provider.rename]
+add_prefix = "Surge-"
 
 [[provider]]
 name = "v2rayn"
