@@ -19,8 +19,8 @@ id = "a188d6b32ddf7cf3bbc9554055e5e2a4"
 [[provider]]
 name = "主力机场"
 type = "clash-meta"
-# file = "meta.yaml"
-url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
+file = "meta.yaml"
+# url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
 
 [[provider]]
 name = "Surge 测试本地"

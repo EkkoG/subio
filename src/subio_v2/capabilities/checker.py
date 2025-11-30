@@ -152,6 +152,17 @@ class CapabilityChecker:
                     field="plugin",
                     suggestion=f"Supported plugins: {', '.join(sorted(supported_plugins))}" if supported_plugins else "No plugins supported"
                 )
+            # 检查 obfs 插件的特殊限制
+            if node.plugin == "obfs" and node.plugin_opts:
+                obfs_mode = node.plugin_opts.get("mode")
+                obfs_host = node.plugin_opts.get("host")
+                # Surge does not support obfs-host when obfs mode is tls
+                if obfs_mode == "tls" and obfs_host:
+                    result.add_warning(
+                        WarningLevel.INFO,
+                        f"obfs-host will be ignored when obfs mode is 'tls' on {self.platform}",
+                        field="plugin_opts"
+                    )
     
     def _check_vmess(self, node: VmessNode, proto_caps: dict, result: CheckResult):
         """检查 VMess 节点"""
