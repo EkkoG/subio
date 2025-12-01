@@ -50,12 +50,6 @@ type = "subio"
 file = 'self.toml'
 
 [[provider]]
-name = "自建节点-隐私"
-type = "subio"
-file = 'self.toml'
-privacy_endpoint = 'ss1'
-
-[[provider]]
 name = "JSON5节点"
 type = "subio"
 file = 'nodes.json5'
@@ -94,7 +88,7 @@ add_prefix = "代理链-"
 name = "ekko-meta.yaml"
 type = "clash-meta"
 template = "clash.yaml"
-providers = ["自建节点-隐私", "自建节点", "主力机场", "Surge 测试"]
+providers = ["自建节点", "主力机场", "Surge 测试"]
 [artifact.options]
 work = true
 
