@@ -9,7 +9,7 @@ from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.processor.common import FilterProcessor, RenameProcessor
+from subio_v2.processor.common import FilterProcessor, RenameProcessor, DialerProxyProcessor
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.ruleset import (
     load_rulesets,
@@ -159,6 +159,12 @@ class WorkflowEngine:
                         prefix=rename_conf.get("add_prefix", ""),
                         replace=rename_conf.get("replace", []),
                     )
+                    nodes = processor.process(nodes)
+
+                # Apply DialerProxy (dialer-proxy for Clash-like, underlying-proxy for Surge)
+                dialer_proxy = prov_conf.get("dialer_proxy")
+                if dialer_proxy:
+                    processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
                     nodes = processor.process(nodes)
 
                 logger.info(
