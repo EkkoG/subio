@@ -52,3 +52,19 @@ class RenameProcessor(Processor):
             node.name = f"{self.prefix}{name}{self.suffix}"
 
         return nodes
+
+
+class DialerProxyProcessor(Processor):
+    def __init__(self, dialer_proxy: str):
+        """
+        Processor to set dialer_proxy (underlying-proxy) for all nodes in a provider.
+        
+        Args:
+            dialer_proxy: The name of the proxy to use as underlying proxy
+        """
+        self.dialer_proxy = dialer_proxy
+
+    def process(self, nodes: List[Node]) -> List[Node]:
+        for node in nodes:
+            node.dialer_proxy = self.dialer_proxy
+        return nodes

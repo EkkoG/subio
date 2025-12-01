@@ -60,6 +60,36 @@ name = "JSON5节点"
 type = "subio"
 file = 'nodes.json5'
 
+# ============ Dialer Proxy 示例 ============
+# Dialer Proxy 示例: 将某个 provider 中的所有节点都通过另一个代理连接
+# 适用于需要代理链的场景，例如：节点 -> 代理A -> 代理B -> 目标服务器
+# 
+# 在 Clash/Clash Meta/Stash 中输出为 dialer-proxy 参数
+# 在 Surge 中输出为 underlying-proxy 参数
+# 
+# 注意：dialer_proxy 的值应该是另一个已定义的代理名称（需要在同一个 artifact 的 providers 中定义）
+
+# 示例1: Clash Meta 中使用 dialer-proxy
+# 将"主力机场"的所有节点通过"自建节点"中的某个节点连接
+# dialer_proxy 的值必须是同一个 artifact 中已存在的节点名称
+[[provider]]
+name = "主力机场-代理链"
+type = "clash-meta"
+file = "meta.yaml"
+dialer_proxy = "香港-IPLC-01"  # 该 provider 中的所有节点都会添加 dialer-proxy=香港-IPLC-01（Clash）或 underlying-proxy=香港-IPLC-01（Surge）
+[provider.rename]
+add_prefix = "代理链-"
+
+# 示例2: Surge 中使用 dialer-proxy（会自动转换为 underlying-proxy）
+# dialer_proxy 的值必须是同一个 artifact 中已存在的节点名称
+[[provider]]
+name = "Surge 测试-代理链"
+type = "surge"
+file = 'surge.conf'
+dialer_proxy = "Surge-ss1"  # 该 provider 中的所有节点都会添加 underlying-proxy=Surge-ss1
+[provider.rename]
+add_prefix = "代理链-"
+
 [[artifact]]
 name = "ekko-meta.yaml"
 type = "clash-meta"
@@ -120,6 +150,25 @@ name = "v2rayn.conf"
 type = "v2rayn"
 template = "v2rayn.conf"
 providers = ["v2rayn"]
+
+# ============ Dialer Proxy 测试示例 ============
+# 测试 dialer-proxy 功能：生成带代理链的配置
+[[artifact]]
+name = "test-dialer-proxy.yaml"
+type = "clash-meta"
+template = "clash.yaml"
+providers = ["自建节点", "主力机场-代理链"]
+[artifact.options]
+work = false
+
+# 测试 Surge underlying-proxy 功能
+[[artifact]]
+name = "test-underlying-proxy.conf"
+type = "surge"
+template = "surge.conf"
+providers = ["Surge 测试本地", "Surge 测试-代理链"]
+[artifact.options]
+work = false
 
 # ============ 多用户示例 ============
 # Multi-user example: 一个配置为多个用户批量生成

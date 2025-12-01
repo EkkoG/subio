@@ -285,4 +285,8 @@ class SurgeEmitter(BaseEmitter):
         if hasattr(node, "ip_version") and node.ip_version and node.ip_version != "dual":
             config_parts.append(f"ip-version={node.ip_version}")
 
+        # Underlying proxy (dialer-proxy in Surge)
+        if hasattr(node, "dialer_proxy") and node.dialer_proxy:
+            config_parts.append(f"underlying-proxy={node.dialer_proxy}")
+
         return f"{node.name} = {', '.join(config_parts)}"

@@ -167,6 +167,9 @@ class SurgeParser(BaseParser):
                         headers[hk.strip()] = hv.strip()
                 transport.headers = headers
 
+        # Extract underlying-proxy (Surge) and convert to dialer_proxy (IR)
+        dialer_proxy = kv_args.get("underlying-proxy")
+
         try:
             if p_type == "ss":
                 # ss, server, port, encrypt-method=..., password=...
@@ -186,7 +189,7 @@ class SurgeParser(BaseParser):
                         "host": kv_args.get("obfs-host", ""),
                     }
 
-                return ShadowsocksNode(
+                node = ShadowsocksNode(
                     name=name,
                     type=Protocol.SHADOWSOCKS,
                     server=server,
@@ -197,6 +200,9 @@ class SurgeParser(BaseParser):
                     plugin_opts=plugin_opts,
                     udp=get_bool("udp-relay", False),
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type == "vmess":
                 # vmess, server, port, username=..., encrypt-method=..., vmess-aead=...
@@ -205,7 +211,7 @@ class SurgeParser(BaseParser):
                 if kv_args.get("tls") == "true":
                     tls.enabled = True
 
-                return VmessNode(
+                node = VmessNode(
                     name=name,
                     type=Protocol.VMESS,
                     server=server,
@@ -217,6 +223,9 @@ class SurgeParser(BaseParser):
                     transport=transport,
                     udp=get_bool("udp-relay", False),
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type == "trojan":
                 # trojan, server, port, password=...
@@ -231,7 +240,7 @@ class SurgeParser(BaseParser):
                             headers[hk.strip()] = hv.strip()
                     transport.headers = headers
 
-                return TrojanNode(
+                node = TrojanNode(
                     name=name,
                     type=Protocol.TROJAN,
                     server=server,
@@ -241,6 +250,9 @@ class SurgeParser(BaseParser):
                     transport=transport,
                     udp=get_bool("udp-relay", False),
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type in ["socks5", "socks5-tls"]:
                 if p_type == "socks5-tls":
@@ -255,7 +267,7 @@ class SurgeParser(BaseParser):
                 if not password and len(pos_args) > 1:
                     password = pos_args[1]
 
-                return Socks5Node(
+                node = Socks5Node(
                     name=name,
                     type=Protocol.SOCKS5,
                     server=server,
@@ -265,6 +277,9 @@ class SurgeParser(BaseParser):
                     tls=tls,
                     udp=get_bool("udp-relay", False),
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type in ["http", "https"]:
                 if p_type == "https":
@@ -278,7 +293,7 @@ class SurgeParser(BaseParser):
                 if not password and len(pos_args) > 1:
                     password = pos_args[1]
 
-                return HttpNode(
+                node = HttpNode(
                     name=name,
                     type=Protocol.HTTP,
                     server=server,
@@ -287,6 +302,9 @@ class SurgeParser(BaseParser):
                     password=password,
                     tls=tls,
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type == "ssh":
                 # ssh, server, port, username=..., password=... or private-key=...
@@ -319,7 +337,7 @@ class SurgeParser(BaseParser):
                             # If decoding fails, keep the base64 value as fallback
                             private_key = base64_key
 
-                return SSHNode(
+                node = SSHNode(
                     name=name,
                     type=Protocol.SSH,
                     server=server,
@@ -329,6 +347,9 @@ class SurgeParser(BaseParser):
                     private_key=private_key,
                     keystore_id=keystore_id,
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type == "snell":
                 # snell, server, port, psk=..., version=..., obfs=..., obfs-host=...
@@ -346,7 +367,7 @@ class SurgeParser(BaseParser):
                 # Snell always uses TLS
                 snell_tls = TLSSettings(enabled=True, skip_cert_verify=kv_args.get("skip-cert-verify") == "true")
 
-                return SnellNode(
+                node = SnellNode(
                     name=name,
                     type=Protocol.SNELL,
                     server=server,
@@ -358,6 +379,9 @@ class SurgeParser(BaseParser):
                     tls=snell_tls,
                     udp=get_bool("udp-relay", False),
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type in ["tuic", "tuic-v5"]:
                 # tuic, server, port, token=..., alpn=..., skip-cert-verify=...
@@ -380,7 +404,7 @@ class SurgeParser(BaseParser):
                     alpn=get_alpn("alpn"),
                 )
 
-                return TUICNode(
+                node = TUICNode(
                     name=name,
                     type=Protocol.TUIC,
                     server=server,
@@ -392,6 +416,9 @@ class SurgeParser(BaseParser):
                     tls=tuic_tls,
                     udp=get_bool("udp-relay", True),  # TUIC supports UDP by default
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
             elif p_type == "hysteria2":
                 # hysteria2, server, port, password=..., download-bandwidth=..., upload-bandwidth=...
@@ -408,7 +435,7 @@ class SurgeParser(BaseParser):
                     alpn=get_alpn("alpn"),
                 )
 
-                return Hysteria2Node(
+                node = Hysteria2Node(
                     name=name,
                     type=Protocol.HYSTERIA2,
                     server=server,
@@ -421,6 +448,9 @@ class SurgeParser(BaseParser):
                     tls=hy_tls,
                     udp=True,  # Hysteria2 always supports UDP
                 )
+                if dialer_proxy:
+                    node.dialer_proxy = dialer_proxy
+                return node
 
 
         except Exception as e:
