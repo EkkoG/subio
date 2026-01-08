@@ -136,6 +136,22 @@ class GistBatchUploader:
                     check=True,
                     capture_output=True,
                 )
+
+                # Show the committed changes
+                try:
+                    show_result = subprocess.run(
+                        ["git", "-C", repo_dir, "show", "--stat", "HEAD"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if show_result.returncode == 0:
+                        logger.info(f"[Upload] Committed changes for Gist {gist_id}:")
+                        for line in show_result.stdout.strip().split('\n'):
+                            logger.dim(f"  {line}")
+                    else:
+                        logger.dim(f"[Upload] Could not show commit details for Gist {gist_id}")
+                except Exception as e:
+                    logger.dim(f"[Upload] Error showing commit details: {e}")
                 # Push (skip in dry-run mode)
                 if self.dry_run:
                     logger.info(
