@@ -34,6 +34,7 @@ class WorkflowEngine:
         self.provider_parsers: Dict[str, Any] = {}  # Store parser instances for keystore access
         self.dry_run = dry_run
         self.clean_gist = clean_gist
+        self._url_cache: Dict[str, str] = {}  # Cache for URL content
 
         # Parsers and Emitters are now managed by Factory
 
@@ -177,6 +178,17 @@ class WorkflowEngine:
 
     def _fetch_content(self, conf: Dict[str, Any]) -> str | None:
         if "url" in conf:
+            # Create cache key based on URL and headers
+            headers = {}
+            if conf.get("user_agent"):
+                headers["User-Agent"] = conf["user_agent"]
+            cache_key = (conf["url"], tuple(sorted(headers.items())))
+
+            # Check cache first
+            if cache_key in self._url_cache:
+                logger.dim(f"Using cached content for {conf['url']}")
+                return self._url_cache[cache_key]
+
             try:
                 # Configure retry strategy
                 retry_strategy = Retry(
@@ -194,14 +206,13 @@ class WorkflowEngine:
                     session.mount("http://", adapter)
                     session.mount("https://", adapter)
 
-                    # Simplified fetch
-                    headers = {}
-                    if conf.get("user_agent"):
-                        headers["User-Agent"] = conf["user_agent"]
-
                     resp = session.get(conf["url"], headers=headers, timeout=10)
                     resp.raise_for_status()
                     content = resp.text
+
+                    # Cache the content
+                    self._url_cache[cache_key] = content
+
                     logger.dim(
                         f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
                     )
