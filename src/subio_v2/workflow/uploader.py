@@ -140,7 +140,7 @@ class GistBatchUploader:
                 # Show the committed changes
                 try:
                     show_result = subprocess.run(
-                        ["git", "-C", repo_dir, "show", "--stat", "HEAD"],
+                        ["git", "-C", repo_dir, "show", "HEAD"],
                         capture_output=True,
                         text=True,
                     )
