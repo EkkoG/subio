@@ -2,6 +2,8 @@ import toml
 import json
 import json5
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import os
 import sys
 from typing import Dict, List, Any
@@ -175,20 +177,36 @@ class WorkflowEngine:
     def _fetch_content(self, conf: Dict[str, Any]) -> str | None:
         if "url" in conf:
             try:
-                # Simplified fetch
-                headers = {}
-                if conf.get("user_agent"):
-                    headers["User-Agent"] = conf["user_agent"]
-
-                resp = requests.get(conf["url"], headers=headers, timeout=10)
-                resp.raise_for_status()
-                content = resp.text
-                logger.dim(
-                    f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                # Configure retry strategy
+                retry_strategy = Retry(
+                    total=3,  # Total number of retries
+                    status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+                    backoff_factor=1,  # Backoff factor (1s, 2s, 4s, ...)
+                    raise_on_status=False,  # Don't raise on bad status codes initially
                 )
-                return content
+
+                # Create adapter with retry strategy
+                adapter = HTTPAdapter(max_retries=retry_strategy)
+
+                # Create session and mount adapter
+                with requests.Session() as session:
+                    session.mount("http://", adapter)
+                    session.mount("https://", adapter)
+
+                    # Simplified fetch
+                    headers = {}
+                    if conf.get("user_agent"):
+                        headers["User-Agent"] = conf["user_agent"]
+
+                    resp = session.get(conf["url"], headers=headers, timeout=10)
+                    resp.raise_for_status()
+                    content = resp.text
+                    logger.dim(
+                        f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                    )
+                    return content
             except Exception as e:
-                logger.error(f"Fetch error: {e}")
+                logger.error(f"Fetch error for {conf['url']}: {e}")
                 return None
         elif "file" in conf:
             # Relative to config file location? Or CWD?
