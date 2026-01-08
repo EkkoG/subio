@@ -193,6 +193,8 @@ class WorkflowEngine:
                 # Configure retry strategy
                 retry_strategy = Retry(
                     total=3,  # Total number of retries
+                    connect=3,  # Retry on connection errors
+                    read=3,  # Retry on read timeout errors
                     status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
                     backoff_factor=1,  # Backoff factor (1s, 2s, 4s, ...)
                     raise_on_status=False,  # Don't raise on bad status codes initially
