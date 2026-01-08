@@ -139,6 +139,7 @@ class WorkflowEngine:
                 p_type = prov_conf.get("type")
                 status.update(f"[bold green]Loading provider: {name} ({p_type})")
 
+                logger.info(f"Processing provider: [bold cyan]{name}[/bold cyan] ({p_type})")
                 content = self._fetch_content(prov_conf)
                 if not content:
                     logger.error(f"Failed to load provider {name}: No content")
