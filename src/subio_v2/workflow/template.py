@@ -18,8 +18,19 @@ import os
 
 class TemplateRenderer:
     def __init__(self, template_dir: str):
+        def finalize_unicode(value):
+            """Finalize function to preserve Unicode characters in output"""
+            if value is None:
+                return ""
+            # For lists, convert to YAML format with allow_unicode=True
+            if isinstance(value, list):
+                return yaml.dump(value, allow_unicode=True, sort_keys=False, default_flow_style=True).strip()
+            return str(value)
+        
         self.env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_dir), undefined=jinja2.Undefined
+            loader=jinja2.FileSystemLoader(template_dir),
+            undefined=jinja2.Undefined,
+            finalize=finalize_unicode
         )
         self._register_base_filters()
         self._register_globals()
