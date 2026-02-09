@@ -80,6 +80,8 @@ class V2RayNParser(BaseParser):
                 server_name=data.get("sni") or data.get("host"),
                 alpn=data.get("alpn", "").split(",") if data.get("alpn") else None,
             )
+            if data.get("net") == "grpc":
+                tls.enabled = True
 
             return VmessNode(
                 name=data.get("ps", "VMess"),
@@ -239,6 +241,8 @@ class V2RayNParser(BaseParser):
                 if security == "reality"
                 else None,
             )
+            if type_net == "grpc":
+                tls.enabled = True
 
             return VlessNode(
                 name=name,

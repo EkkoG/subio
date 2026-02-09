@@ -173,6 +173,9 @@ class ClashParser(BaseParser):
         )
 
     def _parse_vmess(self, data: Dict[str, Any]) -> VmessNode:
+        tls = self._parse_tls(data)
+        if data.get("network") == "grpc":
+            tls.enabled = True
         return VmessNode(
             type=Protocol.VMESS,
             uuid=data.get("uuid", ""),
@@ -180,29 +183,35 @@ class ClashParser(BaseParser):
             cipher=data.get("cipher", "auto"),
             global_padding=data.get("global-padding", False),
             packet_encoding=data.get("packet-encoding"),
-            tls=self._parse_tls(data),
+            tls=tls,
             transport=self._parse_transport(data),
             smux=self._parse_smux(data),
             **self._base_fields(data),
         )
 
     def _parse_vless(self, data: Dict[str, Any]) -> VlessNode:
+        tls = self._parse_tls(data)
+        if data.get("network") == "grpc":
+            tls.enabled = True
         return VlessNode(
             type=Protocol.VLESS,
             uuid=data.get("uuid", ""),
             flow=data.get("flow"),
             packet_encoding=data.get("packet-encoding"),
-            tls=self._parse_tls(data),
+            tls=tls,
             transport=self._parse_transport(data),
             smux=self._parse_smux(data),
             **self._base_fields(data),
         )
 
     def _parse_trojan(self, data: Dict[str, Any]) -> TrojanNode:
+        tls = self._parse_tls(data)
+        if data.get("network") == "grpc":
+            tls.enabled = True
         return TrojanNode(
             type=Protocol.TROJAN,
             password=data.get("password", ""),
-            tls=self._parse_tls(data),
+            tls=tls,
             transport=self._parse_transport(data),
             smux=self._parse_smux(data),
             **self._base_fields(data),
