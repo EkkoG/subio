@@ -73,9 +73,43 @@ proxies:
     assert vm_http.transport.network == Network.HTTP
     assert vm_http.transport.method == "GET" and vm_http.transport.path == "/http"
     assert vm_http.transport.headers.get("Host") == "hh"
-    # gRPC
+    # gRPC (tls is forced true when network is grpc)
     assert vm_grpc.transport.network == Network.GRPC
     assert vm_grpc.transport.grpc_service_name == "svc"
+    assert vm_grpc.tls.enabled is True
+
+
+def test_grpc_forces_tls_true():
+    """When network is grpc, tls is forced to true for vmess/vless/trojan."""
+    yaml_text = """
+proxies:
+  - name: vm-grpc-no-tls
+    type: vmess
+    server: s
+    port: 8443
+    uuid: u
+    network: grpc
+    tls: false
+  - name: vless-grpc-no-tls
+    type: vless
+    server: s
+    port: 8443
+    uuid: u
+    network: grpc
+    tls: false
+  - name: trojan-grpc-no-tls
+    type: trojan
+    server: s
+    port: 8443
+    password: p
+    network: grpc
+    tls: false
+"""
+    nodes = ClashParser().parse(yaml_text)
+    vm, vless, trojan = nodes
+    assert vm.transport.network == Network.GRPC and vm.tls.enabled is True
+    assert vless.transport.network == Network.GRPC and vless.tls.enabled is True
+    assert trojan.transport.network == Network.GRPC and trojan.tls.enabled is True
 
 
 def test_vless_reality_and_tls_options_and_names():
