@@ -22,9 +22,18 @@ class TemplateRenderer:
             """Finalize function to preserve Unicode characters in output"""
             if value is None:
                 return ""
-            # For lists, convert to YAML format with allow_unicode=True
+            # For lists, convert to YAML format with allow_unicode=True.
+            # Use width=float('inf') so flow-style sequences stay on one line; otherwise
+            # PyYAML wraps and continuation lines break YAML (flow sequence must be
+            # sufficiently indented or end with ]).
             if isinstance(value, list):
-                return yaml.dump(value, allow_unicode=True, sort_keys=False, default_flow_style=True).strip()
+                return yaml.dump(
+                    value,
+                    allow_unicode=True,
+                    sort_keys=False,
+                    default_flow_style=True,
+                    width=float("inf"),
+                ).strip()
             return str(value)
         
         self.env = jinja2.Environment(
