@@ -21,7 +21,7 @@ name = "主力机场"
 type = "clash-meta"
 file = "meta.yaml"
 # url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
-# 可选：provider 级别 filter，仅保留该 provider 中匹配的节点（与全局 [filters] 结构相同，先于全局 filter 应用）
+# 可选：provider 级别 filters（与全局 [filters] 同结构，加载时应用，先于全局 filter）
 # [provider.filters]
 # include = '.*'
 # exclude = '.*剩余流量.*'
@@ -52,6 +52,18 @@ replace = [
 name = "自建节点"
 type = "subio"
 file = 'self.toml'
+
+# ============ Provider 级别 filters 示例 ============
+# 与全局 [filters] 结构相同（include/exclude），在 provider 加载时应用，先于全局 filter
+# 仅保留该 provider 中名称匹配的节点
+[[provider]]
+name = "自建节点-仅香港"
+type = "subio"
+file = 'self.toml'
+[provider.filters]
+include = '香港|HK'
+[provider.rename]
+add_prefix = "HK-"
 
 [[provider]]
 name = "JSON5节点"
@@ -165,6 +177,15 @@ name = "test-underlying-proxy.conf"
 type = "surge"
 template = "surge.conf"
 providers = ["Surge 测试本地", "Surge 测试-代理链"]
+[artifact.options]
+work = false
+
+# 测试 Provider 级别 filters：仅香港节点（3 个）
+[[artifact]]
+name = "test-provider-filters.yaml"
+type = "clash-meta"
+template = "clash.yaml"
+providers = ["自建节点-仅香港"]
 [artifact.options]
 work = false
 
