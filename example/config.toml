@@ -21,6 +21,10 @@ name = "主力机场"
 type = "clash-meta"
 file = "meta.yaml"
 # url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
+# 可选：provider 级别 filter，仅保留该 provider 中匹配的节点（与全局 [filters] 结构相同，先于全局 filter 应用）
+# [provider.filters]
+# include = '.*'
+# exclude = '.*剩余流量.*'
 
 [[provider]]
 name = "Surge 测试本地"
