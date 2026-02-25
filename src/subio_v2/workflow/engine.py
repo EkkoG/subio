@@ -171,6 +171,15 @@ class WorkflowEngine:
                     processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
                     nodes = processor.process(nodes)
 
+                # Apply provider-level filter (include/exclude, same structure as global [filters])
+                prov_filter_conf = prov_conf.get("filters")
+                if prov_filter_conf:
+                    prov_filter = FilterProcessor(
+                        include=prov_filter_conf.get("include"),
+                        exclude=prov_filter_conf.get("exclude"),
+                    )
+                    nodes = prov_filter.process(nodes)
+
                 logger.info(
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
                 )
