@@ -171,6 +171,15 @@ class WorkflowEngine:
                     processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
                     nodes = processor.process(nodes)
 
+                # Apply provider-level filter (include/exclude, same structure as global [filters])
+                prov_filter_conf = prov_conf.get("filters")
+                if prov_filter_conf:
+                    prov_filter = FilterProcessor(
+                        include=prov_filter_conf.get("include"),
+                        exclude=prov_filter_conf.get("exclude"),
+                    )
+                    nodes = prov_filter.process(nodes)
+
                 logger.info(
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
                 )
@@ -375,11 +384,7 @@ class WorkflowEngine:
 
             if is_yaml_data:
                 proxies_list = content.get("proxies", [])
-                # Use YAML dump to preserve Unicode characters (emojis) properly
-                names_list = [p["name"] for p in proxies_list]
-                context["proxies_names"] = yaml.dump(
-                    names_list, allow_unicode=True, sort_keys=False
-                ).strip()
+                context["proxies_names"] = [p["name"] for p in proxies_list]
 
             final_content = self.renderer.render(
                 template_path, context, artifact_type, self.rulesets
