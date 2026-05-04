@@ -266,6 +266,63 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "dialer_proxy": False,
         },
     },
+    # ============== dae ==============
+    "dae": {
+        "protocols": {
+            "shadowsocks",
+            "vmess",
+            "vless",
+            "trojan",
+            "http",
+            "socks5",
+            "hysteria2",
+            "tuic",
+            "anytls",
+        },
+        "shadowsocks": {
+            "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
+            "transports": {TRANSPORT_TCP},
+            "plugins": {"obfs", "shadow-tls"},
+            "features": {"udp"},
+        },
+        "vmess": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
+            "features": {"udp", "tls", "reality"},
+        },
+        "vless": {
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
+            "features": {"udp", "tls", "reality", "xtls"},
+            "flows": {"xtls-rprx-vision"},
+        },
+        "trojan": {
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC},
+            "features": {"udp", "tls"},
+        },
+        "http": {
+            "features": {"tls"},
+        },
+        "socks5": {
+            "features": {"udp"},
+        },
+        "hysteria2": {
+            "features": {"udp", "tls", "obfs"},
+        },
+        "tuic": {
+            "versions": {5},
+            "features": {"udp", "tls"},
+        },
+        "anytls": {
+            "features": {"tls"},
+        },
+        # 全局特性
+        "global_features": {
+            "udp_relay": True,
+            "tfo": False,
+            "mptcp": True,
+            "dialer_proxy": True,
+        },
+    },
     # ============== v2rayN ==============
     "v2rayn": {
         "protocols": {

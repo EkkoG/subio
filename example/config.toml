@@ -137,21 +137,21 @@ to = "gist"
 to = "gist"
 file_name = 'clash-for-xx.yml'
 
-# [[artifact]]
-# name = "dae.conf"
-# type = "dae"
-# template = "dae.conf"
-# providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-# [artifact.options]
-# work = true
+[[artifact]]
+name = "dae.conf"
+type = "dae"
+template = "dae.conf"
+providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
+[artifact.options]
+work = true
 
-# [[artifact]]
-# name = "dae_subscription.txt"
-# type = "dae"
-# template = "dae_subscription.txt"
-# providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-# [artifact.options]
-# work = true
+[[artifact]]
+name = "dae_subscription.txt"
+type = "dae"
+template = "dae_subscription.txt"
+providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
+[artifact.options]
+work = true
 # [[artifact.upload]]
 # to = "gist"
 

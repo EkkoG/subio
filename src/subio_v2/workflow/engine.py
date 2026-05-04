@@ -11,6 +11,7 @@ from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.processor.common import FilterProcessor, RenameProcessor, DialerProxyProcessor
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.ruleset import (
@@ -333,6 +334,16 @@ class WorkflowEngine:
             )
             output = emitter.emit(nodes)
 
+            # Compute dae-specific extras (proxies_names + subscription URL list)
+            extra_context: Dict[str, Any] = {}
+            if isinstance(emitter, DaeEmitter):
+                supported_nodes, _ = emitter.emit_with_check(nodes)
+                # dae 过滤名单: 'name1', 'name2', ...
+                extra_context["proxies_names"] = ", ".join(
+                    f"'{n.name}'" for n in supported_nodes
+                )
+                extra_context["subscription"] = emitter.emit_subscription(nodes)
+
             # Use unified writer
             self._write_artifact(
                 name,
@@ -342,6 +353,7 @@ class WorkflowEngine:
                 art_conf.get("options", {}),
                 art_conf,
                 username,
+                extra_context,
             )
         else:
             logger.error(f"Unsupported artifact type: {a_type}")
@@ -355,6 +367,7 @@ class WorkflowEngine:
         artifact_options: Dict[str, Any] = None,
         artifact_conf: Dict[str, Any] = None,
         username: str = None,
+        extra_context: Dict[str, Any] = None,
     ):
         final_content = ""
 
@@ -385,6 +398,10 @@ class WorkflowEngine:
             if is_yaml_data:
                 proxies_list = content.get("proxies", [])
                 context["proxies_names"] = [p["name"] for p in proxies_list]
+
+            # Platform-specific overrides (e.g., dae's pre-formatted names + subscription)
+            if extra_context:
+                context.update(extra_context)
 
             final_content = self.renderer.render(
                 template_path, context, artifact_type, self.rulesets
