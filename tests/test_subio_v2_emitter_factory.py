@@ -14,4 +14,7 @@ def test_emitter_factory_mappings_singletons():
     v2 = EmitterFactory.get_emitter("v2rayn")
     assert v2 is not None
 
+    dae = EmitterFactory.get_emitter("dae")
+    assert dae is not None
+
     assert EmitterFactory.get_emitter("unknown") is None

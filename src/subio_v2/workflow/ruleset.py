@@ -125,6 +125,15 @@ PLATFORM_RULES: Dict[str, Set[str]] = {
         "MATCH",
         "FINAL",
     },
+    "dae": {
+        "DOMAIN",
+        "DOMAIN-SUFFIX",
+        "DOMAIN-KEYWORD",
+        "IP-CIDR",
+        "IP-CIDR6",
+        "MATCH",
+        "FINAL",
+    },
 }
 
 CLASH_PLATFORMS = {"clash", "clash-meta", "stash"}
@@ -298,6 +307,17 @@ class RuleSet:
         if not is_rule_supported(rule.rule_type, platform):
             return None
 
+        # 确定 policy
+        # 如果原 policy 为空，使用默认占位符（取 args 的第一个参数）
+        policy = rule.policy
+        if not policy:
+            first_arg = self.args.split(",")[0].strip()
+            policy = "{{ " + first_arg + " }}"
+
+        # dae 平台采用独立的语法（function-call 风格）
+        if platform == "dae":
+            return self._render_rule_for_dae(rule, policy)
+
         is_clash = platform in CLASH_PLATFORMS
         rule_type = rule.rule_type
 
@@ -309,13 +329,6 @@ class RuleSet:
             # DST-PORT -> DEST-PORT
             elif rule_type == "DST-PORT":
                 rule_type = "DEST-PORT"
-
-        # 确定 policy
-        # 如果原 policy 为空，使用默认占位符（取 args 的第一个参数）
-        policy = rule.policy
-        if not policy:
-            first_arg = self.args.split(",")[0].strip()
-            policy = "{{ " + first_arg + " }}"
 
         # 单参数规则
         if rule_type in SINGLE_PARAM_RULES:
@@ -338,6 +351,28 @@ class RuleSet:
         if is_clash:
             return f"- {result}"
         return result
+
+    def _render_rule_for_dae(self, rule: RuleEntry, policy: str) -> Optional[str]:
+        """将通用规则转换为 dae routing 语法。
+
+        - DOMAIN -> domain(full: x) -> policy
+        - DOMAIN-SUFFIX -> domain(suffix: x) -> policy
+        - DOMAIN-KEYWORD -> domain(keyword: x) -> policy
+        - IP-CIDR / IP-CIDR6 -> dip(x) -> policy
+        - MATCH / FINAL -> fallback: policy
+        """
+        rt = rule.rule_type
+        if rt in ("MATCH", "FINAL"):
+            return f"fallback: {policy}"
+        if rt == "DOMAIN":
+            return f"domain(full: {rule.matcher}) -> {policy}"
+        if rt == "DOMAIN-SUFFIX":
+            return f"domain(suffix: {rule.matcher}) -> {policy}"
+        if rt == "DOMAIN-KEYWORD":
+            return f"domain(keyword: {rule.matcher}) -> {policy}"
+        if rt in ("IP-CIDR", "IP-CIDR6"):
+            return f"dip({rule.matcher}) -> {policy}"
+        return None
 
     def to_macro(self, platform: str) -> str:
         """生成针对指定平台的 Jinja2 macro"""
