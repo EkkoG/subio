@@ -184,4 +184,4 @@ uv.lock
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-dist-subio2/
+dist-subio2/vendor/

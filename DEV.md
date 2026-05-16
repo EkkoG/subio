@@ -185,7 +185,7 @@ def _emit_example(self, node: ExampleNode) -> Dict[str, Any]:
 ### 运行示例
 
 ```bash
-uv run subio2 example/config.toml --dry-run
+uv run subio example/config.toml --dry-run
 ```
 
 输出目录：`./dist/`（见 `AGENTS.md`）。
