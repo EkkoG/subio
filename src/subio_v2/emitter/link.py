@@ -13,6 +13,7 @@ from typing import Optional
 
 from subio_v2.model.nodes import (
     Node,
+    Protocol,
     ShadowsocksNode,
     VmessNode,
     VlessNode,
@@ -273,22 +274,16 @@ def build_anytls_url(node: AnyTLSNode) -> str:
 
 def build_url(node: Node) -> Optional[str]:
     """按 Node 类型分发到具体的 URL 构造函数。"""
-    if isinstance(node, ShadowsocksNode):
-        return build_ss_url(node)
-    if isinstance(node, VmessNode):
-        return build_vmess_url(node)
-    if isinstance(node, VlessNode):
-        return build_vless_url(node)
-    if isinstance(node, TrojanNode):
-        return build_trojan_url(node)
-    if isinstance(node, Socks5Node):
-        return build_socks5_url(node)
-    if isinstance(node, HttpNode):
-        return build_http_url(node)
-    if isinstance(node, Hysteria2Node):
-        return build_hysteria2_url(node)
-    if isinstance(node, TUICNode):
-        return build_tuic_url(node)
-    if isinstance(node, AnyTLSNode):
-        return build_anytls_url(node)
-    return None
+    builders = {
+        Protocol.SHADOWSOCKS: build_ss_url,
+        Protocol.VMESS: build_vmess_url,
+        Protocol.VLESS: build_vless_url,
+        Protocol.TROJAN: build_trojan_url,
+        Protocol.SOCKS5: build_socks5_url,
+        Protocol.HTTP: build_http_url,
+        Protocol.HYSTERIA2: build_hysteria2_url,
+        Protocol.TUIC: build_tuic_url,
+        Protocol.ANYTLS: build_anytls_url,
+    }
+    builder = builders.get(node.type)
+    return builder(node) if builder else None
