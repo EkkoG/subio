@@ -7,73 +7,10 @@ from typing import Any, Dict, List, Optional, Set
 
 from subio_v2.model.nodes import (
     Network,
-    Protocol,
     SmuxSettings,
     TLSSettings,
     TransportSettings,
 )
-
-# Clash `type` -> internal Protocol
-CLASH_TYPE_TO_PROTOCOL: Dict[str, Protocol] = {
-    "ss": Protocol.SHADOWSOCKS,
-    "ssr": Protocol.SHADOWSOCKSR,
-    "vmess": Protocol.VMESS,
-    "vless": Protocol.VLESS,
-    "trojan": Protocol.TROJAN,
-    "socks5": Protocol.SOCKS5,
-    "http": Protocol.HTTP,
-    "wireguard": Protocol.WIREGUARD,
-    "hysteria": Protocol.HYSTERIA,
-    "hysteria2": Protocol.HYSTERIA2,
-    "tuic": Protocol.TUIC,
-    "snell": Protocol.SNELL,
-    "ssh": Protocol.SSH,
-    "anytls": Protocol.ANYTLS,
-    "mieru": Protocol.MIERU,
-    "sudoku": Protocol.SUDOKU,
-    "masque": Protocol.MASQUE,
-    "trusttunnel": Protocol.TRUSTTUNNEL,
-    "openvpn": Protocol.OPENVPN,
-    "tailscale": Protocol.TAILSCALE,
-    "direct": Protocol.DIRECT,
-    "dns": Protocol.DNS,
-}
-
-PROTOCOL_TO_CLASH_TYPE: Dict[Protocol, str] = {
-    Protocol.SHADOWSOCKS: "ss",
-    Protocol.SHADOWSOCKSR: "ssr",
-    Protocol.VMESS: "vmess",
-    Protocol.VLESS: "vless",
-    Protocol.TROJAN: "trojan",
-    Protocol.SOCKS5: "socks5",
-    Protocol.HTTP: "http",
-    Protocol.WIREGUARD: "wireguard",
-    Protocol.HYSTERIA: "hysteria",
-    Protocol.HYSTERIA2: "hysteria2",
-    Protocol.TUIC: "tuic",
-    Protocol.SNELL: "snell",
-    Protocol.SSH: "ssh",
-    Protocol.ANYTLS: "anytls",
-    Protocol.MIERU: "mieru",
-    Protocol.SUDOKU: "sudoku",
-    Protocol.MASQUE: "masque",
-    Protocol.TRUSTTUNNEL: "trusttunnel",
-    Protocol.OPENVPN: "openvpn",
-    Protocol.TAILSCALE: "tailscale",
-    Protocol.DIRECT: "direct",
-    Protocol.DNS: "dns",
-}
-
-PASSTHROUGH_PROTOCOLS: Set[Protocol] = {
-    Protocol.MIERU,
-    Protocol.SUDOKU,
-    Protocol.MASQUE,
-    Protocol.TRUSTTUNNEL,
-    Protocol.OPENVPN,
-    Protocol.TAILSCALE,
-    Protocol.DIRECT,
-    Protocol.DNS,
-}
 
 _BASE_FIELD_KEYS = frozenset(
     {
@@ -175,11 +112,15 @@ def parse_smux(data: Dict[str, Any]) -> SmuxSettings:
 
 
 def emit_base(node: Any) -> Dict[str, Any]:
+    import subio_v2.protocols as protocol_registry
+
+    desc = protocol_registry.get(node.type)
+    clash_type = desc.clash_type if desc else node.type.value
     base: Dict[str, Any] = {
         "name": node.name,
         "server": node.server,
         "port": node.port,
-        "type": PROTOCOL_TO_CLASH_TYPE.get(node.type, node.type.value),
+        "type": clash_type,
         "udp": node.udp,
     }
     if node.ip_version:
