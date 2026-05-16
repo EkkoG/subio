@@ -1,7 +1,7 @@
 示例项目运行方法
 
 ```bash
-uv run subio2 example/config.toml --dry-run
+uv run subio example/config.toml --dry-run
 ```
 
 示例项目运行结果在 `./dist` 目录下

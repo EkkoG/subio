@@ -40,22 +40,33 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
     eng = WorkflowEngine(str(cfg))
 
-    # Mock requests.get to capture headers and simulate error
     captured = {"headers": None}
 
     class Resp:
         text = "hello"
+
         def raise_for_status(self):
             pass
-    
-    def fake_get(url, headers=None, timeout=None):
-        captured["headers"] = headers
-        # Simulate failure when url contains 'fail'
-        if "fail" in url:
-            raise Exception("network fail")
-        return Resp()
 
-    monkeypatch.setattr("subio_v2.workflow.engine.requests.get", fake_get)
+    class FakeSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def mount(self, *args, **kwargs):
+            pass
+
+        def get(self, url, headers=None, timeout=None):
+            captured["headers"] = headers
+            if "fail" in url:
+                raise Exception("network fail")
+            return Resp()
+
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.requests.Session", lambda: FakeSession()
+    )
 
     # Success path and user_agent header
     c = eng._fetch_content({"url": "http://ok", "user_agent": "UA"})
