@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any, Union
 
 class Protocol(StrEnum):
     SHADOWSOCKS = "shadowsocks"
+    SHADOWSOCKSR = "shadowsocksr"
     VMESS = "vmess"
     VLESS = "vless"
     TROJAN = "trojan"
@@ -18,6 +19,14 @@ class Protocol(StrEnum):
     ANYTLS = "anytls"
     SSH = "ssh"
     SNELL = "snell"
+    MIERU = "mieru"
+    SUDOKU = "sudoku"
+    MASQUE = "masque"
+    TRUSTTUNNEL = "trusttunnel"
+    OPENVPN = "openvpn"
+    TAILSCALE = "tailscale"
+    DIRECT = "direct"
+    DNS = "dns"
 
 
 @dataclass
@@ -81,6 +90,10 @@ class BaseNode:
     users: Optional[Dict[str, Dict[str, Any]]] = None
     # Original name before any rename processing (for filtering)
     original_name: Optional[str] = None
+    interface_name: Optional[str] = None
+    routing_mark: Optional[int] = None
+    # Unmapped Clash fields preserved for round-trip emit
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -89,10 +102,26 @@ class ShadowsocksNode(BaseNode):
     password: str = ""
     plugin: Optional[str] = None
     plugin_opts: Optional[Dict[str, Any]] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.SHADOWSOCKS:
             self.type = Protocol.SHADOWSOCKS
+
+
+@dataclass
+class ShadowsocksRNode(BaseNode):
+    cipher: str = ""
+    password: str = ""
+    obfs: str = ""
+    ssr_protocol: str = ""
+    obfs_param: Optional[str] = None
+    protocol_param: Optional[str] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.SHADOWSOCKSR:
+            self.type = Protocol.SHADOWSOCKSR
 
 
 @dataclass
@@ -166,10 +195,20 @@ class WireguardNode(BaseNode):
     private_key: str = ""
     public_key: str = ""
     preshared_key: Optional[str] = None
-    endpoint: Optional[str] = None
+    pre_shared_key: Optional[str] = None  # clash: pre-shared-key on peer
+    interface_ip: Optional[Any] = None  # clash: ip
+    interface_ipv6: Optional[Any] = None  # clash: ipv6
     allowed_ips: List[str] = field(default_factory=lambda: ["0.0.0.0/0", "::/0"])
     reserved: Optional[List[int]] = None
     mtu: Optional[int] = None
+    workers: Optional[int] = None
+    persistent_keepalive: Optional[int] = None
+    amnezia_wg_option: Optional[Dict[str, Any]] = None
+    peers: Optional[List[Dict[str, Any]]] = None
+    remote_dns_resolve: Optional[bool] = None
+    dns_servers: Optional[List[str]] = None
+    refresh_server_ip_interval: Optional[int] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.WIREGUARD:
@@ -190,6 +229,27 @@ class AnyTLSNode(BaseNode):
 
 
 @dataclass
+class HysteriaNode(BaseNode):
+    ports: Optional[str] = None
+    hysteria_protocol: Optional[str] = None
+    obfs_protocol: Optional[str] = None
+    up: Optional[str] = None
+    down: Optional[str] = None
+    up_speed: Optional[int] = None
+    down_speed: Optional[int] = None
+    auth_str: Optional[str] = None
+    auth: Optional[str] = None
+    obfs: Optional[str] = None
+    hop_interval: Optional[int] = None
+    tls: TLSSettings = field(default_factory=TLSSettings)
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.HYSTERIA:
+            self.type = Protocol.HYSTERIA
+
+
+@dataclass
 class Hysteria2Node(BaseNode):
     password: str = ""
     ports: Optional[str] = None
@@ -199,6 +259,7 @@ class Hysteria2Node(BaseNode):
     obfs: Optional[str] = None
     obfs_password: Optional[str] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.HYSTERIA2:
@@ -224,9 +285,11 @@ class SSHNode(BaseNode):
 class SnellNode(BaseNode):
     psk: str = ""
     version: Optional[int] = None
-    obfs: Optional[str] = None  # http, tls
+    obfs: Optional[str] = None  # http, tls (legacy)
     obfs_host: Optional[str] = None
+    obfs_opts: Optional[Dict[str, Any]] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.SNELL:
@@ -240,14 +303,23 @@ class TUICNode(BaseNode):
     uuid: Optional[str] = None  # TUIC v5 uses uuid
     version: Optional[int] = None  # 4 or 5
     tls: TLSSettings = field(default_factory=TLSSettings)
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.TUIC:
             self.type = Protocol.TUIC
 
 
+@dataclass
+class ClashPassthroughNode(BaseNode):
+    """Clash Meta-only proxy; full YAML fields kept in `raw` for round-trip."""
+
+    raw: Dict[str, Any] = field(default_factory=dict)
+
+
 Node = Union[
     ShadowsocksNode,
+    ShadowsocksRNode,
     VmessNode,
     VlessNode,
     TrojanNode,
@@ -255,10 +327,12 @@ Node = Union[
     HttpNode,
     WireguardNode,
     AnyTLSNode,
+    HysteriaNode,
     Hysteria2Node,
     SSHNode,
     SnellNode,
     TUICNode,
+    ClashPassthroughNode,
 ]
 
 

@@ -12,17 +12,20 @@ from subio_v2.model.nodes import (
     Node,
     Protocol,
     ShadowsocksNode,
+    ShadowsocksRNode,
     VmessNode,
     VlessNode,
     TrojanNode,
     Socks5Node,
     HttpNode,
     WireguardNode,
+    HysteriaNode,
     Hysteria2Node,
     SSHNode,
     SnellNode,
     TUICNode,
     AnyTLSNode,
+    ClashPassthroughNode,
     Network,
 )
 from .definitions import (
@@ -258,6 +261,14 @@ class CapabilityChecker:
                     suggestion=f"Supported versions: {', '.join(str(v) for v in sorted(supported_versions))}"
                 )
     
+    def _check_hysteria(self, node: HysteriaNode, proto_caps: dict, result: CheckResult):
+        if node.obfs and "obfs" not in proto_caps.get("features", set()):
+            result.add_warning(
+                WarningLevel.WARNING,
+                f"Obfs is not supported for Hysteria on {self.platform}, will be ignored",
+                field="obfs",
+            )
+
     def _check_hysteria2(self, node: Hysteria2Node, proto_caps: dict, result: CheckResult):
         """检查 Hysteria2 节点"""
         # 检查 obfs
