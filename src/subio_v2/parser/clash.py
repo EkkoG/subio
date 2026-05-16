@@ -1,30 +1,43 @@
-import yaml
+import copy
 import sys
-from typing import List, Any, Dict
-from subio_v2.parser.base import BaseParser
-from subio_v2.model.nodes import (
-    Node,
-    ShadowsocksNode,
-    VmessNode,
-    VlessNode,
-    TrojanNode,
-    Socks5Node,
-    HttpNode,
-    WireguardNode,
-    AnyTLSNode,
-    Hysteria2Node,
-    SSHNode,
-    Protocol,
-    TLSSettings,
-    TransportSettings,
-    SmuxSettings,
-    Network,
+from typing import Any, Dict, List
+
+import yaml
+
+from subio_v2.clash.helpers import (
+    CLASH_TYPE_TO_PROTOCOL,
+    PASSTHROUGH_PROTOCOLS,
+    assign_extra,
+    parse_base_fields,
+    parse_smux,
+    parse_tls,
+    parse_transport,
 )
+from subio_v2.model.nodes import (
+    AnyTLSNode,
+    ClashPassthroughNode,
+    Hysteria2Node,
+    HysteriaNode,
+    HttpNode,
+    Network,
+    Protocol,
+    ShadowsocksNode,
+    ShadowsocksRNode,
+    SnellNode,
+    Socks5Node,
+    SSHNode,
+    TrojanNode,
+    TUICNode,
+    VlessNode,
+    VmessNode,
+    WireguardNode,
+)
+from subio_v2.parser.base import BaseParser
 from subio_v2.utils.logger import logger
 
 
 class ClashParser(BaseParser):
-    def parse(self, content: Any) -> List[Node]:
+    def parse(self, content: Any) -> List:
         if isinstance(content, str):
             try:
                 data = yaml.safe_load(content)
@@ -39,20 +52,13 @@ class ClashParser(BaseParser):
 
         if not isinstance(data, dict):
             logger.error(
-                f"Invalid Clash config format: Expected dict, got {type(data)}. Content preview: {str(content)[:100]}"
+                f"Invalid Clash config format: Expected dict, got {type(data)}. "
+                f"Content preview: {str(content)[:100]}"
             )
             sys.exit(1)
 
-        # CRITICAL: PyYAML can parse simple strings with colons (e.g. "Error: 404 Not Found" or HTML tags)
-        # as dictionaries. For example, "Error: 404" becomes {"Error": "404"}.
-        # Checking for "proxies" key is essential to distinguish valid Clash config from error pages/messages.
         proxies = data.get("proxies")
         if proxies is None:
-            # Some providers return just a list of proxies without "proxies" key?
-            # Or maybe it's a different format?
-            # If strict clash, it must have proxies.
-            # If it's just a list, maybe handle it?
-            # But standard clash config has "proxies".
             logger.error("Clash config missing 'proxies' key")
             sys.exit(1)
 
@@ -62,212 +68,368 @@ class ClashParser(BaseParser):
 
         nodes = []
         for proxy in proxies:
+            if not isinstance(proxy, dict):
+                continue
             node = self._parse_node(proxy)
             if node:
                 nodes.append(node)
         return nodes
 
-    def _parse_node(self, data: Dict[str, Any]) -> Node | None:
+    def _parse_node(self, data: Dict[str, Any]):
         node_type = data.get("type")
+        if not node_type:
+            return None
+
+        protocol = CLASH_TYPE_TO_PROTOCOL.get(node_type)
+        if protocol is None:
+            logger.warning(f"Unsupported Clash proxy type: {node_type}")
+            return None
+
+        if protocol in PASSTHROUGH_PROTOCOLS:
+            return self._parse_passthrough(data, protocol)
 
         try:
-            if node_type == "ss":
-                return self._parse_ss(data)
-            elif node_type == "vmess":
-                return self._parse_vmess(data)
-            elif node_type == "vless":
-                return self._parse_vless(data)
-            elif node_type == "trojan":
-                return self._parse_trojan(data)
-            elif node_type == "socks5":
-                return self._parse_socks5(data)
-            elif node_type == "http":
-                return self._parse_http(data)
-            elif node_type == "wireguard":
-                return self._parse_wireguard(data)
-            elif node_type == "anytls":
-                return self._parse_anytls(data)
-            elif node_type == "hysteria2":
-                return self._parse_hysteria2(data)
-            elif node_type == "ssh":
-                return self._parse_ssh(data)
+            parsers = {
+                Protocol.SHADOWSOCKS: self._parse_ss,
+                Protocol.SHADOWSOCKSR: self._parse_ssr,
+                Protocol.VMESS: self._parse_vmess,
+                Protocol.VLESS: self._parse_vless,
+                Protocol.TROJAN: self._parse_trojan,
+                Protocol.SOCKS5: self._parse_socks5,
+                Protocol.HTTP: self._parse_http,
+                Protocol.WIREGUARD: self._parse_wireguard,
+                Protocol.ANYTLS: self._parse_anytls,
+                Protocol.HYSTERIA2: self._parse_hysteria2,
+                Protocol.HYSTERIA: self._parse_hysteria,
+                Protocol.SSH: self._parse_ssh,
+                Protocol.SNELL: self._parse_snell,
+                Protocol.TUIC: self._parse_tuic,
+            }
+            return parsers[protocol](data)
         except Exception as e:
-            # Log error but continue
             logger.warning(f"Error parsing node {data.get('name')}: {e}")
             return None
 
-        return None
-
-    def _base_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            "name": data.get("name", "Unknown"),
-            "server": data.get("server", ""),
-            "port": int(data.get("port", 0)),
-            "udp": data.get("udp", True),
-            "ip_version": data.get("ip-version", "dual"),
-            "tfo": data.get("tfo", False),
-            "mptcp": data.get("mptcp", False),
-            "dialer_proxy": data.get("dialer-proxy"),
-            "users": data.get("users"),  # Multi-user support
-        }
-
-    def _parse_tls(self, data: Dict[str, Any]) -> TLSSettings:
-        # Hysteria2 might have ech options
-        ech = None
-        if data.get("ech-opts"):
-            ech = data["ech-opts"]
-
-        return TLSSettings(
-            enabled=data.get("tls", False),
-            server_name=data.get("servername") or data.get("sni"),
-            alpn=data.get("alpn"),
-            skip_cert_verify=data.get("skip-cert-verify", False),
-            fingerprint=data.get("fingerprint"),
-            client_fingerprint=data.get("client-fingerprint"),
-            reality_opts=data.get("reality-opts"),
-            ech_opts=ech,
-            certificate=data.get("certificate"),
-            private_key=data.get("private-key"),
-        )
-
-    def _parse_transport(self, data: Dict[str, Any]) -> TransportSettings:
-        net = data.get("network", "tcp")
-        return TransportSettings(
-            network=Network(net) if net in [n.value for n in Network] else Network.TCP,
-            path=data.get("ws-opts", {}).get("path")
-            or data.get("h2-opts", {}).get("path")
-            or data.get("http-opts", {}).get("path"),
-            headers=data.get("ws-opts", {}).get("headers")
-            or data.get("http-opts", {}).get("headers"),
-            host=data.get("h2-opts", {}).get("host"),
-            method=data.get("http-opts", {}).get("method"),
-            grpc_service_name=data.get("grpc-opts", {}).get("grpc-service-name"),
-            max_early_data=data.get("ws-opts", {}).get("max-early-data"),
-            early_data_header_name=data.get("ws-opts", {}).get(
-                "early-data-header-name"
-            ),
-        )
-
-    def _parse_smux(self, data: Dict[str, Any]) -> SmuxSettings:
-        smux_data = data.get("smux", {})
-        if not smux_data:
-            return SmuxSettings()
-        return SmuxSettings(
-            enabled=smux_data.get("enabled", False),
-            protocol=smux_data.get("protocol", "smux"),
-            max_connections=smux_data.get("max-connections", 4),
-            min_streams=smux_data.get("min-streams", 4),
-            max_streams=smux_data.get("max-streams", 0),
-            padding=smux_data.get("padding", False),
-            brutal_opts=smux_data.get("brutal-opts"),
+    def _parse_passthrough(self, data: Dict[str, Any], protocol: Protocol) -> ClashPassthroughNode:
+        return ClashPassthroughNode(
+            type=protocol, raw=copy.deepcopy(data), **parse_base_fields(data)
         )
 
     def _parse_ss(self, data: Dict[str, Any]) -> ShadowsocksNode:
-        return ShadowsocksNode(
+        handled = {
+            "cipher",
+            "password",
+            "plugin",
+            "plugin-opts",
+            "smux",
+            "udp-over-tcp",
+            "udp-over-tcp-version",
+            "client-fingerprint",
+        }
+        node = ShadowsocksNode(
             type=Protocol.SHADOWSOCKS,
             cipher=data.get("cipher", "chacha20-ietf-poly1305"),
             password=data.get("password", ""),
             plugin=data.get("plugin"),
             plugin_opts=data.get("plugin-opts"),
-            **self._base_fields(data),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
+
+    def _parse_ssr(self, data: Dict[str, Any]) -> ShadowsocksRNode:
+        handled = {
+            "cipher",
+            "password",
+            "obfs",
+            "protocol",
+            "obfs-param",
+            "protocol-param",
+            "smux",
+        }
+        node = ShadowsocksRNode(
+            type=Protocol.SHADOWSOCKSR,
+            cipher=data.get("cipher", ""),
+            password=data.get("password", ""),
+            obfs=data.get("obfs", ""),
+            ssr_protocol=data.get("protocol", ""),
+            obfs_param=data.get("obfs-param"),
+            protocol_param=data.get("protocol-param"),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
+        )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_vmess(self, data: Dict[str, Any]) -> VmessNode:
-        tls = self._parse_tls(data)
+        tls = parse_tls(data)
         if data.get("network") == "grpc":
             tls.enabled = True
-        return VmessNode(
+        handled = {
+            "uuid",
+            "alterId",
+            "cipher",
+            "global-padding",
+            "packet-encoding",
+            "tls",
+            "servername",
+            "sni",
+            "alpn",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "reality-opts",
+            "ech-opts",
+            "certificate",
+            "private-key",
+            "network",
+            "ws-opts",
+            "h2-opts",
+            "http-opts",
+            "grpc-opts",
+            "smux",
+        }
+        node = VmessNode(
             type=Protocol.VMESS,
             uuid=data.get("uuid", ""),
-            alter_id=data.get("alterId", 0),
+            alter_id=int(data.get("alterId", 0) or 0),
             cipher=data.get("cipher", "auto"),
-            global_padding=data.get("global-padding", False),
+            global_padding=bool(data.get("global-padding", False)),
             packet_encoding=data.get("packet-encoding"),
             tls=tls,
-            transport=self._parse_transport(data),
-            smux=self._parse_smux(data),
-            **self._base_fields(data),
+            transport=parse_transport(data),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_vless(self, data: Dict[str, Any]) -> VlessNode:
-        tls = self._parse_tls(data)
+        tls = parse_tls(data)
         if data.get("network") == "grpc":
             tls.enabled = True
-        return VlessNode(
+        handled = {
+            "uuid",
+            "flow",
+            "packet-encoding",
+            "tls",
+            "servername",
+            "sni",
+            "alpn",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "reality-opts",
+            "ech-opts",
+            "certificate",
+            "private-key",
+            "network",
+            "ws-opts",
+            "h2-opts",
+            "http-opts",
+            "grpc-opts",
+            "smux",
+        }
+        node = VlessNode(
             type=Protocol.VLESS,
             uuid=data.get("uuid", ""),
             flow=data.get("flow"),
             packet_encoding=data.get("packet-encoding"),
             tls=tls,
-            transport=self._parse_transport(data),
-            smux=self._parse_smux(data),
-            **self._base_fields(data),
+            transport=parse_transport(data),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_trojan(self, data: Dict[str, Any]) -> TrojanNode:
-        tls = self._parse_tls(data)
+        tls = parse_tls(data)
         if data.get("network") == "grpc":
             tls.enabled = True
-        return TrojanNode(
+        handled = {
+            "password",
+            "tls",
+            "servername",
+            "sni",
+            "alpn",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "reality-opts",
+            "ech-opts",
+            "certificate",
+            "private-key",
+            "network",
+            "ws-opts",
+            "h2-opts",
+            "http-opts",
+            "grpc-opts",
+            "smux",
+        }
+        node = TrojanNode(
             type=Protocol.TROJAN,
             password=data.get("password", ""),
             tls=tls,
-            transport=self._parse_transport(data),
-            smux=self._parse_smux(data),
-            **self._base_fields(data),
+            transport=parse_transport(data),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_socks5(self, data: Dict[str, Any]) -> Socks5Node:
-        return Socks5Node(
+        handled = {
+            "username",
+            "password",
+            "tls",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "alpn",
+            "certificate",
+            "private-key",
+        }
+        node = Socks5Node(
             type=Protocol.SOCKS5,
             username=data.get("username"),
             password=data.get("password"),
-            tls=self._parse_tls(data),
-            **self._base_fields(data),
+            tls=parse_tls(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_http(self, data: Dict[str, Any]) -> HttpNode:
-        return HttpNode(
+        handled = {
+            "username",
+            "password",
+            "headers",
+            "tls",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "alpn",
+            "certificate",
+            "private-key",
+        }
+        node = HttpNode(
             type=Protocol.HTTP,
             username=data.get("username"),
             password=data.get("password"),
             headers=data.get("headers"),
-            tls=self._parse_tls(data),
-            **self._base_fields(data),
+            tls=parse_tls(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_wireguard(self, data: Dict[str, Any]) -> WireguardNode:
-        return WireguardNode(
+        ip_val = data.get("ip")
+        allowed_ips: List[str] = []
+        interface_ip = ip_val
+        if isinstance(ip_val, list):
+            allowed_ips = list(ip_val)
+        elif ip_val:
+            interface_ip = ip_val
+
+        if data.get("allowed-ips"):
+            allowed_ips = list(data["allowed-ips"])
+
+        handled = {
+            "private-key",
+            "public-key",
+            "preshared-key",
+            "pre-shared-key",
+            "ip",
+            "ipv6",
+            "allowed-ips",
+            "reserved",
+            "mtu",
+            "workers",
+            "persistent-keepalive",
+            "amnezia-wg-option",
+            "peers",
+            "remote-dns-resolve",
+            "dns",
+            "refresh-server-ip-interval",
+            "smux",
+        }
+        node = WireguardNode(
             type=Protocol.WIREGUARD,
             private_key=data.get("private-key", ""),
             public_key=data.get("public-key", ""),
-            preshared_key=data.get("preshared-key"),
-            endpoint=data.get("udp", False),
-            allowed_ips=data.get("ip", []) if isinstance(data.get("ip"), list) else [],
-            **self._base_fields(data),
+            preshared_key=data.get("preshared-key") or data.get("pre-shared-key"),
+            interface_ip=interface_ip,
+            interface_ipv6=data.get("ipv6"),
+            allowed_ips=allowed_ips or ["0.0.0.0/0", "::/0"],
+            reserved=data.get("reserved"),
+            mtu=data.get("mtu"),
+            workers=data.get("workers"),
+            persistent_keepalive=data.get("persistent-keepalive"),
+            amnezia_wg_option=data.get("amnezia-wg-option"),
+            peers=data.get("peers"),
+            remote_dns_resolve=data.get("remote-dns-resolve"),
+            dns_servers=data.get("dns"),
+            refresh_server_ip_interval=data.get("refresh-server-ip-interval"),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_anytls(self, data: Dict[str, Any]) -> AnyTLSNode:
-        tls = self._parse_tls(data)
+        tls = parse_tls(data)
         tls.enabled = True
-
-        return AnyTLSNode(
+        handled = {
+            "password",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "alpn",
+            "certificate",
+            "private-key",
+            "idle-session-check-interval",
+            "idle-session-timeout",
+            "min-idle-session",
+        }
+        node = AnyTLSNode(
             type=Protocol.ANYTLS,
             password=data.get("password", ""),
             tls=tls,
             idle_session_check_interval=data.get("idle-session-check-interval"),
             idle_session_timeout=data.get("idle-session-timeout"),
             min_idle_session=data.get("min-idle-session"),
-            **self._base_fields(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_hysteria2(self, data: Dict[str, Any]) -> Hysteria2Node:
-        tls = self._parse_tls(data)
-        # Hysteria2 uses TLS implicitly usually, but can be disabled (not standard).
-        # The config fields (sni, skip-cert-verify, etc) are at root. _parse_tls handles them.
+        tls = parse_tls(data)
         tls.enabled = True
-
-        return Hysteria2Node(
+        handled = {
+            "password",
+            "ports",
+            "hop-interval",
+            "up",
+            "down",
+            "obfs",
+            "obfs-password",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "certificate",
+            "private-key",
+            "alpn",
+            "ech-opts",
+            "smux",
+        }
+        node = Hysteria2Node(
             type=Protocol.HYSTERIA2,
             password=data.get("password", ""),
             ports=data.get("ports"),
@@ -277,11 +439,69 @@ class ClashParser(BaseParser):
             obfs=data.get("obfs"),
             obfs_password=data.get("obfs-password"),
             tls=tls,
-            **self._base_fields(data),
+            smux=parse_smux(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
+
+    def _parse_hysteria(self, data: Dict[str, Any]) -> HysteriaNode:
+        tls = parse_tls(data, default_enabled=True)
+        handled = {
+            "ports",
+            "protocol",
+            "obfs-protocol",
+            "up",
+            "down",
+            "up-speed",
+            "down-speed",
+            "auth-str",
+            "auth",
+            "obfs",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "certificate",
+            "private-key",
+            "alpn",
+            "ech-opts",
+            "hop-interval",
+            "recv-window-conn",
+            "recv-window",
+            "disable-mtu-discovery",
+            "fast-open",
+            "smux",
+        }
+        node = HysteriaNode(
+            type=Protocol.HYSTERIA,
+            ports=data.get("ports"),
+            hysteria_protocol=data.get("protocol"),
+            obfs_protocol=data.get("obfs-protocol"),
+            up=data.get("up", ""),
+            down=data.get("down", ""),
+            up_speed=data.get("up-speed"),
+            down_speed=data.get("down-speed"),
+            auth_str=data.get("auth-str"),
+            auth=data.get("auth"),
+            obfs=data.get("obfs"),
+            hop_interval=data.get("hop-interval"),
+            tls=tls,
+            smux=parse_smux(data),
+            **parse_base_fields(data),
+        )
+        assign_extra(node, data, handled)
+        return node
 
     def _parse_ssh(self, data: Dict[str, Any]) -> SSHNode:
-        return SSHNode(
+        handled = {
+            "username",
+            "password",
+            "private-key",
+            "private-key-passphrase",
+            "host-key",
+            "host-key-algorithms",
+        }
+        node = SSHNode(
             type=Protocol.SSH,
             username=data.get("username", ""),
             password=data.get("password"),
@@ -289,5 +509,64 @@ class ClashParser(BaseParser):
             private_key_passphrase=data.get("private-key-passphrase"),
             host_key=data.get("host-key"),
             host_key_algorithms=data.get("host-key-algorithms"),
-            **self._base_fields(data),
+            **parse_base_fields(data),
         )
+        assign_extra(node, data, handled)
+        return node
+
+    def _parse_snell(self, data: Dict[str, Any]) -> SnellNode:
+        obfs_opts = data.get("obfs-opts")
+        obfs = None
+        obfs_host = None
+        if isinstance(obfs_opts, dict):
+            obfs = obfs_opts.get("mode")
+            obfs_host = obfs_opts.get("host")
+        handled = {"psk", "version", "obfs-opts", "smux"}
+        node = SnellNode(
+            type=Protocol.SNELL,
+            psk=data.get("psk", ""),
+            version=data.get("version"),
+            obfs=obfs,
+            obfs_host=obfs_host,
+            obfs_opts=obfs_opts,
+            smux=parse_smux(data),
+            **parse_base_fields(data),
+        )
+        assign_extra(node, data, handled)
+        return node
+
+    def _parse_tuic(self, data: Dict[str, Any]) -> TUICNode:
+        tls = parse_tls(data, default_enabled=True)
+        version = None
+        if data.get("uuid") or data.get("password"):
+            version = 5
+        elif data.get("token"):
+            version = 4
+        handled = {
+            "token",
+            "uuid",
+            "password",
+            "smux",
+            "tls",
+            "sni",
+            "skip-cert-verify",
+            "fingerprint",
+            "client-fingerprint",
+            "alpn",
+            "certificate",
+            "private-key",
+            "ech-opts",
+            "disable-sni",
+        }
+        node = TUICNode(
+            type=Protocol.TUIC,
+            token=data.get("token"),
+            password=data.get("password"),
+            uuid=data.get("uuid"),
+            version=version,
+            tls=tls,
+            smux=parse_smux(data),
+            **parse_base_fields(data),
+        )
+        assign_extra(node, data, handled)
+        return node

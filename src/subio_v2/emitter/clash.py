@@ -1,33 +1,44 @@
-from typing import List, Any, Dict
+from typing import Any, Dict, List
+
+from subio_v2.clash.helpers import (
+    emit_base,
+    emit_passthrough,
+    emit_smux,
+    emit_tls,
+    emit_transport,
+    merge_extra,
+)
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
-    Node,
-    ShadowsocksNode,
-    VmessNode,
-    VlessNode,
-    TrojanNode,
-    Socks5Node,
-    HttpNode,
-    WireguardNode,
     AnyTLSNode,
+    ClashPassthroughNode,
     Hysteria2Node,
-    SSHNode,
+    HysteriaNode,
+    HttpNode,
+    Node,
     Protocol,
-    Network,
+    ShadowsocksNode,
+    ShadowsocksRNode,
+    SnellNode,
+    Socks5Node,
+    SSHNode,
+    TrojanNode,
+    TUICNode,
+    VlessNode,
+    VmessNode,
+    WireguardNode,
 )
 
 
 class ClashEmitter(BaseEmitter):
-    platform = "clash-meta"  # Default to clash-meta, can be overridden
-    
+    platform = "clash-meta"
+
     def __init__(self, platform: str = "clash-meta"):
         self.platform = platform
         super().__init__()
-    
+
     def emit(self, nodes: List[Node]) -> Dict[str, Any]:
-        # Use capability check to filter unsupported nodes
         supported_nodes, _ = self.emit_with_check(nodes)
-        
         proxies = []
         for node in supported_nodes:
             proxy = self._emit_node(node)
@@ -36,258 +47,265 @@ class ClashEmitter(BaseEmitter):
         return {"proxies": proxies}
 
     def _emit_node(self, node: Node) -> Dict[str, Any] | None:
-        base = {
-            "name": node.name,
-            "server": node.server,
-            "port": node.port,
-            "type": self._map_type(node.type),
-            "udp": node.udp,
-        }
-
-        if node.ip_version != "dual" and node.ip_version:
-            base["ip-version"] = node.ip_version
-        if node.tfo:
-            base["tfo"] = True
-        if node.mptcp:
-            base["mptcp"] = True
-        if node.dialer_proxy:
-            base["dialer-proxy"] = node.dialer_proxy
+        if isinstance(node, ClashPassthroughNode):
+            return emit_passthrough(node)
 
         if isinstance(node, ShadowsocksNode):
-            base.update(
-                {
-                    "cipher": node.cipher,
-                    "password": node.password,
-                }
-            )
-            if node.plugin:
-                base["plugin"] = node.plugin
-                if node.plugin_opts:
-                    base["plugin-opts"] = node.plugin_opts
-            # Handle simple-obfs to obfs mapping if needed, but usually model keeps raw
+            return self._emit_ss(node)
+        if isinstance(node, ShadowsocksRNode):
+            return self._emit_ssr(node)
+        if isinstance(node, VmessNode):
+            return self._emit_vmess(node)
+        if isinstance(node, VlessNode):
+            return self._emit_vless(node)
+        if isinstance(node, TrojanNode):
+            return self._emit_trojan(node)
+        if isinstance(node, Socks5Node):
+            return self._emit_socks5(node)
+        if isinstance(node, HttpNode):
+            return self._emit_http(node)
+        if isinstance(node, WireguardNode):
+            return self._emit_wireguard(node)
+        if isinstance(node, AnyTLSNode):
+            return self._emit_anytls(node)
+        if isinstance(node, Hysteria2Node):
+            return self._emit_hysteria2(node)
+        if isinstance(node, HysteriaNode):
+            return self._emit_hysteria(node)
+        if isinstance(node, SSHNode):
+            return self._emit_ssh(node)
+        if isinstance(node, SnellNode):
+            return self._emit_snell(node)
+        if isinstance(node, TUICNode):
+            return self._emit_tuic(node)
+        return None
 
-        elif isinstance(node, VmessNode):
-            base.update(
-                {
-                    "uuid": node.uuid,
-                    "alterId": node.alter_id,
-                    "cipher": node.cipher,
-                    "global-padding": node.global_padding,
-                }
-            )
-            if node.packet_encoding:
-                base["packet-encoding"] = node.packet_encoding
-            self._add_tls(base, node.tls)
-            self._add_transport(base, node.transport)
-            self._add_smux(base, node.smux)
+    def _emit_ss(self, node: ShadowsocksNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base.update(
+            {
+                "cipher": node.cipher,
+                "password": node.password,
+            }
+        )
+        if node.plugin:
+            base["plugin"] = node.plugin
+            if node.plugin_opts:
+                base["plugin-opts"] = node.plugin_opts
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        elif isinstance(node, VlessNode):
-            base.update(
-                {
-                    "uuid": node.uuid,
-                }
-            )
-            if node.flow:
-                base["flow"] = node.flow
-            if node.packet_encoding:
-                base["packet-encoding"] = node.packet_encoding
-            self._add_tls(base, node.tls)
-            self._add_transport(base, node.transport)
-            self._add_smux(base, node.smux)
+    def _emit_ssr(self, node: ShadowsocksRNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base.update(
+            {
+                "cipher": node.cipher,
+                "password": node.password,
+                "obfs": node.obfs,
+                "protocol": node.ssr_protocol,
+            }
+        )
+        if node.obfs_param:
+            base["obfs-param"] = node.obfs_param
+        if node.protocol_param:
+            base["protocol-param"] = node.protocol_param
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        elif isinstance(node, TrojanNode):
-            base.update(
-                {
-                    "password": node.password,
-                }
-            )
-            self._add_tls(base, node.tls)
-            self._add_transport(base, node.transport)
-            self._add_smux(base, node.smux)
+    def _emit_vmess(self, node: VmessNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base.update(
+            {
+                "uuid": node.uuid,
+                "alterId": node.alter_id,
+                "cipher": node.cipher,
+            }
+        )
+        if node.global_padding:
+            base["global-padding"] = True
+        if node.packet_encoding:
+            base["packet-encoding"] = node.packet_encoding
+        emit_tls(base, node.tls)
+        emit_transport(base, node.transport)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        elif isinstance(node, Socks5Node):
-            if node.username:
-                base["username"] = node.username
-            if node.password:
-                base["password"] = node.password
-            self._add_tls(base, node.tls)
+    def _emit_vless(self, node: VlessNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["uuid"] = node.uuid
+        if node.flow:
+            base["flow"] = node.flow
+        if node.packet_encoding:
+            base["packet-encoding"] = node.packet_encoding
+        emit_tls(base, node.tls)
+        emit_transport(base, node.transport)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        elif isinstance(node, HttpNode):
-            if node.username:
-                base["username"] = node.username
-            if node.password:
-                base["password"] = node.password
-            if node.headers:
-                base["headers"] = node.headers
-            self._add_tls(base, node.tls)
+    def _emit_trojan(self, node: TrojanNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["password"] = node.password
+        emit_tls(base, node.tls)
+        emit_transport(base, node.transport)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        elif isinstance(node, WireguardNode):
-            base.update(
-                {
-                    "private-key": node.private_key,
-                    "public-key": node.public_key,
-                    "udp": True,  # WG is UDP
-                }
-            )
-            if node.preshared_key:
-                base["preshared-key"] = node.preshared_key
-            if node.allowed_ips:
-                base["ip"] = node.allowed_ips[
-                    0
-                ]  # Clash uses 'ip' for internal IP assignment usually, check?
-            # Clash WG: ip: string, ipv6: string. allowed-ips: list[str] is for routing
-            # The old parser mapped 'ip' to allowed_ips list?
-            # Checking src/subio/model.py: Wireguard is simpler there.
-            # Clash Meta docs: ip/ipv6 for interface address.
-            # Let's use what we have.
-
-        elif isinstance(node, AnyTLSNode):
-            base.update(
-                {
-                    "password": node.password,
-                }
-            )
-            self._add_tls(base, node.tls)
-            if node.idle_session_check_interval is not None:
-                base["idle-session-check-interval"] = node.idle_session_check_interval
-            if node.idle_session_timeout is not None:
-                base["idle-session-timeout"] = node.idle_session_timeout
-            if node.min_idle_session is not None:
-                base["min-idle-session"] = node.min_idle_session
-
-        elif isinstance(node, Hysteria2Node):
-            base.update(
-                {
-                    "password": node.password,
-                }
-            )
-            if node.ports:
-                base["ports"] = node.ports
-            if node.hop_interval is not None:
-                base["hop-interval"] = node.hop_interval
-            if node.up:
-                base["up"] = node.up
-            if node.down:
-                base["down"] = node.down
-            if node.obfs:
-                base["obfs"] = node.obfs
-            if node.obfs_password:
-                base["obfs-password"] = node.obfs_password
-
-            self._add_tls(base, node.tls)
-
-        elif isinstance(node, SSHNode):
+    def _emit_socks5(self, node: Socks5Node) -> Dict[str, Any]:
+        base = emit_base(node)
+        if node.username:
             base["username"] = node.username
-            if node.password:
-                base["password"] = node.password
-            if node.private_key:
-                base["private-key"] = node.private_key
-            if node.private_key_passphrase:
-                base["private-key-passphrase"] = node.private_key_passphrase
-            if node.host_key:
-                base["host-key"] = node.host_key
-            if node.host_key_algorithms:
-                base["host-key-algorithms"] = node.host_key_algorithms
+        if node.password:
+            base["password"] = node.password
+        emit_tls(base, node.tls)
+        return merge_extra(base, node)
 
-        return base
+    def _emit_http(self, node: HttpNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        if node.username:
+            base["username"] = node.username
+        if node.password:
+            base["password"] = node.password
+        if node.headers:
+            base["headers"] = node.headers
+        emit_tls(base, node.tls)
+        return merge_extra(base, node)
 
-    def _map_type(self, protocol: Protocol) -> str:
-        if protocol == Protocol.SHADOWSOCKS:
-            return "ss"
-        return protocol.value
+    def _emit_wireguard(self, node: WireguardNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["private-key"] = node.private_key
+        base["udp"] = True
+        if node.public_key:
+            base["public-key"] = node.public_key
+        if node.preshared_key:
+            base["preshared-key"] = node.preshared_key
+        if node.interface_ip is not None:
+            base["ip"] = node.interface_ip
+        elif node.allowed_ips and len(node.allowed_ips) > 1:
+            base["ip"] = node.allowed_ips
+        elif node.allowed_ips:
+            base["ip"] = node.allowed_ips[0]
+        if node.interface_ipv6 is not None:
+            base["ipv6"] = node.interface_ipv6
+        if node.allowed_ips and node.interface_ip is None:
+            pass
+        elif node.allowed_ips and isinstance(node.interface_ip, list):
+            if node.allowed_ips != list(node.interface_ip):
+                base["allowed-ips"] = node.allowed_ips
+        if node.reserved:
+            base["reserved"] = node.reserved
+        if node.mtu is not None:
+            base["mtu"] = node.mtu
+        if node.workers is not None:
+            base["workers"] = node.workers
+        if node.persistent_keepalive is not None:
+            base["persistent-keepalive"] = node.persistent_keepalive
+        if node.amnezia_wg_option:
+            base["amnezia-wg-option"] = node.amnezia_wg_option
+        if node.peers:
+            base["peers"] = node.peers
+        if node.remote_dns_resolve is not None:
+            base["remote-dns-resolve"] = node.remote_dns_resolve
+        if node.dns_servers:
+            base["dns"] = node.dns_servers
+        if node.refresh_server_ip_interval is not None:
+            base["refresh-server-ip-interval"] = node.refresh_server_ip_interval
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-    def _add_tls(self, base: Dict[str, Any], tls) -> None:
-        if not tls or not tls.enabled:
-            return
+    def _emit_anytls(self, node: AnyTLSNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["password"] = node.password
+        emit_tls(base, node.tls)
+        if node.idle_session_check_interval is not None:
+            base["idle-session-check-interval"] = node.idle_session_check_interval
+        if node.idle_session_timeout is not None:
+            base["idle-session-timeout"] = node.idle_session_timeout
+        if node.min_idle_session is not None:
+            base["min-idle-session"] = node.min_idle_session
+        return merge_extra(base, node)
 
-        if base["type"] not in ["anytls", "hysteria2"]:
-            base["tls"] = True
+    def _emit_hysteria2(self, node: Hysteria2Node) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["password"] = node.password
+        if node.ports:
+            base["ports"] = node.ports
+        if node.hop_interval is not None:
+            base["hop-interval"] = node.hop_interval
+        if node.up:
+            base["up"] = node.up
+        if node.down:
+            base["down"] = node.down
+        if node.obfs:
+            base["obfs"] = node.obfs
+        if node.obfs_password:
+            base["obfs-password"] = node.obfs_password
+        emit_tls(base, node.tls)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        if tls.server_name:
-            if base["type"] in ["vmess", "vless"]:
-                base["servername"] = tls.server_name
-            else:
-                base["sni"] = tls.server_name  # anytls/hysteria2 uses 'sni'
+    def _emit_hysteria(self, node: HysteriaNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        if node.ports:
+            base["ports"] = node.ports
+        if node.hysteria_protocol:
+            base["protocol"] = node.hysteria_protocol
+        if node.obfs_protocol:
+            base["obfs-protocol"] = node.obfs_protocol
+        if node.up:
+            base["up"] = node.up
+        if node.down:
+            base["down"] = node.down
+        if node.up_speed is not None:
+            base["up-speed"] = node.up_speed
+        if node.down_speed is not None:
+            base["down-speed"] = node.down_speed
+        if node.auth_str:
+            base["auth-str"] = node.auth_str
+        if node.auth:
+            base["auth"] = node.auth
+        if node.obfs:
+            base["obfs"] = node.obfs
+        if node.hop_interval is not None:
+            base["hop-interval"] = node.hop_interval
+        emit_tls(base, node.tls)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-        if tls.skip_cert_verify:
-            base["skip-cert-verify"] = True
-        if tls.fingerprint:
-            base["fingerprint"] = tls.fingerprint
-        if tls.client_fingerprint:
-            base["client-fingerprint"] = tls.client_fingerprint
-        if tls.alpn:
-            base["alpn"] = tls.alpn
-        if tls.reality_opts:
-            base["reality-opts"] = tls.reality_opts
-        if tls.ech_opts:
-            base["ech-opts"] = tls.ech_opts
+    def _emit_ssh(self, node: SSHNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["username"] = node.username
+        if node.password:
+            base["password"] = node.password
+        if node.private_key:
+            base["private-key"] = node.private_key
+        if node.private_key_passphrase:
+            base["private-key-passphrase"] = node.private_key_passphrase
+        if node.host_key:
+            base["host-key"] = node.host_key
+        if node.host_key_algorithms:
+            base["host-key-algorithms"] = node.host_key_algorithms
+        return merge_extra(base, node)
 
-        # mTLS
-        if tls.certificate:
-            base["certificate"] = tls.certificate
-        if tls.private_key:
-            base["private-key"] = tls.private_key
+    def _emit_snell(self, node: SnellNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        base["psk"] = node.psk
+        if node.version is not None:
+            base["version"] = node.version
+        if node.obfs_opts:
+            base["obfs-opts"] = node.obfs_opts
+        elif node.obfs:
+            base["obfs-opts"] = {"mode": node.obfs, "host": node.obfs_host or "bing.com"}
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
 
-    def _add_transport(self, base: Dict[str, Any], transport) -> None:
-        if not transport or transport.network == Network.TCP:
-            return
-
-        base["network"] = transport.network.value
-
-        if transport.network == Network.WS:
-            opts = {}
-            if transport.path:
-                opts["path"] = transport.path
-            if transport.headers:
-                opts["headers"] = transport.headers
-            if transport.max_early_data is not None:
-                opts["max-early-data"] = transport.max_early_data
-            if transport.early_data_header_name:
-                opts["early-data-header-name"] = transport.early_data_header_name
-            if opts:
-                base["ws-opts"] = opts
-
-        elif transport.network == Network.HTTP:
-            opts = {}
-            if transport.method:
-                opts["method"] = transport.method
-            if transport.path:
-                opts["path"] = (
-                    [transport.path]
-                    if isinstance(transport.path, str)
-                    else transport.path
-                )
-            if transport.headers:
-                opts["headers"] = transport.headers
-            if opts:
-                base["http-opts"] = opts
-
-        elif transport.network == Network.H2:
-            opts = {}
-            if transport.host:
-                opts["host"] = transport.host
-            if transport.path:
-                opts["path"] = transport.path
-            if opts:
-                base["h2-opts"] = opts
-
-        elif transport.network == Network.GRPC:
-            opts = {}
-            if transport.grpc_service_name:
-                opts["grpc-service-name"] = transport.grpc_service_name
-            if opts:
-                base["grpc-opts"] = opts
-
-    def _add_smux(self, base: Dict[str, Any], smux) -> None:
-        if not smux or not smux.enabled:
-            return
-        base["smux"] = {
-            "enabled": True,
-            "protocol": smux.protocol,
-            "max-connections": smux.max_connections,
-            "min-streams": smux.min_streams,
-            "max-streams": smux.max_streams,
-            "padding": smux.padding,
-        }
-        if smux.brutal_opts:
-            base["smux"]["brutal-opts"] = smux.brutal_opts
+    def _emit_tuic(self, node: TUICNode) -> Dict[str, Any]:
+        base = emit_base(node)
+        if node.token:
+            base["token"] = node.token
+        if node.uuid:
+            base["uuid"] = node.uuid
+        if node.password:
+            base["password"] = node.password
+        emit_tls(base, node.tls)
+        emit_smux(base, node.smux)
+        return merge_extra(base, node)
