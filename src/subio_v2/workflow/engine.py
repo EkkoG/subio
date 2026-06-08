@@ -21,6 +21,7 @@ from subio_v2.workflow.ruleset import (
     RuleSetStore,
 )
 from subio_v2.workflow.uploader import upload, flush_uploads
+from subio_v2.crypto import age
 from subio_v2.utils.logger import logger
 import yaml
 
@@ -36,6 +37,26 @@ class WorkflowEngine:
         self.dry_run = dry_run
         self.clean_gist = clean_gist
         self._url_cache: Dict[str, str] = {}  # Cache for URL content
+
+        # Age encryption keys
+        self.global_age_secret_key = self.config.get("age_secret_key", "")
+        self.global_age_public_key = self.config.get("age_public_key", "")
+
+        if self.global_age_secret_key:
+            err = age.verify_secret_key(self.global_age_secret_key)
+            if err:
+                logger.error(
+                    f"Invalid global age_secret_key: {err}"
+                )
+                sys.exit(1)
+
+        if self.global_age_public_key:
+            err = age.verify_public_key(self.global_age_public_key)
+            if err:
+                logger.error(
+                    f"Invalid global age_public_key: {err}"
+                )
+                sys.exit(1)
 
         # Parsers and Emitters are now managed by Factory
 
@@ -187,6 +208,8 @@ class WorkflowEngine:
                 self.providers[name] = nodes
 
     def _fetch_content(self, conf: Dict[str, Any]) -> str | None:
+        content: str | None = None
+
         if "url" in conf:
             # Create cache key based on URL and headers
             headers = {}
@@ -197,41 +220,40 @@ class WorkflowEngine:
             # Check cache first
             if cache_key in self._url_cache:
                 logger.dim(f"Using cached content for {conf['url']}")
-                return self._url_cache[cache_key]
-
-            try:
-                # Configure retry strategy
-                retry_strategy = Retry(
-                    total=3,  # Total number of retries
-                    connect=3,  # Retry on connection errors
-                    read=3,  # Retry on read timeout errors
-                    status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-                    backoff_factor=1,  # Backoff factor (1s, 2s, 4s, ...)
-                    raise_on_status=False,  # Don't raise on bad status codes initially
-                )
-
-                # Create adapter with retry strategy
-                adapter = HTTPAdapter(max_retries=retry_strategy)
-
-                # Create session and mount adapter
-                with requests.Session() as session:
-                    session.mount("http://", adapter)
-                    session.mount("https://", adapter)
-
-                    resp = session.get(conf["url"], headers=headers, timeout=10)
-                    resp.raise_for_status()
-                    content = resp.text
-
-                    # Cache the content
-                    self._url_cache[cache_key] = content
-
-                    logger.dim(
-                        f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                content = self._url_cache[cache_key]
+            else:
+                try:
+                    # Configure retry strategy
+                    retry_strategy = Retry(
+                        total=3,  # Total number of retries
+                        connect=3,  # Retry on connection errors
+                        read=3,  # Retry on read timeout errors
+                        status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+                        backoff_factor=1,  # Backoff factor (1s, 2s, 4s, ...)
+                        raise_on_status=False,  # Don't raise on bad status codes initially
                     )
-                    return content
-            except Exception as e:
-                logger.error(f"Fetch error for {conf['url']}: {e}")
-                return None
+
+                    # Create adapter with retry strategy
+                    adapter = HTTPAdapter(max_retries=retry_strategy)
+
+                    # Create session and mount adapter
+                    with requests.Session() as session:
+                        session.mount("http://", adapter)
+                        session.mount("https://", adapter)
+
+                        resp = session.get(conf["url"], headers=headers, timeout=10)
+                        resp.raise_for_status()
+                        content = resp.text
+
+                        # Cache the raw content (before decryption)
+                        self._url_cache[cache_key] = content
+
+                        logger.dim(
+                            f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                        )
+                except Exception as e:
+                    logger.error(f"Fetch error for {conf['url']}: {e}")
+                    return None
         elif "file" in conf:
             # Relative to config file location? Or CWD?
             # Usually relative to config file or CWD.
@@ -246,20 +268,49 @@ class WorkflowEngine:
                     logger.dim(
                         f"Read file {path} (first 100 chars): {content[:100]}..."
                     )
-                    return content
-            # Check 'provider' subfolder
-            abs_path = os.path.join(config_dir, "provider", path)
-            if os.path.exists(abs_path):
-                with open(abs_path, "r") as f:
-                    content = f.read()
-                    logger.dim(
-                        f"Read file {path} (first 100 chars): {content[:100]}..."
-                    )
-                    return content
+            else:
+                # Check 'provider' subfolder
+                abs_path = os.path.join(config_dir, "provider", path)
+                if os.path.exists(abs_path):
+                    with open(abs_path, "r") as f:
+                        content = f.read()
+                        logger.dim(
+                            f"Read file {path} (first 100 chars): {content[:100]}..."
+                        )
+                else:
+                    logger.error(f"File not found: {path}")
+                    return None
 
-            logger.error(f"File not found: {path}")
+        if content is None:
             return None
-        return None
+
+        # Decrypt age-encrypted content if needed.
+        # Provider-level key takes precedence over global key.
+        provider_secret_key = conf.get("age_secret_key", "")
+        secret_keys = []
+        if provider_secret_key:
+            secret_keys.append(provider_secret_key)
+        if self.global_age_secret_key:
+            secret_keys.append(self.global_age_secret_key)
+
+        if secret_keys:
+            try:
+                content_bytes = content.encode("utf-8", errors="replace")
+                # Check if content is age-encrypted before attempting decryption
+                # (pass-through for plain text)
+                if age.is_age_encrypted(content_bytes):
+                    content = age.decrypt_bytes(content_bytes, *secret_keys).decode(
+                        "utf-8", errors="replace"
+                    )
+                    logger.dim(f"Decrypted age-encrypted content for {conf.get('name', conf.get('url', conf.get('file', 'unknown')))}")
+            except Exception as e:
+                logger.error(
+                    f"Failed to decrypt age-encrypted content for "
+                    f"{conf.get('name', conf.get('url', conf.get('file', 'unknown')))}: {e}"
+                )
+                return None
+
+        return content
 
     def _generate_artifacts(self):
         global_filter = None
@@ -416,6 +467,19 @@ class WorkflowEngine:
         actual_filename = filename
         if username:
             actual_filename = filename.replace("{user}", username)
+
+        # Encrypt output with age if public key is configured.
+        # Artifact-level key takes precedence over global key.
+        artifact_public_key = (artifact_conf or {}).get("age_public_key", "")
+        public_key = artifact_public_key or self.global_age_public_key
+        if public_key:
+            try:
+                final_content_bytes = age.encrypt_bytes(final_content, public_key)
+                final_content = final_content_bytes.decode("ascii")
+                logger.dim(f"Encrypted artifact output with age public key")
+            except Exception as e:
+                logger.error(f"Failed to encrypt artifact output with age: {e}")
+                return
 
         with open(f"dist/{actual_filename}", "w") as f:
             f.write(final_content)

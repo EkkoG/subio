@@ -9,6 +9,12 @@ work_filter = '.*(香港|Hong Kong|HK|Japan|美国|United States|US).*(?<!\.)(1|
 exclude = '.*剩余流量|距离下次|套餐到期.*'
 # include = '.*'
 
+# ========== Age 加密配置 ==========
+# 全局 age 私钥：用于解密所有 provider 的 age 加密订阅
+# age_secret_key = "AGE-SECRET-KEY-1..."
+# 全局 age 公钥：所有 artifact 输出都会用此公钥加密后上传
+# age_public_key = "age1..."
+
 [[uploader]]
 name = 'gist'
 type = 'gist'
@@ -73,11 +79,19 @@ file = 'nodes.json5'
 # ============ Dialer Proxy 示例 ============
 # Dialer Proxy 示例: 将某个 provider 中的所有节点都通过另一个代理连接
 # 适用于需要代理链的场景，例如：节点 -> 代理A -> 代理B -> 目标服务器
-# 
+#
 # 在 Clash/Clash Meta/Stash 中输出为 dialer-proxy 参数
 # 在 Surge 中输出为 underlying-proxy 参数
-# 
+#
 # 注意：dialer_proxy 的值应该是另一个已定义的代理名称（需要在同一个 artifact 的 providers 中定义）
+
+# ============ Age 加密 Provider 示例 ============
+# 如果订阅源的内容是 age 加密的，配置 age_secret_key 即可自动解密
+# [[provider]]
+# name = "加密订阅"
+# type = "clash-meta"
+# url = "https://example.com/encrypted-sub.txt"
+# age_secret_key = "AGE-SECRET-KEY-1..."
 
 # 示例1: Clash Meta 中使用 dialer-proxy
 # 将"主力机场"的所有节点通过"自建节点"中的某个节点连接
@@ -188,6 +202,19 @@ template = "clash.yaml"
 providers = ["自建节点-仅香港"]
 [artifact.options]
 work = false
+
+# ============ 多用户示例 ============
+# ============ Age 加密输出示例 ============
+# 用 age 公钥加密 artifact 输出，上传到 Gist 的是加密内容。
+# Mihomo 客户端可用 --age-secret-key 自动解密使用。
+# [[artifact]]
+# name = "ekko-meta-encrypted.yaml"
+# type = "clash-meta"
+# template = "clash.yaml"
+# providers = ["自建节点", "主力机场"]
+# age_public_key = "age1..."
+# [[artifact.upload]]
+# to = "gist"
 
 # ============ 多用户示例 ============
 # Multi-user example: 一个配置为多个用户批量生成

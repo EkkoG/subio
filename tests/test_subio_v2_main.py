@@ -28,8 +28,8 @@ def test_main_no_config_logs_error(tmp_path, monkeypatch):
             messages.append(msg)
     monkeypatch.setattr(main_mod, "logger", DummyLogger())
 
-    # Simulate no args and no config files
-    monkeypatch.setattr(sys, "argv", ["prog"])  # no config provided
+    # Simulate "subio convert" with no config args
+    monkeypatch.setattr(sys, "argv", ["prog", "convert"])
     # Replace WorkflowEngine to ensure not constructed
     constructed = []
     class DummyEngine:
@@ -68,7 +68,7 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
     monkeypatch.setattr(main_mod, "WorkflowEngine", DummyEngine)
 
     # Simulate args with flags
-    monkeypatch.setattr(sys, "argv", ["prog", str(cfg), "--dry-run", "--clean-gist"])
+    monkeypatch.setattr(sys, "argv", ["prog", "convert", str(cfg), "--dry-run", "--clean-gist"])
 
     # Ensure dist doesn't exist initially
     assert not (tmp_path / "dist").exists()
@@ -97,7 +97,7 @@ def test_main_uses_default_config_when_arg_missing(tmp_path, monkeypatch):
             used["config"] = config_path
         def run(self):
             pass
-    monkeypatch.setattr(sys, "argv", ["prog", "--dry-run"])  # no positional config
+    monkeypatch.setattr(sys, "argv", ["prog", "convert", "--dry-run"])  # no positional config
     monkeypatch.setattr(main_mod, "WorkflowEngine", DummyEngine)
 
     main_mod.main()
