@@ -1,7 +1,5 @@
 """Round-trip tests for all Clash Meta proxy types (meta-json-schema)."""
 
-import yaml
-
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol
@@ -64,6 +62,41 @@ proxies:
     assert by_name["mr1"]["transport"] == "TCP"
     assert by_name["ts1"]["type"] == "tailscale"
     assert by_name["dr1"]["type"] == "direct"
+
+
+def test_shadowsocks_udp_over_tcp_fields_roundtrip():
+    yaml_text = """
+proxies:
+  - name: ss-uot-enabled
+    type: ss
+    server: s
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: pw
+    udp-over-tcp: true
+    udp-over-tcp-version: 2
+  - name: ss-uot-falsy
+    type: ss
+    server: s
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: pw
+    udp-over-tcp: false
+    udp-over-tcp-version: 0
+"""
+    nodes = ClashParser().parse(yaml_text)
+    nodes_by_name = {node.name: node for node in nodes}
+    assert nodes_by_name["ss-uot-enabled"].extra["udp-over-tcp"] is True
+    assert nodes_by_name["ss-uot-enabled"].extra["udp-over-tcp-version"] == 2
+    assert nodes_by_name["ss-uot-falsy"].extra["udp-over-tcp"] is False
+    assert nodes_by_name["ss-uot-falsy"].extra["udp-over-tcp-version"] == 0
+
+    proxies = ClashEmitter().emit(nodes)["proxies"]
+    proxies_by_name = {proxy["name"]: proxy for proxy in proxies}
+    assert proxies_by_name["ss-uot-enabled"]["udp-over-tcp"] is True
+    assert proxies_by_name["ss-uot-enabled"]["udp-over-tcp-version"] == 2
+    assert proxies_by_name["ss-uot-falsy"]["udp-over-tcp"] is False
+    assert proxies_by_name["ss-uot-falsy"]["udp-over-tcp-version"] == 0
 
 
 def test_tuic_extra_fields_roundtrip():

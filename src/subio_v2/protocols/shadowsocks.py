@@ -27,8 +27,6 @@ class ShadowsocksDescriptor(ProtocolDescriptor):
             "plugin",
             "plugin-opts",
             "smux",
-            "udp-over-tcp",
-            "udp-over-tcp-version",
             "client-fingerprint",
         }
         node = ShadowsocksNode(

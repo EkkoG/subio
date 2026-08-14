@@ -68,6 +68,10 @@ SubIO V2 采用 Pipeline 架构：
 - `parse_tls` / `emit_tls`、`parse_transport` / `emit_transport`、`parse_smux` / `emit_smux`
 - `assign_extra` / `merge_extra`
 
+`handled` 只应包含已经写入强类型字段或由专用解析逻辑保存的键。尚未跨平台建模、
+但需要 Clash 往返保留的字段应交给 `extra` / `merge_extra` 透传；否则字段会在解析时
+被排除且无法重新生成。
+
 ### 2.4 `ClashPassthroughNode`（透传节点）
 
 用于 **Clash Meta 独有、暂不跨平台** 的协议。解析时把整段 proxy 字典存入 `raw`；生成时 `emit_passthrough()` 深拷贝 `raw` 并覆盖 `name` / `server` / `port` 等 `BaseNode` 字段（便于过滤、改名）。
