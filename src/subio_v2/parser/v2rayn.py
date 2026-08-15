@@ -3,6 +3,7 @@ import json
 import urllib.parse
 import sys
 from typing import List, Any
+from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node,
@@ -19,10 +20,23 @@ from subio_v2.utils.logger import logger
 
 
 class V2RayNParser(BaseParser):
+    @staticmethod
+    def _network(value: str) -> Network | str:
+        try:
+            return Network(value)
+        except ValueError:
+            return value
+
     def parse(self, content: Any) -> List[Node]:
-        if not isinstance(content, str):
-            logger.error("Invalid content type for V2RayNParser")
+        try:
+            return self.parse_result(content).nodes
+        except ValueError as exc:
+            logger.error(str(exc))
             sys.exit(1)
+
+    def parse_result(self, content: Any) -> ParseResult:
+        if not isinstance(content, str):
+            raise ValueError("Invalid content type for V2RayNParser")
 
         # Try decoding base64 if it looks like a subscription
         try:
@@ -31,8 +45,9 @@ class V2RayNParser(BaseParser):
         except Exception:
             lines = content.splitlines()
 
-        nodes = []
-        for line in lines:
+        nodes: list[Node] = []
+        issues: list[ConversionIssue] = []
+        for index, line in enumerate(lines):
             line = line.strip()
             if not line:
                 continue
@@ -40,7 +55,23 @@ class V2RayNParser(BaseParser):
             node = self._parse_line(line)
             if node:
                 nodes.append(node)
-        return nodes
+                continue
+            scheme = line.partition("://")[0] or None
+            fragment = urllib.parse.urlparse(line).fragment
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.ERROR,
+                    node=urllib.parse.unquote(fragment) if fragment else None,
+                    protocol=scheme,
+                    source=None,
+                    target="ir",
+                    field=f"lines[{index}]",
+                    message="Failed to parse v2rayN subscription link",
+                    stage="parse",
+                    code="parse.link",
+                )
+            )
+        return ParseResult(nodes=nodes, issues=issues)
 
     def _parse_line(self, line: str) -> Node | None:
         if line.startswith("vmess://"):
@@ -67,22 +98,28 @@ class V2RayNParser(BaseParser):
             # "path": "/", "tls": "tls", "sni": "", "alpn": ""
             # }
 
-            transport = TransportSettings(
-                network=Network(data.get("net", "tcp")),
-                path=data.get("path"),
-                headers={"Host": data.get("host")}
-                if data.get("host")
-                else None,  # simplified
-            )
+            network = data.get("net", "tcp")
+            transport = TransportSettings(network=self._network(network))
+            if network == Network.WS.value:
+                transport.path = data.get("path")
+                if data.get("host"):
+                    transport.headers = {"Host": data["host"]}
+            elif network == Network.H2.value:
+                transport.path = data.get("path")
+                if data.get("host"):
+                    transport.host = data["host"].split(",")
+            elif network == Network.GRPC.value:
+                transport.grpc_service_name = data.get("path")
+            elif network == Network.HTTP.value:
+                transport.path = data.get("path")
+                if data.get("host"):
+                    transport.headers = {"Host": data["host"]}
 
             tls = TLSSettings(
                 enabled=data.get("tls") == "tls",
                 server_name=data.get("sni") or data.get("host"),
                 alpn=data.get("alpn", "").split(",") if data.get("alpn") else None,
             )
-            if data.get("net") == "grpc":
-                tls.enabled = True
-
             return VmessNode(
                 name=data.get("ps", "VMess"),
                 type=Protocol.VMESS,
@@ -187,6 +224,26 @@ class V2RayNParser(BaseParser):
             q = urllib.parse.parse_qs(url.query)
             sni = q.get("sni", [None])[0]
             allow_insecure = q.get("allowInsecure", ["0"])[0] == "1"
+            type_net = q.get("type", ["tcp"])[0]
+            transport = TransportSettings(network=self._network(type_net))
+            if type_net == Network.WS.value:
+                transport.path = q.get("path", [None])[0]
+                if q.get("host"):
+                    transport.headers = {"Host": q["host"][0]}
+            elif type_net == Network.H2.value:
+                transport.path = q.get("path", [None])[0]
+                if q.get("host"):
+                    transport.host = q["host"][0].split(",")
+            elif type_net == Network.GRPC.value:
+                transport.grpc_service_name = q.get("serviceName", [None])[0]
+
+            security = q.get("security", ["tls"])[0]
+            reality_opts = None
+            if security == "reality":
+                reality_opts = {
+                    "public-key": q.get("pbk", [""])[0],
+                    "short-id": q.get("sid", [""])[0],
+                }
 
             return TrojanNode(
                 name=name,
@@ -198,7 +255,10 @@ class V2RayNParser(BaseParser):
                     enabled=True,
                     server_name=sni or server,
                     skip_cert_verify=allow_insecure,
+                    client_fingerprint=q.get("fp", [None])[0],
+                    reality_opts=reality_opts,
                 ),
+                transport=transport,
             )
         except Exception as e:
             logger.warning(f"Error parsing trojan: {e}")
@@ -221,19 +281,28 @@ class V2RayNParser(BaseParser):
             security = q.get("security", ["none"])[0]
             flow = q.get("flow", [None])[0]
 
-            transport = TransportSettings(
-                network=Network(type_net)
-                if type_net in [n.value for n in Network]
-                else Network.TCP,
-                path=q.get("path", [None])[0],
-                headers={"Host": q.get("host", [None])[0]} if q.get("host") else None,
-            )
+            transport = TransportSettings(network=self._network(type_net))
+            if type_net == Network.WS.value:
+                transport.path = q.get("path", [None])[0]
+                if q.get("host"):
+                    transport.headers = {"Host": q["host"][0]}
+            elif type_net == Network.H2.value:
+                transport.path = q.get("path", [None])[0]
+                if q.get("host"):
+                    transport.host = q["host"][0].split(",")
+            elif type_net == Network.GRPC.value:
+                transport.grpc_service_name = q.get("serviceName", [None])[0]
+            elif type_net == Network.HTTP.value:
+                path = q.get("path", [None])[0]
+                transport.path = path.split(",") if path else None
+                if q.get("host"):
+                    transport.headers = {"Host": q["host"][0]}
 
             tls = TLSSettings(
                 enabled=(security == "tls" or security == "reality"),
                 server_name=q.get("sni", [None])[0],
                 skip_cert_verify=q.get("allowInsecure", ["0"])[0] == "1",
-                fingerprint=q.get("fp", [None])[0],
+                client_fingerprint=q.get("fp", [None])[0],
                 reality_opts={
                     "public-key": q.get("pbk", [""])[0],
                     "short-id": q.get("sid", [""])[0],
@@ -241,9 +310,6 @@ class V2RayNParser(BaseParser):
                 if security == "reality"
                 else None,
             )
-            if type_net == "grpc":
-                tls.enabled = True
-
             return VlessNode(
                 name=name,
                 type=Protocol.VLESS,

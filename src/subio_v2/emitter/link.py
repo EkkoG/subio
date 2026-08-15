@@ -9,7 +9,8 @@ capabilities 决定接受哪些协议，再调用同一个 builder。
 import base64
 import json
 import urllib.parse
-from typing import Optional
+from types import MappingProxyType
+from typing import Callable, Mapping, Optional
 
 from subio_v2.model.nodes import (
     Node,
@@ -35,9 +36,7 @@ def build_ss_url(node: ShadowsocksNode) -> str:
     """SIP002: ss://BASE64URL(method:password)@server:port[/?plugin=...]#name"""
     userinfo = f"{node.cipher}:{node.password}"
     userinfo_b64 = (
-        base64.urlsafe_b64encode(userinfo.encode("utf-8"))
-        .decode("utf-8")
-        .rstrip("=")
+        base64.urlsafe_b64encode(userinfo.encode("utf-8")).decode("utf-8").rstrip("=")
     )
     url = f"ss://{userinfo_b64}@{node.server}:{node.port}"
 
@@ -56,7 +55,7 @@ def build_ss_url(node: ShadowsocksNode) -> str:
 
 def build_vmess_url(node: VmessNode) -> str:
     """v2rayN: vmess://BASE64(JSON)"""
-    network = node.transport.network.value if node.transport else "tcp"
+    network = node.transport.network_value if node.transport else "tcp"
     data = {
         "v": "2",
         "ps": node.name,
@@ -84,13 +83,21 @@ def build_vmess_url(node: VmessNode) -> str:
             if node.transport.path:
                 data["path"] = node.transport.path
             if node.transport.host:
-                data["host"] = ",".join(node.transport.host) if isinstance(node.transport.host, list) else node.transport.host
+                data["host"] = (
+                    ",".join(node.transport.host)
+                    if isinstance(node.transport.host, list)
+                    else node.transport.host
+                )
         elif node.transport.network == Network.GRPC:
             if node.transport.grpc_service_name:
                 data["path"] = node.transport.grpc_service_name
         elif node.transport.network == Network.HTTP:
             if node.transport.path:
-                data["path"] = node.transport.path if isinstance(node.transport.path, str) else ",".join(node.transport.path)
+                data["path"] = (
+                    node.transport.path
+                    if isinstance(node.transport.path, str)
+                    else ",".join(node.transport.path)
+                )
             if node.transport.headers and "Host" in node.transport.headers:
                 data["host"] = node.transport.headers["Host"]
 
@@ -107,7 +114,7 @@ def build_vmess_url(node: VmessNode) -> str:
 
 def build_vless_url(node: VlessNode) -> str:
     """DuckSoft URI: vless://uuid@server:port?type=...&security=...&...#name"""
-    network = node.transport.network.value if node.transport else "tcp"
+    network = node.transport.network_value if node.transport else "tcp"
     params: dict[str, str] = {"type": network}
 
     if node.tls and node.tls.enabled:
@@ -123,8 +130,8 @@ def build_vless_url(node: VlessNode) -> str:
             params["security"] = "tls"
         if node.tls.server_name:
             params["sni"] = node.tls.server_name
-        if node.tls.fingerprint:
-            params["fp"] = node.tls.fingerprint
+        if node.tls.client_fingerprint:
+            params["fp"] = node.tls.client_fingerprint
         if node.tls.skip_cert_verify:
             params["allowInsecure"] = "1"
         if node.tls.alpn:
@@ -148,7 +155,20 @@ def build_vless_url(node: VlessNode) -> str:
             if node.transport.path:
                 params["path"] = node.transport.path
             if node.transport.host:
-                params["host"] = ",".join(node.transport.host) if isinstance(node.transport.host, list) else node.transport.host
+                params["host"] = (
+                    ",".join(node.transport.host)
+                    if isinstance(node.transport.host, list)
+                    else node.transport.host
+                )
+        elif node.transport.network == Network.HTTP:
+            if node.transport.path:
+                params["path"] = (
+                    node.transport.path
+                    if isinstance(node.transport.path, str)
+                    else ",".join(node.transport.path)
+                )
+            if node.transport.headers and "Host" in node.transport.headers:
+                params["host"] = node.transport.headers["Host"]
 
     query = urllib.parse.urlencode(params)
     return f"vless://{node.uuid}@{node.server}:{node.port}?{query}#{_quote_name(node.name)}"
@@ -176,6 +196,16 @@ def build_trojan_url(node: TrojanNode) -> str:
             params["type"] = "grpc"
             if node.transport.grpc_service_name:
                 params["serviceName"] = node.transport.grpc_service_name
+        elif node.transport.network == Network.H2:
+            params["type"] = "h2"
+            if node.transport.path:
+                params["path"] = node.transport.path
+            if node.transport.host:
+                params["host"] = (
+                    ",".join(node.transport.host)
+                    if isinstance(node.transport.host, list)
+                    else node.transport.host
+                )
 
     url = f"trojan://{urllib.parse.quote(node.password, safe='')}@{node.server}:{node.port}"
     if params:
@@ -184,8 +214,11 @@ def build_trojan_url(node: TrojanNode) -> str:
     return url
 
 
-def build_socks5_url(node: Socks5Node) -> str:
+def build_socks5_url(node: Socks5Node) -> Optional[str]:
     """socks5://[user:pass@]server:port#name"""
+    if node.tls and node.tls.enabled:
+        # There is no interoperable SOCKS5-TLS subscription URI to emit here.
+        return None
     if node.username or node.password:
         userinfo = f"{urllib.parse.quote(node.username or '', safe='')}:{urllib.parse.quote(node.password or '', safe='')}@"
     else:
@@ -272,9 +305,8 @@ def build_anytls_url(node: AnyTLSNode) -> str:
     return url
 
 
-def build_url(node: Node) -> Optional[str]:
-    """按 Node 类型分发到具体的 URL 构造函数。"""
-    builders = {
+LINK_BUILDERS: Mapping[Protocol, Callable[[Node], Optional[str]]] = MappingProxyType(
+    {
         Protocol.SHADOWSOCKS: build_ss_url,
         Protocol.VMESS: build_vmess_url,
         Protocol.VLESS: build_vless_url,
@@ -285,5 +317,10 @@ def build_url(node: Node) -> Optional[str]:
         Protocol.TUIC: build_tuic_url,
         Protocol.ANYTLS: build_anytls_url,
     }
-    builder = builders.get(node.type)
+)
+
+
+def build_url(node: Node) -> Optional[str]:
+    """按 Node 类型分发到具体的 URL 构造函数。"""
+    builder = LINK_BUILDERS.get(node.type)
     return builder(node) if builder else None
