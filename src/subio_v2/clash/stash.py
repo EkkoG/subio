@@ -137,6 +137,36 @@ _PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
         }
     ),
     Protocol.DIRECT: frozenset({"name", "type", "interface-name"}),
+    Protocol.MIERU: frozenset(
+        {
+            "name",
+            "type",
+            "server",
+            "port",
+            "port-range",
+            "transport",
+            "username",
+            "password",
+            "dialer-proxy",
+            "interface-name",
+        }
+    ),
+    Protocol.JUICITY: frozenset(
+        {
+            "name",
+            "type",
+            "server",
+            "port",
+            "uuid",
+            "password",
+            "skip-cert-verify",
+            "server-cert-fingerprint",
+            "sni",
+            "alpn",
+            "dialer-proxy",
+            "interface-name",
+        }
+    ),
 }
 
 _PLUGIN_FIELDS = {
@@ -180,6 +210,8 @@ def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
     _move_aliases(normalized, _INPUT_ALIASES.get(protocol, {}), dialect="Stash")
     if protocol == Protocol.TROJAN.value:
         normalized.setdefault("tls", True)
+    if protocol == Protocol.MIERU.value and "transport" in normalized:
+        normalized["transport"] = str(normalized["transport"]).upper()
     if protocol == Protocol.TUIC.value and "version" in normalized:
         try:
             version = int(normalized.pop("version"))
@@ -215,6 +247,9 @@ def post_stash_emit(
 
     if node.type == Protocol.TUIC:
         output["version"] = node.version or (5 if output.get("uuid") else 4)
+
+    if node.type == Protocol.MIERU and "transport" in output:
+        output["transport"] = str(output["transport"]).lower()
 
     if node.type == Protocol.HYSTERIA:
         for source, target in (("up", "up-speed"), ("down", "down-speed")):
@@ -261,7 +296,8 @@ def post_stash_emit(
             output.pop(key)
             if not (
                 key == "udp"
-                and node.type in {Protocol.SSH, Protocol.DIRECT}
+                and node.type
+                in {Protocol.SSH, Protocol.DIRECT, Protocol.MIERU, Protocol.JUICITY}
                 and node.udp
             ):
                 dropped.add(key)

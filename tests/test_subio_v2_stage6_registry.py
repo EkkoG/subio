@@ -29,6 +29,7 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
         descriptor.clash_type
         for descriptor in descriptors
         if not descriptor.dynamic_clash_type
+        and descriptor.supports_dialect("mihomo")
     }
 
     assert known_types == set(snapshot["proxy_types"])
@@ -37,7 +38,11 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.MIERU).passthrough is False
     assert registry.get(Protocol.REJECT).node_class is RejectNode
     assert registry.get(Protocol.REJECT).requires_endpoint is False
-    registered_protocols = {descriptor.protocol.value for descriptor in descriptors}
+    registered_protocols = {
+        descriptor.protocol.value
+        for descriptor in descriptors
+        if descriptor.supports_dialect("mihomo")
+    }
     assert PLATFORM_CAPABILITIES["clash-meta"]["protocols"] == registered_protocols
 
 

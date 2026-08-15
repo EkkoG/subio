@@ -531,6 +531,17 @@ class MieruNode(BaseNode):
 
 
 @dataclass
+class JuicityNode(BaseNode):
+    uuid: str = field(default="", repr=False)
+    password: str = field(default="", repr=False)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
+
+    def __post_init__(self):
+        if self.type != Protocol.JUICITY:
+            self.type = Protocol.JUICITY
+
+
+@dataclass
 class TUICNode(BaseNode):
     token: Optional[str] = field(default=None, repr=False)  # TUIC v4 uses token
     password: Optional[str] = field(default=None, repr=False)  # TUIC v5 password
@@ -583,6 +594,7 @@ Node = Union[
     SSHNode,
     SnellNode,
     MieruNode,
+    JuicityNode,
     TUICNode,
     ClashPassthroughNode,
     NativeNode,

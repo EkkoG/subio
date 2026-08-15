@@ -274,7 +274,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 "HANDSHAKE_STANDARD",
                 "HANDSHAKE_NO_WAIT",
             },
-            "features": {"udp", "smux"},
+            "features": {"udp", "smux", "traffic-pattern"},
         },
         "gost-relay": {"features": set()},
         "rematch": {"features": set()},
@@ -368,6 +368,8 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "ssh",
             "anytls",
             "direct",
+            "mieru",
+            "juicity",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_STASH,
@@ -444,6 +446,15 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "direct": {
             "features": {"interface-binding"},
+        },
+        "mieru": {
+            "transports": {"TCP"},
+            "multiplexing": set(),
+            "handshake_modes": set(),
+            "features": set(),
+        },
+        "juicity": {
+            "features": {"udp", "tls"},
         },
         "global_features": {
             "udp_relay": True,
@@ -582,6 +593,7 @@ PROTOCOL_NAME_MAP = {
     "hysteria2": "hysteria2",
     "hy2": "hysteria2",
     "mieru": "mieru",
+    "juicity": "juicity",
     "gost-relay": "gost-relay",
     "rematch": "rematch",
     "shadowquic": "shadowquic",

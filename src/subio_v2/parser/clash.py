@@ -92,6 +92,8 @@ class ClashParser(BaseParser):
             return None
 
         desc = protocol_registry.by_clash_type(node_type)
+        if desc and not desc.supports_dialect(self.context.dialect):
+            desc = None
         if not desc:
             desc = protocol_registry.get(Protocol.CLASH_UNKNOWN)
             logger.warning(

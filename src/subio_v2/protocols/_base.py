@@ -32,6 +32,10 @@ class ProtocolDescriptor(ABC):
     passthrough: bool = False
     dynamic_clash_type: bool = False
     requires_endpoint: bool = True
+    clash_dialects: frozenset[str] = frozenset({"mihomo", "clash", "stash"})
+
+    def supports_dialect(self, dialect: str) -> bool:
+        return dialect in self.clash_dialects
 
     @abstractmethod
     def parse_clash(

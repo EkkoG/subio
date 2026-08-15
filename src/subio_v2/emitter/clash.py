@@ -72,7 +72,7 @@ class ClashEmitter(BaseEmitter):
         self, node: Node
     ) -> tuple[Dict[str, Any] | None, tuple[str, ...]]:
         desc = protocol_registry.get(node.type)
-        if not desc:
+        if not desc or not desc.supports_dialect(self.target_context.dialect):
             return None, ()
         proxy = desc.emit_clash(node, self.target_context)
         return self._post_descriptor_emit(proxy, node)

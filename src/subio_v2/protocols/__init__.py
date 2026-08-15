@@ -34,6 +34,7 @@ def _bootstrap() -> None:
         http,
         hysteria,
         hysteria2,
+        juicity,
         masque,
         mieru,
         passthrough,

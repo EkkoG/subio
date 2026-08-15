@@ -218,7 +218,7 @@ def _stash_nodes():
 def test_stage9_atomically_exposes_stash_parser_emitter_and_capabilities():
     assert isinstance(ParserFactory.get_parser("stash"), StashParser)
     assert isinstance(EmitterFactory.get_emitter("stash"), StashEmitter)
-    assert PLATFORM_CAPABILITIES["stash"]["protocols"] == STAGE9_PROTOCOLS
+    assert STAGE9_PROTOCOLS <= PLATFORM_CAPABILITIES["stash"]["protocols"]
 
 
 def test_stash_shared_protocols_parse_emit_and_round_trip():

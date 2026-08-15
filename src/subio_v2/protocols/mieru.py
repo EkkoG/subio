@@ -123,6 +123,51 @@ class MieruDescriptor(StructuredProtocolDescriptor):
             )
         return errors
 
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+        if not isinstance(node, MieruNode):
+            return []
+        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
+
+        warnings: list[Any] = []
+        checks = (
+            ("transport", node.transport, proto_caps.get("transports", set())),
+            (
+                "multiplexing",
+                node.multiplexing,
+                proto_caps.get("multiplexing", set()),
+            ),
+            (
+                "handshake_mode",
+                node.handshake_mode,
+                proto_caps.get("handshake_modes", set()),
+            ),
+        )
+        for field, value, supported in checks:
+            if value is not None and value.value not in supported:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            f"Mieru {field} '{value.value}' is not supported by "
+                            f"{platform}"
+                        ),
+                        field=field,
+                        code="conversion.unsupported-protocol-variant",
+                    )
+                )
+        if node.traffic_pattern and "traffic-pattern" not in proto_caps.get(
+            "features", set()
+        ):
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"Mieru traffic-pattern is not supported by {platform}",
+                    field="traffic_pattern",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+        return warnings
+
     @staticmethod
     def _valid_port_range(value: str | None) -> bool:
         if value is None:
