@@ -1,0 +1,3 @@
+default_rule, api_rule
+DOMAIN,default.example,{{ default_rule }}
+DOMAIN,api.example,{{ api_rule }}

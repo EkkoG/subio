@@ -1,0 +1,3 @@
+rule
+DOMAIN,default.example,{{ rule }}
+IP-CIDR,192.0.2.0/24,{{ rule }},no-resolve

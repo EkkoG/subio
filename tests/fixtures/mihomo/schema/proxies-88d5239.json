@@ -1,0 +1,95 @@
+{
+  "source": "https://github.com/dongchengjie/meta-json-schema",
+  "commit": "88d5239f9b5db8340bcdda3c963fe7fc5f6f5dbb",
+  "schema_path": "src/modules/config/proxies.json",
+  "extracted_at": "2026-08-16",
+  "proxy_types": [
+    "ss",
+    "ssr",
+    "socks5",
+    "http",
+    "vmess",
+    "vless",
+    "snell",
+    "trojan",
+    "hysteria",
+    "hysteria2",
+    "wireguard",
+    "tuic",
+    "gost-relay",
+    "direct",
+    "dns",
+    "reject",
+    "rematch",
+    "ssh",
+    "mieru",
+    "anytls",
+    "sudoku",
+    "masque",
+    "trusttunnel",
+    "openvpn",
+    "tailscale",
+    "shadowquic"
+  ],
+  "key_fields": {
+    "tls": {
+      "fingerprint": "server certificate SHA-256 fingerprint",
+      "client-fingerprint": "TLS client fingerprint",
+      "name-cert-verify": "certificate DNSName verification target"
+    },
+    "anytls": [
+      "password",
+      "idle-session-check-interval",
+      "idle-session-timeout",
+      "min-idle-session",
+      "disable-reuse",
+      "fingerprint",
+      "client-fingerprint"
+    ],
+    "masque": [
+      "private-key",
+      "public-key",
+      "ip",
+      "ipv6",
+      "uri",
+      "network",
+      "remote-dns-resolve",
+      "dns",
+      "mtu"
+    ],
+    "snell": [
+      "psk",
+      "version",
+      "udp",
+      "obfs-opts",
+      "reuse",
+      "fingerprint",
+      "client-fingerprint"
+    ],
+    "reject": [
+      "name",
+      "type"
+    ],
+    "tailscale": [
+      "hostname",
+      "auth-key",
+      "control-url",
+      "state-dir",
+      "ephemeral",
+      "accept-routes",
+      "exit-node",
+      "exit-node-allow-lan-access"
+    ],
+    "mieru": [
+      "server",
+      "port",
+      "port-range",
+      "transport",
+      "username",
+      "password",
+      "multiplexing",
+      "handshake-mode",
+      "traffic-pattern"
+    ]
+  }
+}

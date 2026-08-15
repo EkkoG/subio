@@ -1,0 +1,3 @@
+# FINAL and pre-matching are not valid inside an external Surge Rule Set.
+FINAL
+DOMAIN-SUFFIX,tracker.example.com,pre-matching

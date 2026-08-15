@@ -1,0 +1,5 @@
+payload:
+  - DOMAIN,example.com
+  - IP-CIDR,198.51.100.0/24,no-resolve
+  - IP-CIDR,192.0.2.0/24,src,no-resolve
+  - AND,((DOMAIN-SUFFIX,example.org),(OR,((NETWORK,udp),(NOT,((DST-PORT,443))))))

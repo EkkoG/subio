@@ -1,0 +1,6 @@
+# Surge Rule Set; policy is bound by the outer RULE-SET rule.
+DOMAIN-SUFFIX,example.com
+DOMAIN,cdn.example.org,extended-matching
+IP-CIDR,203.0.113.0/24,no-resolve
+AND,((NOT,((SRC-IP,192.168.1.110))),(OR,((DOMAIN-SUFFIX,example.net),(DEST-PORT,443)))))
+SCRIPT,ssid-rule,requires-resolve

@@ -1,0 +1,55 @@
+{
+  "name": "baseline",
+  "arguments": "rule",
+  "rules": [
+    {
+      "rule_type": "DOMAIN",
+      "matcher": "example.com",
+      "options": []
+    },
+    {
+      "rule_type": "IP-CIDR",
+      "matcher": "192.0.2.0/24",
+      "options": [
+        "no-resolve"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "platform": "clash",
+      "kwargs": {
+        "rule": "DIRECT"
+      },
+      "expected": "- DOMAIN,example.com,DIRECT\n- IP-CIDR,192.0.2.0/24,DIRECT,no-resolve"
+    },
+    {
+      "platform": "clash-meta",
+      "args": [
+        "PROXY"
+      ],
+      "expected": "- DOMAIN,example.com,PROXY\n- IP-CIDR,192.0.2.0/24,PROXY,no-resolve"
+    },
+    {
+      "platform": "stash",
+      "args": [
+        "Proxy"
+      ],
+      "expected": "- DOMAIN,example.com,Proxy\n- IP-CIDR,192.0.2.0/24,Proxy,no-resolve"
+    },
+    {
+      "platform": "surge",
+      "args": [
+        "Proxy"
+      ],
+      "expected": "DOMAIN,example.com,Proxy\nIP-CIDR,192.0.2.0/24,Proxy,no-resolve"
+    },
+    {
+      "platform": "dae",
+      "args": [
+        "proxy"
+      ],
+      "expected": "domain(full: example.com) -> proxy\ndip(192.0.2.0/24) -> proxy"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+rule
+AND,((DOMAIN-SUFFIX,example.org),(OR,((NETWORK,udp),(NOT,((DST-PORT,443)))))),{{ rule }}

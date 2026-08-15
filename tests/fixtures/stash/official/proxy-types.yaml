@@ -1,0 +1,97 @@
+source: https://stash.wiki/proxy-protocols/proxy-types
+last_updated: 2026-06-25
+extracted_at: 2026-08-16
+common:
+  required:
+    - name
+    - type
+  usual:
+    - server
+    - port
+  optional:
+    - tls
+    - skip-cert-verify
+    - server-cert-fingerprint
+    - sni
+    - alpn
+    - interface-name
+protocols:
+  mieru:
+    required:
+      - server
+      - transport
+      - username
+      - password
+    one_of:
+      - port
+      - port-range
+    transport_values:
+      - tcp
+  juicity:
+    required:
+      - server
+      - port
+      - uuid
+      - password
+    optional:
+      - skip-cert-verify
+      - sni
+      - alpn
+  masque:
+    required:
+      - server
+      - port
+      - private-key
+      - public-key
+    at_least_one:
+      - ip
+      - ipv6
+    optional:
+      - dns
+      - network
+      - sni
+      - connect-uri
+      - mtu
+      - keepalive
+    network_values:
+      - h3
+      - h2
+  tailscale:
+    optional:
+      - auth-key
+      - hostname
+      - control-url
+      - ephemeral
+      - exit-node
+    exit_node_fallback: automatic-selection
+  trusttunnel:
+    required:
+      - server
+      - port
+      - username
+      - password
+    optional:
+      - quic
+      - sni
+      - alpn
+      - skip-cert-verify
+      - server-cert-fingerprint
+  ssh:
+    required:
+      - server
+      - port
+      - user
+    authentication:
+      - password
+      - private-key
+      - private-key-passphrase
+  snell:
+    required:
+      - server
+      - port
+      - psk
+      - version
+    optional:
+      - udp
+      - obfs-opts.mode
+      - obfs-opts.host

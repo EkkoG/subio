@@ -1,0 +1,353 @@
+from pathlib import Path
+
+import pytest
+
+from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.emitter.factory import EmitterFactory
+from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.model.nodes import RejectMode, RejectNode
+from subio_v2.parser.clash import ClashParser
+from subio_v2.parser.factory import ParserFactory
+from subio_v2.parser.surge import SurgeParser
+from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
+from subio_v2.workflow.ruleset import (
+    RuleSet,
+    load_rulesets,
+    load_snippets,
+    parse_rules,
+)
+
+
+FIXTURES = Path(__file__).parent / "fixtures/rulesets"
+CERT_SHA256 = ":".join(["AA"] * 32)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: undeclared remote input is not strict Mihomo classical text",
+)
+def test_untyped_remote_rejects_mihomo_yaml_instead_of_sniffing(monkeypatch):
+    content = (FIXTURES / "mihomo/classical-yaml.yaml").read_bytes()
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: content,
+    )
+
+    with pytest.raises(ConfigError):
+        load_rulesets([{"name": "default", "url": "https://example.test/rules"}])
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: Mihomo src is still parsed as a policy",
+)
+def test_mihomo_classical_src_is_an_option_not_policy():
+    ruleset = RuleSet(
+        name="remote_src",
+        args="rule",
+        rules=parse_rules("IP-CIDR,10.0.0.0/8,src,no-resolve"),
+    )
+
+    assert ruleset.render("clash-meta", "Proxy") == (
+        "- IP-CIDR,10.0.0.0/8,Proxy,src,no-resolve"
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: nested logical rules are still split on every comma",
+)
+def test_parameterized_snippet_binds_policy_only_to_outer_logic(tmp_path):
+    source = (FIXTURES / "snippets/outer_logic").read_text()
+    (tmp_path / "outer_logic").write_text(source)
+
+    ruleset = load_snippets(str(tmp_path)).get("outer_logic")
+
+    assert ruleset is not None
+    assert ruleset.render("clash-meta", "Proxy") == (
+        "- AND,((DOMAIN-SUFFIX,example.org),"
+        "(OR,((NETWORK,udp),(NOT,((DST-PORT,443)))))),Proxy"
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: arbitrary snippet text is still silently ignored",
+)
+def test_arbitrary_text_snippet_is_rejected(tmp_path):
+    source = (FIXTURES / "snippets/arbitrary_invalid_text").read_text()
+    (tmp_path / "invalid").write_text(source)
+
+    with pytest.raises(ConfigError):
+        load_snippets(str(tmp_path))
+
+
+@pytest.mark.parametrize(
+    ("behavior", "fixture_name", "expected_line"),
+    [
+        ("domain", "domain.mrs", "- DOMAIN,exact.example.org,Proxy"),
+        ("ipcidr", "ipcidr.mrs", "- IP-CIDR,192.0.2.0/24,Proxy"),
+    ],
+)
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: Mihomo MRS bytes do not have an internal decoder",
+)
+def test_mihomo_mrs_decodes_to_normal_rules(
+    monkeypatch, behavior, fixture_name, expected_line
+):
+    content = (FIXTURES / "mrs" / fixture_name).read_bytes()
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: content,
+    )
+
+    store = load_rulesets(
+        [
+            {
+                "name": behavior,
+                "url": f"https://example.test/{fixture_name}",
+                "type": "mihomo",
+                "behavior": behavior,
+                "format": "mrs",
+            }
+        ]
+    )
+
+    ruleset = store.get(f"remote_{behavior}")
+    assert ruleset is not None
+    assert expected_line in ruleset.render("clash-meta", "Proxy")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 1: classical MRS is not rejected as an invalid combination",
+)
+def test_mihomo_classical_mrs_is_rejected(monkeypatch):
+    content = (FIXTURES / "mrs/domain.mrs").read_bytes()
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: content,
+    )
+
+    with pytest.raises(ConfigError):
+        load_rulesets(
+            [
+                {
+                    "name": "invalid",
+                    "url": "https://example.test/classical.mrs",
+                    "type": "mihomo",
+                    "behavior": "classical",
+                    "format": "mrs",
+                }
+            ]
+        )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 2: Stash MRS does not yet reuse the shared decoder",
+)
+def test_stash_domain_mrs_reuses_normal_rule_ir(monkeypatch):
+    content = (FIXTURES / "mrs/domain.mrs").read_bytes()
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: content,
+    )
+
+    store = load_rulesets(
+        [
+            {
+                "name": "stash_domain",
+                "url": "https://example.test/domain.mrs",
+                "type": "stash",
+                "behavior": "domain",
+                "format": "mrs",
+            }
+        ]
+    )
+
+    ruleset = store.get("remote_stash_domain")
+    assert ruleset is not None
+    assert "- DOMAIN,exact.example.org,Proxy" in ruleset.render("stash", "Proxy")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 4: Mihomo extra fields still leak into Stash output",
+)
+def test_mihomo_unknown_extra_is_not_emitted_to_stash():
+    parser = ParserFactory.get_parser("clash-meta")
+    emitter = EmitterFactory.get_emitter("stash")
+    assert parser is not None
+    assert emitter is not None
+
+    node = parser.parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "vmess",
+                    "type": "vmess",
+                    "server": "example.com",
+                    "port": 443,
+                    "uuid": "00000000-0000-0000-0000-000000000001",
+                    "cipher": "auto",
+                    "future-mihomo-option": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    emission = emitter.emit_result([node])
+    proxy = emission.content["proxies"][0]
+
+    assert "future-mihomo-option" not in proxy
+    assert any(
+        issue.code == "conversion.unconsumed-source-field"
+        for issue in emission.issues
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 5: Mihomo fingerprint still uses the ambiguous TLS field",
+)
+def test_mihomo_tls_fingerprint_maps_to_server_certificate_sha256():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "tls",
+                    "type": "anytls",
+                    "server": "example.com",
+                    "port": 443,
+                    "password": "secret",
+                    "fingerprint": CERT_SHA256,
+                    "client-fingerprint": "chrome",
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert node.tls.certificate_sha256 == CERT_SHA256
+    assert node.tls.client_fingerprint == "chrome"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 5: Mihomo disable-reuse is not mapped to positive reuse semantics",
+)
+def test_mihomo_anytls_disable_reuse_converts_to_surge_reuse_false():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "reuse",
+                    "type": "anytls",
+                    "server": "example.com",
+                    "port": 443,
+                    "password": "secret",
+                    "disable-reuse": True,
+                }
+            ]
+        }
+    ).nodes[0]
+
+    emission = SurgeEmitter().emit_result([node])
+
+    assert node.reuse is False
+    assert "disable-reuse" not in node.extra
+    assert emission.errors == []
+    assert "reuse=false" in emission.content
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 5: Mihomo MASQUE uri is preserved only as raw extra",
+)
+def test_mihomo_masque_uri_enters_shared_semantic_ir():
+    connect_uri = "https://masque.example.com/.well-known/masque"
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "masque",
+                    "type": "masque",
+                    "server": "masque.example.com",
+                    "port": 443,
+                    "private-key": "private",
+                    "public-key": "public",
+                    "ip": "10.0.0.2/32",
+                    "uri": connect_uri,
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert getattr(node, "connect_uri", None) == connect_uri
+    assert "uri" not in node.extra
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 6: Mihomo reject is not registered as a strong descriptor",
+)
+def test_mihomo_reject_uses_shared_reject_node_in_both_directions():
+    mihomo_node = ClashParser().parse_result(
+        {"proxies": [{"name": "deny", "type": "reject"}]}
+    ).nodes[0]
+    surge_node = SurgeParser().parse_result("deny = reject").nodes[0]
+    emission = ClashEmitter(platform="clash-meta").emit_result([surge_node])
+
+    assert isinstance(mihomo_node, RejectNode)
+    assert mihomo_node.mode is RejectMode.REJECT
+    assert emission.errors == []
+    assert emission.supported_nodes == [surge_node]
+    assert emission.content["proxies"][0]["type"] == "reject"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="stage 3: a failed run leaves stale files in the uploader queue",
+)
+def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
+    tmp_path, monkeypatch
+):
+    config = tmp_path / "config.toml"
+    config.write_text("a = 1\n")
+    engine = WorkflowEngine(str(config), dry_run=False)
+    attempts = 0
+
+    monkeypatch.setattr(engine, "_load_providers", lambda: None)
+    monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
+    monkeypatch.setattr(engine.batch_uploader, "flush", lambda: None)
+
+    def generate():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            engine.batch_uploader.add(
+                "old",
+                {"name": "old.txt"},
+                {"file_name": "old.txt"},
+                {"name": "gist", "id": "abc123", "token": "token"},
+            )
+            raise ArtifactGenerationError("first run failed")
+
+        engine.batch_uploader.add(
+            "new",
+            {"name": "new.txt"},
+            {"file_name": "new.txt"},
+            {"name": "gist", "id": "abc123", "token": "token"},
+        )
+        engine._staged_artifacts["new.txt"] = "new"
+
+    monkeypatch.setattr(engine, "_generate_artifacts", generate)
+
+    with pytest.raises(ArtifactGenerationError):
+        engine.run()
+    result = engine.run()
+
+    assert result.generated == ["new.txt"]
+    assert result.uploaded == ["abc123:new.txt"]

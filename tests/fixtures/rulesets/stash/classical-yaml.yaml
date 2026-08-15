@@ -1,0 +1,5 @@
+payload:
+  - DOMAIN,example.com
+  - IP-CIDR,198.51.100.0/24,no-resolve
+  - AND,((NOT,((NETWORK,tcp))),(OR,((DST-PORT,443),(DOMAIN-SUFFIX,example.org)))))
+  - SCRIPT,quic

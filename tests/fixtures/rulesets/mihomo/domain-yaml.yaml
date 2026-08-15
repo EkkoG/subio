@@ -1,0 +1,4 @@
+payload:
+  - .example.com
+  - '*.cdn.example.net'
+  - exact.example.org
