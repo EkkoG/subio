@@ -97,6 +97,13 @@ class MasqueMode(StrEnum):
     H3_L4_PROXY = "h3-l4proxy"
 
 
+class RejectMode(StrEnum):
+    REJECT = "reject"
+    DROP = "reject-drop"
+    NO_DROP = "reject-no-drop"
+    TINYGIF = "reject-tinygif"
+
+
 @dataclass
 class TransportSettings:
     network: Union[Network, str] = Network.TCP
@@ -352,6 +359,26 @@ class TrustTunnelNode(BaseNode):
 
 
 @dataclass
+class DirectNode(BaseNode):
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.DIRECT:
+            self.type = Protocol.DIRECT
+
+
+@dataclass
+class RejectNode(BaseNode):
+    mode: RejectMode = RejectMode.REJECT
+
+    def __post_init__(self):
+        if self.type != Protocol.REJECT:
+            self.type = Protocol.REJECT
+        if not isinstance(self.mode, RejectMode):
+            self.mode = RejectMode(self.mode)
+
+
+@dataclass
 class AnyTLSNode(BaseNode):
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
@@ -483,6 +510,8 @@ Node = Union[
     TailscaleNode,
     MasqueNode,
     TrustTunnelNode,
+    DirectNode,
+    RejectNode,
     AnyTLSNode,
     HysteriaNode,
     Hysteria2Node,

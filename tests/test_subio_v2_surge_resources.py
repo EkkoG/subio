@@ -2,7 +2,9 @@ from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import (
     NativeNode,
+    DirectNode,
     Protocol,
+    RejectNode,
     SSHNode,
     TailscaleNode,
     WireguardNode,
@@ -179,7 +181,7 @@ future-section-field = keep-me
     assert len(reparsed.nodes[0].peers) == 2
 
 
-def test_surge_tailscale_is_a_node_while_builtin_aliases_remain_document_policies():
+def test_surge_tailscale_and_builtin_aliases_are_nodes():
     result = SurgeParser().parse_result(
         """
 [Proxy]
@@ -193,15 +195,14 @@ hostname = surge-client
 """
     )
 
-    assert len(result.nodes) == 1
+    assert len(result.nodes) == 3
     assert isinstance(result.nodes[0], TailscaleNode)
+    assert isinstance(result.nodes[1], DirectNode)
+    assert isinstance(result.nodes[2], RejectNode)
     assert result.nodes[0].hostname == "surge-client"
     assert result.nodes[0].auth_key == "tskey-auth-example"
     assert result.issues == []
-    assert [policy.name for policy in result.resources.policies] == [
-        "On",
-        "Off",
-    ]
+    assert result.resources.policies == []
     assert ("tailscale", "office") not in result.resources.named_sections
 
     emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)

@@ -29,12 +29,14 @@ from subio_v2.model.nodes import (
     MasqueMode,
     MasqueNode,
     TrustTunnelNode,
+    DirectNode,
+    NativeNode,
+    RejectMode,
+    RejectNode,
 )
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
-    SurgeExternalPolicy,
     SurgeNamedSection,
-    SurgeOpaquePolicy,
     get_surge_node_attachments,
 )
 from subio_v2.surge.codecs import (
@@ -52,6 +54,7 @@ from subio_v2.surge.syntax import (
     parse_proxy_line,
     split_comma_separated,
 )
+from subio_v2.surge.security import authorize_local_external, validate_external_record
 from subio_v2.utils.logger import logger
 
 
@@ -308,7 +311,7 @@ class SurgeParser(BaseParser):
                         )
                         continue
                     try:
-                        self._add_external_policy(record, resources, index)
+                        node = self._parse_external(record)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -323,6 +326,9 @@ class SurgeParser(BaseParser):
                                 code="parse.external-policy",
                             )
                         )
+                        continue
+                    self._set_policy_order(node, index)
+                    nodes.append(node)
                     continue
                 if protocol in SURGE_BUILTIN_ALIAS_TYPES:
                     if name == "DIRECT":
@@ -354,13 +360,25 @@ class SurgeParser(BaseParser):
                             )
                         )
                     else:
-                        resources.policies.append(
-                            SurgeOpaquePolicy(
-                                record=record,
-                                order=index,
-                                source_kind=self.source_kind,
+                        try:
+                            node = self._parse_builtin_alias(record)
+                        except (TypeError, ValueError) as exc:
+                            issues.append(
+                                ConversionIssue(
+                                    severity=IssueSeverity.ERROR,
+                                    node=name,
+                                    protocol=protocol,
+                                    source=None,
+                                    target="ir",
+                                    field=f"lines[{index}]",
+                                    message=f"Failed to parse Surge alias: {exc}",
+                                    stage="parse",
+                                    code="parse.line",
+                                )
                             )
-                        )
+                            continue
+                        self._set_policy_order(node, index)
+                        nodes.append(node)
                     continue
                 node = self._parse_line(line, keystore)
                 if node:
@@ -746,33 +764,49 @@ class SurgeParser(BaseParser):
         )
         return self._apply_common_options(node, record, "trust-tunnel")
 
-    def _add_external_policy(
-        self,
-        record: SurgeProxyRecord,
-        resources: SurgeDocumentResources,
-        order: int,
-    ) -> None:
-        values = record.parameters.last_values
-        if not values.get("exec"):
-            raise ValueError("exec is required")
-        if not values.get("local-port"):
-            raise ValueError("local-port is required")
-        try:
-            local_port = int(values["local-port"])
-        except ValueError:
-            raise ValueError("local-port must be an integer") from None
-        if not 1 <= local_port <= 65535:
-            raise ValueError("local-port must be between 1 and 65535")
-        if values.get("udp-relay") not in {None, "true", "false"}:
-            raise ValueError("udp-relay must be true or false")
-        resources.external_policies.append(
-            SurgeExternalPolicy(
-                record=record,
-                order=order,
-                source_kind=self.source_kind,
-                authorized=True,
-            )
+    def _parse_external(self, record: SurgeProxyRecord) -> NativeNode:
+        values = validate_external_record(record)
+        node = NativeNode(
+            name=record.name,
+            type=Protocol.EXTERNAL,
+            server=None,
+            port=None,
+            udp=values.get("udp-relay") == "true",
+            native_format="surge",
+            raw=copy.deepcopy(record),
+            unsafe=True,
         )
+        node.source_extensions["surge"] = {
+            "source_kind": self.source_kind,
+            "authorized": True,
+        }
+        authorize_local_external(node)
+        return self._apply_common_options(node, record, "external")
+
+    def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
+        if record.positional:
+            raise ValueError(
+                f"Surge {record.type.lower()} does not accept positional arguments"
+            )
+        protocol = record.type.lower()
+        if protocol == "direct":
+            node: DirectNode | RejectNode = DirectNode(
+                name=record.name,
+                type=Protocol.DIRECT,
+                server=None,
+                port=None,
+                udp=True,
+            )
+        else:
+            node = RejectNode(
+                name=record.name,
+                type=Protocol.REJECT,
+                server=None,
+                port=None,
+                udp=False,
+                mode=RejectMode(protocol),
+            )
+        return self._apply_common_options(node, record, protocol)
 
     @staticmethod
     def _line_identity(line: str) -> tuple[str | None, str | None]:

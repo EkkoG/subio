@@ -1,6 +1,14 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.model.nodes import MasqueMode, MasqueNode, TailscaleNode, TrustTunnelNode
+from subio_v2.model.nodes import (
+    DirectNode,
+    MasqueMode,
+    MasqueNode,
+    RejectMode,
+    RejectNode,
+    TailscaleNode,
+    TrustTunnelNode,
+)
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
 
@@ -270,3 +278,45 @@ def test_masque_method_profiles_are_not_cross_converted_with_fake_credentials():
     to_surge = SurgeEmitter().emit_result(mihomo.nodes)
     assert to_surge.supported_nodes == []
     assert to_surge.errors[0].code == "conversion.unsupported-protocol-variant"
+
+
+def test_surge_builtin_aliases_round_trip_as_nodes():
+    parsed = SurgeParser().parse_result(
+        """
+[Proxy]
+On = direct, interface=en0
+Off = reject, no-error-alert=true
+Drop = reject-drop
+Stable = reject-no-drop
+Gif = reject-tinygif
+"""
+    )
+
+    assert parsed.issues == []
+    assert isinstance(parsed.nodes[0], DirectNode)
+    assert all(isinstance(node, RejectNode) for node in parsed.nodes[1:])
+    assert [node.mode for node in parsed.nodes[1:]] == [
+        RejectMode.REJECT,
+        RejectMode.DROP,
+        RejectMode.NO_DROP,
+        RejectMode.TINYGIF,
+    ]
+    assert parsed.resources.policies == []
+
+    emission = SurgeEmitter().emit_result(parsed.nodes)
+
+    assert emission.errors == []
+    assert "On = direct, interface=en0" in emission.content
+    assert "Off = reject, no-error-alert=true" in emission.content
+    assert "Drop = reject-drop" in emission.content
+    assert "Stable = reject-no-drop" in emission.content
+    assert "Gif = reject-tinygif" in emission.content
+
+    to_mihomo = ClashEmitter().emit_result(parsed.nodes)
+    assert [node.name for node in to_mihomo.supported_nodes] == ["On"]
+    assert {issue.node for issue in to_mihomo.errors} == {
+        "Off",
+        "Drop",
+        "Stable",
+        "Gif",
+    }

@@ -12,7 +12,6 @@ DEFAULT_SURGE_TARGET = "latest"
 class SurgePolicyKind(StrEnum):
     NODE = "node"
     DOCUMENT = "document"
-    EXTERNAL = "external"
 
 
 class SurgeUdpBehavior(StrEnum):
@@ -288,15 +287,15 @@ SURGE_CODEC_SPECS = (
     _spec(
         "direct",
         protocol=Protocol.DIRECT,
-        kind=SurgePolicyKind.DOCUMENT,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        handler="_parts_direct",
     ),
     *(
         _spec(
             keyword,
-            protocol=None,
-            kind=SurgePolicyKind.DOCUMENT,
+            protocol=Protocol.REJECT,
             udp=SurgeUdpBehavior.UNSUPPORTED,
+            handler="_parts_reject",
         )
         for keyword in (
             "reject",
@@ -307,9 +306,9 @@ SURGE_CODEC_SPECS = (
     ),
     _spec(
         "external",
-        protocol=None,
-        kind=SurgePolicyKind.EXTERNAL,
+        protocol=Protocol.EXTERNAL,
         udp=SurgeUdpBehavior.EXPLICIT,
+        handler="_parts_external",
         consumed=("exec", "local-port", "args", "addresses", "udp-relay"),
         multi=("args", "addresses"),
     ),

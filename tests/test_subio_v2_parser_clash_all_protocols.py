@@ -3,6 +3,7 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import (
+    DirectNode,
     MasqueNode,
     Protocol,
     TailscaleNode,
@@ -61,6 +62,7 @@ proxies:
     assert isinstance(by_node_name["mq1"], MasqueNode)
     assert isinstance(by_node_name["tt1"], TrustTunnelNode)
     assert isinstance(by_node_name["ts1"], TailscaleNode)
+    assert isinstance(by_node_name["dr1"], DirectNode)
 
     proxies = _roundtrip(yaml_text)
     assert len(proxies) == 22

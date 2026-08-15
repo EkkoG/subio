@@ -60,7 +60,7 @@ Surge Parser 应先经过语法层，再把已知字段映射到 Node；Emitter 
 语法层生成文本。新增字段时不得恢复手写逗号拼接，也不得使用普通字典承载需要保序或
 允许重复的原始参数。
 
-UDP 参数必须按协议生成：只有 SOCKS5、Shadowsocks，以及未来的 External 和
+UDP 参数必须按协议生成：只有 SOCKS5、Shadowsocks、External 和
 HTTP/2 CONNECT 使用显式 `udp-relay`。VMess、Trojan、TUIC、Hysteria 2 和 Snell v3+
 的 UDP 支持是协议能力，不应因为 `node.udp=True` 输出该参数；HTTP/HTTPS 和 SSH 不支持
 UDP relay。
@@ -69,16 +69,17 @@ Surge 已知但不跨平台的公共参数存入 `BaseNode.surge_options`，未�
 `BaseNode.source_extensions["surge"]`。Surge 输出会写回这些字段；其他目标输出必须返回
 `conversion.unconsumed-source-field` issue，不能静默丢弃。
 
-过渡期内，尚未迁移的 Keystore、未引用命名 section 和真正的 Surge-only policy 仍由
+过渡期内，尚未收口的 Keystore 和未引用命名 section 仍由
 `src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
-检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message；不要再向这条文档旁路
-新增可跨平台协议。
+检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message；`[Proxy]` 条目不得进入
+这条文档旁路。
 
 WireGuard 的 policy line 映射为强类型 `WireguardNode`，多个 peer 会映射到
 `WireguardNode.peers`。Tailscale 映射为无伪造端点的 `TailscaleNode`，引用的
 `[Tailscale <name>]` section 绑定到该节点的 `SurgeNodeAttachments`；改名、过滤、用户覆盖和
-capability 检查都作用于节点。`direct` / `reject*` alias 仍是待迁移的文档策略，因此
-workflow 判断过渡期 Surge artifact 是否为空时仍需兼顾 `EmissionResult.emitted_policy_names`。
+capability 检查都作用于节点。`direct` 使用无端点 `DirectNode`，可与 Mihomo 的 direct proxy
+双向转换；`reject*` 使用 `RejectNode` 保留 Surge alias 语义，但不猜测为 Mihomo 可声明的
+自定义 reject proxy。二者都必须经过普通节点的 rename、filter、用户覆盖和 capability 流水线。
 
 MASQUE 和 Trust Tunnel 均使用强类型节点。`MasqueNode.mode` 区分 Surge 的标准
 HTTP/3 CONNECT/CONNECT-UDP forward proxy、Mihomo CONNECT-IP 和 Mihomo
@@ -87,12 +88,12 @@ profile，跨端生成必须返回 `conversion.unsupported-protocol-variant`，�
 隧道地址或把 HTTP Basic 凭据推导成 WARP 凭据。Trust Tunnel 的 H2/H3、TLS 和
 `max-streams` 可跨平台映射；UDP、WebSocket、headers 和平台扩展按 capability 明确报告。
 
-External Proxy Program 使用独立的 `SurgeExternalPolicy`，不能进入普通 opaque 列表。默认
-拒绝所有来源；仅本地 `file` provider 显式设置 `allow_unsafe_external = true` 时允许，并且
-仍只能输出到 Surge。URL provider 禁止启用该开关，远程内容即使经过 age 解密仍按远程来源
-处理。被拒绝的 External record 必须在 parser 阶段从资源中移除，所以
-`allow_conversion_errors = true` 不能恢复它；issue 和日志不得包含 `exec`、`args` 或
-`addresses` 的值。
+External Proxy Program 使用受限 `NativeNode`，原始 `SurgeProxyRecord` 必须以
+`repr=False` 保存，不能进入 document resource 或普通 opaque 列表。默认拒绝所有来源；仅本地
+`file` provider 显式设置 `allow_unsafe_external = true` 时允许，并且仍只能输出到 Surge。URL
+provider 禁止启用该开关，远程内容即使经过 age 解密仍按远程来源处理。被拒绝的 External
+record 必须在 parser 阶段丢弃，所以 `allow_conversion_errors = true` 不能恢复它；伪造节点还要
+由 capability 再次拒绝。issue 和日志不得包含 `exec`、`args` 或 `addresses` 的值。
 
 Surge `h2-connect` 使用 `HttpNode.variant=HttpVariant.H2_CONNECT`，不得退化为普通
 HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge 目标无法表达这些
@@ -104,7 +105,7 @@ HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge
 `SurgeCodecSpec` 同时声明：
 
 - Surge keyword 与对应 `Protocol`；
-- 普通 Node、文档策略或 External 安全策略类型；
+- 普通 Node 或过渡 document resource 类型；External 和 alias 都属于 Node；
 - emitter handler；
 - 已消费参数、规范化参数和多值参数；
 - `EXPLICIT`、`AUTOMATIC`、`VERSIONED` 或 `UNSUPPORTED` UDP 行为。
@@ -138,7 +139,8 @@ parser keyword、参数生成路径和 UDP 矩阵是否漂移。不要在 parser
 | `ss`, `vmess`, `vless`, `trojan`, `socks5`, `http` | 强类型 `*Node` | 可扩展 Surge / dae 等 |
 | `ssr`, `hysteria`, `tuic`, `snell`, `wireguard`, `hysteria2`, `anytls`, `ssh` | 强类型 + `BaseNode.extra` | 部分已有 / 可继续补 |
 | `masque`, `trusttunnel`, `tailscale` | 强类型 + `BaseNode.extra` | Mihomo/Surge 按协议变体与字段能力转换 |
-| `mieru`, `sudoku`, `openvpn`, `direct`, `dns` | `ClashPassthroughNode` | **仅 Clash 往返** |
+| `direct` | 无端点 `DirectNode` | Mihomo / Surge 双向转换 |
+| `mieru`, `sudoku`, `openvpn`, `dns` | `ClashPassthroughNode` | **仅 Clash 往返** |
 | 未来未知 `type` | `ClashPassthroughNode(clash_type=...)` | **仅 Mihomo 往返** |
 
 ### 2.2 实现结构

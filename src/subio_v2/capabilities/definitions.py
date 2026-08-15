@@ -148,6 +148,9 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "transports": {"h2", "h3", "ws"},
             "features": {"tls"},
         },
+        "direct": {"features": {"interface-binding"}},
+        "reject": {"features": {"drop", "no-drop", "tinygif"}},
+        "external": {"features": {"udp", "ordered-arguments"}},
         # 全局特性
         "global_features": {
             "udp_relay": True,
@@ -496,6 +499,8 @@ PROTOCOL_NAME_MAP = {
     "openvpn": "openvpn",
     "tailscale": "tailscale",
     "direct": "direct",
+    "reject": "reject",
+    "external": "external",
     "dns": "dns",
     "wireguard": "wireguard",
     "wg": "wireguard",

@@ -122,6 +122,11 @@ def test_every_node_codec_has_protocol_and_emitter_handler():
             "node = trust-tunnel, example.com, 443, username=u, password=p",
             Protocol.TRUSTTUNNEL,
         ),
+        ("direct", "node = direct", Protocol.DIRECT),
+        ("reject", "node = reject", Protocol.REJECT),
+        ("reject-drop", "node = reject-drop", Protocol.REJECT),
+        ("reject-no-drop", "node = reject-no-drop", Protocol.REJECT),
+        ("reject-tinygif", "node = reject-tinygif", Protocol.REJECT),
     ],
 )
 def test_node_codec_keywords_have_parser_paths(keyword, line, protocol):
@@ -151,12 +156,17 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         "hysteria2",
         "masque",
         "trust-tunnel",
+        "direct",
+        "reject",
+        "reject-drop",
+        "reject-no-drop",
+        "reject-tinygif",
     }
     registered = {
         codec.keyword
         for codec in SURGE_CODEC_SPECS
         if codec.policy_kind == SurgePolicyKind.NODE
-        and codec.keyword not in {"wireguard", "tailscale"}
+        and codec.keyword not in {"wireguard", "tailscale", "external"}
     }
     assert sampled == registered
 
@@ -222,6 +232,14 @@ def test_non_explicit_udp_codecs_reject_udp_relay_parameter(line):
     assert result.nodes == []
     assert result.resources.policies == []
     assert result.issues[0].code == "parse.protocol-parameter"
+
+
+@pytest.mark.parametrize("keyword", ["direct", "reject", "reject-drop"])
+def test_builtin_aliases_reject_positional_arguments(keyword):
+    result = SurgeParser().parse_result(f"Alias = {keyword}, unexpected")
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.line"
 
 
 def test_latest_is_the_only_current_surge_target():

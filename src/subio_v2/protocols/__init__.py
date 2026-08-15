@@ -30,6 +30,7 @@ def _bootstrap() -> None:
     # Keep this list explicit so grep/rg can quickly discover all descriptors.
     from subio_v2.protocols import (  # noqa: F401
         anytls,
+        direct,
         http,
         hysteria,
         hysteria2,

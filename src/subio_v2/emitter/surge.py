@@ -10,9 +10,12 @@ from subio_v2.model.nodes import (
     AnyTLSNode,
     HttpVariant,
     Hysteria2Node,
+    DirectNode,
     Network,
+    NativeNode,
     Node,
     Protocol,
+    RejectNode,
     ShadowsocksNode,
     SnellNode,
     Socks5Node,
@@ -33,7 +36,11 @@ from subio_v2.surge.syntax import (
     serialize_parameter_list,
     serialize_proxy_line,
 )
-from subio_v2.surge.codecs import DEFAULT_SURGE_TARGET, SURGE_EMITTER_HANDLERS
+from subio_v2.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    SURGE_COMMON_PARAMETERS,
+    SURGE_EMITTER_HANDLERS,
+)
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
     SurgeExternalPolicy,
@@ -41,6 +48,7 @@ from subio_v2.surge.resources import (
     coerce_surge_resources,
     get_surge_node_attachments,
 )
+from subio_v2.surge.security import validate_external_record
 
 
 class SurgeEmitter(BaseEmitter):
@@ -154,7 +162,19 @@ class SurgeEmitter(BaseEmitter):
                 )
 
         emitted_nodes: list[Node] = []
+        emitted_policy_name_set: set[str] = set()
         for node in prepared_nodes:
+            if node.name in emitted_policy_name_set:
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        f"Duplicate Surge policy name '{node.name}'",
+                        field="name",
+                        code="conversion.resource-conflict",
+                    )
+                )
+                continue
             try:
                 line = self._emit_node(node, node_keystore_map)
             except Exception as exc:
@@ -178,9 +198,9 @@ class SurgeEmitter(BaseEmitter):
                 continue
             lines.append(line)
             emitted_nodes.append(node)
+            emitted_policy_name_set.add(node.name)
 
         emitted_policy_names = [node.name for node in emitted_nodes]
-        emitted_policy_name_set = set(emitted_policy_names)
         document_policies = [
             *self.resources.policies,
             *self.resources.external_policies,
@@ -291,6 +311,8 @@ class SurgeEmitter(BaseEmitter):
     ) -> str | None:
         if node_keystore_map is None:
             node_keystore_map = {}
+        if isinstance(node, NativeNode) and node.type == Protocol.EXTERNAL:
+            return self._emit_external_node(node)
         handler_name = self._HANDLERS.get(node.type)
         if not handler_name:
             return None
@@ -319,6 +341,75 @@ class SurgeEmitter(BaseEmitter):
                 parameters=SurgeParameters(parameters),
             )
         )
+
+    def _emit_external_node(self, node: NativeNode) -> str:
+        record = node.raw
+        if node.native_format != "surge":
+            raise ValueError("External node does not contain a Surge proxy record")
+        validate_external_record(record)
+
+        replacements: dict[str, SurgeParameter] = {}
+        for option in self._common_opts(node):
+            key, value = option.split("=", 1)
+            if key in SURGE_COMMON_PARAMETERS:
+                replacements[key] = SurgeParameter(key=key, value=value)
+        if node.udp:
+            replacements["udp-relay"] = SurgeParameter(key="udp-relay", value="true")
+
+        parameters = list(record.parameters)
+        managed_keys = SURGE_COMMON_PARAMETERS | {"udp-relay"}
+        last_indexes = {
+            parameter.key: index
+            for index, parameter in enumerate(parameters)
+            if parameter.key in managed_keys
+        }
+        updated: list[SurgeParameter] = []
+        emitted_replacements: set[str] = set()
+        for index, parameter in enumerate(parameters):
+            if parameter.key not in managed_keys:
+                updated.append(parameter)
+                continue
+            replacement = replacements.get(parameter.key)
+            if replacement is None:
+                continue
+            if index == last_indexes[parameter.key]:
+                updated.append(replacement)
+                emitted_replacements.add(parameter.key)
+            else:
+                updated.append(parameter)
+        updated.extend(
+            replacement
+            for key, replacement in replacements.items()
+            if key not in emitted_replacements
+        )
+
+        return serialize_proxy_line(
+            SurgeProxyRecord(
+                name=node.name,
+                type=record.type,
+                positional=record.positional,
+                parameters=SurgeParameters(updated),
+            )
+        )
+
+    def _parts_direct(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, DirectNode)
+        return ["direct"]
+
+    def _parts_reject(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, RejectNode)
+        return [node.mode.value]
+
+    def _parts_external(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, NativeNode)
+        record = node.raw
+        if not isinstance(record, SurgeProxyRecord):
+            raise ValueError("External node does not contain a Surge proxy record")
+        return [
+            record.type,
+            *record.positional,
+            *(f"{parameter.key}={parameter.value}" for parameter in record.parameters),
+        ]
 
     def _parts_ss(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, ShadowsocksNode)

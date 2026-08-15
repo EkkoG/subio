@@ -9,7 +9,8 @@ from enum import Enum
 from typing import List, Optional
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Node
+from subio_v2.model.nodes import NativeNode, Node, Protocol, RejectMode, RejectNode
+from subio_v2.surge.security import is_authorized_local_external
 from .definitions import get_platform_capabilities, normalize_protocol_name
 
 
@@ -45,16 +46,18 @@ class CheckResult:
         message: str,
         field: Optional[str] = None,
         suggestion: Optional[str] = None,
+        code: str = "conversion",
     ):
-        self.warnings.append(CapabilityWarning(level, message, field, suggestion))
+        self.warnings.append(CapabilityWarning(level, message, field, suggestion, code))
 
     def add_error(
         self,
         message: str,
         field: Optional[str] = None,
         suggestion: Optional[str] = None,
+        code: str = "conversion",
     ):
-        self.add_warning(WarningLevel.ERROR, message, field, suggestion)
+        self.add_warning(WarningLevel.ERROR, message, field, suggestion, code)
         self.supported = False
 
     def has_errors(self) -> bool:
@@ -90,6 +93,30 @@ class CapabilityChecker:
 
         if not node.name:
             result.add_error("Node name is required", field="name")
+        if isinstance(node, NativeNode) and node.type == Protocol.EXTERNAL:
+            external = node.source_extensions.get("surge", {})
+            if self.platform != "surge" or node.native_format != "surge":
+                result.add_error(
+                    "External Proxy Program cannot be converted across platforms",
+                    field="native_format",
+                    code="security.external-cross-platform",
+                )
+            elif not (
+                node.unsafe
+                and external.get("source_kind") == "local"
+                and external.get("authorized") is True
+                and is_authorized_local_external(node)
+            ):
+                result.add_error(
+                    "External policy is not authorized for Surge emission",
+                    field="source_extensions.surge",
+                    code="security.external-rejected",
+                )
+        if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
+            result.add_error(
+                "Reject mode is invalid",
+                field="mode",
+            )
         if desc and not desc.passthrough:
             if desc.requires_endpoint:
                 if not node.server:
