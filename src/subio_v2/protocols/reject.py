@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from subio_v2.model.nodes import Node, Protocol, RejectNode
+from subio_v2.protocols import register
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import smux_group
+
+
+class RejectDescriptor(StructuredProtocolDescriptor):
+    protocol = Protocol.REJECT
+    clash_type = "reject"
+    node_class = RejectNode
+    requires_endpoint = False
+    fields = (smux_group(),)
+
+    def prepare_parse_kwargs(
+        self, data: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        kwargs["server"] = None
+        kwargs["port"] = None
+        kwargs["udp"] = False
+        return kwargs
+
+    def after_emit(self, out: Dict[str, Any], node: Node) -> None:
+        out.pop("server", None)
+        out.pop("port", None)
+        out.pop("udp", None)
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+        if not isinstance(node, RejectNode):
+            return []
+        supported_modes = proto_caps.get("modes", set())
+        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
+
+        warnings: list[Any] = []
+        if node.mode.value not in supported_modes:
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=(
+                        f"Reject mode '{node.mode.value}' is not supported by {platform}"
+                    ),
+                    field="mode",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+        if node.smux.enabled and "smux" not in proto_caps.get("features", set()):
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"Reject SMUX is not supported by {platform}",
+                    field="smux",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+        return warnings
+
+
+register(RejectDescriptor())

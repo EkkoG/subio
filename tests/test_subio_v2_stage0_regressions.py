@@ -260,10 +260,6 @@ def test_mihomo_masque_uri_enters_shared_semantic_ir():
     assert proxy["uri"] == connect_uri
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 6: Mihomo reject is not registered as a strong descriptor",
-)
 def test_mihomo_reject_uses_shared_reject_node_in_both_directions():
     mihomo_node = ClashParser().parse_result(
         {"proxies": [{"name": "deny", "type": "reject"}]}

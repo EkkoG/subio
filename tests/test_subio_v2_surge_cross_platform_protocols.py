@@ -313,10 +313,21 @@ Gif = reject-tinygif
     assert "Gif = reject-tinygif" in emission.content
 
     to_mihomo = ClashEmitter().emit_result(parsed.nodes)
-    assert [node.name for node in to_mihomo.supported_nodes] == ["On"]
+    assert [node.name for node in to_mihomo.supported_nodes] == ["On", "Off"]
+    assert [proxy["type"] for proxy in to_mihomo.content["proxies"]] == [
+        "direct",
+        "reject",
+    ]
     assert {issue.node for issue in to_mihomo.errors} == {
-        "Off",
         "Drop",
         "Stable",
         "Gif",
     }
+    warning = next(
+        issue
+        for issue in to_mihomo.issues
+        if issue.node == "Off"
+        and issue.code == "conversion.unconsumed-source-field"
+    )
+    assert warning.field == "source_extensions.surge"
+    assert "no-error-alert" in warning.message

@@ -22,6 +22,9 @@ class Protocol(StrEnum):
     SSH = "ssh"
     SNELL = "snell"
     MIERU = "mieru"
+    GOST_RELAY = "gost-relay"
+    REMATCH = "rematch"
+    SHADOWQUIC = "shadowquic"
     SUDOKU = "sudoku"
     MASQUE = "masque"
     TRUSTTUNNEL = "trusttunnel"
@@ -400,6 +403,7 @@ class DirectNode(BaseNode):
 @dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
         if self.type != Protocol.REJECT:

@@ -37,6 +37,7 @@ def _bootstrap() -> None:
         masque,
         mieru,
         passthrough,
+        reject,
         shadowsocks,
         shadowsocksr,
         snell,
