@@ -40,7 +40,7 @@ Config
   -> Uploader
 ```
 
-规则集主线以 `docs/development_plan.md` 阶段 1 的契约为准，完成后只保留这一条语义路径：
+规则集主线以 `docs/development_plan.md` 阶段 1～2 的契约为准，完成后只保留这一条语义路径：
 
 ```text
 Config / local snippet
@@ -97,8 +97,9 @@ Config / local snippet
 这些数据不是通用语义。Emitter 只能消费属于自己目标方言的扩展；跨方言未消费内容必须
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。
 
-`ParseResult.resources`、`EmissionResult.emitted_policy_names` 和
-`EmissionResult.emitted_resource_keys` 目前仅为兼容保留，不得承载新的完整文档资源设计。
+`ParseResult.resources` 和 `EmissionResult.emitted_resource_keys` 目前仅为兼容保留，不得承载新的
+完整文档资源设计。`EmissionResult.emitted_policy_names` 仍被 Workflow 用作 Surge 模板桥接，
+必须等平台模板上下文下沉后再移除。
 
 ### 3.3 节点附件
 
@@ -116,7 +117,7 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 ### 3.4 方言上下文
 
-`docs/development_plan.md` 阶段 1～3 完成后，节点和规则集使用同一个轻量 `DialectContext`
+`docs/development_plan.md` 阶段 1 和阶段 4 完成后，节点和规则集使用同一个轻量 `DialectContext`
 契约描述来源或目标方言。来源与目标分别传入上下文实例，不创建 `RuleSetSourceContext`、
 `NodeDialectContext` 或平台专属 context 等平行类型。
 
@@ -237,8 +238,8 @@ Stash 支持的实施顺序和具体协议矩阵见 `docs/development_plan.md`�
 
 ### 7.1 可分享规则集
 
-以下内容是阶段 1 已锁定的实现契约。当前宽松 parser 的额外行为不构成兼容承诺，也不得写入
-新的用户示例。
+以下内容是 `docs/development_plan.md` 已锁定、但尚未实施完成的目标契约。当前宽松 parser 的
+额外行为不构成兼容承诺，也不得写入新的用户示例。
 
 SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集，不解析完整配置中的
 `rules`、`[Rule]`、script provider 或其他外部依赖资源。
@@ -251,8 +252,12 @@ SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集
 - rule renderer：现有目标配置片段生成器，不新增对称的规则集输出 artifact。
 
 远程 `[[ruleset]]` 通过 `type = "mihomo" | "stash" | "surge"` 声明输入方言；未声明 `type`
-时必须严格按 Mihomo `classical` 解析。显式声明方言时使用对应 codec，不根据 URL、文件名或
-解析失败结果切换方言。不得保留 legacy parser、宽松 fallback 或根据逗号位置猜 policy。
+时精确定义为 `mihomo + classical + text`。显式声明方言时使用对应 codec，不根据 URL、文件名
+或解析失败结果切换方言。不得保留 legacy parser、宽松 fallback 或根据逗号位置猜 policy。
+
+Mihomo 和 Stash 的 YAML/text 支持 `domain`、`ipcidr`、`classical`；MRS 当前只支持 `domain`、
+`ipcidr`。远程加载必须保留原始 bytes，由 codec 选择文本解码或 MRS 解码；运行时不得依赖外部
+Mihomo CLI。Surge 输入只覆盖外部 Rule Set、Domain Set 和已抽取的 inline Ruleset 内容。
 
 本地 snippet 是参数化的 Mihomo classical 规则集：第一行声明参数，后续规则不写 policy 时绑定
 第一个参数，`{{ name }}` 只能引用已声明参数，`DIRECT` 等值是固定 policy。移除 binding 后，
@@ -270,8 +275,9 @@ SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并
 阻止部分发布。
 
-Artifact 应先全部生成成功，再开始上传。文件写入使用原子替换；日志、异常、命令参数和 Git
-配置不得泄露订阅正文、token、age key、密码或私钥。
+Artifact 应先全部生成成功，再开始发布。每个本地文件使用原子替换，但多文件整批不保证原子，
+远程上传也不属于同一个全局事务。日志、异常、命令参数和 Git 配置不得泄露订阅正文、token、
+age key、密码或私钥。
 
 `allow_conversion_errors = true` 会放行全部 conversion error，只适合已审阅的调试配置。
 新增 issue 时应使用稳定 code，为后续按 code allowlist 做准备。
