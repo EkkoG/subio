@@ -1,4 +1,13 @@
-from subio_v2.workflow.filters import F, keyword, regex, excluding, union, intersect, chain, all_filters
+from subio_v2.workflow.filters import (
+    F,
+    keyword,
+    regex,
+    excluding,
+    union,
+    intersect,
+    chain,
+    all_filters,
+)
 
 
 class Item:
@@ -7,7 +16,7 @@ class Item:
 
 
 def names(items):
-    return sorted([getattr(i, 'name', i) for i in items])
+    return sorted([getattr(i, "name", i) for i in items])
 
 
 def test_filters_basic_and_combinators():
@@ -30,7 +39,9 @@ def test_filters_basic_and_combinators():
     assert "SG Pro" in names(F.sg(data))
 
     # keyword and regex
-    assert "node-123" in names(keyword(r"node-\d+")(names(data)))  # keyword on names list works via regex_filter
+    assert "node-123" in names(
+        keyword(r"node-\d+")(names(data))
+    )  # keyword on names list works via regex_filter
     assert "node-123" in names(regex(r"node-\d+")(names(data)))
 
     # excluding

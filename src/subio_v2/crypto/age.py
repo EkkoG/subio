@@ -98,9 +98,7 @@ def decrypt_bytes(data: bytes, *secret_keys: str) -> bytes:
 # ---------------------------------------------------------------------------
 
 
-def encrypt_bytes(
-    data: bytes | str, *public_keys: str, armored: bool = True
-) -> bytes:
+def encrypt_bytes(data: bytes | str, *public_keys: str, armored: bool = True) -> bytes:
     """Encrypt *data* with one or more age *public_keys*.
 
     Parameters

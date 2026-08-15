@@ -13,4 +13,3 @@ __all__ = [
     "CapabilityChecker",
     "check_node_for_platform",
 ]
-
