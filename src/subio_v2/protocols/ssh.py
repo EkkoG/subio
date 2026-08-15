@@ -1,56 +1,35 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-from subio_v2.clash.helpers import assign_extra, emit_base, merge_extra, parse_base_fields
 from subio_v2.model.nodes import Node, Protocol, SSHNode
 from subio_v2.protocols import register
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
-class SSHDescriptor(ProtocolDescriptor):
+class SSHDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SSH
     clash_type = "ssh"
     node_class = SSHNode
-
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-        handled = {
-            "username",
-            "password",
-            "private-key",
+    fields = (
+        scalar_field(
+            "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+        ),
+        scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("private-key", "private_key", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field(
             "private-key-passphrase",
-            "host-key",
+            "private_key_passphrase",
+            emit_policy=EmitPolicy.TRUTHY,
+        ),
+        scalar_field("host-key", "host_key", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field(
             "host-key-algorithms",
-        }
-        node = SSHNode(
-            type=Protocol.SSH,
-            username=data.get("username", ""),
-            password=data.get("password"),
-            private_key=data.get("private-key"),
-            private_key_passphrase=data.get("private-key-passphrase"),
-            host_key=data.get("host-key"),
-            host_key_algorithms=data.get("host-key-algorithms"),
-            **parse_base_fields(data),
-        )
-        assign_extra(node, data, handled)
-        return node
-
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
-        if not isinstance(node, SSHNode):
-            raise TypeError(f"Expected SSHNode, got {type(node)}")
-        base = emit_base(node)
-        base["username"] = node.username
-        if node.password:
-            base["password"] = node.password
-        if node.private_key:
-            base["private-key"] = node.private_key
-        if node.private_key_passphrase:
-            base["private-key-passphrase"] = node.private_key_passphrase
-        if node.host_key:
-            base["host-key"] = node.host_key
-        if node.host_key_algorithms:
-            base["host-key-algorithms"] = node.host_key_algorithms
-        return merge_extra(base, node)
+            "host_key_algorithms",
+            emit_policy=EmitPolicy.TRUTHY,
+        ),
+    )
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, SSHNode):

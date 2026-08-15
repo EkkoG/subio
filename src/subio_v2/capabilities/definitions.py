@@ -53,6 +53,7 @@ TRANSPORT_WS = "ws"
 TRANSPORT_H2 = "h2"
 TRANSPORT_GRPC = "grpc"
 TRANSPORT_HTTP = "http"
+TRANSPORT_XHTTP = "xhttp"
 
 # ============== 平台能力定义 ==============
 
@@ -138,6 +139,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "tailscale",
             "direct",
             "dns",
+            "clash-unknown",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
@@ -147,11 +149,24 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2, TRANSPORT_HTTP},
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
             "features": {"udp", "tls", "reality", "smux"},
         },
         "vless": {
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2, TRANSPORT_HTTP},
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+                TRANSPORT_XHTTP,
+            },
             "features": {"udp", "tls", "reality", "xtls", "smux"},
             "flows": {"xtls-rprx-vision"},
         },
@@ -190,6 +205,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "tailscale": {"features": set()},
         "direct": {"features": set()},
         "dns": {"features": set()},
+        "clash-unknown": {"features": set()},
         "wireguard": {
             "features": {"udp"},
         },
@@ -317,7 +333,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "vmess": {
             "ciphers": VMESS_CIPHERS,
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
-            "features": {"udp", "tls", "reality"},
+            "features": {"udp", "tls"},
         },
         "vless": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
@@ -369,11 +385,23 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2, TRANSPORT_HTTP},
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
             "features": {"udp", "tls"},
         },
         "vless": {
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2, TRANSPORT_HTTP},
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
             "features": {"udp", "tls", "reality", "xtls"},
             "flows": {"xtls-rprx-vision"},
         },
@@ -453,4 +481,3 @@ def get_protocol_capabilities(platform: str, protocol: str) -> Optional[Dict[str
         return None
     normalized = normalize_protocol_name(protocol)
     return caps.get(normalized)
-

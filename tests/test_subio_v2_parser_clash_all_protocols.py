@@ -119,3 +119,37 @@ proxies:
     proxies = ClashEmitter().emit(nodes)["proxies"]
     assert proxies[0]["congestion-controller"] == "bbr"
     assert proxies[0]["udp-relay-mode"] == "quic"
+
+
+def test_unknown_future_clash_type_is_preserved_for_mihomo_roundtrip():
+    yaml_text = """
+proxies:
+  - name: future
+    type: future-protocol
+    server: example.com
+    port: 443
+    credential: secret
+    future-opts:
+      enabled: false
+      count: 0
+"""
+    nodes = ClashParser().parse(yaml_text)
+
+    assert len(nodes) == 1
+    assert nodes[0].type == Protocol.CLASH_UNKNOWN
+    assert nodes[0].clash_type == "future-protocol"
+    assert nodes[0].raw["future-opts"] == {"enabled": False, "count": 0}
+
+    proxies = ClashEmitter(platform="clash-meta").emit(nodes)["proxies"]
+    assert proxies == [
+        {
+            "name": "future",
+            "type": "future-protocol",
+            "server": "example.com",
+            "port": 443,
+            "credential": "secret",
+            "future-opts": {"enabled": False, "count": 0},
+        }
+    ]
+
+    assert ClashEmitter(platform="clash").emit(nodes)["proxies"] == []

@@ -19,13 +19,25 @@ class PassthroughDescriptor(ProtocolDescriptor):
 
     def parse_clash(self, data: Dict[str, Any]) -> Node:
         return ClashPassthroughNode(
-            type=self.protocol, raw=copy.deepcopy(data), **parse_base_fields(data)
+            type=self.protocol,
+            raw=copy.deepcopy(data),
+            clash_type=data.get("type"),
+            **parse_base_fields(data),
         )
 
     def emit_clash(self, node: Node) -> Dict[str, Any]:
         if not isinstance(node, ClashPassthroughNode):
             raise TypeError(f"Expected ClashPassthroughNode, got {type(node)}")
         return emit_passthrough(node)
+
+
+class UnknownPassthroughDescriptor(PassthroughDescriptor):
+    protocol = Protocol.CLASH_UNKNOWN
+    clash_type = "*"
+    dynamic_clash_type = True
+
+    def __init__(self):
+        pass
 
 
 for _protocol, _clash_type in (
@@ -39,3 +51,5 @@ for _protocol, _clash_type in (
     (Protocol.DNS, "dns"),
 ):
     register(PassthroughDescriptor(protocol=_protocol, clash_type=_clash_type))
+
+register(UnknownPassthroughDescriptor())

@@ -1,62 +1,80 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-from subio_v2.clash.helpers import (
-    assign_extra,
-    emit_base,
-    emit_tls,
-    merge_extra,
-    parse_base_fields,
-    parse_tls,
-)
 from subio_v2.model.nodes import HttpNode, Node, Protocol
 from subio_v2.protocols import register
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
-class HttpDescriptor(ProtocolDescriptor):
+class HttpDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HTTP
     clash_type = "http"
     node_class = HttpNode
+    fields = (
+        scalar_field("username", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("headers", emit_policy=EmitPolicy.TRUTHY),
+        tls_group(
+            consumed_keys=(
+                "tls",
+                "sni",
+                "skip-cert-verify",
+                "fingerprint",
+                "client-fingerprint",
+                "alpn",
+                "certificate",
+                "private-key",
+            )
+        ),
+    )
 
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-        handled = {
-            "username",
-            "password",
-            "headers",
-            "tls",
-            "sni",
-            "skip-cert-verify",
-            "fingerprint",
-            "client-fingerprint",
-            "alpn",
-            "certificate",
-            "private-key",
-        }
-        node = HttpNode(
-            type=Protocol.HTTP,
-            username=data.get("username"),
-            password=data.get("password"),
-            headers=data.get("headers"),
-            tls=parse_tls(data),
-            **parse_base_fields(data),
-        )
-        assign_extra(node, data, handled)
-        return node
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+        if not isinstance(node, HttpNode) or not node.tls or not node.tls.enabled:
+            return []
+        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
 
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
-        if not isinstance(node, HttpNode):
-            raise TypeError(f"Expected HttpNode, got {type(node)}")
-        base = emit_base(node)
-        if node.username:
-            base["username"] = node.username
-        if node.password:
-            base["password"] = node.password
-        if node.headers:
-            base["headers"] = node.headers
-        emit_tls(base, node.tls)
-        return merge_extra(base, node)
+        if "tls" not in proto_caps.get("features", set()):
+            return [
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"HTTP TLS is not supported by {platform}",
+                    field="tls",
+                )
+            ]
+        if platform not in {"dae", "v2rayn"}:
+            return []
+
+        unsupported: list[str] = []
+        if node.tls.server_name and node.tls.server_name != node.server:
+            unsupported.append("sni")
+        if node.tls.skip_cert_verify:
+            unsupported.append("skip-cert-verify")
+        if node.tls.alpn:
+            unsupported.append("alpn")
+        if node.tls.fingerprint:
+            unsupported.append("fingerprint")
+        if node.tls.client_fingerprint:
+            unsupported.append("client-fingerprint")
+        if node.tls.reality_opts:
+            unsupported.append("reality-opts")
+        if node.tls.ech_opts:
+            unsupported.append("ech-opts")
+        if node.tls.certificate or node.tls.private_key:
+            unsupported.append("client-certificate")
+        if not unsupported:
+            return []
+        fields = ", ".join(unsupported)
+        return [
+            CapabilityWarning(
+                level=WarningLevel.ERROR,
+                message=(
+                    f"HTTP TLS options cannot be represented by {platform}: {fields}"
+                ),
+                field=unsupported[0],
+            )
+        ]
 
 
 register(HttpDescriptor())

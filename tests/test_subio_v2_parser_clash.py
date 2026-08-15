@@ -63,3 +63,24 @@ proxies:
 """
     nodes = ClashParser().parse(yaml_text)
     assert [n.name for n in nodes] == ["ok"]
+
+
+def test_clash_parse_result_reports_bad_nodes_instead_of_silently_dropping_them():
+    result = ClashParser().parse_result(
+        """
+proxies:
+  - {name: ok, type: ss, server: s, port: 1, cipher: aes-256-gcm, password: p}
+  - {name: bad, type: ss, server: s, port: notint, cipher: aes-256-gcm, password: p}
+"""
+    )
+
+    assert [node.name for node in result.nodes] == ["ok"]
+    assert len(result.issues) == 1
+    assert result.issues[0].node == "bad"
+    assert result.issues[0].stage == "parse"
+    assert result.issues[0].code == "parse.node"
+
+
+def test_clash_parse_result_raises_value_error_for_invalid_document():
+    with pytest.raises(ValueError, match="missing 'proxies'"):
+        ClashParser().parse_result({"not-proxies": []})

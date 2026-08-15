@@ -27,6 +27,7 @@ class Protocol(StrEnum):
     TAILSCALE = "tailscale"
     DIRECT = "direct"
     DNS = "dns"
+    CLASH_UNKNOWN = "clash-unknown"
 
 
 @dataclass
@@ -49,18 +50,25 @@ class Network(StrEnum):
     HTTP = "http"
     H2 = "h2"
     GRPC = "grpc"
+    XHTTP = "xhttp"
 
 
 @dataclass
 class TransportSettings:
-    network: Network = Network.TCP
-    path: Optional[str] = None  # ws/h2/http path
-    headers: Optional[Dict[str, str]] = None  # ws/http headers
+    network: Union[Network, str] = Network.TCP
+    path: Optional[Union[str, List[str]]] = None  # ws/h2/http path
+    headers: Optional[Dict[str, Any]] = None  # ws/http headers
     host: Optional[List[str]] = None  # h2 host
     method: Optional[str] = "GET"  # http method
     grpc_service_name: Optional[str] = None
     max_early_data: Optional[int] = None
     early_data_header_name: Optional[str] = None
+    # Unmapped nested transport fields, keyed by Clash option block (e.g. ws-opts).
+    extra: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+    @property
+    def network_value(self) -> str:
+        return self.network.value if isinstance(self.network, Network) else self.network
 
 
 @dataclass
@@ -94,6 +102,8 @@ class BaseNode:
     routing_mark: Optional[int] = None
     # Unmapped Clash fields preserved for round-trip emit
     extra: Dict[str, Any] = field(default_factory=dict)
+    # Workflow provenance for structured conversion issues; never emitted.
+    source_provider: Optional[str] = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -198,7 +208,7 @@ class WireguardNode(BaseNode):
     pre_shared_key: Optional[str] = None  # clash: pre-shared-key on peer
     interface_ip: Optional[Any] = None  # clash: ip
     interface_ipv6: Optional[Any] = None  # clash: ipv6
-    allowed_ips: List[str] = field(default_factory=lambda: ["0.0.0.0/0", "::/0"])
+    allowed_ips: Optional[List[str]] = None
     reserved: Optional[List[int]] = None
     mtu: Optional[int] = None
     workers: Optional[int] = None
@@ -315,6 +325,7 @@ class ClashPassthroughNode(BaseNode):
     """Clash Meta-only proxy; full YAML fields kept in `raw` for round-trip."""
 
     raw: Dict[str, Any] = field(default_factory=dict)
+    clash_type: Optional[str] = None
 
 
 Node = Union[
@@ -336,6 +347,29 @@ Node = Union[
 ]
 
 
+_USER_OVERRIDE_FIELDS = frozenset(
+    {
+        "server",
+        "port",
+        "username",
+        "password",
+        "uuid",
+        "cipher",
+        "alter_id",
+        "token",
+        "auth",
+        "auth_str",
+        "psk",
+        "private_key",
+        "private_key_passphrase",
+        "public_key",
+        "preshared_key",
+        "pre_shared_key",
+        "obfs_password",
+    }
+)
+
+
 def clone_node_for_user(node: Node, username: str) -> Node | None:
     """
     Clone a node and apply user-specific credential overrides.
@@ -348,11 +382,23 @@ def clone_node_for_user(node: Node, username: str) -> Node | None:
 
     new_node = copy.deepcopy(node)
     user_overrides = node.users[username]
+    if not isinstance(user_overrides, dict):
+        raise ValueError(f"Overrides for user '{username}' must be an object")
 
-    # Apply overrides to the node
+    # User entries are credential/endpoint overrides, not arbitrary node patches.
     for key, value in user_overrides.items():
-        if hasattr(new_node, key):
-            setattr(new_node, key, value)
+        normalized_key = key.replace("-", "_")
+        if normalized_key not in _USER_OVERRIDE_FIELDS or not hasattr(
+            new_node, normalized_key
+        ):
+            raise ValueError(f"User '{username}' cannot override node field '{key}'")
+        if normalized_key == "port" and (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or not 1 <= value <= 65535
+        ):
+            raise ValueError(f"Invalid port override for user '{username}'")
+        setattr(new_node, normalized_key, value)
 
     # Clear users field in the cloned node (no longer needed)
     new_node.users = None

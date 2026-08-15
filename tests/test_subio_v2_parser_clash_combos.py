@@ -1,4 +1,3 @@
-import pytest
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol, Network
 
@@ -63,8 +62,11 @@ proxies:
     assert vm_ws.type == Protocol.VMESS and vm_ws.transport.network == Network.WS
     assert vm_ws.transport.path == "/ws" and vm_ws.transport.headers.get("Host") == "h"
     assert vm_ws.tls.enabled and vm_ws.tls.server_name == "host"
-    assert vm_ws.tls.alpn == ["h2","http/1.1"]
-    assert vm_ws.tls.fingerprint == "chrome" and vm_ws.tls.client_fingerprint == "randomized"
+    assert vm_ws.tls.alpn == ["h2", "http/1.1"]
+    assert (
+        vm_ws.tls.fingerprint == "chrome"
+        and vm_ws.tls.client_fingerprint == "randomized"
+    )
     assert vm_ws.smux.enabled and vm_ws.smux.max_connections == 8 and vm_ws.smux.padding
     # H2
     assert vm_h2.transport.network == Network.H2
@@ -73,14 +75,13 @@ proxies:
     assert vm_http.transport.network == Network.HTTP
     assert vm_http.transport.method == "GET" and vm_http.transport.path == "/http"
     assert vm_http.transport.headers.get("Host") == "hh"
-    # gRPC (tls is forced true when network is grpc)
+    # gRPC preserves the source TLS setting.
     assert vm_grpc.transport.network == Network.GRPC
     assert vm_grpc.transport.grpc_service_name == "svc"
-    assert vm_grpc.tls.enabled is True
+    assert vm_grpc.tls.enabled is False
 
 
-def test_grpc_forces_tls_true():
-    """When network is grpc, tls is forced to true for vmess/vless/trojan."""
+def test_grpc_preserves_explicit_tls_false():
     yaml_text = """
 proxies:
   - name: vm-grpc-no-tls
@@ -107,9 +108,9 @@ proxies:
 """
     nodes = ClashParser().parse(yaml_text)
     vm, vless, trojan = nodes
-    assert vm.transport.network == Network.GRPC and vm.tls.enabled is True
-    assert vless.transport.network == Network.GRPC and vless.tls.enabled is True
-    assert trojan.transport.network == Network.GRPC and trojan.tls.enabled is True
+    assert vm.transport.network == Network.GRPC and vm.tls.enabled is False
+    assert vless.transport.network == Network.GRPC and vless.tls.enabled is False
+    assert trojan.transport.network == Network.GRPC and trojan.tls.enabled is False
 
 
 def test_vless_reality_and_tls_options_and_names():
@@ -136,8 +137,15 @@ proxies:
     skip-cert-verify: true
 """
     v_reality, v_tls = ClashParser().parse(yaml_text)
-    assert v_reality.tls.enabled and v_reality.tls.reality_opts == {"public-key":"pk","short-id":"sid"}
-    assert v_tls.tls.enabled and v_tls.tls.server_name == "t.example" and v_tls.tls.alpn == ["h2"]
+    assert v_reality.tls.enabled and v_reality.tls.reality_opts == {
+        "public-key": "pk",
+        "short-id": "sid",
+    }
+    assert (
+        v_tls.tls.enabled
+        and v_tls.tls.server_name == "t.example"
+        and v_tls.tls.alpn == ["h2"]
+    )
     assert v_tls.tls.skip_cert_verify is True
 
 
@@ -181,8 +189,15 @@ proxies:
     tls: false
 """
     s_tls, http_h = ClashParser().parse(yaml_text)
-    assert s_tls.type == Protocol.SOCKS5 and s_tls.tls.enabled and s_tls.tls.server_name == "sni"
-    assert http_h.headers.get("User-Agent") == "UA" and http_h.headers.get("X-Test") == "XV"
+    assert (
+        s_tls.type == Protocol.SOCKS5
+        and s_tls.tls.enabled
+        and s_tls.tls.server_name == "sni"
+    )
+    assert (
+        http_h.headers.get("User-Agent") == "UA"
+        and http_h.headers.get("X-Test") == "XV"
+    )
 
 
 def test_wireguard_allowed_ips_and_reserved():
@@ -197,4 +212,5 @@ proxies:
     ip: ["10.0.0.2/32","fd00::/8"]
 """
     wg = ClashParser().parse(yaml_text)[0]
-    assert wg.allowed_ips == ["10.0.0.2/32","fd00::/8"]
+    assert wg.interface_ip == ["10.0.0.2/32", "fd00::/8"]
+    assert wg.allowed_ips is None

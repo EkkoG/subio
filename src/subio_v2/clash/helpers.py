@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 from subio_v2.model.nodes import (
     Network,
@@ -79,20 +79,69 @@ def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSett
 
 
 def parse_transport(data: Dict[str, Any]) -> TransportSettings:
-    net = data.get("network", "tcp")
-    network = Network(net) if net in [n.value for n in Network] else Network.TCP
+    net = data.get("network") or Network.TCP.value
+    try:
+        network: Network | str = Network(net)
+    except ValueError:
+        # Keep future Mihomo transports intact for Clash-to-Clash round trips.
+        network = str(net)
+
+    option_blocks: Dict[str, Dict[str, Any]] = {}
+    for key in ("ws-opts", "h2-opts", "http-opts", "grpc-opts", "xhttp-opts"):
+        value = data.get(key)
+        if isinstance(value, dict):
+            option_blocks[key] = value
+
+    ws_opts = option_blocks.get("ws-opts", {})
+    h2_opts = option_blocks.get("h2-opts", {})
+    http_opts = option_blocks.get("http-opts", {})
+    grpc_opts = option_blocks.get("grpc-opts", {})
+
+    modeled_keys = {
+        "ws-opts": {
+            "path",
+            "headers",
+            "max-early-data",
+            "early-data-header-name",
+        },
+        "h2-opts": {"path", "host"},
+        "http-opts": {"path", "headers", "method"},
+        "grpc-opts": {"grpc-service-name"},
+        "xhttp-opts": set(),
+    }
+    active_option_key = {
+        Network.WS.value: "ws-opts",
+        Network.H2.value: "h2-opts",
+        Network.HTTP.value: "http-opts",
+        Network.GRPC.value: "grpc-opts",
+        Network.XHTTP.value: "xhttp-opts",
+    }.get(str(net))
+    extra = {
+        key: {
+            nested_key: copy.deepcopy(nested_value)
+            for nested_key, nested_value in value.items()
+            if key != active_option_key or nested_key not in modeled_keys[key]
+        }
+        for key, value in option_blocks.items()
+    }
+    extra = {key: value for key, value in extra.items() if value}
+
+    def first_present(*candidates: tuple[Dict[str, Any], str]) -> Any:
+        for options, key in candidates:
+            if key in options:
+                return options[key]
+        return None
+
     return TransportSettings(
         network=network,
-        path=data.get("ws-opts", {}).get("path")
-        or data.get("h2-opts", {}).get("path")
-        or data.get("http-opts", {}).get("path"),
-        headers=data.get("ws-opts", {}).get("headers")
-        or data.get("http-opts", {}).get("headers"),
-        host=data.get("h2-opts", {}).get("host"),
-        method=data.get("http-opts", {}).get("method"),
-        grpc_service_name=data.get("grpc-opts", {}).get("grpc-service-name"),
-        max_early_data=data.get("ws-opts", {}).get("max-early-data"),
-        early_data_header_name=data.get("ws-opts", {}).get("early-data-header-name"),
+        path=first_present((ws_opts, "path"), (h2_opts, "path"), (http_opts, "path")),
+        headers=first_present((ws_opts, "headers"), (http_opts, "headers")),
+        host=h2_opts.get("host"),
+        method=http_opts.get("method"),
+        grpc_service_name=grpc_opts.get("grpc-service-name"),
+        max_early_data=ws_opts.get("max-early-data"),
+        early_data_header_name=ws_opts.get("early-data-header-name"),
+        extra=extra,
     )
 
 
@@ -169,45 +218,55 @@ def emit_tls(base: Dict[str, Any], tls: Optional[TLSSettings]) -> None:
         base["private-key"] = tls.private_key
 
 
-def emit_transport(base: Dict[str, Any], transport: Optional[TransportSettings]) -> None:
-    if not transport or transport.network == Network.TCP:
+def emit_transport(
+    base: Dict[str, Any], transport: Optional[TransportSettings]
+) -> None:
+    if not transport:
         return
-    base["network"] = transport.network.value
-    if transport.network == Network.WS:
-        opts: Dict[str, Any] = {}
-        if transport.path:
+
+    for key, value in transport.extra.items():
+        base[key] = copy.deepcopy(value)
+
+    network = transport.network_value
+    if network == Network.TCP.value:
+        return
+
+    base["network"] = network
+    if network == Network.WS.value:
+        opts: Dict[str, Any] = copy.deepcopy(transport.extra.get("ws-opts", {}))
+        if transport.path is not None:
             opts["path"] = transport.path
-        if transport.headers:
+        if transport.headers is not None:
             opts["headers"] = transport.headers
         if transport.max_early_data is not None:
             opts["max-early-data"] = transport.max_early_data
-        if transport.early_data_header_name:
+        if transport.early_data_header_name is not None:
             opts["early-data-header-name"] = transport.early_data_header_name
         if opts:
             base["ws-opts"] = opts
-    elif transport.network == Network.HTTP:
-        opts = {}
-        if transport.method:
+    elif network == Network.HTTP.value:
+        opts = copy.deepcopy(transport.extra.get("http-opts", {}))
+        if transport.method is not None:
             opts["method"] = transport.method
-        if transport.path:
+        if transport.path is not None:
             opts["path"] = (
                 [transport.path] if isinstance(transport.path, str) else transport.path
             )
-        if transport.headers:
+        if transport.headers is not None:
             opts["headers"] = transport.headers
         if opts:
             base["http-opts"] = opts
-    elif transport.network == Network.H2:
-        opts = {}
-        if transport.host:
+    elif network == Network.H2.value:
+        opts = copy.deepcopy(transport.extra.get("h2-opts", {}))
+        if transport.host is not None:
             opts["host"] = transport.host
-        if transport.path:
+        if transport.path is not None:
             opts["path"] = transport.path
         if opts:
             base["h2-opts"] = opts
-    elif transport.network == Network.GRPC:
-        opts = {}
-        if transport.grpc_service_name:
+    elif network == Network.GRPC.value:
+        opts = copy.deepcopy(transport.extra.get("grpc-opts", {}))
+        if transport.grpc_service_name is not None:
             opts["grpc-service-name"] = transport.grpc_service_name
         if opts:
             base["grpc-opts"] = opts

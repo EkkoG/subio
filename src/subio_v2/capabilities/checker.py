@@ -48,7 +48,10 @@ class CheckResult:
         self.warnings.append(CapabilityWarning(level, message, field, suggestion))
 
     def add_error(
-        self, message: str, field: Optional[str] = None, suggestion: Optional[str] = None
+        self,
+        message: str,
+        field: Optional[str] = None,
+        suggestion: Optional[str] = None,
     ):
         self.add_warning(WarningLevel.ERROR, message, field, suggestion)
         self.supported = False
@@ -57,7 +60,10 @@ class CheckResult:
         return any(w.level == WarningLevel.ERROR for w in self.warnings)
 
     def has_warnings(self) -> bool:
-        return any(w.level == WarningLevel.WARNING for w in self.warnings)
+        return any(
+            warning.level in {WarningLevel.WARNING, WarningLevel.INFO}
+            for warning in self.warnings
+        )
 
 
 class CapabilityChecker:
@@ -79,6 +85,27 @@ class CapabilityChecker:
         result = CheckResult(supported=True)
 
         protocol = normalize_protocol_name(node.type.value)
+        desc = protocol_registry.get(node.type)
+
+        if not node.name:
+            result.add_error("Node name is required", field="name")
+        if desc and not desc.passthrough:
+            if not node.server:
+                result.add_error("Server is required", field="server")
+            if (
+                not isinstance(node.port, int)
+                or isinstance(node.port, bool)
+                or not 1 <= node.port <= 65535
+            ):
+                result.add_error(
+                    f"Port must be between 1 and 65535, got {node.port!r}",
+                    field="port",
+                )
+            for error in desc.validate(node):
+                result.add_error(error.message, field=error.field)
+
+        if result.has_errors():
+            return result
 
         if protocol not in self.capabilities.get("protocols", set()):
             result.add_error(
@@ -93,7 +120,6 @@ class CapabilityChecker:
 
         proto_caps = self.capabilities.get(protocol, {})
 
-        desc = protocol_registry.get(node.type)
         if desc:
             for warning in desc.check(node, proto_caps, self.platform):
                 result.warnings.append(warning)
@@ -114,8 +140,10 @@ class CapabilityChecker:
                 field="tfo",
             )
 
-        if hasattr(node, "mptcp") and node.mptcp and not global_features.get(
-            "mptcp", False
+        if (
+            hasattr(node, "mptcp")
+            and node.mptcp
+            and not global_features.get("mptcp", False)
         ):
             result.add_warning(
                 WarningLevel.INFO,
@@ -123,8 +151,10 @@ class CapabilityChecker:
                 field="mptcp",
             )
 
-        if hasattr(node, "dialer_proxy") and node.dialer_proxy and not global_features.get(
-            "dialer_proxy", False
+        if (
+            hasattr(node, "dialer_proxy")
+            and node.dialer_proxy
+            and not global_features.get("dialer_proxy", False)
         ):
             result.add_warning(
                 WarningLevel.INFO,

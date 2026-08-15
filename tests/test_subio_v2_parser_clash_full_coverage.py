@@ -1,4 +1,3 @@
-import pytest
 from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol, Network
 
@@ -111,7 +110,10 @@ proxies:
 
     vless = nodes[1]
     assert vless.type == Protocol.VLESS and vless.packet_encoding == "packetmix"
-    assert vless.transport.network == Network.GRPC and vless.transport.grpc_service_name == "svc"
+    assert (
+        vless.transport.network == Network.GRPC
+        and vless.transport.grpc_service_name == "svc"
+    )
 
     ss = nodes[2]
     assert ss.type == Protocol.SHADOWSOCKS and ss.udp is False
@@ -120,21 +122,35 @@ proxies:
     assert tro.type == Protocol.TROJAN and tro.tls.enabled is True
 
     socks = nodes[4]
-    assert socks.type == Protocol.SOCKS5 and socks.username is None and socks.password is None
+    assert (
+        socks.type == Protocol.SOCKS5
+        and socks.username is None
+        and socks.password is None
+    )
 
     http = nodes[5]
-    assert http.type == Protocol.HTTP and http.tls.enabled is False and http.headers["X-H"] == "XV"
+    assert (
+        http.type == Protocol.HTTP
+        and http.tls.enabled is False
+        and http.headers["X-H"] == "XV"
+    )
 
     wg = nodes[6]
-    assert wg.type == Protocol.WIREGUARD and wg.allowed_ips == ["10.0.0.2/32", "::/0"]
+    assert wg.type == Protocol.WIREGUARD
+    assert wg.interface_ip == ["10.0.0.2/32", "::/0"]
+    assert wg.allowed_ips is None
 
     anytls = nodes[7]
     assert anytls.type == Protocol.ANYTLS and anytls.tls.enabled is True
     assert anytls.idle_session_check_interval == 15 and anytls.min_idle_session == 3
 
     h2 = nodes[8]
-    assert h2.type == Protocol.HYSTERIA2 and h2.ports == "443,444-450" and h2.hop_interval == 60
+    assert (
+        h2.type == Protocol.HYSTERIA2
+        and h2.ports == "443,444-450"
+        and h2.hop_interval == 60
+    )
 
     ssh = nodes[9]
     assert ssh.type == Protocol.SSH and ssh.private_key == "/path/key"
-    assert ssh.host_key_algorithms == ["rsa","ed25519"]
+    assert ssh.host_key_algorithms == ["rsa", "ed25519"]

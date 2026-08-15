@@ -2,75 +2,71 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from subio_v2.clash.helpers import (
-    assign_extra,
-    emit_base,
-    emit_smux,
-    emit_tls,
-    merge_extra,
-    parse_base_fields,
-    parse_smux,
-    parse_tls,
-)
 from subio_v2.model.nodes import Node, Protocol, TUICNode
 from subio_v2.protocols import register
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._fields import (
+    EmitPolicy,
+    scalar_field,
+    smux_group,
+    tls_group,
+)
 
 
-class TUICDescriptor(ProtocolDescriptor):
+class TUICDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TUIC
     clash_type = "tuic"
     node_class = TUICNode
+    fields = (
+        scalar_field("token", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("uuid", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
+        tls_group(
+            consumed_keys=(
+                "tls",
+                "sni",
+                "skip-cert-verify",
+                "fingerprint",
+                "client-fingerprint",
+                "alpn",
+                "certificate",
+                "private-key",
+                "ech-opts",
+            ),
+            default_enabled=True,
+        ),
+        smux_group(),
+    )
 
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-        tls = parse_tls(data, default_enabled=True)
-        version = None
+    def prepare_parse_kwargs(
+        self, data: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
         if data.get("uuid") or data.get("password"):
-            version = 5
+            kwargs["version"] = 5
         elif data.get("token"):
-            version = 4
-        handled = {
-            "token",
-            "uuid",
-            "password",
-            "smux",
-            "tls",
-            "sni",
-            "skip-cert-verify",
-            "fingerprint",
-            "client-fingerprint",
-            "alpn",
-            "certificate",
-            "private-key",
-            "ech-opts",
-            "disable-sni",
-        }
-        node = TUICNode(
-            type=Protocol.TUIC,
-            token=data.get("token"),
-            password=data.get("password"),
-            uuid=data.get("uuid"),
-            version=version,
-            tls=tls,
-            smux=parse_smux(data),
-            **parse_base_fields(data),
-        )
-        assign_extra(node, data, handled)
-        return node
+            kwargs["version"] = 4
+        else:
+            kwargs["version"] = None
+        return kwargs
 
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
+    def validate(self, node: Node) -> list[NodeValidationError]:
+        errors = super().validate(node)
         if not isinstance(node, TUICNode):
-            raise TypeError(f"Expected TUICNode, got {type(node)}")
-        base = emit_base(node)
-        if node.token:
-            base["token"] = node.token
-        if node.uuid:
-            base["uuid"] = node.uuid
-        if node.password:
-            base["password"] = node.password
-        emit_tls(base, node.tls)
-        emit_smux(base, node.smux)
-        return merge_extra(base, node)
+            return errors
+        if node.uuid or node.password:
+            if not node.uuid:
+                errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
+            if not node.password:
+                errors.append(
+                    NodeValidationError("password", "TUIC v5 requires a password")
+                )
+        elif not node.token:
+            errors.append(
+                NodeValidationError(
+                    "token", "TUIC requires either a v4 token or v5 UUID/password"
+                )
+            )
+        return errors
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, TUICNode):
@@ -78,13 +74,19 @@ class TUICDescriptor(ProtocolDescriptor):
         from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
 
         warnings: list[Any] = []
-        if node.version:
+        actual_version = node.version
+        if actual_version is None:
+            if node.uuid or node.password:
+                actual_version = 5
+            elif node.token:
+                actual_version = 4
+        if actual_version:
             supported_versions = proto_caps.get("versions", set())
-            if supported_versions and node.version not in supported_versions:
+            if supported_versions and actual_version not in supported_versions:
                 warnings.append(
                     CapabilityWarning(
                         level=WarningLevel.ERROR,
-                        message=f"TUIC version {node.version} is not supported by {platform}",
+                        message=f"TUIC version {actual_version} is not supported by {platform}",
                         field="version",
                         suggestion=(
                             f"Supported versions: {', '.join(str(v) for v in sorted(supported_versions))}"

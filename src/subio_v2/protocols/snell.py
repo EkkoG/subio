@@ -1,59 +1,56 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from collections.abc import Mapping, MutableMapping
+from typing import Any
 
-from subio_v2.clash.helpers import (
-    assign_extra,
-    emit_base,
-    emit_smux,
-    merge_extra,
-    parse_base_fields,
-    parse_smux,
-)
 from subio_v2.model.nodes import Node, Protocol, SnellNode
 from subio_v2.protocols import register
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import (
+    EmitPolicy,
+    field_group,
+    scalar_field,
+    smux_group,
+)
 
 
-class SnellDescriptor(ProtocolDescriptor):
+def _parse_obfs_opts(data: Mapping[str, Any]) -> dict[str, Any]:
+    value = data.get("obfs-opts")
+    if not isinstance(value, dict):
+        return {"obfs": None, "obfs_host": None, "obfs_opts": value}
+    return {
+        "obfs": value.get("mode"),
+        "obfs_host": value.get("host"),
+        "obfs_opts": value,
+    }
+
+
+def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
+    assert isinstance(node, SnellNode)
+    if node.obfs_opts:
+        out["obfs-opts"] = node.obfs_opts
+    elif node.obfs:
+        out["obfs-opts"] = {
+            "mode": node.obfs,
+            "host": node.obfs_host or "bing.com",
+        }
+
+
+class SnellDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SNELL
     clash_type = "snell"
     node_class = SnellNode
-
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-        obfs_opts = data.get("obfs-opts")
-        obfs = None
-        obfs_host = None
-        if isinstance(obfs_opts, dict):
-            obfs = obfs_opts.get("mode")
-            obfs_host = obfs_opts.get("host")
-        handled = {"psk", "version", "obfs-opts", "smux"}
-        node = SnellNode(
-            type=Protocol.SNELL,
-            psk=data.get("psk", ""),
-            version=data.get("version"),
-            obfs=obfs,
-            obfs_host=obfs_host,
-            obfs_opts=obfs_opts,
-            smux=parse_smux(data),
-            **parse_base_fields(data),
-        )
-        assign_extra(node, data, handled)
-        return node
-
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
-        if not isinstance(node, SnellNode):
-            raise TypeError(f"Expected SnellNode, got {type(node)}")
-        base = emit_base(node)
-        base["psk"] = node.psk
-        if node.version is not None:
-            base["version"] = node.version
-        if node.obfs_opts:
-            base["obfs-opts"] = node.obfs_opts
-        elif node.obfs:
-            base["obfs-opts"] = {"mode": node.obfs, "host": node.obfs_host or "bing.com"}
-        emit_smux(base, node.smux)
-        return merge_extra(base, node)
+    fields = (
+        scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field("version", emit_policy=EmitPolicy.NOT_NONE),
+        field_group(
+            consumed_keys=("obfs-opts",),
+            node_attrs=("obfs", "obfs_host", "obfs_opts"),
+            parse_kwargs=_parse_obfs_opts,
+            emit_into=_emit_obfs_opts,
+        ),
+        smux_group(),
+    )
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, SnellNode):
@@ -79,8 +76,8 @@ class SnellDescriptor(ProtocolDescriptor):
             if supported_obfs and node.obfs not in supported_obfs:
                 warnings.append(
                     CapabilityWarning(
-                        level=WarningLevel.WARNING,
-                        message=f"Obfs mode '{node.obfs}' may not be supported",
+                        level=WarningLevel.ERROR,
+                        message=f"Obfs mode '{node.obfs}' is not supported by {platform}",
                         field="obfs",
                     )
                 )

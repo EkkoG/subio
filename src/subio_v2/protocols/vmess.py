@@ -1,91 +1,55 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-from subio_v2.clash.helpers import (
-    assign_extra,
-    emit_base,
-    emit_smux,
-    emit_tls,
-    emit_transport,
-    merge_extra,
-    parse_base_fields,
-    parse_smux,
-    parse_tls,
-    parse_transport,
-)
-from subio_v2.model.nodes import Node, Protocol, VmessNode
+from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
 from subio_v2.protocols import register
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import (
+    EmitPolicy,
+    scalar_field,
+    smux_group,
+    tls_group,
+    transport_group,
+)
 
 
-class VmessDescriptor(ProtocolDescriptor):
+class VmessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VMESS
     clash_type = "vmess"
     node_class = VmessNode
-
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-        tls = parse_tls(data)
-        if data.get("network") == "grpc":
-            tls.enabled = True
-        handled = {
-            "uuid",
+    fields = (
+        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field(
             "alterId",
-            "cipher",
+            "alter_id",
+            default=0,
+            decode=lambda value: int(value or 0),
+            emit_policy=EmitPolicy.ALWAYS,
+        ),
+        scalar_field("cipher", default="auto", emit_policy=EmitPolicy.ALWAYS),
+        scalar_field(
             "global-padding",
-            "packet-encoding",
-            "tls",
-            "servername",
-            "sni",
-            "alpn",
-            "skip-cert-verify",
-            "fingerprint",
-            "client-fingerprint",
-            "reality-opts",
-            "ech-opts",
-            "certificate",
-            "private-key",
-            "network",
-            "ws-opts",
-            "h2-opts",
-            "http-opts",
-            "grpc-opts",
-            "smux",
-        }
-        node = VmessNode(
-            type=Protocol.VMESS,
-            uuid=data.get("uuid", ""),
-            alter_id=int(data.get("alterId", 0) or 0),
-            cipher=data.get("cipher", "auto"),
-            global_padding=bool(data.get("global-padding", False)),
-            packet_encoding=data.get("packet-encoding"),
-            tls=tls,
-            transport=parse_transport(data),
-            smux=parse_smux(data),
-            **parse_base_fields(data),
-        )
-        assign_extra(node, data, handled)
-        return node
-
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
-        if not isinstance(node, VmessNode):
-            raise TypeError(f"Expected VmessNode, got {type(node)}")
-        base = emit_base(node)
-        base.update(
-            {
-                "uuid": node.uuid,
-                "alterId": node.alter_id,
-                "cipher": node.cipher,
-            }
-        )
-        if node.global_padding:
-            base["global-padding"] = True
-        if node.packet_encoding:
-            base["packet-encoding"] = node.packet_encoding
-        emit_tls(base, node.tls)
-        emit_transport(base, node.transport)
-        emit_smux(base, node.smux)
-        return merge_extra(base, node)
+            "global_padding",
+            default=False,
+            decode=bool,
+            emit_policy=EmitPolicy.TRUTHY,
+        ),
+        scalar_field(
+            "packet-encoding", "packet_encoding", emit_policy=EmitPolicy.TRUTHY
+        ),
+        tls_group(),
+        transport_group(
+            consumed_keys=(
+                "network",
+                "ws-opts",
+                "h2-opts",
+                "http-opts",
+                "grpc-opts",
+            )
+        ),
+        smux_group(),
+    )
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, VmessNode):
@@ -97,15 +61,22 @@ class VmessDescriptor(ProtocolDescriptor):
         if node.cipher and node.cipher not in supported_ciphers:
             warnings.append(
                 CapabilityWarning(
-                    level=WarningLevel.WARNING,
-                    message=f"Cipher '{node.cipher}' may not be supported, using 'auto'",
+                    level=WarningLevel.ERROR,
+                    message=f"Cipher '{node.cipher}' is not supported by {platform}",
                     field="cipher",
                 )
             )
 
         supported_transports = proto_caps.get("transports", set())
-        network = node.transport.network.value if node.transport and node.transport.network else "tcp"
-        if supported_transports and network not in supported_transports:
+        network = node.transport.network_value if node.transport else "tcp"
+        unknown_network = node.transport and not isinstance(
+            node.transport.network, Network
+        )
+        if (
+            supported_transports
+            and network not in supported_transports
+            and not (platform == "clash-meta" and unknown_network)
+        ):
             warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.ERROR,
@@ -115,12 +86,28 @@ class VmessDescriptor(ProtocolDescriptor):
                 )
             )
 
-        if node.smux and node.smux.enabled and "smux" not in proto_caps.get("features", set()):
+        if (
+            node.smux
+            and node.smux.enabled
+            and "smux" not in proto_caps.get("features", set())
+        ):
             warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.WARNING,
                     message=f"SMUX is not supported by {platform}, will be ignored",
                     field="smux",
+                )
+            )
+        if (
+            node.tls
+            and node.tls.reality_opts
+            and "reality" not in proto_caps.get("features", set())
+        ):
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"Reality is not supported for VMess on {platform}",
+                    field="reality",
                 )
             )
         return warnings
