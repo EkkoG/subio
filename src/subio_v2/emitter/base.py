@@ -46,6 +46,10 @@ class BaseEmitter(ABC):
             return CheckResult(supported=True)
         return self._checker.check_node(node)
 
+    @staticmethod
+    def template_context(nodes: List[Node]) -> dict[str, Any]:
+        return {"proxies_names": [node.name for node in nodes]}
+
     def issue_for_node(
         self,
         node: Node,

@@ -20,8 +20,6 @@ from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.emitter.factory import EmitterFactory
-from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.processor.common import (
     FilterProcessor,
     RenameProcessor,
@@ -652,18 +650,12 @@ class WorkflowEngine:
                 )
 
             output = emission.content
-            node_names = [node.name for node in supported_nodes]
-            extra_context: Dict[str, Any] = {"proxies_names": node_names}
-            if isinstance(emitter, SurgeEmitter):
-                policy_names = emission.emitted_policy_names
-                extra_context["proxies_names"] = (
-                    f"PROXY = select, {', '.join(policy_names)}"
+            extra_context = emission.extras.get("template_context", {})
+            if not isinstance(extra_context, dict):
+                raise ArtifactGenerationError(
+                    f"Emitter for artifact '{display_name}' returned an invalid "
+                    "template context"
                 )
-            if isinstance(emitter, DaeEmitter):
-                extra_context["proxies_names"] = ", ".join(
-                    f"'{n.name}'" for n in supported_nodes
-                )
-                extra_context["subscription"] = emission.extras["subscription"]
 
             # Use unified writer
             self._write_artifact(
@@ -718,11 +710,6 @@ class WorkflowEngine:
                 "user": username,  # Add username to template context
             }
 
-            if is_yaml_data:
-                proxies_list = content.get("proxies", [])
-                context["proxies_names"] = [p["name"] for p in proxies_list]
-
-            # Platform-specific overrides (e.g., dae's pre-formatted names + subscription)
             if extra_context:
                 context.update(extra_context)
 

@@ -65,6 +65,7 @@ class ClashEmitter(BaseEmitter):
             content={"proxies": proxies},
             supported_nodes=emitted_nodes,
             issues=issues,
+            extras={"template_context": self.template_context(emitted_nodes)},
         )
 
     def _emit_node(

@@ -50,7 +50,10 @@ class V2RayNEmitter(BaseEmitter):
             content=content,
             supported_nodes=emitted_nodes,
             issues=issues,
-            extras={"list": plain},
+            extras={
+                "list": plain,
+                "template_context": self.template_context(emitted_nodes),
+            },
         )
 
     def emit_list(self, nodes: List[Node]) -> str:

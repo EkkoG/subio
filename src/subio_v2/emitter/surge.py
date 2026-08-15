@@ -205,6 +205,13 @@ class SurgeEmitter(BaseEmitter):
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
             issues=issues,
+            extras={
+                "template_context": {
+                    "proxies_names": (
+                        f"PROXY = select, {', '.join(emitted_policy_names)}"
+                    )
+                }
+            },
             emitted_policy_names=emitted_policy_names,
             emitted_resource_keys=emitted_resource_keys,
         )

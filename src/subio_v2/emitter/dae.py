@@ -88,11 +88,20 @@ class DaeEmitter(BaseEmitter):
             subscription_lines.append(chain_url)
             emitted_nodes.append(node)
 
+        subscription = "\n".join(subscription_lines)
         return EmissionResult(
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
             issues=issues,
-            extras={"subscription": "\n".join(subscription_lines)},
+            extras={
+                "subscription": subscription,
+                "template_context": {
+                    "proxies_names": ", ".join(
+                        f"'{node.name}'" for node in emitted_nodes
+                    ),
+                    "subscription": subscription,
+                },
+            },
         )
 
     def emit_subscription(self, nodes: List[Node]) -> str:
