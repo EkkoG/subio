@@ -1,3 +1,4 @@
+import os
 import stat
 from pathlib import Path
 
@@ -6,7 +7,7 @@ import pytest
 from subio_v2.conversion import IssueSeverity, WorkflowResult
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.workflow.engine import WorkflowEngine
-from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
+from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.workflow.template import TemplateRenderResult
 
 
@@ -88,6 +89,40 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
     assert (tmp_path / "dist" / "file-alice.txt").exists()
 
 
+def test_commit_artifacts_is_atomic_per_file_not_for_the_whole_batch(
+    tmp_path, monkeypatch
+):
+    cfg = write(tmp_path, "config.toml", "a = 1")
+    monkeypatch.chdir(tmp_path)
+    engine = WorkflowEngine(str(cfg), dry_run=True)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "first.txt").write_text("old-first")
+    (dist / "second.txt").write_text("old-second")
+    engine._staged_artifacts = {
+        "first.txt": "new-first",
+        "second.txt": "new-second",
+    }
+    real_replace = os.replace
+    replacements = 0
+
+    def fail_second_replace(source, target):
+        nonlocal replacements
+        replacements += 1
+        if replacements == 2:
+            raise OSError("injected replace failure")
+        real_replace(source, target)
+
+    monkeypatch.setattr("subio_v2.workflow.engine.os.replace", fail_second_replace)
+
+    with pytest.raises(ArtifactGenerationError, match="injected replace failure"):
+        engine._commit_artifacts()
+
+    assert (dist / "first.txt").read_text() == "new-first"
+    assert (dist / "second.txt").read_text() == "old-second"
+    assert not list(dist.glob(".*.tmp"))
+
+
 def test_write_artifact_rejects_path_traversal(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
     monkeypatch.chdir(tmp_path)
@@ -113,6 +148,74 @@ providers = ["missing"]
 
     with pytest.raises(ConfigError, match="missing provider"):
         WorkflowEngine(str(cfg), dry_run=True)
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("options = []", "options must be an object"),
+        ('[filters]\ninclude = ["hk"]', "include must be a string"),
+        ('[filters]\ninclude = "["', "not a valid regex"),
+        (
+            '[[artifact]]\nname = "out"\ntype = "surge"\nproviders = "p"',
+            "providers must be a list",
+        ),
+        (
+            '[[artifact]]\nname = "out"\ntype = "surge"\nusers = "alice"',
+            "users must be a list",
+        ),
+        (
+            '[[artifact]]\nname = "out"\ntype = "surge"\n'
+            'user = "alice"\nusers = ["bob"]',
+            "cannot define both user and users",
+        ),
+        (
+            '[[artifact]]\nname = "out"\ntype = "surge"\n'
+            'upload = [{file_name = "out"}]',
+            "upload target must be a non-empty string",
+        ),
+        (
+            '[[artifact]]\nname = "out"\ntype = "surge"\n'
+            'upload = [{to = "missing"}]',
+            "references missing uploader",
+        ),
+    ],
+)
+def test_config_shape_errors_are_reported_as_config_errors(
+    tmp_path, content, message
+):
+    cfg = write(tmp_path, "config.toml", content)
+
+    with pytest.raises(ConfigError, match=message):
+        WorkflowEngine(str(cfg), dry_run=True)
+
+
+def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
+    cfg = write(tmp_path, "config.toml", "a = 1")
+    engine = WorkflowEngine(str(cfg), dry_run=False)
+    monkeypatch.setattr(engine, "_load_providers", lambda: None)
+
+    def generate():
+        engine._staged_artifacts["out.txt"] = "content"
+        engine.batch_uploader.add(
+            "content",
+            {"name": "out.txt"},
+            {},
+            {"name": "gist", "id": "abc123", "token": "token"},
+        )
+
+    monkeypatch.setattr(engine, "_generate_artifacts", generate)
+    monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
+
+    def fail_flush():
+        raise UploadError("injected upload failure")
+
+    monkeypatch.setattr(engine.batch_uploader, "flush", fail_flush)
+
+    with pytest.raises(UploadError, match="injected upload failure"):
+        engine.run()
+
+    assert engine.batch_uploader.pending_uploads() == []
 
 
 def test_load_providers_applies_provider_level_filters(tmp_path, monkeypatch):

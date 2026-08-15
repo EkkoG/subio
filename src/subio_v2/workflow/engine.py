@@ -3,6 +3,7 @@ import json
 import json5
 import hashlib
 import requests
+import re
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
@@ -162,6 +163,8 @@ class WorkflowEngine:
         global_allow_errors = self.config.get("allow_conversion_errors", False)
         if not isinstance(global_allow_errors, bool):
             raise ConfigError("'allow_conversion_errors' must be a boolean")
+        self._validate_options(self.config.get("options"), "Config options")
+        self._validate_filters(self.config.get("filters"), "Config filters")
 
         for section in ("provider", "artifact", "uploader"):
             entries = self.config.get(section, [])
@@ -193,14 +196,50 @@ class WorkflowEngine:
                         raise ConfigError(
                             f"Provider '{name}' cannot enable allow_unsafe_external for a URL source"
                         )
-                if section == "artifact" and not isinstance(
-                    entry.get("allow_conversion_errors", False), bool
-                ):
-                    raise ConfigError(
-                        f"Artifact '{name}' allow_conversion_errors must be a boolean"
+                    self._validate_filters(
+                        entry.get("filters"), f"Provider '{name}' filters"
                     )
+                if section == "artifact":
+                    if not isinstance(entry.get("allow_conversion_errors", False), bool):
+                        raise ConfigError(
+                            f"Artifact '{name}' allow_conversion_errors must be a boolean"
+                        )
+                    if not isinstance(entry.get("allow_empty", False), bool):
+                        raise ConfigError(
+                            f"Artifact '{name}' allow_empty must be a boolean"
+                        )
+                    providers = entry.get("providers", [])
+                    if not isinstance(providers, list) or any(
+                        not isinstance(provider, str) or not provider
+                        for provider in providers
+                    ):
+                        raise ConfigError(
+                            f"Artifact '{name}' providers must be a list of names"
+                        )
+                    self._validate_options(
+                        entry.get("options"), f"Artifact '{name}' options"
+                    )
+                    self._validate_artifact_users(entry, name)
+                    self._validate_artifact_uploads(entry.get("upload"), name)
+                if section == "uploader":
+                    uploader_type = entry.get("type")
+                    if not isinstance(uploader_type, str) or not uploader_type:
+                        raise ConfigError(
+                            f"Uploader '{name}' type must be a non-empty string"
+                        )
+                    if uploader_type == "gist" and (
+                        not isinstance(entry.get("id"), str) or not entry["id"]
+                    ):
+                        raise ConfigError(
+                            f"Uploader '{name}' id must be a non-empty string"
+                        )
+                    if not isinstance(entry.get("token", ""), str):
+                        raise ConfigError(f"Uploader '{name}' token must be a string")
+                    if not isinstance(entry.get("clean", False), bool):
+                        raise ConfigError(f"Uploader '{name}' clean must be a boolean")
 
         provider_names = {item["name"] for item in self.config.get("provider", [])}
+        uploader_names = {item["name"] for item in self.config.get("uploader", [])}
         for artifact in self.config.get("artifact", []):
             missing = [
                 name
@@ -212,25 +251,94 @@ class WorkflowEngine:
                     f"Artifact '{artifact['name']}' references missing provider(s): "
                     f"{', '.join(missing)}"
                 )
+            missing_uploaders = [
+                item["to"]
+                for item in artifact.get("upload", [])
+                if item["to"] not in uploader_names
+            ]
+            if missing_uploaders:
+                raise ConfigError(
+                    f"Artifact '{artifact['name']}' references missing uploader(s): "
+                    f"{', '.join(missing_uploaders)}"
+                )
+
+    @staticmethod
+    def _validate_options(value: Any, label: str) -> None:
+        if value is not None and not isinstance(value, dict):
+            raise ConfigError(f"{label} must be an object")
+
+    @staticmethod
+    def _validate_filters(value: Any, label: str) -> None:
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            raise ConfigError(f"{label} must be an object")
+        for key in ("include", "exclude"):
+            pattern = value.get(key)
+            if pattern is not None and not isinstance(pattern, str):
+                raise ConfigError(f"{label} {key} must be a string")
+            if pattern:
+                try:
+                    re.compile(pattern)
+                except re.error as exc:
+                    raise ConfigError(f"{label} {key} is not a valid regex") from exc
+
+    @staticmethod
+    def _validate_artifact_users(entry: Dict[str, Any], name: str) -> None:
+        user = entry.get("user")
+        users = entry.get("users", [])
+        if user is not None and (not isinstance(user, str) or not user):
+            raise ConfigError(f"Artifact '{name}' user must be a non-empty string")
+        if not isinstance(users, list) or any(
+            not isinstance(item, str) or not item for item in users
+        ):
+            raise ConfigError(f"Artifact '{name}' users must be a list of names")
+        if user is not None and users:
+            raise ConfigError(f"Artifact '{name}' cannot define both user and users")
+
+    @staticmethod
+    def _validate_artifact_uploads(value: Any, name: str) -> None:
+        if value is None:
+            return
+        if not isinstance(value, list):
+            raise ConfigError(f"Artifact '{name}' upload must be a list")
+        for item in value:
+            if not isinstance(item, dict):
+                raise ConfigError(f"Artifact '{name}' upload entries must be objects")
+            target = item.get("to")
+            if not isinstance(target, str) or not target:
+                raise ConfigError(
+                    f"Artifact '{name}' upload target must be a non-empty string"
+                )
+            file_name = item.get("file_name")
+            if file_name is not None and (
+                not isinstance(file_name, str) or not file_name
+            ):
+                raise ConfigError(
+                    f"Artifact '{name}' upload file_name must be a non-empty string"
+                )
 
     def run(self) -> WorkflowResult:
         if self.dry_run:
             logger.info("--- Starting SubIO v2 Workflow (DRY-RUN) ---")
         else:
             logger.info("--- Starting SubIO v2 Workflow ---")
+        self.batch_uploader.begin()
         self._staged_artifacts.clear()
+        self.providers.clear()
         self.issues.clear()
         self.provider_issues.clear()
-        self._load_providers()
-        self._generate_artifacts()
-        generated = list(self._staged_artifacts)
-        queued_uploads = [
-            f"{gist_id}:{filename}"
-            for gist_id, data in self.batch_uploader._pending.items()
-            for filename in data["files"]
-        ]
-        self._commit_artifacts()
-        self.batch_uploader.flush()
+        try:
+            self._load_providers()
+            self._generate_artifacts()
+            generated = list(self._staged_artifacts)
+            queued_uploads = self.batch_uploader.pending_uploads()
+            self._commit_artifacts()
+            self.batch_uploader.flush()
+        except BaseException:
+            self._staged_artifacts.clear()
+            self.batch_uploader.abort()
+            raise
         logger.success("--- Finished ---")
         return WorkflowResult(
             generated=generated,

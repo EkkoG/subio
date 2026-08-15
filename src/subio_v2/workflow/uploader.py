@@ -26,6 +26,24 @@ class GistBatchUploader:
         self.dry_run = dry_run
         self.clean_gist = clean_gist
 
+    def begin(self) -> None:
+        """Start a run with an empty queue."""
+        self.reset()
+
+    def reset(self) -> None:
+        self._pending.clear()
+
+    def abort(self) -> None:
+        """Discard files queued by a failed run."""
+        self.reset()
+
+    def pending_uploads(self) -> list[str]:
+        return [
+            f"{gist_id}:{filename}"
+            for gist_id, data in self._pending.items()
+            for filename in data["files"]
+        ]
+
     def add(
         self,
         content: str,
@@ -89,14 +107,14 @@ class GistBatchUploader:
                     f"[Dry-run] Would upload {len(data['files'])} file(s) "
                     f"to Gist {gist_id}: {names}"
                 )
-            self._pending.clear()
+            self.reset()
             return
 
         for gist_id, data in self._pending.items():
             self._upload_batch(
                 gist_id, data["token"], data["files"], data.get("clean", False)
             )
-        self._pending.clear()
+        self.reset()
 
     @staticmethod
     def _git_env(askpass_path: str, token: str) -> Dict[str, str]:

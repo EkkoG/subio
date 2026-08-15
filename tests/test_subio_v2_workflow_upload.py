@@ -30,13 +30,26 @@ def test_upload_queues_to_gist_and_flush(monkeypatch):
         username="alice",
     )
 
-    assert batch._pending["abc123"]["files"] == {"file-alice.txt": "content"}
+    assert batch.pending_uploads() == ["abc123:file-alice.txt"]
     monkeypatch.setattr(
         "subio_v2.workflow.uploader.subprocess.run",
         lambda *args, **kwargs: pytest.fail("dry-run must not execute git"),
     )
     batch.flush()
-    assert batch._pending == {}
+    assert batch.pending_uploads() == []
+
+
+def test_uploader_begin_and_abort_discard_pending_files():
+    batch = GistBatchUploader(dry_run=True)
+    uploader = {"name": "gist1", "id": "abc123", "token": ""}
+    batch.add("old", {"name": "old.txt"}, {}, uploader)
+
+    batch.begin()
+    assert batch.pending_uploads() == []
+
+    batch.add("new", {"name": "new.txt"}, {}, uploader)
+    batch.abort()
+    assert batch.pending_uploads() == []
 
 
 def test_real_upload_requires_environment_token(monkeypatch):

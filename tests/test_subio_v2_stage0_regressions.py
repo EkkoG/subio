@@ -277,10 +277,6 @@ def test_mihomo_reject_uses_shared_reject_node_in_both_directions():
     assert emission.content["proxies"][0]["type"] == "reject"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 3: a failed run leaves stale files in the uploader queue",
-)
 def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
     tmp_path, monkeypatch
 ):
