@@ -3,9 +3,35 @@ import os
 
 import pytest
 
+from subio_v2.dialect import DialectContext
+from subio_v2.model.rules import (
+    BoundRule,
+    DefaultParameter,
+    ParameterizedRuleSet,
+    Predicate,
+    RuleComment,
+)
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.errors import TemplateRenderError
-from subio_v2.workflow.ruleset import RuleSet, RuleSetStore, RuleEntry, CommentEntry
+from subio_v2.workflow.ruleset import RuleSet, RuleSetStore
+
+
+def make_ruleset(name, entries):
+    return RuleSet(
+        ParameterizedRuleSet(
+            name=name,
+            parameters=("rule",),
+            entries=tuple(entries),
+            source_context=DialectContext("mihomo", "text"),
+        )
+    )
+
+
+def bound(rule_type, matcher="", options=()):
+    return BoundRule(
+        Predicate(rule_type, matcher, tuple(options)),
+        DefaultParameter(),
+    )
 
 
 def test_template_renderer_renders_with_macros(tmp_path):
@@ -17,14 +43,9 @@ def test_template_renderer_renders_with_macros(tmp_path):
     )
 
     # Prepare ruleset store with a simple ruleset
-    ruleset = RuleSet(
-        name="rs1",
-        args="rule",
-        rules=[
-            CommentEntry("# comment"),
-            RuleEntry(rule_type="DOMAIN", matcher="google.com", policy="{{ rule }}"),
-            RuleEntry(rule_type="MATCH", matcher="", policy="{{ rule }}"),
-        ],
+    ruleset = make_ruleset(
+        "rs1",
+        [RuleComment("# comment"), bound("DOMAIN", "google.com"), bound("MATCH")],
     )
     store = RuleSetStore()
     store.register("rs1", ruleset)
@@ -64,11 +85,7 @@ def test_template_missing_variable_fails(tmp_path):
 def test_ruleset_ssti_payload_is_plain_data(tmp_path, monkeypatch):
     (tmp_path / "safe.j2").write_text("{{ remote_evil('DIRECT') }}")
     payload = "{{ cycler.__init__.__globals__.os.popen('id').read() }}"
-    ruleset = RuleSet(
-        name="remote_evil",
-        args="rule",
-        rules=[RuleEntry(rule_type="DOMAIN", matcher=payload, policy="")],
-    )
+    ruleset = make_ruleset("remote_evil", [bound("DOMAIN", payload)])
     store = RuleSetStore()
     store.register("remote_evil", ruleset)
 
@@ -89,7 +106,7 @@ def test_ruleset_ssti_payload_is_plain_data(tmp_path, monkeypatch):
 def test_ruleset_callable_context_conflict_fails(tmp_path):
     (tmp_path / "conflict.j2").write_text("{{ rules('DIRECT') }}")
     store = RuleSetStore()
-    store.register("rules", RuleSet(name="rules", args="rule", rules=[]))
+    store.register("rules", make_ruleset("rules", []))
     renderer = TemplateRenderer(str(tmp_path))
 
     with pytest.raises(TemplateRenderError, match="conflicts"):
@@ -102,22 +119,34 @@ def test_ruleset_callable_context_conflict_fails(tmp_path):
 
 
 def test_ruleset_render_surge_transformations():
-    rs = RuleSet(
-        name="r",
-        args="rule",
-        rules=[
-            RuleEntry(rule_type="MATCH", matcher="", policy=""),
-            RuleEntry(rule_type="DST-PORT", matcher="80", policy="Proxy"),
-            RuleEntry(
-                rule_type="IP-CIDR",
-                matcher="1.1.1.0/24",
-                policy="Proxy",
-                options=["no-resolve"],
-            ),
+    rs = make_ruleset(
+        "r",
+        [
+            bound("MATCH"),
+            bound("DST-PORT", "80"),
+            bound("IP-CIDR", "1.1.1.0/24", ("no-resolve",)),
         ],
     )
     surge_rules = rs.render("surge", "DIRECT")
     # MATCH -> FINAL, DST-PORT -> DEST-PORT, keep no-resolve for IP-CIDR
     assert "FINAL,DIRECT" in surge_rules
-    assert "DEST-PORT,80,Proxy" in surge_rules
-    assert "IP-CIDR,1.1.1.0/24,Proxy,no-resolve" in surge_rules
+    assert "DEST-PORT,80,DIRECT" in surge_rules
+    assert "IP-CIDR,1.1.1.0/24,DIRECT,no-resolve" in surge_rules
+
+
+def test_template_render_result_collects_ruleset_issues(tmp_path):
+    (tmp_path / "rules.j2").write_text("{{ rs1('Proxy') }}")
+    store = RuleSetStore()
+    store.register("rs1", make_ruleset("rs1", [bound("USER-AGENT", "*Safari*")]))
+
+    result = TemplateRenderer(str(tmp_path)).render_result(
+        "rules.j2",
+        {},
+        artifact_type="clash-meta",
+        rulesets=store,
+    )
+
+    assert result.content == ""
+    assert [issue.code for issue in result.issues] == [
+        "ruleset.unsupported-target-rule"
+    ]

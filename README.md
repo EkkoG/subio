@@ -44,6 +44,34 @@ uv run subio convert example/config.toml --dry-run
 - 可以在当前目录下创建 `snippet` 目录，用于存放参数化规则片段，参考 [pt](./example/snippet/pt)。第一行声明逗号分隔的 policy 参数，后续每行是规则；`{{ rule }}` 只表示已声明的 policy 参数引用，不是通用 Jinja 模板源码。
 - 可以在模板中引用远程规则集；远程规则集需要通过 `[[ruleset]]` 在配置文件中定义。
 
+远程规则集输入使用 `type`、`behavior` 和 `format` 显式选择 codec：
+
+```toml
+[[ruleset]]
+name = "mihomo_domains"
+url = "https://example.com/domains.yaml"
+type = "mihomo"
+behavior = "domain"
+format = "yaml"
+
+[[ruleset]]
+name = "surge_rules"
+url = "https://example.com/rules.list"
+type = "surge"
+behavior = "classical"
+format = "text"
+```
+
+当三个字段都未声明时，精确默认为 `mihomo + classical + text`；不根据 URL、
+扩展名或解析失败切换格式。当前文本输入的合法组合为：
+
+- Mihomo / Stash：`domain | ipcidr | classical` 与 `text | yaml`；
+- Surge：`classical | domain` 与 `text`。
+
+Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语义会按方言
+分别解析。引用外部脚本或其他规则资源的条目不会被执行；被当前目标无法精确表达的
+规则会产生结构化 conversion error，并在 artifact 写入或上传前阻断。
+
 然后执行 `subio` 命令即可。
 
 ```shell

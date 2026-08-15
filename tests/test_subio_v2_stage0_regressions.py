@@ -11,22 +11,13 @@ from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
-from subio_v2.workflow.ruleset import (
-    RuleSet,
-    load_rulesets,
-    load_snippets,
-    parse_rules,
-)
+from subio_v2.workflow.ruleset import load_rulesets, load_snippets
 
 
 FIXTURES = Path(__file__).parent / "fixtures/rulesets"
 CERT_SHA256 = ":".join(["AA"] * 32)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 1: undeclared remote input is not strict Mihomo classical text",
-)
 def test_untyped_remote_rejects_mihomo_yaml_instead_of_sniffing(monkeypatch):
     content = (FIXTURES / "mihomo/classical-yaml.yaml").read_bytes()
     monkeypatch.setattr(
@@ -38,26 +29,21 @@ def test_untyped_remote_rejects_mihomo_yaml_instead_of_sniffing(monkeypatch):
         load_rulesets([{"name": "default", "url": "https://example.test/rules"}])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 1: Mihomo src is still parsed as a policy",
-)
-def test_mihomo_classical_src_is_an_option_not_policy():
-    ruleset = RuleSet(
-        name="remote_src",
-        args="rule",
-        rules=parse_rules("IP-CIDR,10.0.0.0/8,src,no-resolve"),
+def test_mihomo_classical_src_is_an_option_not_policy(monkeypatch):
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: b"IP-CIDR,10.0.0.0/8,src,no-resolve",
     )
+    ruleset = load_rulesets(
+        [{"name": "src", "url": "https://example.test/src"}]
+    ).get("remote_src")
 
+    assert ruleset is not None
     assert ruleset.render("clash-meta", "Proxy") == (
         "- IP-CIDR,10.0.0.0/8,Proxy,src,no-resolve"
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 1: nested logical rules are still split on every comma",
-)
 def test_parameterized_snippet_binds_policy_only_to_outer_logic(tmp_path):
     source = (FIXTURES / "snippets/outer_logic").read_text()
     (tmp_path / "outer_logic").write_text(source)
@@ -71,10 +57,6 @@ def test_parameterized_snippet_binds_policy_only_to_outer_logic(tmp_path):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 1: arbitrary snippet text is still silently ignored",
-)
 def test_arbitrary_text_snippet_is_rejected(tmp_path):
     source = (FIXTURES / "snippets/arbitrary_invalid_text").read_text()
     (tmp_path / "invalid").write_text(source)
@@ -92,7 +74,7 @@ def test_arbitrary_text_snippet_is_rejected(tmp_path):
 )
 @pytest.mark.xfail(
     strict=True,
-    reason="stage 1: Mihomo MRS bytes do not have an internal decoder",
+    reason="stage 2: Mihomo MRS bytes do not have an internal decoder",
 )
 def test_mihomo_mrs_decodes_to_normal_rules(
     monkeypatch, behavior, fixture_name, expected_line
@@ -120,10 +102,6 @@ def test_mihomo_mrs_decodes_to_normal_rules(
     assert expected_line in ruleset.render("clash-meta", "Proxy")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 1: classical MRS is not rejected as an invalid combination",
-)
 def test_mihomo_classical_mrs_is_rejected(monkeypatch):
     content = (FIXTURES / "mrs/domain.mrs").read_bytes()
     monkeypatch.setattr(

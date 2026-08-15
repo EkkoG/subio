@@ -257,7 +257,9 @@ SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集
 
 Mihomo 和 Stash 的 YAML/text 支持 `domain`、`ipcidr`、`classical`；MRS 当前只支持 `domain`、
 `ipcidr`。远程加载必须保留原始 bytes，由 codec 选择文本解码或 MRS 解码；运行时不得依赖外部
-Mihomo CLI。Surge 输入只覆盖外部 Rule Set、Domain Set 和已抽取的 inline Ruleset 内容。
+Mihomo CLI 或系统 `zstd`。MRS 使用进程内 `zstandard` 和带输入/解压上限的 data-only decoder，
+校验内嵌 behavior、长度、trie/range 结构和尾部数据。Surge 输入只覆盖外部 Rule Set、Domain Set
+和已抽取的 inline Ruleset 内容。
 
 本地 snippet 是参数化的 Mihomo classical 规则集：第一行声明参数，后续规则不写 policy 时绑定
 第一个参数，`{{ name }}` 只能引用已声明参数，`DIRECT` 等值是固定 policy。移除 binding 后，

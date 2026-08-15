@@ -1,55 +1,77 @@
-from subio_v2.workflow.ruleset import RuleSet, RuleEntry
+from subio_v2.dialect import DialectContext
+from subio_v2.model.rules import (
+    BoundRule,
+    DefaultParameter,
+    LiteralPolicy,
+    ParameterizedRuleSet,
+    Predicate,
+)
+from subio_v2.workflow.ruleset import RuleSet
+
+
+def make_ruleset(entries):
+    return RuleSet(
+        ParameterizedRuleSet(
+            name="rs",
+            parameters=("rule",),
+            entries=tuple(entries),
+            source_context=DialectContext("mihomo", "text"),
+        )
+    )
+
+
+def bound(rule_type, matcher="", binding=None):
+    return BoundRule(
+        Predicate(rule_type, matcher),
+        binding or DefaultParameter(),
+    )
 
 
 def test_dae_macro_renders_function_call_syntax():
-    rs = RuleSet(
-        name="rs",
-        args="rule",
-        rules=[
-            RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
-            RuleEntry(rule_type="DOMAIN-SUFFIX", matcher="cn", policy=""),
-            RuleEntry(rule_type="DOMAIN-KEYWORD", matcher="apple", policy=""),
-            RuleEntry(rule_type="IP-CIDR", matcher="1.1.1.0/24", policy=""),
-            RuleEntry(rule_type="IP-CIDR6", matcher="::1/128", policy=""),
-            RuleEntry(rule_type="MATCH", matcher="", policy=""),
-        ],
+    ruleset = make_ruleset(
+        [
+            bound("DOMAIN", "example.com"),
+            bound("DOMAIN-SUFFIX", "cn"),
+            bound("DOMAIN-KEYWORD", "apple"),
+            bound("IP-CIDR", "1.1.1.0/24"),
+            bound("IP-CIDR6", "::1/128"),
+            bound("MATCH"),
+        ]
     )
-    rendered = rs.render("dae", "direct")
+    rendered = ruleset.render("dae", "direct")
     assert "domain(full: example.com) -> direct" in rendered
     assert "domain(suffix: cn) -> direct" in rendered
     assert "domain(keyword: apple) -> direct" in rendered
     assert "dip(1.1.1.0/24) -> direct" in rendered
     assert "dip(::1/128) -> direct" in rendered
     assert "fallback: direct" in rendered
-    # dae 不使用 `- ` YAML 列表前缀
     assert "- domain(" not in rendered
 
 
-def test_dae_unsupported_rule_types_skipped():
-    rs = RuleSet(
-        name="rs",
-        args="rule",
-        rules=[
-            RuleEntry(rule_type="PROCESS-NAME", matcher="curl", policy=""),
-            RuleEntry(rule_type="RULE-SET", matcher="ext", policy=""),
-            RuleEntry(rule_type="DOMAIN", matcher="ok.com", policy=""),
-        ],
+def test_dae_unsupported_rule_types_return_issues():
+    ruleset = make_ruleset(
+        [
+            bound("PROCESS-NAME", "curl"),
+            bound("DOMAIN", "ok.com"),
+        ]
     )
-    rendered = rs.render("dae", "direct")
-    assert "PROCESS-NAME" not in rendered
-    assert "RULE-SET" not in rendered
-    assert "domain(full: ok.com)" in rendered
+    result = ruleset.render_result("dae", "direct")
+
+    assert result.content == "domain(full: ok.com) -> direct"
+    assert [issue.code for issue in result.issues] == [
+        "ruleset.unsupported-target-rule"
+    ]
 
 
 def test_dae_explicit_policy_kept():
-    rs = RuleSet(
-        name="rs",
-        args="rule",
-        rules=[
-            RuleEntry(
-                rule_type="DOMAIN-SUFFIX", matcher="google.com", policy="my_proxy"
-            ),
-        ],
+    ruleset = make_ruleset(
+        [
+            bound(
+                "DOMAIN-SUFFIX",
+                "google.com",
+                LiteralPolicy("my_proxy"),
+            )
+        ]
     )
-    rendered = rs.render("dae", "direct")
+    rendered = ruleset.render("dae", "direct")
     assert "domain(suffix: google.com) -> my_proxy" in rendered

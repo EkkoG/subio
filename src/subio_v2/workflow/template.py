@@ -2,11 +2,19 @@
 
 import jinja2
 import yaml
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from subio_v2.conversion import ConversionIssue
 from subio_v2.workflow.errors import TemplateRenderError
 from subio_v2.workflow.filters import all_filters
-from subio_v2.workflow.ruleset import RuleSetStore
+from subio_v2.workflow.ruleset import RuleIssueCollector, RuleSetStore
 import os
+
+
+@dataclass(frozen=True)
+class TemplateRenderResult:
+    content: str
+    issues: tuple[ConversionIssue, ...] = ()
 
 
 class TemplateRenderer:
@@ -53,6 +61,20 @@ class TemplateRenderer:
         artifact_type: str = None,
         rulesets: Optional[RuleSetStore] = None,
     ) -> str:
+        return self.render_result(
+            template_name,
+            context,
+            artifact_type=artifact_type,
+            rulesets=rulesets,
+        ).content
+
+    def render_result(
+        self,
+        template_name: str,
+        context: Dict[str, Any],
+        artifact_type: str = None,
+        rulesets: Optional[RuleSetStore] = None,
+    ) -> TemplateRenderResult:
         """
         渲染模板
 
@@ -75,8 +97,9 @@ class TemplateRenderer:
 
             platform = artifact_type or "clash-meta"
             render_context = dict(context)
+            collector = RuleIssueCollector()
             if rulesets:
-                callables = rulesets.get_callables(platform)
+                callables = rulesets.get_callables(platform, collector)
                 conflicts = sorted(
                     set(callables) & (set(render_context) | set(self.env.globals))
                 )
@@ -88,7 +111,10 @@ class TemplateRenderer:
                 render_context.update(callables)
 
             template = self.env.from_string(template_source)
-            return template.render(**render_context)
+            return TemplateRenderResult(
+                content=template.render(**render_context),
+                issues=tuple(collector.issues),
+            )
 
         except TemplateRenderError:
             raise

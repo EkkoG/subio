@@ -7,6 +7,7 @@ from subio_v2.conversion import IssueSeverity, WorkflowResult
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
+from subio_v2.workflow.template import TemplateRenderResult
 
 
 def write(tmp_path: Path, name: str, content: str):
@@ -42,8 +43,8 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
 
     # Mock renderer to bypass template rendering
     class DummyRenderer:
-        def render(self, *a, **kw):
-            return "rendered"
+        def render_result(self, *a, **kw):
+            return TemplateRenderResult("rendered")
 
     eng.renderer = DummyRenderer()
 
@@ -379,6 +380,89 @@ proxies:
 
     assert len(result.errors) == 1
     assert result.generated == ["out.txt"]
+
+
+def _write_ruleset_issue_workflow(tmp_path: Path, *, allow_errors: bool) -> Path:
+    (tmp_path / "template").mkdir()
+    (tmp_path / "template" / "out.j2").write_text(
+        "proxies:\n{{ proxies | indent(2, true) }}\nrules:\n"
+        "{{ remote_bad('Proxy') | indent(2, true) }}\n"
+    )
+    write(
+        tmp_path,
+        "nodes.yaml",
+        """
+proxies:
+  - name: supported
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: p
+""".strip(),
+    )
+    allow_line = "allow_conversion_errors = true" if allow_errors else ""
+    return write(
+        tmp_path,
+        "config.toml",
+        f"""
+[[provider]]
+name = "source-provider"
+type = "clash-meta"
+file = "nodes.yaml"
+
+[[artifact]]
+name = "out.yaml"
+type = "clash-meta"
+providers = ["source-provider"]
+template = "out.j2"
+{allow_line}
+
+[[ruleset]]
+name = "bad"
+url = "https://example.test/bad.list"
+type = "surge"
+""".strip(),
+    )
+
+
+def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
+    cfg = _write_ruleset_issue_workflow(tmp_path, allow_errors=False)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: b"USER-AGENT,*Safari*\n",
+    )
+    engine = WorkflowEngine(str(cfg), dry_run=True)
+
+    with pytest.raises(ArtifactGenerationError) as exc_info:
+        engine.run()
+
+    assert [issue.code for issue in exc_info.value.issues] == [
+        "ruleset.unsupported-target-rule"
+    ]
+    assert exc_info.value.issues[0].artifact == "out.yaml"
+    assert exc_info.value.issues[0].target == "clash-meta"
+    assert engine._staged_artifacts == {}
+    assert not (tmp_path / "dist").exists()
+
+
+def test_allowed_ruleset_errors_are_returned_by_workflow(tmp_path, monkeypatch):
+    cfg = _write_ruleset_issue_workflow(tmp_path, allow_errors=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "subio_v2.workflow.ruleset.load_remote_resource",
+        lambda *args, **kwargs: b"USER-AGENT,*Safari*\n",
+    )
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert result.generated == ["out.yaml"]
+    assert [issue.code for issue in result.errors] == [
+        "ruleset.unsupported-target-rule"
+    ]
+    assert result.errors[0].artifact == "out.yaml"
+    assert (tmp_path / "dist" / "out.yaml").is_file()
 
 
 def test_parse_errors_abort_before_artifact_write(tmp_path, monkeypatch):

@@ -618,9 +618,35 @@ class WorkflowEngine:
             if extra_context:
                 context.update(extra_context)
 
-            final_content = self.renderer.render(
+            render_result = self.renderer.render_result(
                 template_path, context, artifact_type, self.rulesets
             )
+            final_content = render_result.content
+            ruleset_issues = [
+                replace(issue, artifact=filename, user=username)
+                for issue in render_result.issues
+            ]
+            self.issues.extend(ruleset_issues)
+            ruleset_errors = [
+                issue
+                for issue in ruleset_issues
+                if issue.severity == IssueSeverity.ERROR
+            ]
+            allow_conversion_errors = bool(
+                self.config.get("allow_conversion_errors", False)
+                or (artifact_conf or {}).get("allow_conversion_errors", False)
+            )
+            if ruleset_errors and not allow_conversion_errors:
+                raise ArtifactGenerationError(
+                    f"Artifact '{filename}' has {len(ruleset_errors)} ruleset conversion error(s)",
+                    issues=ruleset_errors,
+                )
+            if ruleset_errors:
+                logger.warning(
+                    f"Artifact '{filename}' is continuing with "
+                    f"{len(ruleset_errors)} ruleset conversion error(s) because "
+                    "allow_conversion_errors=true"
+                )
         else:
             if is_yaml_data:
                 final_content = yaml.dump(content, allow_unicode=True, sort_keys=False)

@@ -1,348 +1,434 @@
-"""
-RuleSet 模块 - 规则集的加载、存储和渲染
+"""Load shareable rulesets and expose data-only template callables."""
 
-设计理念：
-- snippet 和 remote ruleset 统一处理，remote ruleset 是 snippet 的特例
-- 规则只解析一次（加载时）
-- 规则集作为模板上下文中的 Python callable 暴露
-- 远端规则内容永远不会被当作 Jinja2 源码编译
-"""
+from __future__ import annotations
 
 import hashlib
+import ipaddress
 import os
-import re
-import requests
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set
+from dataclasses import dataclass, field, replace
+from typing import Any, Callable, Mapping
 
+import requests
+
+from subio_v2.conversion import ConversionIssue, IssueSeverity
+from subio_v2.dialect import DialectContext
+from subio_v2.model.rules import (
+    BoundRule,
+    DefaultParameter,
+    HeadlessRuleSet,
+    LiteralPolicy,
+    LogicalExpression,
+    ParameterReference,
+    ParameterizedRuleSet,
+    Predicate,
+    RuleComment,
+    RuleExpression,
+    RuleRenderResult,
+)
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.errors import ConfigError
+from subio_v2.workflow.rule_parser import (
+    MIHOMO_CLASSICAL_PARSER,
+    parse_argument_names,
+    validate_identifier,
+)
+from subio_v2.workflow.ruleset_codec import (
+    DEFAULT_RULESET_CODEC_REGISTRY,
+    RuleSetInputCodecRegistry,
+    RuleSetInputSelection,
+)
 
 
-# ============== 平台配置 ==============
+CLASH_PLATFORMS = frozenset({"clash", "clash-meta", "stash"})
+LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
 
-# 需要 no-resolve 参数的规则类型
-RULES_WITH_NO_RESOLVE: Set[str] = {
-    "IP-CIDR",
-    "IP-CIDR6",
-    "IP-SUFFIX",
-    "IP-ASN",
-    "GEOIP",
-    "SRC-IP-CIDR",
-    "SRC-IP-SUFFIX",
-    "SRC-IP-ASN",
-    "SRC-GEOIP",
+PLATFORM_RULES: dict[str, frozenset[str]] = {
+    "clash-meta": frozenset(
+        {
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "DOMAIN-WILDCARD",
+            "DOMAIN-REGEX",
+            "GEOSITE",
+            "IP-CIDR",
+            "IP-CIDR6",
+            "IP-SUFFIX",
+            "IP-ASN",
+            "GEOIP",
+            "SRC-GEOIP",
+            "SRC-IP-ASN",
+            "SRC-IP-CIDR",
+            "SRC-IP-SUFFIX",
+            "DST-PORT",
+            "SRC-PORT",
+            "IN-PORT",
+            "IN-TYPE",
+            "IN-USER",
+            "IN-NAME",
+            "REMATCH-NAME",
+            "PROCESS-PATH",
+            "PROCESS-PATH-WILDCARD",
+            "PROCESS-PATH-REGEX",
+            "PROCESS-NAME",
+            "PROCESS-NAME-WILDCARD",
+            "PROCESS-NAME-REGEX",
+            "UID",
+            "NETWORK",
+            "DSCP",
+            "MATCH",
+            *LOGICAL_RULES,
+        }
+    ),
+    "clash": frozenset(
+        {
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "IP-CIDR",
+            "IP-CIDR6",
+            "GEOIP",
+            "DST-PORT",
+            "SRC-PORT",
+            "PROCESS-NAME",
+            "MATCH",
+        }
+    ),
+    "stash": frozenset(
+        {
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "DOMAIN-WILDCARD",
+            "DOMAIN-REGEX",
+            "GEOSITE",
+            "IP-CIDR",
+            "IP-CIDR6",
+            "IP-ASN",
+            "GEOIP",
+            "SRC-IP",
+            "DST-PORT",
+            "PROCESS-NAME",
+            "PROCESS-PATH",
+            "USER-AGENT",
+            "URL-REGEX",
+            "NETWORK",
+            "PROTOCOL",
+            "MATCH",
+            *LOGICAL_RULES,
+        }
+    ),
+    "surge": frozenset(
+        {
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "DOMAIN-WILDCARD",
+            "IP-CIDR",
+            "IP-CIDR6",
+            "IP-ASN",
+            "GEOIP",
+            "SRC-IP",
+            "DEST-PORT",
+            "SRC-PORT",
+            "IN-PORT",
+            "PROCESS-NAME",
+            "USER-AGENT",
+            "URL-REGEX",
+            "PROTOCOL",
+            "DEVICE-NAME",
+            "MAC-ADDRESS",
+            "HOSTNAME-TYPE",
+            "SUBNET",
+            "CELLULAR-RADIO",
+            "CELLULAR-CARRIER",
+            "FINAL",
+            *LOGICAL_RULES,
+        }
+    ),
+    "dae": frozenset(
+        {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "MATCH"}
+    ),
 }
 
-# 只有一个参数的规则类型（TYPE,POLICY）
-SINGLE_PARAM_RULES: Set[str] = {"MATCH", "FINAL"}
-
-# 已知的 options（用于区分第三个位置是 option 还是 policy）
-KNOWN_OPTIONS: Set[str] = {"no-resolve", "extended-matching"}
-
-# 平台支持的规则类型
-PLATFORM_RULES: Dict[str, Set[str]] = {
-    "clash-meta": {
-        "DOMAIN",
-        "DOMAIN-SUFFIX",
-        "DOMAIN-KEYWORD",
-        "DOMAIN-WILDCARD",
-        "DOMAIN-REGEX",
-        "GEOSITE",
-        "IP-CIDR",
-        "IP-CIDR6",
-        "IP-SUFFIX",
-        "IP-ASN",
-        "GEOIP",
-        "SRC-GEOIP",
-        "SRC-IP-ASN",
-        "SRC-IP-CIDR",
-        "SRC-IP-SUFFIX",
-        "DST-PORT",
-        "SRC-PORT",
-        "IN-PORT",
-        "IN-TYPE",
-        "IN-USER",
-        "IN-NAME",
-        "PROCESS-PATH",
-        "PROCESS-PATH-REGEX",
-        "PROCESS-NAME",
-        "PROCESS-NAME-REGEX",
-        "UID",
-        "NETWORK",
-        "DSCP",
-        "RULE-SET",
-        "MATCH",
-    },
-    "clash": {
-        "DOMAIN",
-        "DOMAIN-SUFFIX",
-        "DOMAIN-KEYWORD",
-        "IP-CIDR",
-        "IP-CIDR6",
-        "GEOIP",
-        "DST-PORT",
-        "SRC-PORT",
-        "PROCESS-NAME",
-        "RULE-SET",
-        "MATCH",
-    },
-    "stash": {
-        "DOMAIN",
-        "DOMAIN-SUFFIX",
-        "DOMAIN-KEYWORD",
-        "DOMAIN-WILDCARD",
-        "GEOSITE",
-        "IP-CIDR",
-        "IP-CIDR6",
-        "IP-ASN",
-        "GEOIP",
-        "DST-PORT",
-        "SRC-PORT",
-        "IN-PORT",
-        "IN-TYPE",
-        "PROCESS-NAME",
-        "NETWORK",
-        "RULE-SET",
-        "MATCH",
-    },
-    "surge": {
-        "DOMAIN",
-        "DOMAIN-SUFFIX",
-        "DOMAIN-KEYWORD",
-        "IP-CIDR",
-        "IP-CIDR6",
-        "IP-ASN",
-        "GEOIP",
-        "DST-PORT",
-        "DEST-PORT",
-        "SRC-PORT",  # Surge 用 DEST-PORT，但也支持 DST-PORT 输入
-        "IN-PORT",
-        "PROCESS-NAME",
-        "NETWORK",
-        "USER-AGENT",
-        "URL-REGEX",
-        "RULE-SET",
-        "MATCH",
-        "FINAL",
-    },
-    "dae": {
-        "DOMAIN",
-        "DOMAIN-SUFFIX",
-        "DOMAIN-KEYWORD",
-        "IP-CIDR",
-        "IP-CIDR6",
-        "MATCH",
-        "FINAL",
-    },
-}
-
-CLASH_PLATFORMS = {"clash", "clash-meta", "stash"}
-
-IDENTIFIER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
-POLICY_PLACEHOLDER_RE = re.compile(r"^\{\{\s*([A-Za-z][A-Za-z0-9_]*)\s*\}\}$")
-
-
-def _validate_identifier(value: str, kind: str) -> str:
-    if not isinstance(value, str) or not IDENTIFIER_RE.fullmatch(value):
-        raise ValueError(
-            f"Invalid ruleset {kind} {value!r}: expected an ASCII identifier "
-            "starting with a letter"
-        )
-    return value
-
-
-def _parse_argument_names(args: str) -> tuple[str, ...]:
-    if not isinstance(args, str):
-        raise ValueError("Invalid ruleset arguments: expected a comma-separated string")
-
-    parts = tuple(part.strip() for part in args.split(","))
-    if not parts or any(not part for part in parts):
-        raise ValueError("Invalid ruleset arguments: argument names cannot be empty")
-    names = parts
-
-    seen = set()
-    for name in names:
-        _validate_identifier(name, "argument")
-        if name in seen:
-            raise ValueError(f"Duplicate ruleset argument: {name}")
-        seen.add(name)
-    return names
-
-
-# ============== 数据结构 ==============
-
 
 @dataclass
-class RuleEntry:
-    """
-    统一的规则条目
+class RuleIssueCollector:
+    issues: list[ConversionIssue] = field(default_factory=list)
+    _seen: set[ConversionIssue] = field(default_factory=set, init=False, repr=False)
 
-    用于表示 snippet 和 remote ruleset 中的规则
-    """
+    def add(self, issue: ConversionIssue) -> None:
+        if issue not in self._seen:
+            self._seen.add(issue)
+            self.issues.append(issue)
 
-    rule_type: str  # 规则类型，如 DOMAIN, IP-CIDR
-    matcher: str  # 匹配内容，如 google.com
-    policy: str = ""  # 策略，可以是 "", "{{ rule }}", "{{ api_rule }}" 等
-    options: List[str] = field(default_factory=list)  # 选项，如 no-resolve
-
-
-@dataclass
-class CommentEntry:
-    """注释条目"""
-
-    content: str
+    def extend(self, issues: tuple[ConversionIssue, ...] | list[ConversionIssue]) -> None:
+        for issue in issues:
+            self.add(issue)
 
 
-# 规则行类型
-RuleLine = RuleEntry | CommentEntry | None
+class RuleSetRenderer:
+    def render(
+        self,
+        ruleset: ParameterizedRuleSet,
+        platform: str,
+        arguments: Mapping[str, Any],
+    ) -> RuleRenderResult:
+        issues = [replace(issue, target=platform) for issue in ruleset.issues]
+        lines: list[str] = []
 
-
-# ============== 解析逻辑 ==============
-
-
-def is_known_option(value: str) -> bool:
-    """判断是否是已知的 option"""
-    return value.lower() in KNOWN_OPTIONS
-
-
-def parse_rule_line(line: str) -> RuleLine:
-    """
-    解析单行规则
-
-    支持以下格式：
-    - TYPE,MATCHER                           -> policy=""
-    - TYPE,MATCHER,no-resolve                -> policy="", options=["no-resolve"]
-    - TYPE,MATCHER,POLICY                    -> policy="POLICY"
-    - TYPE,MATCHER,POLICY,no-resolve         -> policy="POLICY", options=["no-resolve"]
-    - TYPE,MATCHER,{{ rule }}                -> policy="{{ rule }}"
-    - TYPE,MATCHER,{{ rule }},no-resolve     -> policy="{{ rule }}", options=["no-resolve"]
-    - MATCH,POLICY                           -> 单参数规则
-    """
-    line = line.strip()
-
-    if not line:
-        return None
-
-    # 注释行
-    if line.startswith("#") or line.startswith("//"):
-        return CommentEntry(content=line)
-
-    # 移除 YAML 列表前缀
-    if line.startswith("- "):
-        line = line[2:]
-
-    parts = [p.strip() for p in line.split(",")]
-    if len(parts) < 1:
-        return None
-
-    rule_type = parts[0]
-
-    # 单参数规则 (MATCH,POLICY)
-    if rule_type in SINGLE_PARAM_RULES:
-        policy = parts[1] if len(parts) > 1 else ""
-        return RuleEntry(rule_type=rule_type, matcher="", policy=policy)
-
-    if len(parts) < 2:
-        return None
-
-    matcher = parts[1]
-    policy = ""
-    options = []
-
-    if len(parts) >= 3:
-        third = parts[2]
-
-        # 判断第三个位置是 option 还是 policy
-        if is_known_option(third):
-            # 第三个是 option，policy 为空
-            options = [p for p in parts[2:] if p]
-        else:
-            # 第三个是 policy
-            policy = third
-            options = [p for p in parts[3:] if p]
-
-    return RuleEntry(
-        rule_type=rule_type,
-        matcher=matcher,
-        policy=policy,
-        options=options,
-    )
-
-
-def parse_rules(content: str) -> List[RuleLine]:
-    """解析多行规则内容"""
-    lines = content.split("\n")
-    result = []
-    for line in lines:
-        parsed = parse_rule_line(line)
-        if parsed is not None:
-            result.append(parsed)
-    return result
-
-
-# ============== 平台支持检查 ==============
-
-
-def is_rule_supported(rule_type: str, platform: str) -> bool:
-    """检查规则类型是否被平台支持"""
-    if platform not in PLATFORM_RULES:
-        return True
-
-    supported = PLATFORM_RULES.get(platform, set())
-
-    # MATCH 和 FINAL 互通
-    if rule_type == "MATCH" and "FINAL" in supported:
-        return True
-    if rule_type == "FINAL" and "MATCH" in supported:
-        return True
-
-    # DST-PORT 和 DEST-PORT 互通
-    if rule_type == "DST-PORT" and "DEST-PORT" in supported:
-        return True
-    if rule_type == "DEST-PORT" and "DST-PORT" in supported:
-        return True
-
-    return rule_type in supported
-
-
-# ============== RuleSet 类 ==============
-
-
-@dataclass
-class RuleSet:
-    """
-    规则集对象
-
-    统一表示 snippet 和 remote ruleset
-    - remote ruleset: args="rule", 规则中 policy 为空
-    - snippet: args 可以是多个参数，规则中 policy 可以是 Jinja2 变量
-    """
-
-    name: str
-    args: str  # 参数声明，如 "rule" 或 "default_rule, api_rule"
-    rules: List[RuleLine] = field(default_factory=list)
-
-    def __post_init__(self):
-        _validate_identifier(self.name, "name")
-        argument_names = self.argument_names
-        for rule in self.rules:
-            if not isinstance(rule, RuleEntry):
+        for entry in ruleset.entries:
+            if isinstance(entry, RuleComment):
+                lines.append(entry.content)
                 continue
-            match = POLICY_PLACEHOLDER_RE.fullmatch(rule.policy)
-            if match and match.group(1) not in argument_names:
-                raise ValueError(
-                    f"Ruleset {self.name!r} references undeclared argument "
-                    f"{match.group(1)!r}"
+
+            policy = self._resolve_policy(entry, ruleset, arguments)
+            rendered, expression_issues = self._render_expression(
+                ruleset.name,
+                entry.expression,
+                platform,
+                policy,
+                nested=False,
+            )
+            issues.extend(expression_issues)
+            if rendered is not None:
+                if platform in CLASH_PLATFORMS:
+                    rendered = f"- {rendered}"
+                lines.append(rendered)
+
+        return RuleRenderResult(content="\n".join(lines), issues=tuple(issues))
+
+    def _resolve_policy(
+        self,
+        entry: BoundRule,
+        ruleset: ParameterizedRuleSet,
+        arguments: Mapping[str, Any],
+    ) -> str:
+        binding = entry.policy_binding
+        if isinstance(binding, DefaultParameter):
+            return str(arguments[ruleset.parameters[0]])
+        if isinstance(binding, ParameterReference):
+            return str(arguments[binding.name])
+        if isinstance(binding, LiteralPolicy):
+            return binding.value
+        raise TypeError(f"Unsupported policy binding: {type(binding).__name__}")
+
+    def _render_expression(
+        self,
+        source: str,
+        expression: RuleExpression,
+        platform: str,
+        policy: str | None,
+        *,
+        nested: bool,
+    ) -> tuple[str | None, list[ConversionIssue]]:
+        rule_type = self._target_rule_type(expression, platform)
+        matcher = expression.matcher if isinstance(expression, Predicate) else ""
+        if (
+            platform == "clash-meta"
+            and isinstance(expression, Predicate)
+            and expression.rule_type == "SRC-IP"
+        ):
+            try:
+                address = ipaddress.ip_address(expression.matcher)
+            except ValueError:
+                pass
+            else:
+                rule_type = "SRC-IP-CIDR"
+                matcher = f"{address}/{32 if address.version == 4 else 128}"
+        if not self._is_supported(rule_type, platform):
+            return None, [
+                self._issue(
+                    source,
+                    expression,
+                    platform,
+                    "ruleset.unsupported-target-rule",
+                    f"Rule type {rule_type} cannot be rendered for {platform}",
                 )
+            ]
+
+        option_issue = self._unsupported_option(source, expression, platform)
+        if option_issue is not None:
+            return None, [option_issue]
+
+        if platform == "dae":
+            assert isinstance(expression, Predicate)
+            return self._render_dae(expression, policy), []
+
+        if isinstance(expression, LogicalExpression):
+            operands: list[str] = []
+            issues: list[ConversionIssue] = []
+            for operand in expression.operands:
+                rendered, operand_issues = self._render_expression(
+                    source,
+                    operand,
+                    platform,
+                    None,
+                    nested=True,
+                )
+                issues.extend(operand_issues)
+                if rendered is None:
+                    return None, issues
+                operands.append(f"({rendered})")
+            fields = [rule_type, f"({','.join(operands)})"]
+        else:
+            fields = [rule_type]
+            if matcher:
+                fields.append(self._serialize_matcher(rule_type, matcher))
+
+        if policy is not None:
+            fields.append(self._serialize_token(policy))
+        fields.extend(self._serialize_option(option) for option in expression.options)
+        return ",".join(fields), []
+
+    def _target_rule_type(self, expression: RuleExpression, platform: str) -> str:
+        rule_type = (
+            expression.operator
+            if isinstance(expression, LogicalExpression)
+            else expression.rule_type
+        )
+        if platform == "surge":
+            if rule_type == "MATCH":
+                return "FINAL"
+            if rule_type == "DST-PORT":
+                return "DEST-PORT"
+            if rule_type == "NETWORK":
+                return "PROTOCOL"
+        elif platform in CLASH_PLATFORMS:
+            if rule_type == "FINAL":
+                return "MATCH"
+            if rule_type == "DEST-PORT":
+                return "DST-PORT"
+            if platform == "clash-meta" and rule_type == "PROTOCOL":
+                assert isinstance(expression, Predicate)
+                if expression.matcher.lower() in {"tcp", "udp"}:
+                    return "NETWORK"
+        return rule_type
+
+    def _is_supported(self, rule_type: str, platform: str) -> bool:
+        supported = PLATFORM_RULES.get(platform)
+        return supported is None or rule_type in supported
+
+    def _unsupported_option(
+        self,
+        source: str,
+        expression: RuleExpression,
+        platform: str,
+    ) -> ConversionIssue | None:
+        for option in expression.options:
+            if option == "src" and platform != "clash-meta":
+                return self._issue(
+                    source,
+                    expression,
+                    platform,
+                    "ruleset.unsupported-target-option",
+                    f"Rule option {option!r} cannot be rendered for {platform}",
+                )
+            if (
+                option in {"extended-matching", "requires-resolve"}
+                or option.startswith(
+                    ("notification-text=", "notification-interval=", "always-capture=")
+                )
+            ) and platform != "surge":
+                return self._issue(
+                    source,
+                    expression,
+                    platform,
+                    "ruleset.unsupported-target-option",
+                    f"Rule option {option!r} cannot be rendered for {platform}",
+                )
+        return None
+
+    @staticmethod
+    def _serialize_token(value: str) -> str:
+        if not any(char in value for char in (",", '"', "\n", "\r")):
+            return value
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+
+    def _serialize_matcher(self, rule_type: str, matcher: str) -> str:
+        if rule_type in {"DST-PORT", "SRC-PORT", "DEST-PORT", "IN-PORT"}:
+            fragments = matcher.split(",")
+            if fragments and all(
+                fragment.isdigit()
+                or (
+                    "-" in fragment
+                    and all(part.isdigit() for part in fragment.split("-", 1))
+                )
+                for fragment in fragments
+            ):
+                return matcher
+        return self._serialize_token(matcher)
+
+    def _serialize_option(self, option: str) -> str:
+        if "=" not in option:
+            return option
+        name, value = option.split("=", 1)
+        return f"{name}={self._serialize_token(value)}"
+
+    @staticmethod
+    def _render_dae(expression: Predicate, policy: str | None) -> str:
+        assert policy is not None
+        if expression.rule_type in {"MATCH", "FINAL"}:
+            return f"fallback: {policy}"
+        if expression.rule_type == "DOMAIN":
+            return f"domain(full: {expression.matcher}) -> {policy}"
+        if expression.rule_type == "DOMAIN-SUFFIX":
+            return f"domain(suffix: {expression.matcher}) -> {policy}"
+        if expression.rule_type == "DOMAIN-KEYWORD":
+            return f"domain(keyword: {expression.matcher}) -> {policy}"
+        return f"dip({expression.matcher}) -> {policy}"
+
+    @staticmethod
+    def _issue(
+        source: str,
+        expression: RuleExpression,
+        target: str,
+        code: str,
+        message: str,
+    ) -> ConversionIssue:
+        return ConversionIssue(
+            severity=IssueSeverity.ERROR,
+            node=None,
+            protocol=None,
+            source=source,
+            target=target,
+            field=(
+                f"line {expression.source_line}"
+                if expression.source_line is not None
+                else None
+            ),
+            message=message,
+            stage="render",
+            code=code,
+        )
+
+
+RULESET_RENDERER = RuleSetRenderer()
+
+
+class RuleSet:
+    """Runtime facade for a parameterized, data-only ruleset."""
+
+    def __init__(self, model: ParameterizedRuleSet):
+        validate_identifier(model.name, "name")
+        if not model.parameters:
+            raise ValueError("Ruleset must declare at least one argument")
+        for name in model.parameters:
+            validate_identifier(name, "argument")
+        self.model = model
+
+    @property
+    def name(self) -> str:
+        return self.model.name
 
     @property
     def argument_names(self) -> tuple[str, ...]:
-        return _parse_argument_names(self.args)
+        return self.model.parameters
 
     def _bind_arguments(
-        self, values: tuple[Any, ...], kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, values: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         names = self.argument_names
         if len(values) > len(names):
             raise TypeError(
@@ -370,125 +456,34 @@ class RuleSet:
             )
         return bound
 
-    def _resolve_policy(self, policy: str, arguments: Mapping[str, Any]) -> str:
-        if not policy:
-            return str(arguments[self.argument_names[0]])
-
-        match = POLICY_PLACEHOLDER_RE.fullmatch(policy)
-        if match:
-            return str(arguments[match.group(1)])
-
-        # Jinja-looking remote input is plain data and is never re-evaluated.
-        return policy
-
-    def render_rule(
-        self, rule: RuleLine, platform: str, arguments: Mapping[str, Any]
-    ) -> Optional[str]:
-        """Render one parsed rule using already-bound callable arguments."""
-        if rule is None:
-            return None
-
-        if isinstance(rule, CommentEntry):
-            return rule.content
-
-        if not isinstance(rule, RuleEntry):
-            return None
-
-        # 检查平台支持
-        if not is_rule_supported(rule.rule_type, platform):
-            return None
-
-        policy = self._resolve_policy(rule.policy, arguments)
-
-        # dae 平台采用独立的语法（function-call 风格）
-        if platform == "dae":
-            return self._render_rule_for_dae(rule, policy)
-
-        is_clash = platform in CLASH_PLATFORMS
-        rule_type = rule.rule_type
-
-        # Surge 平台特殊处理
-        if platform == "surge":
-            # MATCH -> FINAL
-            if rule_type == "MATCH":
-                rule_type = "FINAL"
-            # DST-PORT -> DEST-PORT
-            elif rule_type == "DST-PORT":
-                rule_type = "DEST-PORT"
-
-        # 单参数规则
-        if rule_type in SINGLE_PARAM_RULES:
-            result = f"{rule_type},{policy}"
-        else:
-            parts = [rule_type, rule.matcher, policy]
-
-            # 处理 options
-            for opt in rule.options:
-                opt_lower = opt.lower()
-                # no-resolve 只在支持的规则类型中保留
-                if opt_lower == "no-resolve":
-                    if rule.rule_type in RULES_WITH_NO_RESOLVE:
-                        parts.append(opt)
-                else:
-                    parts.append(opt)
-
-            result = ",".join(parts)
-
-        if is_clash:
-            return f"- {result}"
-        return result
-
-    def _render_rule_for_dae(self, rule: RuleEntry, policy: str) -> Optional[str]:
-        """将通用规则转换为 dae routing 语法。
-
-        - DOMAIN -> domain(full: x) -> policy
-        - DOMAIN-SUFFIX -> domain(suffix: x) -> policy
-        - DOMAIN-KEYWORD -> domain(keyword: x) -> policy
-        - IP-CIDR / IP-CIDR6 -> dip(x) -> policy
-        - MATCH / FINAL -> fallback: policy
-        """
-        rt = rule.rule_type
-        if rt in ("MATCH", "FINAL"):
-            return f"fallback: {policy}"
-        if rt == "DOMAIN":
-            return f"domain(full: {rule.matcher}) -> {policy}"
-        if rt == "DOMAIN-SUFFIX":
-            return f"domain(suffix: {rule.matcher}) -> {policy}"
-        if rt == "DOMAIN-KEYWORD":
-            return f"domain(keyword: {rule.matcher}) -> {policy}"
-        if rt in ("IP-CIDR", "IP-CIDR6"):
-            return f"dip({rule.matcher}) -> {policy}"
-        return None
+    def render_result(
+        self, platform: str, *values: Any, **kwargs: Any
+    ) -> RuleRenderResult:
+        arguments = self._bind_arguments(values, kwargs)
+        return RULESET_RENDERER.render(self.model, platform, arguments)
 
     def render(self, platform: str, *values: Any, **kwargs: Any) -> str:
-        """Render this ruleset as plain text for use as a Jinja callable."""
-        arguments = self._bind_arguments(values, kwargs)
-        lines = []
-        for rule in self.rules:
-            rendered = self.render_rule(rule, platform, arguments)
-            if rendered is not None:
-                lines.append(rendered)
-        return "\n".join(lines)
+        return self.render_result(platform, *values, **kwargs).content
 
-    def as_callable(self, platform: str) -> Callable[..., str]:
+    def as_callable(
+        self, platform: str, collector: RuleIssueCollector | None = None
+    ) -> Callable[..., str]:
         def render_ruleset(*values: Any, **kwargs: Any) -> str:
-            return self.render(platform, *values, **kwargs)
+            result = self.render_result(platform, *values, **kwargs)
+            if collector is not None:
+                collector.extend(result.issues)
+            return result.content
 
         render_ruleset.__name__ = self.name
         return render_ruleset
 
 
-# ============== RuleSetStore ==============
-
-
 class RuleSetStore:
-    """规则集存储 - 管理所有加载的规则集"""
+    def __init__(self) -> None:
+        self._items: dict[str, RuleSet] = {}
 
-    def __init__(self):
-        self._items: Dict[str, RuleSet] = {}
-
-    def register(self, name: str, item: RuleSet):
-        _validate_identifier(name, "name")
+    def register(self, name: str, item: RuleSet) -> None:
+        validate_identifier(name, "name")
         if name != item.name:
             raise ValueError(
                 f"Ruleset registration name {name!r} does not match item name "
@@ -498,135 +493,165 @@ class RuleSetStore:
             raise ValueError(f"Duplicate ruleset name: {name}")
         self._items[name] = item
 
-    def get(self, name: str) -> Optional[RuleSet]:
+    def get(self, name: str) -> RuleSet | None:
         return self._items.get(name)
 
     def __contains__(self, name: str) -> bool:
         return name in self._items
 
     @property
-    def names(self) -> List[str]:
-        return list(self._items.keys())
+    def names(self) -> list[str]:
+        return list(self._items)
 
-    def get_callables(self, platform: str) -> Dict[str, Callable[..., str]]:
-        """Build template callables without generating Jinja source code."""
-        return {name: item.as_callable(platform) for name, item in self._items.items()}
+    def get_callables(
+        self, platform: str, collector: RuleIssueCollector | None = None
+    ) -> dict[str, Callable[..., str]]:
+        return {
+            name: item.as_callable(platform, collector)
+            for name, item in self._items.items()
+        }
 
 
-# ============== 资源加载 ==============
+def load_remote_resource(
+    url: str, user_agent: str | None = None, debug: bool = False
+) -> bytes:
+    """Load remote ruleset bytes without text decoding or content sniffing."""
 
-
-def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) -> str:
-    """加载远程资源"""
     headers = {"User-Agent": user_agent} if user_agent else {}
+    cache_file: str | None = None
     if debug or os.getenv("DEBUG"):
-        if not os.path.exists("cache"):
-            os.makedirs("cache")
-        file_name = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
-        if os.path.exists(file_name):
-            with open(file_name, "r", encoding="utf-8") as f:
-                return f.read()
-        else:
-            try:
-                resp = requests.get(url, headers=headers, timeout=10)
-                resp.raise_for_status()
-                text = resp.text
-                with open(file_name, "w", encoding="utf-8") as f:
-                    f.write(text)
-                return text
-            except Exception as e:
-                raise ConfigError(
-                    f"Failed to fetch remote ruleset: {type(e).__name__}"
-                ) from e
-    else:
-        try:
-            resp = requests.get(url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            return resp.text
-        except Exception as e:
-            raise ConfigError(
-                f"Failed to fetch remote ruleset: {type(e).__name__}"
-            ) from e
+        os.makedirs("cache", exist_ok=True)
+        cache_file = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
+        if os.path.exists(cache_file):
+            with open(cache_file, "rb") as file:
+                return file.read()
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        content = response.content
+    except Exception as exc:
+        raise ConfigError(
+            f"Failed to fetch remote ruleset: {type(exc).__name__}"
+        ) from exc
+
+    if cache_file is not None:
+        with open(cache_file, "wb") as file:
+            file.write(content)
+    return content
 
 
-def load_rulesets(ruleset_configs: List[Dict[str, Any]]) -> RuleSetStore:
-    """
-    加载远程规则集
-
-    remote ruleset 是 snippet 的特例：args 固定为 "rule"
-    """
+def load_rulesets(
+    ruleset_configs: list[dict[str, Any]],
+    registry: RuleSetInputCodecRegistry = DEFAULT_RULESET_CODEC_REGISTRY,
+) -> RuleSetStore:
     store = RuleSetStore()
+    if not isinstance(ruleset_configs, list):
+        raise ConfigError("Config section 'ruleset' must be a list")
 
-    for conf in ruleset_configs:
-        name = conf.get("name")
-        url = conf.get("url")
-        if not name or not url:
-            raise ConfigError("Every remote ruleset must define name and url")
+    for config in ruleset_configs:
+        if not isinstance(config, dict):
+            raise ConfigError("Entries in 'ruleset' must be objects")
+        name = config.get("name")
+        url = config.get("url")
+        if not isinstance(name, str) or not name:
+            raise ConfigError("Every remote ruleset must define a name")
+        if not isinstance(url, str) or not url:
+            raise ConfigError(f"Ruleset {name!r} must define a URL")
+        user_agent = config.get("user_agent")
+        if user_agent is not None and not isinstance(user_agent, str):
+            raise ConfigError(f"Ruleset {name!r} user_agent must be a string")
 
+        callable_name = f"remote_{name}"
+        try:
+            validate_identifier(callable_name, "name")
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from exc
+
+        selection = RuleSetInputSelection.from_config(config)
+        codec = registry.get(selection)
         logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
-        content = load_remote_resource(url, conf.get("user_agent"))
-        if content:
-            rules = parse_rules(content)
-            # remote ruleset 的 args 固定为 "rule"
-            ruleset = RuleSet(name=f"remote_{name}", args="rule", rules=rules)
-            store.register(f"remote_{name}", ruleset)
+        content = load_remote_resource(url, user_agent)
+        if not content:
+            raise ConfigError(f"Ruleset {name!r} is empty")
+
+        context = DialectContext(
+            dialect=selection.dialect,
+            format=selection.format,
+        )
+        parsed = codec.parse(name=callable_name, content=content, context=context)
+        model = _parameterize_headless(parsed.ruleset, parsed.issues)
+        store.register(callable_name, RuleSet(model))
 
     return store
 
 
 def load_snippets(snippet_dir: str) -> RuleSetStore:
-    """
-    加载本地 snippet 文件
-
-    Snippet 文件格式：
-        第一行：参数声明（如 "rule" 或 "default_rule, api_rule"）
-        其余行：规则内容（可包含 Jinja2 变量）
-    """
     store = RuleSetStore()
-
     if not os.path.exists(snippet_dir):
         return store
 
-    for snippet_file in os.listdir(snippet_dir):
+    for snippet_file in sorted(os.listdir(snippet_dir)):
         if snippet_file.startswith("."):
             continue
-
         snippet_path = os.path.join(snippet_dir, snippet_file)
         if not os.path.isfile(snippet_path):
             continue
 
         try:
-            with open(snippet_path, "r", encoding="utf-8") as f:
-                text = f.read()
-
+            validate_identifier(snippet_file, "name")
+            with open(snippet_path, "r", encoding="utf-8") as file:
+                text = file.read()
             lines = text.splitlines()
             if not lines:
                 raise ValueError("file is empty")
-
-            args = lines[0].strip()
-            if not args:
-                raise ValueError("missing argument declaration")
-
-            content = "\n".join(lines[1:])
-            rules = parse_rules(content)
-
-            ruleset = RuleSet(name=snippet_file, args=args, rules=rules)
-            store.register(snippet_file, ruleset)
-
-        except ValueError as e:
-            raise ConfigError(f"Invalid snippet {snippet_file!r}: {e}") from e
-        except Exception as e:
-            raise ConfigError(f"Failed to load snippet {snippet_file!r}: {e}") from e
+            parameters = parse_argument_names(lines[0].strip())
+            parsed = MIHOMO_CLASSICAL_PARSER.parse_snippet(
+                name=snippet_file,
+                parameter_names=parameters,
+                content="\n".join(lines[1:]),
+                source_context=DialectContext("mihomo", "text"),
+            )
+            model = ParameterizedRuleSet(
+                name=snippet_file,
+                parameters=parameters,
+                entries=parsed.entries,
+                source_context=DialectContext("mihomo", "text"),
+                issues=parsed.issues,
+            )
+            store.register(snippet_file, RuleSet(model))
+        except ConfigError:
+            raise
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ConfigError(f"Invalid snippet {snippet_file!r}: {exc}") from exc
 
     return store
 
 
+def _parameterize_headless(
+    ruleset: HeadlessRuleSet,
+    issues: tuple[ConversionIssue, ...],
+) -> ParameterizedRuleSet:
+    entries = tuple(
+        entry
+        if isinstance(entry, RuleComment)
+        else BoundRule(entry, DefaultParameter())
+        for entry in ruleset.entries
+    )
+    return ParameterizedRuleSet(
+        name=ruleset.name,
+        parameters=("rule",),
+        entries=entries,
+        source_context=ruleset.source_context,
+        issues=issues,
+    )
+
+
 def merge_stores(*stores: RuleSetStore) -> RuleSetStore:
-    """合并多个规则集存储"""
     merged = RuleSetStore()
     for store in stores:
         for name in store.names:
-            ruleset = store.get(name)
-            if ruleset:
-                merged.register(name, ruleset)
+            item = store.get(name)
+            if item is not None:
+                merged.register(name, item)
     return merged

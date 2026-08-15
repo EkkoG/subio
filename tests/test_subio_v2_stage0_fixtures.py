@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 import yaml
 
-from subio_v2.workflow.ruleset import RuleEntry, RuleSet
+from subio_v2.dialect import DialectContext
+from subio_v2.model.rules import (
+    BoundRule,
+    DefaultParameter,
+    ParameterizedRuleSet,
+    Predicate,
+)
+from subio_v2.workflow.ruleset import RuleSet
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -104,9 +111,24 @@ def test_parameterized_snippet_fixtures_cover_binding_modes():
 def test_existing_ruleset_callable_and_renderer_golden():
     golden = json.loads((RULESET_FIXTURES / "golden/render.json").read_text())
     ruleset = RuleSet(
-        name=golden["name"],
-        args=golden["arguments"],
-        rules=[RuleEntry(policy="", **rule) for rule in golden["rules"]],
+        ParameterizedRuleSet(
+            name=golden["name"],
+            parameters=tuple(
+                value.strip() for value in golden["arguments"].split(",")
+            ),
+            entries=tuple(
+                BoundRule(
+                    Predicate(
+                        rule["rule_type"],
+                        rule.get("matcher", ""),
+                        tuple(rule.get("options", [])),
+                    ),
+                    DefaultParameter(),
+                )
+                for rule in golden["rules"]
+            ),
+            source_context=DialectContext("mihomo", "text"),
+        )
     )
 
     for call in golden["calls"]:
