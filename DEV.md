@@ -25,12 +25,28 @@ SubIO V2 采用 Pipeline 架构：
 
 ### 1.2 工厂注册
 
-- **Parser**：`src/subio_v2/parser/factory.py` — `clash` / `clash-meta` 共用 `ClashParser`
-- **Emitter**：`src/subio_v2/emitter/factory.py` — `clash` / `clash-meta` / `stash` 共用 `ClashEmitter(platform="clash-meta")`
+- **Parser**：`src/subio_v2/parser/factory.py` — `clash` / `clash-meta` 共用 `ClashParser` 类型，但每次请求都会创建新实例。
+- **Emitter**：`src/subio_v2/emitter/factory.py` — `clash` / `clash-meta` / `stash` 分别创建 `ClashEmitter(platform="clash")`、`ClashEmitter(platform="clash-meta")`、`ClashEmitter(platform="stash")`，使用各自能力表。
+
+### 1.3 结构化转换结果
+
+v2 保留原有 `parse()` / `emit()` 兼容 API，同时提供用于 workflow 的结构化接口：
+
+- `ParseResult(nodes, issues, resources)`：返回成功解析的节点、单项解析问题和文档级资源；Surge keystore 通过 `resources["keystore"]` 传递，不再依赖 parser 实例旁路。
+- `EmissionResult(content, supported_nodes, issues, extras)`：返回实际输出、真正可生成的节点、转换问题和模板附加上下文。
+- `WorkflowResult(generated, uploaded, issues)`：汇总本次运行的产物、上传结果和全部问题。
+
+`ConversionIssue` 包含 `severity`、`stage`、`code`、`source`、`artifact`、`user`、`node`、`protocol`、`target`、`field` 等上下文。默认只要存在 ERROR，artifact 就不会写入或上传；确需生成有损示例时，可在全局或单个 artifact 显式设置：
+
+```toml
+allow_conversion_errors = true
+```
+
+该选项会放行全部转换错误，应只用于已审阅的配置，不应作为普通默认值。
 
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
-`ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种** `type`。
+`ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。
 
 ### 2.1 实现方式一览
 
@@ -39,6 +55,7 @@ SubIO V2 采用 Pipeline 架构：
 | `ss`, `vmess`, `vless`, `trojan`, `socks5`, `http` | 强类型 `*Node` | 可扩展 Surge / dae 等 |
 | `ssr`, `hysteria`, `tuic`, `snell`, `wireguard`, `hysteria2`, `anytls`, `ssh` | 强类型 + `BaseNode.extra` | 部分已有 / 可继续补 |
 | `mieru`, `sudoku`, `masque`, `trusttunnel`, `openvpn`, `tailscale`, `direct`, `dns` | `ClashPassthroughNode` | **仅 Clash 往返** |
+| 未来未知 `type` | `ClashPassthroughNode(clash_type=...)` | **仅 Mihomo 往返** |
 
 ### 2.2 实现结构
 
@@ -46,10 +63,8 @@ SubIO V2 采用 Pipeline 架构：
 
 - `parser/clash.py` 只做 YAML 解析 + `protocols.by_clash_type(type)` 分发；
 - `emitter/clash.py` 只做遍历 + `protocols.get(node.type)` 分发；
-- 每个协议在 `src/subio_v2/protocols/*.py` 中自包含：
-  - `parse_clash(data) -> Node`
-  - `emit_clash(node) -> dict`
-  - `check(node, proto_caps, platform) -> list[CapabilityWarning]`
+- 14 个强类型协议继承 `StructuredProtocolDescriptor`，通过同一组 `ClashFieldSpec` 派生 consumed keys、模型属性、required 校验、parse 和 emit；
+- 特殊协议逻辑可覆写 `prepare_parse_kwargs()`、`after_parse()`、`after_emit()` 和 `check()`；
 - `protocols/passthrough.py` 统一注册 Clash-only 透传协议描述符。
 
 换句话说，`ClashParser` / `ClashEmitter` 不再维护 `_parse_xxx` / `_emit_xxx` 巨型分支。
@@ -68,9 +83,16 @@ SubIO V2 采用 Pipeline 架构：
 - `parse_tls` / `emit_tls`、`parse_transport` / `emit_transport`、`parse_smux` / `emit_smux`
 - `assign_extra` / `merge_extra`
 
-`handled` 只应包含已经写入强类型字段或由专用解析逻辑保存的键。尚未跨平台建模、
-但需要 Clash 往返保留的字段应交给 `extra` / `merge_extra` 透传；否则字段会在解析时
-被排除且无法重新生成。
+强类型协议不再手写 `handled`。`ClashFieldSpec.consumed_keys` 必须只包含已写入模型、
+且能由同一规格重新生成的字段。尚未跨平台建模、但需要 Clash 往返保留的字段应交给
+`extra` / `merge_extra` 透传。`EmitPolicy.ALWAYS`、`TRUTHY`、`NOT_NONE` 用于明确控制
+空字符串、`false`、`0` 和 `None` 的输出语义；关键凭据可设置 `required=True`。
+
+传输层同样遵循该规则：`TransportSettings.network` 可保留尚未纳入 `Network` 枚举的
+新传输名称，`TransportSettings.extra` 按 `ws-opts` / `grpc-opts` 等嵌套配置块保存未
+建模子字段。解析器只从当前 active transport block 提取强类型字段；非 active 的
+`ws-opts` / `http-opts` / `h2-opts` / `grpc-opts` 必须完整保留。未知 network 不得降级
+为 `tcp`，也不得因读取了部分子字段而丢弃整个 opts 配置块的其余内容。
 
 ### 2.4 `ClashPassthroughNode`（透传节点）
 
@@ -81,6 +103,10 @@ Clash YAML → ClashPassthroughNode(raw=完整 dict) → ClashEmitter → Clash 
 ```
 
 透传协议列表在 `src/subio_v2/protocols/passthrough.py` 中注册。
+
+对于注册表中不存在的未来 Clash/Mihomo `type`，parser 会使用动态透传 descriptor 保存
+完整 raw 字典和原始 `clash_type`。该节点只能由 `clash-meta` emitter 输出；原版 Clash、
+Stash 和其他平台会通过 capability 检查明确拒绝。
 
 **适用**：订阅里要原样保留、且不需要转 Surge/dae 的节点。  
 **不适用**：需要在多平台间转换的协议（应改为强类型，见第 5 节）。
@@ -104,9 +130,9 @@ git clone --depth 1 https://github.com/dongchengjie/meta-json-schema.git vendor/
 
 当前 `CapabilityChecker` 的协议级检查路径为：
 
-1. 检查平台是否支持该协议；
-2. 读取 `proto_caps`；
-3. 调用 `protocols.get(node.type).check(...)`；
+1. 校验非透传节点的 `name`、`server`、`port` 和 descriptor 声明的 required 字段；
+2. 检查平台是否支持该协议；
+3. 读取 `proto_caps` 并调用 `protocols.get(node.type).check(...)`；
 4. 再做 `tfo` / `mptcp` / `dialer_proxy` 全局特性检查。
 
 即：字段级协议检查逻辑已下沉到 `protocols/*.py`，不再在 `checker.py` 中维护 `_check_xxx` 分支。
@@ -129,10 +155,10 @@ git clone --depth 1 https://github.com/dongchengjie/meta-json-schema.git vendor/
 
 在 `src/subio_v2/protocols/` 新建 `xxx.py`：
 
-1. 定义 `XxxDescriptor(ProtocolDescriptor)`，声明 `protocol` / `clash_type` / `node_class`；
-2. 实现 `parse_clash()`（可复用 `clash/helpers.py` 中的 `parse_*` / `assign_extra`）；
-3. 实现 `emit_clash()`（`emit_base` + 协议字段 + `emit_*` + `merge_extra`）；
-4. （推荐）实现 `check()`，写该协议平台能力检查；
+1. 定义 `XxxDescriptor(StructuredProtocolDescriptor)`，声明 `protocol` / `clash_type` / `node_class`；
+2. 用 `scalar_field()`、`tls_group()`、`transport_group()`、`smux_group()` 或 `field_group()` 声明 `fields`；
+3. 对关键凭据设置 `required=True`，并选择正确的 `EmitPolicy`；
+4. 如有特殊逻辑，覆写 descriptor hook 或 `check()`，不要重新维护另一套 consumed keys；
 5. 末尾调用 `register(XxxDescriptor())`。
 
 然后在 `protocols/__init__.py` 的 `_bootstrap()` 里导入该模块，完成注册。
@@ -155,29 +181,20 @@ git clone --depth 1 https://github.com/dongchengjie/meta-json-schema.git vendor/
 ### 示例：协议描述符（强类型 + extra）
 
 ```python
-class ExampleDescriptor(ProtocolDescriptor):
+class ExampleDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.EXAMPLE
     clash_type = "example"
     node_class = ExampleNode
-
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
-    handled = {"password", "tls", "sni", "smux", ...}
-    node = ExampleNode(
-        type=Protocol.EXAMPLE,
-        password=data.get("password", ""),
-        tls=parse_tls(data),
-        smux=parse_smux(data),
-        **parse_base_fields(data),
+    fields = (
+        scalar_field(
+            "password",
+            default="",
+            emit_policy=EmitPolicy.ALWAYS,
+            required=True,
+        ),
+        tls_group(),
+        smux_group(),
     )
-    assign_extra(node, data, handled)
-    return node
-
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
-        base = emit_base(node)
-        base["password"] = node.password
-        emit_tls(base, node.tls)
-        emit_smux(base, node.smux)
-        return merge_extra(base, node)
 
 register(ExampleDescriptor())
 ```
@@ -200,7 +217,9 @@ register(ExampleDescriptor())
 
 ### 步骤 1：Parser（可选）
 
-在 `src/subio_v2/parser/` 新建解析器，继承 `BaseParser`，在 `parser/factory.py` 注册。
+在 `src/subio_v2/parser/` 新建解析器，继承 `BaseParser`，实现 `parse_result()` 并在
+`parser/factory.py` 注册。单项失败应返回 `ConversionIssue`；顶层不可解析输入应抛
+`ValueError`。文档级 sidecar 数据通过 `ParseResult.resources` 返回。
 
 ### 步骤 2：Emitter
 
@@ -220,7 +239,7 @@ register(ExampleDescriptor())
 ### 运行示例
 
 ```bash
-uv run subio example/config.toml --dry-run
+uv run subio convert example/config.toml --dry-run
 ```
 
 输出目录：`./dist/`（见 `AGENTS.md`）。
