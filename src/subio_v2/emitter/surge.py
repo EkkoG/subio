@@ -31,6 +31,7 @@ from subio_v2.surge.syntax import (
 )
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
+    SurgeExternalPolicy,
     SurgeNamedSection,
     coerce_surge_resources,
 )
@@ -182,7 +183,11 @@ class SurgeEmitter(BaseEmitter):
 
         emitted_policy_names = [node.name for node in emitted_nodes]
         emitted_policy_name_set = set(emitted_policy_names)
-        for policy in sorted(self.resources.policies, key=lambda item: item.order):
+        document_policies = [
+            *self.resources.policies,
+            *self.resources.external_policies,
+        ]
+        for policy in sorted(document_policies, key=lambda item: item.order):
             if policy.name in emitted_policy_name_set:
                 issues.append(
                     ConversionIssue(
@@ -198,8 +203,25 @@ class SurgeEmitter(BaseEmitter):
                     )
                 )
                 continue
+            if isinstance(policy, SurgeExternalPolicy) and (
+                not policy.authorized or policy.source_kind != "local"
+            ):
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=policy.name,
+                        protocol="external",
+                        source=None,
+                        target="surge",
+                        field="resources.external_policies",
+                        message="External policy is not authorized for Surge emission",
+                        stage="security",
+                        code="security.external-rejected",
+                    )
+                )
+                continue
             if (
-                policy.associated_section
+                getattr(policy, "associated_section", None)
                 and policy.associated_section not in self.resources.named_sections
             ):
                 kind, section_name = policy.associated_section

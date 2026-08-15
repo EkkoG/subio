@@ -9,6 +9,9 @@ Sources were reviewed on 2026-08-15:
 - https://manual.nssurge.com/policies/wireguard.html
 - https://manual.nssurge.com/policies/tailscale.html
 - https://manual.nssurge.com/policies/built-in.html
+- https://manual.nssurge.com/policies/masque.html
+- https://manual.nssurge.com/policies/trust-tunnel.html
+- https://manual.nssurge.com/policies/external.html
 
 The fixture files contain minimal, non-secret examples distilled from the
 official syntax. Tests must not fetch the documentation at runtime.

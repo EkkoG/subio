@@ -100,8 +100,28 @@ class SurgeDocumentResources(Mapping[str, Any]):
             if existing is None:
                 self.named_sections[key] = copy.deepcopy(section)
 
-        self.policies.extend(copy.deepcopy(other.policies))
-        self.external_policies.extend(copy.deepcopy(other.external_policies))
+        existing_policies = {
+            policy.name: policy for policy in [*self.policies, *self.external_policies]
+        }
+        for policy in [*other.policies, *other.external_policies]:
+            existing = existing_policies.get(policy.name)
+            if existing is not None:
+                same_kind = type(existing) is type(policy)
+                same_record = existing.record == policy.record
+                same_section = getattr(existing, "associated_section", None) == getattr(
+                    policy, "associated_section", None
+                )
+                if not (same_kind and same_record and same_section):
+                    raise ValueError(
+                        f"conflicting Surge document policy '{policy.name}'"
+                    )
+                continue
+            copied = copy.deepcopy(policy)
+            if isinstance(copied, SurgeExternalPolicy):
+                self.external_policies.append(copied)
+            else:
+                self.policies.append(copied)
+            existing_policies[copied.name] = copied
 
 
 def coerce_surge_resources(resources: Any) -> SurgeDocumentResources:

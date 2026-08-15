@@ -28,6 +28,7 @@ from subio_v2.model.nodes import (
 )
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
+    SurgeExternalPolicy,
     SurgeNamedSection,
     SurgeOpaquePolicy,
 )
@@ -170,10 +171,20 @@ _PREDEFINED_BUILTIN_NAMES = {
 }
 _NAMED_SECTION_KINDS = {"wireguard", "tailscale"}
 _NAMED_SECTION_RE = re.compile(r"^\[([^\]\s]+)\s+([^\]]+)\]$")
+_OPAQUE_POLICY_TYPES = {"masque", "trust-tunnel"}
+_SOURCE_KINDS = {"unknown", "local", "remote"}
 
 
 class SurgeParser(BaseParser):
-    def __init__(self):
+    def __init__(
+        self, *, source_kind: str = "unknown", allow_unsafe_external: bool = False
+    ):
+        if source_kind not in _SOURCE_KINDS:
+            raise ValueError(f"Invalid Surge source kind: {source_kind}")
+        if not isinstance(allow_unsafe_external, bool):
+            raise TypeError("allow_unsafe_external must be a boolean")
+        self.source_kind = source_kind
+        self.allow_unsafe_external = allow_unsafe_external
         self.keystore: dict = {}  # Store Keystore entries for emitter: {key_id: {"type": "...", "base64": "..."}}
 
     def parse(self, content: Any) -> List[Node]:
@@ -311,6 +322,68 @@ class SurgeParser(BaseParser):
                             )
                         )
                     continue
+                if protocol in _OPAQUE_POLICY_TYPES:
+                    try:
+                        self._add_opaque_policy(record, resources, index)
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=f"Failed to parse Surge {protocol} policy: {exc}",
+                                stage="parse",
+                                code="parse.opaque-policy",
+                            )
+                        )
+                    continue
+                if protocol == "external":
+                    if self.source_kind != "local":
+                        reason = (
+                            "External policies are rejected from non-local providers"
+                        )
+                    elif not self.allow_unsafe_external:
+                        reason = (
+                            "External policies require allow_unsafe_external=true "
+                            "on a local file provider"
+                        )
+                    else:
+                        reason = None
+                    if reason:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=reason,
+                                stage="security",
+                                code="security.external-rejected",
+                            )
+                        )
+                        continue
+                    try:
+                        self._add_external_policy(record, resources, index)
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=f"Invalid authorized External policy: {exc}",
+                                stage="parse",
+                                code="parse.external-policy",
+                            )
+                        )
+                    continue
                 if protocol in _BUILTIN_ALIAS_TYPES:
                     if name == "DIRECT":
                         issues.append(
@@ -342,7 +415,11 @@ class SurgeParser(BaseParser):
                         )
                     else:
                         resources.policies.append(
-                            SurgeOpaquePolicy(record=record, order=index)
+                            SurgeOpaquePolicy(
+                                record=record,
+                                order=index,
+                                source_kind=self.source_kind,
+                            )
                         )
                     continue
                 node = self._parse_line(line, keystore)
@@ -568,6 +645,87 @@ class SurgeParser(BaseParser):
                 record=record,
                 order=order,
                 associated_section=section_key,
+                source_kind=self.source_kind,
+            )
+        )
+
+    @staticmethod
+    def _validate_opaque_endpoint(record: SurgeProxyRecord) -> None:
+        if len(record.positional) < 2:
+            raise ValueError("host and port are required")
+        port = int(record.positional[1])
+        if not record.positional[0] or not 1 <= port <= 65535:
+            raise ValueError("host or port is invalid")
+
+    def _add_opaque_policy(
+        self,
+        record: SurgeProxyRecord,
+        resources: SurgeDocumentResources,
+        order: int,
+    ) -> None:
+        self._validate_opaque_endpoint(record)
+        protocol = record.type.lower()
+        values = record.parameters.last_values
+
+        if protocol == "masque":
+            if values.get("port-hopping") and values.get("underlying-proxy"):
+                raise ValueError(
+                    "port-hopping cannot be combined with underlying-proxy"
+                )
+            if values.get("port-hopping-interval") is not None:
+                interval = int(values["port-hopping-interval"])
+                if interval <= 0:
+                    raise ValueError("port-hopping-interval must be positive")
+            if values.get("shadow-tls-password"):
+                raise ValueError("Shadow TLS cannot be combined with MASQUE")
+        elif protocol == "trust-tunnel":
+            if not values.get("username") or not values.get("password"):
+                raise ValueError("username and password are required")
+            for key in ("h3", "ws"):
+                if values.get(key) not in {None, "true", "false"}:
+                    raise ValueError(f"{key} must be true or false")
+            if values.get("h3") == "true" and values.get("ws") == "true":
+                raise ValueError("h3 and ws cannot be enabled together")
+            if values.get("udp-relay") is not None:
+                raise ValueError("Trust Tunnel does not support udp-relay")
+            if values.get("max-streams") is not None:
+                max_streams = int(values["max-streams"])
+                if max_streams <= 0:
+                    raise ValueError("max-streams must be positive")
+
+        resources.policies.append(
+            SurgeOpaquePolicy(
+                record=record,
+                order=order,
+                source_kind=self.source_kind,
+            )
+        )
+
+    def _add_external_policy(
+        self,
+        record: SurgeProxyRecord,
+        resources: SurgeDocumentResources,
+        order: int,
+    ) -> None:
+        values = record.parameters.last_values
+        if not values.get("exec"):
+            raise ValueError("exec is required")
+        if not values.get("local-port"):
+            raise ValueError("local-port is required")
+        try:
+            local_port = int(values["local-port"])
+        except ValueError:
+            raise ValueError("local-port must be an integer") from None
+        if not 1 <= local_port <= 65535:
+            raise ValueError("local-port must be between 1 and 65535")
+        if values.get("udp-relay") not in {None, "true", "false"}:
+            raise ValueError("udp-relay must be true or false")
+        resources.external_policies.append(
+            SurgeExternalPolicy(
+                record=record,
+                order=order,
+                source_kind=self.source_kind,
+                authorized=True,
             )
         )
 

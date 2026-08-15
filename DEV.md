@@ -80,6 +80,19 @@ section 资源保留；多个 peer 会映射到 `WireguardNode.peers`，Surge �
 是否为空、以及模板中的策略名时，必须使用 `EmissionResult.emitted_policy_names`，不能只看
 `supported_nodes`。
 
+MASQUE 和 Trust Tunnel 当前同样作为 `SurgeOpaquePolicy` 保留有序 token，并在 parser 中
+校验确定性的必填、互斥和 UDP 约束；它们只允许 Surge -> Surge。provider 或全局 filter、
+provider rename 无法安全处理 opaque policy 时必须返回
+`conversion.opaque-policy-transform`，非 Surge 输出必须返回
+`conversion.unconsumed-source-resource`，不得静默忽略。
+
+External Proxy Program 使用独立的 `SurgeExternalPolicy`，不能进入普通 opaque 列表。默认
+拒绝所有来源；仅本地 `file` provider 显式设置 `allow_unsafe_external = true` 时允许，并且
+仍只能输出到 Surge。URL provider 禁止启用该开关，远程内容即使经过 age 解密仍按远程来源
+处理。被拒绝的 External record 必须在 parser 阶段从资源中移除，所以
+`allow_conversion_errors = true` 不能恢复它；issue 和日志不得包含 `exec`、`args` 或
+`addresses` 的值。
+
 Surge `h2-connect` 使用 `HttpNode.variant=HttpVariant.H2_CONNECT`，不得退化为普通
 HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge 目标无法表达这些
 字段时必须由 descriptor 返回 capability error。

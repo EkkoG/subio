@@ -18,6 +18,7 @@ from subio_v2.conversion import (
 )
 from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
+from subio_v2.parser.surge import SurgeParser
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.surge.resources import (
@@ -182,6 +183,22 @@ class WorkflowEngine:
                 if name in names:
                     raise ConfigError(f"Duplicate {section} name: {name}")
                 names.add(name)
+                if section == "provider":
+                    has_url = "url" in entry
+                    has_file = "file" in entry
+                    if has_url == has_file:
+                        raise ConfigError(
+                            f"Provider '{name}' must define exactly one of 'url' or 'file'"
+                        )
+                    allow_unsafe_external = entry.get("allow_unsafe_external", False)
+                    if not isinstance(allow_unsafe_external, bool):
+                        raise ConfigError(
+                            f"Provider '{name}' allow_unsafe_external must be a boolean"
+                        )
+                    if has_url and allow_unsafe_external:
+                        raise ConfigError(
+                            f"Provider '{name}' cannot enable allow_unsafe_external for a URL source"
+                        )
                 if section == "artifact" and not isinstance(
                     entry.get("allow_conversion_errors", False), bool
                 ):
@@ -242,7 +259,15 @@ class WorkflowEngine:
                 if not content:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
 
-                parser = ParserFactory.get_parser(p_type)
+                if p_type == "surge":
+                    parser = SurgeParser(
+                        source_kind="remote" if "url" in prov_conf else "local",
+                        allow_unsafe_external=prov_conf.get(
+                            "allow_unsafe_external", False
+                        ),
+                    )
+                else:
+                    parser = ParserFactory.get_parser(p_type)
                 if parser is None:
                     raise ProviderLoadError(
                         f"Unsupported provider type '{p_type}' for provider '{name}'"
@@ -264,10 +289,14 @@ class WorkflowEngine:
                     replace(issue, source=name) for issue in parse_result.issues
                 ]
                 self.provider_resources[name] = copy.deepcopy(parse_result.resources)
+                surge_resources = coerce_surge_resources(parse_result.resources)
 
                 # Apply Rename
                 rename_conf = prov_conf.get("rename")
                 if rename_conf:
+                    self.provider_issues[name].extend(
+                        self._opaque_transform_issues(surge_resources, name, "rename")
+                    )
                     processor = RenameProcessor(
                         prefix=rename_conf.get("add_prefix", ""),
                         replace=rename_conf.get("replace", []),
@@ -283,6 +312,9 @@ class WorkflowEngine:
                 # Apply provider-level filter (include/exclude, same structure as global [filters])
                 prov_filter_conf = prov_conf.get("filters")
                 if prov_filter_conf:
+                    self.provider_issues[name].extend(
+                        self._opaque_transform_issues(surge_resources, name, "filter")
+                    )
                     prov_filter = FilterProcessor(
                         include=prov_filter_conf.get("include"),
                         exclude=prov_filter_conf.get("exclude"),
@@ -293,6 +325,75 @@ class WorkflowEngine:
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
                 )
                 self.providers[name] = nodes
+
+    @staticmethod
+    def _opaque_transform_issues(
+        resources: SurgeDocumentResources,
+        provider_name: str,
+        transform: str,
+    ) -> list[ConversionIssue]:
+        issues: list[ConversionIssue] = []
+        for policy in [*resources.policies, *resources.external_policies]:
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.ERROR,
+                    node=policy.name,
+                    protocol=policy.record.type,
+                    source=provider_name,
+                    target="ir",
+                    field=f"resources.{transform}",
+                    message=(
+                        f"Surge document policy '{policy.name}' cannot be safely "
+                        f"processed by provider {transform}"
+                    ),
+                    stage="processor",
+                    code="conversion.opaque-policy-transform",
+                )
+            )
+        return issues
+
+    @staticmethod
+    def _non_surge_resource_issues(
+        resources: SurgeDocumentResources,
+        provider_name: str,
+        target: str,
+    ) -> list[ConversionIssue]:
+        issues: list[ConversionIssue] = []
+        for policy in resources.policies:
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.ERROR,
+                    node=policy.name,
+                    protocol=policy.record.type,
+                    source=provider_name,
+                    target=target,
+                    field="resources.policies",
+                    message=(
+                        f"Surge document policy '{policy.name}' cannot be represented "
+                        f"by {target}"
+                    ),
+                    stage="conversion",
+                    code="conversion.unconsumed-source-resource",
+                )
+            )
+        for policy in resources.external_policies:
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.ERROR,
+                    node=policy.name,
+                    protocol="external",
+                    source=provider_name,
+                    target=target,
+                    field="resources.external_policies",
+                    message=(
+                        f"Authorized local External policy '{policy.name}' is restricted "
+                        "to Surge output"
+                    ),
+                    stage="security",
+                    code="security.external-cross-platform",
+                )
+            )
+        return issues
 
     def _fetch_content(self, conf: Dict[str, Any]) -> str:
         content: str | None = None
@@ -508,6 +609,24 @@ class WorkflowEngine:
                 for prov_name in art_conf.get("providers", [])
                 for issue in self.provider_issues.get(prov_name, [])
             ]
+            for prov_name in art_conf.get("providers", []):
+                provider_resources = coerce_surge_resources(
+                    self.provider_resources.get(prov_name, {})
+                )
+                if global_filter:
+                    artifact_issues.extend(
+                        replace(issue, artifact=name, user=username)
+                        for issue in self._opaque_transform_issues(
+                            provider_resources, prov_name, "global-filter"
+                        )
+                    )
+                if a_type != "surge":
+                    artifact_issues.extend(
+                        replace(issue, artifact=name, user=username)
+                        for issue in self._non_surge_resource_issues(
+                            provider_resources, prov_name, a_type
+                        )
+                    )
             artifact_issues.extend(
                 replace(issue, artifact=name, user=username)
                 for issue in emission.issues
