@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from subio_v2.model.nodes import AnyTLSNode, Protocol
+from typing import Any
+
+from subio_v2.model.nodes import AnyTLSNode, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
@@ -42,6 +44,19 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
             emit_policy=EmitPolicy.NOT_NONE,
         ),
     )
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+        if not isinstance(node, AnyTLSNode) or node.reuse or platform == "surge":
+            return []
+        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
+
+        return [
+            CapabilityWarning(
+                level=WarningLevel.ERROR,
+                message=f"AnyTLS reuse=false cannot be represented by {platform}",
+                field="reuse",
+            )
+        ]
 
 
 register(AnyTLSDescriptor())

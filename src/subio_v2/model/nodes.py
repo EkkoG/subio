@@ -82,6 +82,13 @@ class Network(StrEnum):
     XHTTP = "xhttp"
 
 
+class HttpVariant(StrEnum):
+    AUTO = "auto"
+    HTTP = "http"
+    HTTPS = "https"
+    H2_CONNECT = "h2-connect"
+
+
 @dataclass
 class TransportSettings:
     network: Union[Network, str] = Network.TCP
@@ -226,6 +233,8 @@ class HttpNode(BaseNode):
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
     headers: Optional[Dict[str, str]] = None
+    variant: HttpVariant = HttpVariant.AUTO
+    max_streams: Optional[int] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
 
     def __post_init__(self):
@@ -262,6 +271,7 @@ class WireguardNode(BaseNode):
 class AnyTLSNode(BaseNode):
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
+    reuse: bool = True
     idle_session_check_interval: Optional[int] = None
     idle_session_timeout: Optional[int] = None
     min_idle_session: Optional[int] = None
@@ -318,6 +328,8 @@ class SSHNode(BaseNode):
     keystore_id: Optional[str] = None  # Reference to Keystore entry ID
     host_key: Optional[List[str]] = None
     host_key_algorithms: Optional[List[str]] = None
+    idle_timeout: Optional[int] = None
+    server_fingerprints: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.type != Protocol.SSH:

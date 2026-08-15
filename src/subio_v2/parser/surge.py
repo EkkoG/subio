@@ -11,6 +11,7 @@ from subio_v2.model.nodes import (
     TrojanNode,
     Socks5Node,
     HttpNode,
+    AnyTLSNode,
     SSHNode,
     SnellNode,
     TUICNode,
@@ -19,6 +20,7 @@ from subio_v2.model.nodes import (
     TLSSettings,
     TransportSettings,
     Network,
+    HttpVariant,
     ShadowTLSSettings,
     SurgePolicyOptions,
 )
@@ -77,7 +79,21 @@ _PROTOCOL_PARAMETERS = {
     "socks5-tls": {"username", "password", "udp-relay"},
     "http": {"username", "password"},
     "https": {"username", "password"},
-    "ssh": {"username", "password", "private-key"},
+    "h2-connect": {
+        "username",
+        "password",
+        "headers",
+        "max-streams",
+        "udp-relay",
+    },
+    "anytls": {"password", "reuse"},
+    "ssh": {
+        "username",
+        "password",
+        "private-key",
+        "idle-timeout",
+        "server-fingerprint",
+    },
     "snell": {
         "psk",
         "version",
@@ -116,6 +132,10 @@ _PROTOCOL_PARAMETERS = {
         "port-hopping-interval",
         "udp-relay",
     },
+}
+
+_MULTI_VALUE_PARAMETERS = {
+    "ssh": {"server-fingerprint"},
 }
 
 
@@ -391,7 +411,11 @@ class SurgeParser(BaseParser):
             preserved = [
                 (parameter.key, parameter.value)
                 for index, parameter in enumerate(record.parameters)
-                if parameter.key not in consumed or index != last_indexes[parameter.key]
+                if parameter.key not in _MULTI_VALUE_PARAMETERS.get(p_type, set())
+                and (
+                    parameter.key not in consumed
+                    or index != last_indexes[parameter.key]
+                )
             ]
             semantic_fields = [
                 key
@@ -413,6 +437,8 @@ class SurgeParser(BaseParser):
                 )
                 if key in kv_args
             ]
+            if p_type == "anytls" and kv_args.get("reuse") == "false":
+                semantic_fields.append("reuse")
             if preserved or semantic_fields:
                 node.source_extensions["surge"] = {
                     "parameters": preserved,
@@ -525,8 +551,8 @@ class SurgeParser(BaseParser):
                 )
                 return apply_common_options(node)
 
-            elif p_type in ["http", "https"]:
-                if p_type == "https":
+            elif p_type in ["http", "https", "h2-connect"]:
+                if p_type in {"https", "h2-connect"}:
                     tls.enabled = True
 
                 username = kv_args.get("username")
@@ -537,6 +563,14 @@ class SurgeParser(BaseParser):
                 if not password and len(pos_args) > 1:
                     password = pos_args[1]
 
+                headers = None
+                if kv_args.get("headers"):
+                    headers = {}
+                    for header in kv_args["headers"].split("|"):
+                        if ":" in header:
+                            key, value = header.split(":", 1)
+                            headers[key.strip()] = value.strip()
+
                 node = HttpNode(
                     name=name,
                     type=Protocol.HTTP,
@@ -544,8 +578,28 @@ class SurgeParser(BaseParser):
                     port=port,
                     username=username,
                     password=password,
+                    headers=headers,
+                    variant=HttpVariant(p_type),
+                    max_streams=get_int("max-streams"),
                     tls=tls,
-                    udp=False,
+                    udp=(
+                        get_bool("udp-relay", False)
+                        if p_type == "h2-connect"
+                        else False
+                    ),
+                )
+                return apply_common_options(node)
+
+            elif p_type == "anytls":
+                node = AnyTLSNode(
+                    name=name,
+                    type=Protocol.ANYTLS,
+                    server=server,
+                    port=port,
+                    password=kv_args.get("password", ""),
+                    reuse=get_bool("reuse", True),
+                    tls=build_tls(enabled=True),
+                    udp=True,
                 )
                 return apply_common_options(node)
 
@@ -570,6 +624,14 @@ class SurgeParser(BaseParser):
                     password=password,
                     private_key=private_key,
                     keystore_id=keystore_id,
+                    idle_timeout=get_int("idle-timeout"),
+                    server_fingerprints=[
+                        fingerprint
+                        for value in record.parameters.get_all("server-fingerprint")
+                        for fingerprint in value.split(",")
+                        if fingerprint
+                    ]
+                    or None,
                     udp=False,
                 )
                 return apply_common_options(node)

@@ -7,6 +7,8 @@ from subio_v2.conversion import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
     HttpNode,
+    AnyTLSNode,
+    HttpVariant,
     Hysteria2Node,
     Network,
     Node,
@@ -45,6 +47,7 @@ class SurgeEmitter(BaseEmitter):
         Protocol.SNELL: "_parts_snell",
         Protocol.TUIC: "_parts_tuic",
         Protocol.HYSTERIA2: "_parts_hysteria2",
+        Protocol.ANYTLS: "_parts_anytls",
     }
 
     def __init__(
@@ -303,12 +306,38 @@ class SurgeEmitter(BaseEmitter):
 
     def _parts_http(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, HttpNode)
-        proxy_type = "https" if (node.tls and node.tls.enabled) else "http"
+        if node.variant == HttpVariant.H2_CONNECT:
+            proxy_type = "h2-connect"
+        elif node.variant == HttpVariant.HTTP:
+            proxy_type = "http"
+        elif node.variant == HttpVariant.HTTPS:
+            proxy_type = "https"
+        else:
+            proxy_type = "https" if (node.tls and node.tls.enabled) else "http"
         config_parts = [proxy_type, self._server_str(node), str(node.port)]
         if node.username:
             config_parts.append(f"username={node.username}")
         if node.password:
             config_parts.append(f"password={node.password}")
+        if node.headers:
+            headers = "|".join(f"{key}:{value}" for key, value in node.headers.items())
+            config_parts.append(f"headers={headers}")
+        if node.max_streams is not None:
+            config_parts.append(f"max-streams={node.max_streams}")
+        if node.variant == HttpVariant.H2_CONNECT and node.udp:
+            config_parts.append("udp-relay=true")
+        return config_parts
+
+    def _parts_anytls(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, AnyTLSNode)
+        config_parts = [
+            "anytls",
+            self._server_str(node),
+            str(node.port),
+            f"password={node.password}",
+        ]
+        if not node.reuse:
+            config_parts.append("reuse=false")
         return config_parts
 
     def _parts_ssh(self, node: Node, node_keystore_map: dict[int, str]) -> list[str]:
@@ -323,6 +352,10 @@ class SurgeEmitter(BaseEmitter):
             config_parts.append(f"private-key={keystore_id}")
         elif node.private_key:
             config_parts.append(f"private-key={node.private_key}")
+        if node.idle_timeout is not None:
+            config_parts.append(f"idle-timeout={node.idle_timeout}")
+        for fingerprint in node.server_fingerprints or []:
+            config_parts.append(f"server-fingerprint={fingerprint}")
         return config_parts
 
     def _parts_snell(self, node: Node, _: dict[int, str]) -> list[str]:

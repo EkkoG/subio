@@ -93,6 +93,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "tuic",
             "hysteria2",
             "ssh",
+            "anytls",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
@@ -110,7 +111,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "features": {"udp", "tls"},
         },
         "http": {
-            "features": {"tls"},  # https
+            "features": {"tls", "h2-connect", "connect-udp"},
         },
         "socks5": {
             "features": {"tls", "udp"},  # socks5-tls
@@ -137,6 +138,9 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "ssh": {
             "auth_methods": {"password", "private_key"},
+        },
+        "anytls": {
+            "features": {"tls", "udp"},
         },
         # 全局特性
         "global_features": {

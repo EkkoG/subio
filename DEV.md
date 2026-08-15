@@ -72,6 +72,10 @@ Keystore、命名 section 和 Surge-only policy 统一由
 `src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
 检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message。
 
+Surge `h2-connect` 使用 `HttpNode.variant=HttpVariant.H2_CONNECT`，不得退化为普通
+HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge 目标无法表达这些
+字段时必须由 descriptor 返回 capability error。
+
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
 `ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。

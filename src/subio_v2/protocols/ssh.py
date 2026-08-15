@@ -4,7 +4,7 @@ from typing import Any
 
 from subio_v2.model.nodes import Node, Protocol, SSHNode
 from subio_v2.protocols import register
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
@@ -30,6 +30,19 @@ class SSHDescriptor(StructuredProtocolDescriptor):
             emit_policy=EmitPolicy.TRUTHY,
         ),
     )
+
+    def validate(self, node: Node) -> list[NodeValidationError]:
+        errors = super().validate(node)
+        if not isinstance(node, SSHNode):
+            return errors
+        if not (node.password or node.private_key or node.keystore_id):
+            errors.append(
+                NodeValidationError(
+                    "password",
+                    "SSH requires password or private key authentication",
+                )
+            )
+        return errors
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, SSHNode):
