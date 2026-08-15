@@ -3,7 +3,14 @@ from subio_v2.model.nodes import ShadowsocksNode, Protocol
 
 
 def make_node(name, users=None):
-    return ShadowsocksNode(name=name, type=Protocol.SHADOWSOCKS, server="s", port=1, password="p", users=users)
+    return ShadowsocksNode(
+        name=name,
+        type=Protocol.SHADOWSOCKS,
+        server="s",
+        port=1,
+        password="p",
+        users=users,
+    )
 
 
 def test_filter_processor_include_exclude_and_original_name(monkeypatch):
@@ -24,7 +31,20 @@ def test_filter_processor_include_exclude_and_original_name(monkeypatch):
 
 def test_rename_processor_prefix_suffix_and_replace():
     n = make_node("node-123")
-    rp = RenameProcessor(prefix="[P] ", suffix=" [S]", replace=[{"old": "123", "new": "X"}])
+    rp = RenameProcessor(
+        prefix="[P] ", suffix=" [S]", replace=[{"old": "123", "new": "X"}]
+    )
     out = rp.process([n])
     assert out[0].name == "[P] node-X [S]"
     assert out[0].original_name == "node-123"
+
+
+def test_rename_processor_updates_dialer_proxy_references():
+    base = make_node("base")
+    chained = make_node("chained")
+    chained.dialer_proxy = "base"
+
+    RenameProcessor(prefix="P-").process([base, chained])
+
+    assert base.name == "P-base"
+    assert chained.dialer_proxy == "P-base"

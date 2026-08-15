@@ -13,6 +13,13 @@ from typing import List, Any, Callable
 FilterFunc = Callable[[List[Any]], List[Any]]
 
 
+def _item_key(item: Any) -> tuple[Any, ...]:
+    """Use value identity for scalar template data and object identity for nodes."""
+    if isinstance(item, (str, int, float, bool, bytes, type(None))):
+        return ("value", type(item), item)
+    return ("object", id(item))
+
+
 def _get_name(item: Any) -> str:
     """获取项目名称"""
     if isinstance(item, str):
@@ -125,10 +132,18 @@ def union(*filters: FilterFunc) -> FilterFunc:
     def _filter(data: List[Any]) -> List[Any]:
         if not filters:
             return data
-        result = set()
+        selected: set[tuple[Any, ...]] = set()
         for f in filters:
-            result |= set(f(data))
-        return list(result)
+            selected.update(_item_key(item) for item in f(data))
+
+        result = []
+        emitted: set[tuple[Any, ...]] = set()
+        for item in data:
+            key = _item_key(item)
+            if key in selected and key not in emitted:
+                result.append(item)
+                emitted.add(key)
+        return result
 
     return _filter
 
@@ -143,10 +158,18 @@ def intersect(*filters: FilterFunc) -> FilterFunc:
     def _filter(data: List[Any]) -> List[Any]:
         if not filters:
             return data
-        result = set(filters[0](data))
+        selected = {_item_key(item) for item in filters[0](data)}
         for f in filters[1:]:
-            result &= set(f(data))
-        return list(result)
+            selected.intersection_update(_item_key(item) for item in f(data))
+
+        result = []
+        emitted: set[tuple[Any, ...]] = set()
+        for item in data:
+            key = _item_key(item)
+            if key in selected and key not in emitted:
+                result.append(item)
+                emitted.add(key)
+        return result
 
     return _filter
 
@@ -216,13 +239,22 @@ def combine(
     left_result = call_func(left_func, left_args)
     right_result = call_func(right_func, right_args)
 
-    s_left = set(left_result)
-    s_right = set(right_result)
+    left_keys = {_item_key(item) for item in left_result}
+    right_keys = {_item_key(item) for item in right_result}
 
     if relation:
-        return list(s_left & s_right)
+        selected = left_keys & right_keys
     else:
-        return list(s_left | s_right)
+        selected = left_keys | right_keys
+
+    result = []
+    emitted: set[tuple[Any, ...]] = set()
+    for item in data:
+        key = _item_key(item)
+        if key in selected and key not in emitted:
+            result.append(item)
+            emitted.add(key)
+    return result
 
 
 class FilterCollection:

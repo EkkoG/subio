@@ -43,7 +43,9 @@ def _vmess(name="vm", server="vm.example.com", port=443):
         uuid="11111111-1111-1111-1111-111111111111",
         alter_id=0,
         cipher="auto",
-        transport=TransportSettings(network=Network.WS, path="/ray", headers={"Host": "vm.example.com"}),
+        transport=TransportSettings(
+            network=Network.WS, path="/ray", headers={"Host": "vm.example.com"}
+        ),
         tls=TLSSettings(enabled=True, server_name="vm.example.com"),
     )
 
@@ -140,8 +142,10 @@ def test_build_ss_url_sip002():
     assert url.startswith("ss://")
     head, _, frag = url.partition("#")
     assert frag == urllib.parse.quote(node.name, safe="")
-    userinfo_b64 = head[len("ss://"): head.index("@")]
-    decoded = base64.urlsafe_b64decode(userinfo_b64 + "=" * (-len(userinfo_b64) % 4)).decode()
+    userinfo_b64 = head[len("ss://") : head.index("@")]
+    decoded = base64.urlsafe_b64decode(
+        userinfo_b64 + "=" * (-len(userinfo_b64) % 4)
+    ).decode()
     assert decoded == "aes-256-gcm:p@ss"
     assert "hk.example.com:8388" in head
 
@@ -150,7 +154,7 @@ def test_build_vmess_url_base64_json():
     node = _vmess()
     url = link.build_vmess_url(node)
     assert url.startswith("vmess://")
-    payload = url[len("vmess://"):]
+    payload = url[len("vmess://") :]
     data = json.loads(base64.b64decode(payload).decode())
     assert data["ps"] == node.name
     assert data["add"] == node.server
@@ -164,7 +168,9 @@ def test_build_vmess_url_base64_json():
 
 def test_build_vless_url_with_flow_and_tls():
     url = link.build_vless_url(_vless())
-    assert url.startswith("vless://22222222-2222-2222-2222-222222222222@vl.example.com:443?")
+    assert url.startswith(
+        "vless://22222222-2222-2222-2222-222222222222@vl.example.com:443?"
+    )
     qs = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     assert qs["security"] == ["tls"]
     assert qs["flow"] == ["xtls-rprx-vision"]
@@ -256,13 +262,32 @@ def test_dae_emit_dialer_chain_appends_arrow():
     assert "ss://" in chained_line
 
 
-def test_dae_emit_dialer_chain_unknown_target_falls_back():
+def test_dae_emit_dialer_chain_unknown_target_fails():
     chained = _vmess("orphan")
     chained.dialer_proxy = "missing"
-    out = DaeEmitter().emit([chained])
-    lines = out.splitlines()
-    assert len(lines) == 1
-    assert " -> " not in lines[0]
+    with pytest.raises(ValueError, match="unknown dialer_proxy"):
+        DaeEmitter().emit([chained])
+
+
+def test_dae_rejects_duplicate_node_names():
+    with pytest.raises(ValueError, match="Duplicate node name"):
+        DaeEmitter().emit([_ss("same"), _vmess("same")])
+
+
+def test_dae_resolves_full_dialer_chain_and_rejects_cycles():
+    base = _ss("base")
+    middle = _vmess("middle")
+    leaf = _trojan("leaf")
+    middle.dialer_proxy = "base"
+    leaf.dialer_proxy = "middle"
+
+    out = DaeEmitter().emit([base, middle, leaf])
+    leaf_line = next(line for line in out.splitlines() if line.startswith("'leaf':"))
+    assert leaf_line.count(" -> ") == 2
+
+    base.dialer_proxy = "leaf"
+    with pytest.raises(ValueError, match="Cyclic dae dialer chain"):
+        DaeEmitter().emit([base, middle, leaf])
 
 
 def test_dae_emit_filters_unsupported_protocols():

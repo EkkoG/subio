@@ -34,6 +34,7 @@ class RenameProcessor(Processor):
         self.replace = replace or []
 
     def process(self, nodes: List[Node]) -> List[Node]:
+        renamed: Dict[str, str] = {}
         for node in nodes:
             # Save original name before any modifications (only if not already saved)
             if node.original_name is None:
@@ -49,7 +50,13 @@ class RenameProcessor(Processor):
                     name = name.replace(old, new)
 
             # Prefix/Suffix
+            old_name = node.name
             node.name = f"{self.prefix}{name}{self.suffix}"
+            renamed[old_name] = node.name
+
+        for node in nodes:
+            if node.dialer_proxy in renamed:
+                node.dialer_proxy = renamed[node.dialer_proxy]
 
         return nodes
 
@@ -58,7 +65,7 @@ class DialerProxyProcessor(Processor):
     def __init__(self, dialer_proxy: str):
         """
         Processor to set dialer_proxy (underlying-proxy) for all nodes in a provider.
-        
+
         Args:
             dialer_proxy: The name of the proxy to use as underlying proxy
         """

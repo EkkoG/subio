@@ -314,6 +314,7 @@ class TestUnion:
         assert len(result) == 2
         assert "香港-01" in result
         assert "日本-01" in result
+        assert result == ["香港-01", "日本-01"]
 
     def test_union_multiple(self):
         """并集多个过滤器"""
@@ -411,6 +412,7 @@ class TestNewAPIWithMockNodes:
         names = [n.name for n in result]
         assert "香港-01" in names
         assert "日本-01" in names
+        assert names == ["香港-01", "日本-01"]
 
     def test_intersect_nodes(self):
         nodes = [
