@@ -43,6 +43,7 @@ class SnellDescriptor(StructuredProtocolDescriptor):
     fields = (
         scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field("version", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("reuse", emit_policy=EmitPolicy.NOT_NONE),
         field_group(
             consumed_keys=("obfs-opts",),
             node_attrs=("obfs", "obfs_host", "obfs_opts"),
@@ -58,6 +59,7 @@ class SnellDescriptor(StructuredProtocolDescriptor):
         from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
 
         warnings: list[Any] = []
+        version = node.version or 1
         if node.version:
             supported_versions = proto_caps.get("versions", set())
             if supported_versions and node.version not in supported_versions:
@@ -72,7 +74,6 @@ class SnellDescriptor(StructuredProtocolDescriptor):
                     )
                 )
         if node.obfs:
-            version = node.version or 1
             by_version = proto_caps.get("obfs_modes_by_version", {})
             supported_obfs = by_version.get(
                 version, proto_caps.get("obfs_modes", set())
@@ -95,13 +96,33 @@ class SnellDescriptor(StructuredProtocolDescriptor):
                         field="obfs",
                     )
                 )
-        version = node.version or 1
+        if node.reuse is not None:
+            reuse_versions = proto_caps.get("reuse_versions", set())
+            if reuse_versions and version not in reuse_versions:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            f"Snell version {version} does not support reuse on {platform}"
+                        ),
+                        field="reuse",
+                    )
+                )
         if node.udp_port is not None and version < 3:
             warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.ERROR,
                     message=f"Snell version {version} does not support udp-port",
                     field="udp_port",
+                )
+            )
+        if node.udp_port is not None and platform != "surge":
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"Snell udp-port cannot be represented by {platform}",
+                    field="udp_port",
+                    code="conversion.unconsumed-source-field",
                 )
             )
         if node.mode and version != 6:

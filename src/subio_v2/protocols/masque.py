@@ -43,6 +43,7 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
     clash_type = "masque"
     node_class = MasqueNode
     fields = (
+        scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("private-key", "private_key", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("public-key", "public_key", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("ip", "interface_ip", emit_policy=EmitPolicy.NOT_NONE),

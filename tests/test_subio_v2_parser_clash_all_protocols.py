@@ -5,6 +5,7 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import (
     DirectNode,
     MasqueNode,
+    MieruNode,
     Protocol,
     TailscaleNode,
     TrustTunnelNode,
@@ -60,6 +61,7 @@ proxies:
     assert Protocol.DIRECT in types
     by_node_name = {node.name: node for node in nodes}
     assert isinstance(by_node_name["mq1"], MasqueNode)
+    assert isinstance(by_node_name["mr1"], MieruNode)
     assert isinstance(by_node_name["tt1"], TrustTunnelNode)
     assert isinstance(by_node_name["ts1"], TailscaleNode)
     assert isinstance(by_node_name["dr1"], DirectNode)

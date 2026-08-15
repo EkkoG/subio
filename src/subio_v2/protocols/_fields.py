@@ -109,6 +109,7 @@ TLS_KEYS = (
     "skip-cert-verify",
     "fingerprint",
     "client-fingerprint",
+    "name-cert-verify",
     "reality-opts",
     "ech-opts",
     "certificate",

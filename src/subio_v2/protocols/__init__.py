@@ -35,6 +35,7 @@ def _bootstrap() -> None:
         hysteria,
         hysteria2,
         masque,
+        mieru,
         passthrough,
         shadowsocks,
         shadowsocksr,

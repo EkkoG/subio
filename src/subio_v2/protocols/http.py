@@ -23,6 +23,7 @@ class HttpDescriptor(StructuredProtocolDescriptor):
                 "skip-cert-verify",
                 "fingerprint",
                 "client-fingerprint",
+                "name-cert-verify",
                 "alpn",
                 "certificate",
                 "private-key",
@@ -74,10 +75,12 @@ class HttpDescriptor(StructuredProtocolDescriptor):
             unsupported.append("skip-cert-verify")
         if node.tls.alpn:
             unsupported.append("alpn")
-        if node.tls.fingerprint:
+        if node.tls.certificate_sha256:
             unsupported.append("fingerprint")
         if node.tls.client_fingerprint:
             unsupported.append("client-fingerprint")
+        if node.tls.verify_name:
+            unsupported.append("name-cert-verify")
         if node.tls.reality_opts:
             unsupported.append("reality-opts")
         if node.tls.ech_opts:

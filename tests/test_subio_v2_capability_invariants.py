@@ -262,7 +262,7 @@ def test_vless_reality_contract_uses_client_fingerprint():
         uuid="u",
         tls=TLSSettings(
             enabled=True,
-            fingerprint="AA:BB",
+            certificate_sha256="AA:BB",
             client_fingerprint="chrome",
             reality_opts={"public-key": "pk", "short-id": "sid"},
         ),

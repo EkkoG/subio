@@ -28,6 +28,7 @@ class TUICDescriptor(StructuredProtocolDescriptor):
                 "skip-cert-verify",
                 "fingerprint",
                 "client-fingerprint",
+                "name-cert-verify",
                 "alpn",
                 "certificate",
                 "private-key",

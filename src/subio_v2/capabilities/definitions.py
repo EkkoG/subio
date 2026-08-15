@@ -109,6 +109,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "snell": {
             "versions": {1, 2, 3, 4, 5, 6},
+            "reuse_versions": {4, 5, 6},
             "obfs_modes": {"http", "tls"},
             "obfs_modes_by_version": {
                 1: {"http", "tls"},
@@ -237,12 +238,28 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "snell": {
             "versions": {1, 2, 3, 4, 5},
+            "reuse_versions": {4, 5},
             "obfs_modes": {"http", "tls"},
         },
         "shadowsocksr": {
             "features": set(),
         },
-        "mieru": {"features": set()},
+        "mieru": {
+            "transports": {"TCP", "UDP"},
+            "multiplexing": {
+                "MULTIPLEXING_DEFAULT",
+                "MULTIPLEXING_OFF",
+                "MULTIPLEXING_LOW",
+                "MULTIPLEXING_MIDDLE",
+                "MULTIPLEXING_HIGH",
+            },
+            "handshake_modes": {
+                "HANDSHAKE_DEFAULT",
+                "HANDSHAKE_STANDARD",
+                "HANDSHAKE_NO_WAIT",
+            },
+            "features": {"udp", "smux"},
+        },
         "sudoku": {"features": set()},
         "masque": {
             "modes": {"connect-ip", "h3-l4proxy"},
@@ -348,6 +365,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "snell": {
             "versions": {3, 4},
+            "reuse_versions": {4},
             "obfs_modes": {"http", "tls"},
         },
         "wireguard": {

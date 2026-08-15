@@ -820,10 +820,9 @@ class SurgeEmitter(BaseEmitter):
                 config_parts.append(f"sni={tls.server_name}")
             if tls.verify_name:
                 config_parts.append(f"server-cert-verify-name={tls.verify_name}")
-            certificate_sha256 = tls.certificate_sha256 or tls.fingerprint
-            if certificate_sha256:
+            if tls.certificate_sha256:
                 config_parts.append(
-                    f"server-cert-fingerprint-sha256={certificate_sha256}"
+                    f"server-cert-fingerprint-sha256={tls.certificate_sha256}"
                 )
             if tls.alpn:
                 alpn_str = (

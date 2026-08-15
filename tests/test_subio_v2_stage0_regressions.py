@@ -175,10 +175,6 @@ def test_mihomo_unknown_extra_is_not_emitted_to_stash():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 5: Mihomo fingerprint still uses the ambiguous TLS field",
-)
 def test_mihomo_tls_fingerprint_maps_to_server_certificate_sha256():
     node = ClashParser().parse_result(
         {
@@ -191,6 +187,7 @@ def test_mihomo_tls_fingerprint_maps_to_server_certificate_sha256():
                     "password": "secret",
                     "fingerprint": CERT_SHA256,
                     "client-fingerprint": "chrome",
+                    "name-cert-verify": "verify.example.com",
                 }
             ]
         }
@@ -198,12 +195,16 @@ def test_mihomo_tls_fingerprint_maps_to_server_certificate_sha256():
 
     assert node.tls.certificate_sha256 == CERT_SHA256
     assert node.tls.client_fingerprint == "chrome"
+    assert node.tls.verify_name == "verify.example.com"
+
+    proxy = ClashEmitter(platform="clash-meta").emit_result([node]).content[
+        "proxies"
+    ][0]
+    assert proxy["fingerprint"] == CERT_SHA256
+    assert proxy["client-fingerprint"] == "chrome"
+    assert proxy["name-cert-verify"] == "verify.example.com"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 5: Mihomo disable-reuse is not mapped to positive reuse semantics",
-)
 def test_mihomo_anytls_disable_reuse_converts_to_surge_reuse_false():
     node = ClashParser().parse_result(
         {
@@ -226,12 +227,12 @@ def test_mihomo_anytls_disable_reuse_converts_to_surge_reuse_false():
     assert "disable-reuse" not in node.extra
     assert emission.errors == []
     assert "reuse=false" in emission.content
+    mihomo_proxy = ClashEmitter(platform="clash-meta").emit_result([node]).content[
+        "proxies"
+    ][0]
+    assert mihomo_proxy["disable-reuse"] is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 5: Mihomo MASQUE uri is preserved only as raw extra",
-)
 def test_mihomo_masque_uri_enters_shared_semantic_ir():
     connect_uri = "https://masque.example.com/.well-known/masque"
     node = ClashParser().parse_result(
@@ -253,6 +254,10 @@ def test_mihomo_masque_uri_enters_shared_semantic_ir():
 
     assert getattr(node, "connect_uri", None) == connect_uri
     assert "uri" not in node.extra
+    proxy = ClashEmitter(platform="clash-meta").emit_result([node]).content[
+        "proxies"
+    ][0]
+    assert proxy["uri"] == connect_uri
 
 
 @pytest.mark.xfail(

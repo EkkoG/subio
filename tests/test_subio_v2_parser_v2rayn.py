@@ -99,7 +99,7 @@ def test_vless_reality_grpc_codec_roundtrip_preserves_semantics():
     assert node.transport.network == Network.GRPC
     assert node.transport.grpc_service_name == "svc"
     assert node.tls.client_fingerprint == "chrome"
-    assert node.tls.fingerprint is None
+    assert node.tls.certificate_sha256 is None
     assert node.tls.reality_opts == {"public-key": "public", "short-id": "short"}
 
     rebuilt = urllib.parse.urlparse(link.build_vless_url(node))

@@ -1,11 +1,27 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 from subio_v2.model.nodes import AnyTLSNode, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
-from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
+from subio_v2.protocols._fields import (
+    EmitPolicy,
+    field_group,
+    scalar_field,
+    tls_group,
+)
+
+
+def _parse_reuse(data: Mapping[str, Any]) -> dict[str, Any]:
+    return {"reuse": not bool(data.get("disable-reuse", False))}
+
+
+def _emit_reuse(out: MutableMapping[str, Any], node: Node) -> None:
+    assert isinstance(node, AnyTLSNode)
+    if not node.reuse:
+        out["disable-reuse"] = True
 
 
 class AnyTLSDescriptor(StructuredProtocolDescriptor):
@@ -22,6 +38,7 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
                 "skip-cert-verify",
                 "fingerprint",
                 "client-fingerprint",
+                "name-cert-verify",
                 "alpn",
                 "certificate",
                 "private-key",
@@ -43,10 +60,20 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
             "min_idle_session",
             emit_policy=EmitPolicy.NOT_NONE,
         ),
+        field_group(
+            consumed_keys=("disable-reuse",),
+            node_attrs=("reuse",),
+            parse_kwargs=_parse_reuse,
+            emit_into=_emit_reuse,
+        ),
     )
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
-        if not isinstance(node, AnyTLSNode) or node.reuse or platform == "surge":
+        if (
+            not isinstance(node, AnyTLSNode)
+            or node.reuse
+            or platform in {"clash-meta", "surge"}
+        ):
             return []
         from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
 

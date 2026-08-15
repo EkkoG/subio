@@ -22,6 +22,7 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
                 "skip-cert-verify",
                 "fingerprint",
                 "client-fingerprint",
+                "name-cert-verify",
                 "alpn",
                 "certificate",
                 "private-key",

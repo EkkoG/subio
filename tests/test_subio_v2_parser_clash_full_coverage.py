@@ -2,6 +2,9 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol, Network
 
 
+CERT_SHA256 = ":".join(["AA"] * 32)
+
+
 def test_clash_parser_additional_fields_full():
     yaml_text = """
 proxies:
@@ -36,7 +39,7 @@ proxies:
     grpc-opts: {grpc-service-name: svc}
     tls: true
     sni: vhost
-    fingerprint: firefox
+    fingerprint: __CERT_SHA256__
     client-fingerprint: randomized
   - name: ss-basic
     type: ss
@@ -98,7 +101,7 @@ proxies:
     private-key-passphrase: pass
     host-key: ["algo1","algo2"]
     host-key-algorithms: ["rsa","ed25519"]
-"""
+""".replace("__CERT_SHA256__", CERT_SHA256)
     nodes = ClashParser().parse(yaml_text)
     assert len(nodes) == 10
     vm = nodes[0]

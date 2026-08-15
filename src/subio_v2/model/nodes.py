@@ -40,7 +40,6 @@ class TLSSettings:
     server_name: Optional[str] = None  # sni
     alpn: Optional[List[str]] = None
     skip_cert_verify: bool = False
-    fingerprint: Optional[str] = None  # chrome, firefox, randomize...
     client_fingerprint: Optional[str] = None  # utls fingerprint
     reality_opts: Optional[Dict[str, str]] = None  # public-key, short-id
     ech_opts: Optional[Dict[str, Any]] = None  # Hysteria2 ECH
@@ -97,6 +96,25 @@ class MasqueMode(StrEnum):
     FORWARD_PROXY = "forward-proxy"
     CONNECT_IP = "connect-ip"
     H3_L4_PROXY = "h3-l4proxy"
+
+
+class MieruTransport(StrEnum):
+    TCP = "TCP"
+    UDP = "UDP"
+
+
+class MieruMultiplexing(StrEnum):
+    DEFAULT = "MULTIPLEXING_DEFAULT"
+    OFF = "MULTIPLEXING_OFF"
+    LOW = "MULTIPLEXING_LOW"
+    MIDDLE = "MULTIPLEXING_MIDDLE"
+    HIGH = "MULTIPLEXING_HIGH"
+
+
+class MieruHandshakeMode(StrEnum):
+    DEFAULT = "HANDSHAKE_DEFAULT"
+    STANDARD = "HANDSHAKE_STANDARD"
+    NO_WAIT = "HANDSHAKE_NO_WAIT"
 
 
 class RejectMode(StrEnum):
@@ -324,6 +342,7 @@ class TailscaleNode(BaseNode):
 class MasqueNode(BaseNode):
     mode: MasqueMode = MasqueMode.FORWARD_PROXY
     transport: str = "h3"
+    connect_uri: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
     private_key: Optional[str] = field(default=None, repr=False)
@@ -477,6 +496,36 @@ class SnellNode(BaseNode):
 
 
 @dataclass
+class MieruNode(BaseNode):
+    port_range: Optional[str] = None
+    transport: Optional[MieruTransport] = None
+    username: str = ""
+    password: str = field(default="", repr=False)
+    multiplexing: Optional[MieruMultiplexing] = None
+    handshake_mode: Optional[MieruHandshakeMode] = None
+    traffic_pattern: Optional[str] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.MIERU:
+            self.type = Protocol.MIERU
+        if self.port_range is not None:
+            self.port_range = str(self.port_range)
+        if self.transport is not None and not isinstance(
+            self.transport, MieruTransport
+        ):
+            self.transport = MieruTransport(self.transport)
+        if self.multiplexing is not None and not isinstance(
+            self.multiplexing, MieruMultiplexing
+        ):
+            self.multiplexing = MieruMultiplexing(self.multiplexing)
+        if self.handshake_mode is not None and not isinstance(
+            self.handshake_mode, MieruHandshakeMode
+        ):
+            self.handshake_mode = MieruHandshakeMode(self.handshake_mode)
+
+
+@dataclass
 class TUICNode(BaseNode):
     token: Optional[str] = field(default=None, repr=False)  # TUIC v4 uses token
     password: Optional[str] = field(default=None, repr=False)  # TUIC v5 password
@@ -528,6 +577,7 @@ Node = Union[
     Hysteria2Node,
     SSHNode,
     SnellNode,
+    MieruNode,
     TUICNode,
     ClashPassthroughNode,
     NativeNode,

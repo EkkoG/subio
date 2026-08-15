@@ -76,8 +76,9 @@ def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSett
         server_name=data.get("servername") or data.get("sni"),
         alpn=data.get("alpn"),
         skip_cert_verify=bool(data.get("skip-cert-verify", False)),
-        fingerprint=data.get("fingerprint"),
+        certificate_sha256=data.get("fingerprint"),
         client_fingerprint=data.get("client-fingerprint"),
+        verify_name=data.get("name-cert-verify"),
         reality_opts=data.get("reality-opts"),
         ech_opts=ech,
         certificate=data.get("certificate"),
@@ -212,10 +213,12 @@ def emit_tls(base: Dict[str, Any], tls: Optional[TLSSettings]) -> None:
             base["sni"] = tls.server_name
     if tls.skip_cert_verify:
         base["skip-cert-verify"] = True
-    if tls.fingerprint:
-        base["fingerprint"] = tls.fingerprint
+    if tls.certificate_sha256:
+        base["fingerprint"] = tls.certificate_sha256
     if tls.client_fingerprint:
         base["client-fingerprint"] = tls.client_fingerprint
+    if tls.verify_name:
+        base["name-cert-verify"] = tls.verify_name
     if tls.alpn:
         base["alpn"] = tls.alpn
     if tls.reality_opts:

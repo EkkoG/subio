@@ -34,6 +34,7 @@ class HysteriaDescriptor(StructuredProtocolDescriptor):
                 "sni",
                 "skip-cert-verify",
                 "fingerprint",
+                "name-cert-verify",
                 "certificate",
                 "private-key",
                 "alpn",

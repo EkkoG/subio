@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from subio_v2.model.nodes import Node, Protocol, TrustTunnelNode
 from subio_v2.protocols import register
@@ -49,19 +49,6 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
         scalar_field("max-streams", "max_streams", emit_policy=EmitPolicy.NOT_NONE),
         smux_group(),
     )
-
-    def after_parse(self, node: Node, data: Dict[str, Any]) -> Node:
-        assert isinstance(node, TrustTunnelNode)
-        node.tls.verify_name = data.get("name-cert-verify")
-        node.tls.certificate_sha256 = node.tls.fingerprint
-        return node
-
-    def after_emit(self, out: Dict[str, Any], node: Node) -> None:
-        assert isinstance(node, TrustTunnelNode)
-        if node.tls.verify_name:
-            out["name-cert-verify"] = node.tls.verify_name
-        if node.tls.certificate_sha256 and not node.tls.fingerprint:
-            out["fingerprint"] = node.tls.certificate_sha256
 
     def validate(self, node: Node) -> list[NodeValidationError]:
         errors = super().validate(node)

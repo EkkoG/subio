@@ -2,6 +2,9 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol, Network
 
 
+CERT_SHA256 = ":".join(["AA"] * 32)
+
+
 def test_clash_parser_all_supported_types_comprehensive():
     yaml_text = """
 proxies:
@@ -62,7 +65,7 @@ proxies:
     server: s8
     port: 800
     password: apw
-    fingerprint: chrome
+    fingerprint: __CERT_SHA256__
     idle-session-check-interval: 10
     idle-session-timeout: 30
     min-idle-session: 2
@@ -83,7 +86,7 @@ proxies:
     port: 22
     username: root
     password: rpw
-"""
+""".replace("__CERT_SHA256__", CERT_SHA256)
     nodes = ClashParser().parse(yaml_text)
     names = [n.name for n in nodes]
     assert names == [

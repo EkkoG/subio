@@ -2,6 +2,9 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.model.nodes import Protocol, Network
 
 
+CERT_SHA256 = ":".join(["AA"] * 32)
+
+
 def test_vmess_transports_ws_h2_http_grpc_and_smux_tls_fields():
     yaml_text = """
 proxies:
@@ -17,7 +20,7 @@ proxies:
     tls: true
     sni: host
     alpn: ["h2","http/1.1"]
-    fingerprint: chrome
+    fingerprint: __CERT_SHA256__
     client-fingerprint: randomized
     smux:
       enabled: true
@@ -55,7 +58,7 @@ proxies:
     network: grpc
     grpc-opts:
       grpc-service-name: svc
-"""
+""".replace("__CERT_SHA256__", CERT_SHA256)
     nodes = ClashParser().parse(yaml_text)
     vm_ws, vm_h2, vm_http, vm_grpc = nodes
     # WS
@@ -64,7 +67,7 @@ proxies:
     assert vm_ws.tls.enabled and vm_ws.tls.server_name == "host"
     assert vm_ws.tls.alpn == ["h2", "http/1.1"]
     assert (
-        vm_ws.tls.fingerprint == "chrome"
+        vm_ws.tls.certificate_sha256 == CERT_SHA256
         and vm_ws.tls.client_fingerprint == "randomized"
     )
     assert vm_ws.smux.enabled and vm_ws.smux.max_connections == 8 and vm_ws.smux.padding
