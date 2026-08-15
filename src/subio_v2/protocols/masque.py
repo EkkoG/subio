@@ -138,12 +138,14 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
             return []
         from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
 
-        supported = {
+        supported_modes = {
             "surge": {MasqueMode.FORWARD_PROXY},
             "clash-meta": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
+            "stash": {MasqueMode.CONNECT_IP},
         }.get(platform)
-        if supported is not None and node.mode not in supported:
-            return [
+        warnings: list[Any] = []
+        if supported_modes is not None and node.mode not in supported_modes:
+            warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.ERROR,
                     message=(
@@ -152,8 +154,48 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
                     field="mode",
                     code="conversion.unsupported-protocol-variant",
                 )
-            ]
-        return []
+            )
+            return warnings
+
+        supported_transports = {
+            "surge": {"h3"},
+            "stash": {"h2", "h3"},
+        }.get(platform)
+        if (
+            supported_transports is not None
+            and node.transport not in supported_transports
+        ):
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=(
+                        f"MASQUE transport '{node.transport}' is not supported by "
+                        f"{platform}"
+                    ),
+                    field="transport",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+
+        if platform == "stash":
+            for field, value in (
+                ("remote_dns_resolve", node.remote_dns_resolve),
+                ("congestion_controller", node.congestion_controller),
+                ("cwnd", node.cwnd),
+                ("bbr_profile", node.bbr_profile),
+                ("handshake_timeout", node.handshake_timeout),
+                ("smux", node.smux.enabled),
+            ):
+                if value is not None and value is not False:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.WARNING,
+                            message=f"MASQUE field '{field}' is Mihomo-only",
+                            field=field,
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
+        return warnings
 
 
 register(MasqueDescriptor())

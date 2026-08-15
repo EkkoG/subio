@@ -16,6 +16,7 @@ _INPUT_ALIASES: dict[str, dict[str, str]] = {
         "down-speed": "down",
     },
     Protocol.WIREGUARD.value: {"keepalive": "persistent-keepalive"},
+    Protocol.MASQUE.value: {"connect-uri": "uri"},
 }
 
 _OUTPUT_ALIASES = {
@@ -167,6 +168,50 @@ _PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
             "interface-name",
         }
     ),
+    Protocol.TAILSCALE: frozenset(
+        {
+            "name",
+            "type",
+            "auth-key",
+            "hostname",
+            "control-url",
+            "ephemeral",
+            "exit-node",
+        }
+    ),
+    Protocol.MASQUE: frozenset(
+        {
+            "name",
+            "type",
+            "server",
+            "port",
+            "private-key",
+            "public-key",
+            "ip",
+            "ipv6",
+            "dns",
+            "network",
+            "sni",
+            "connect-uri",
+            "mtu",
+            "keepalive",
+        }
+    ),
+    Protocol.TRUSTTUNNEL: frozenset(
+        {
+            "name",
+            "type",
+            "server",
+            "port",
+            "username",
+            "password",
+            "quic",
+            "sni",
+            "alpn",
+            "skip-cert-verify",
+            "server-cert-fingerprint",
+        }
+    ),
 }
 
 _PLUGIN_FIELDS = {
@@ -210,6 +255,8 @@ def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
     _move_aliases(normalized, _INPUT_ALIASES.get(protocol, {}), dialect="Stash")
     if protocol == Protocol.TROJAN.value:
         normalized.setdefault("tls", True)
+    if protocol == Protocol.TRUSTTUNNEL.value:
+        normalized.setdefault("udp", False)
     if protocol == Protocol.MIERU.value and "transport" in normalized:
         normalized["transport"] = str(normalized["transport"]).upper()
     if protocol == Protocol.TUIC.value and "version" in normalized:
@@ -250,6 +297,9 @@ def post_stash_emit(
 
     if node.type == Protocol.MIERU and "transport" in output:
         output["transport"] = str(output["transport"]).lower()
+
+    if node.type == Protocol.MASQUE and node.transport == "h3":
+        output.setdefault("network", "h3")
 
     if node.type == Protocol.HYSTERIA:
         for source, target in (("up", "up-speed"), ("down", "down-speed")):
@@ -293,8 +343,22 @@ def post_stash_emit(
         allowed.update(node.extra)
     for key in tuple(output):
         if key not in allowed:
+            lossless_default = (
+                node.type == Protocol.TAILSCALE
+                and output[key] is False
+                and key
+                in {"udp", "accept-routes", "exit-node-allow-lan-access"}
+            ) or (
+                node.type == Protocol.MASQUE
+                and output[key] is False
+                and key in {"udp", "remote-dns-resolve"}
+            ) or (
+                node.type == Protocol.TRUSTTUNNEL
+                and key == "udp"
+                and output[key] is False
+            )
             output.pop(key)
-            if not (
+            if not lossless_default and not (
                 key == "udp"
                 and node.type
                 in {Protocol.SSH, Protocol.DIRECT, Protocol.MIERU, Protocol.JUICITY}

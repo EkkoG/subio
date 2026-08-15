@@ -135,6 +135,58 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
                             code="conversion.unconsumed-source-field",
                         )
                     )
+        elif platform == "stash":
+            for field, value in (
+                ("headers", node.headers),
+                ("websocket", node.websocket),
+            ):
+                if value:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.ERROR,
+                            message=f"Trust Tunnel field '{field}' is Surge-only",
+                            field=field,
+                            code="conversion.unsupported-protocol-variant",
+                        )
+                    )
+            for field, value in (
+                ("health_check", node.health_check),
+                ("congestion_controller", node.congestion_controller),
+                ("cwnd", node.cwnd),
+                ("bbr_profile", node.bbr_profile),
+                ("max_connections", node.max_connections),
+                ("min_streams", node.min_streams),
+                ("max_streams", node.max_streams),
+                ("client_fingerprint", node.tls.client_fingerprint),
+                ("verify_name", node.tls.verify_name),
+                ("smux", node.smux.enabled),
+            ):
+                if value is not None and value is not False:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.WARNING,
+                            message=f"Trust Tunnel field '{field}' is Mihomo-only",
+                            field=field,
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
+            for field, value in (
+                ("ech_opts", node.tls.ech_opts),
+                ("certificate", node.tls.certificate),
+                ("private_key", node.tls.private_key),
+            ):
+                if value:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.ERROR,
+                            message=(
+                                f"Trust Tunnel TLS field '{field}' cannot be "
+                                "represented by Stash"
+                            ),
+                            field=f"tls.{field}",
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
         return warnings
 
 

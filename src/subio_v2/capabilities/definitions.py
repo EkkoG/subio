@@ -370,6 +370,9 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "direct",
             "mieru",
             "juicity",
+            "tailscale",
+            "masque",
+            "trusttunnel",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_STASH,
@@ -455,6 +458,18 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "juicity": {
             "features": {"udp", "tls"},
+        },
+        "tailscale": {
+            "features": {"interactive-login", "automatic-exit-node"},
+        },
+        "masque": {
+            "modes": {"connect-ip"},
+            "transports": {"h2", "h3"},
+            "features": {"tls"},
+        },
+        "trusttunnel": {
+            "transports": {"h2", "h3"},
+            "features": {"tls"},
         },
         "global_features": {
             "udp_relay": True,

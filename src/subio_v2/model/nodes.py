@@ -328,6 +328,7 @@ class TailscaleNode(BaseNode):
     ephemeral: bool = False
     accept_routes: bool = False
     exit_node: Optional[str] = None
+    exit_node_auto_fallback: bool = False
     exit_node_allow_lan_access: bool = False
     derp_only: bool = False
     auto_add_magic_dns_rule: Optional[bool] = None
