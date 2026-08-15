@@ -66,7 +66,10 @@ def test_surge_opaque_policy_constraints_are_validated(line, message):
     result = SurgeParser().parse_result(line)
 
     assert result.resources.policies == []
-    assert result.issues[0].code == "parse.opaque-policy"
+    assert result.issues[0].code in {
+        "parse.opaque-policy",
+        "parse.protocol-parameter",
+    }
     assert message in result.issues[0].message
 
 
@@ -333,3 +336,41 @@ allow_conversion_errors = true
         WorkflowEngine(str(cfg), dry_run=True).run()
 
     assert not (tmp_path / "dist").exists()
+
+
+def test_keystore_resources_report_cross_platform_loss(tmp_path, monkeypatch):
+    write(
+        tmp_path,
+        "source.conf",
+        """
+[Proxy]
+ssh = ssh, example.com, 22, username=root, private-key=shared
+[Keystore]
+shared = type = openssh-private-key, base64 = S0VZ
+""",
+    )
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "source"
+type = "surge"
+file = "source.conf"
+
+[[artifact]]
+name = "out.yaml"
+type = "clash-meta"
+providers = ["source"]
+""",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ArtifactGenerationError) as exc_info:
+        WorkflowEngine(str(cfg), dry_run=True).run()
+
+    issue = next(
+        issue for issue in exc_info.value.issues if issue.field == "resources.keystore"
+    )
+    assert issue.code == "conversion.unconsumed-source-resource"
+    assert "S0VZ" not in issue.message

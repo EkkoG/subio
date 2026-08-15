@@ -29,6 +29,7 @@ from subio_v2.surge.syntax import (
     serialize_parameter_list,
     serialize_proxy_line,
 )
+from subio_v2.surge.codecs import DEFAULT_SURGE_TARGET, SURGE_EMITTER_HANDLERS
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
     SurgeExternalPolicy,
@@ -40,26 +41,18 @@ from subio_v2.surge.resources import (
 class SurgeEmitter(BaseEmitter):
     platform = "surge"
 
-    _HANDLERS: dict[Protocol, str] = {
-        Protocol.SHADOWSOCKS: "_parts_ss",
-        Protocol.VMESS: "_parts_vmess",
-        Protocol.TROJAN: "_parts_trojan",
-        Protocol.SOCKS5: "_parts_socks5",
-        Protocol.HTTP: "_parts_http",
-        Protocol.SSH: "_parts_ssh",
-        Protocol.SNELL: "_parts_snell",
-        Protocol.TUIC: "_parts_tuic",
-        Protocol.HYSTERIA2: "_parts_hysteria2",
-        Protocol.ANYTLS: "_parts_anytls",
-        Protocol.WIREGUARD: "_parts_wireguard",
-    }
+    _HANDLERS: dict[Protocol, str] = dict(SURGE_EMITTER_HANDLERS)
 
     def __init__(
         self,
         keystore: dict | None = None,
         resources: SurgeDocumentResources | None = None,
+        target_version: str = DEFAULT_SURGE_TARGET,
     ):
         super().__init__()
+        if target_version != DEFAULT_SURGE_TARGET:
+            raise ValueError("Only the latest Surge target is currently supported")
+        self.target_version = target_version
         self.resources = coerce_surge_resources(resources)
         if keystore:
             self.resources.merge(

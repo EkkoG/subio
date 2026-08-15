@@ -1,0 +1,221 @@
+from pathlib import Path
+
+import pytest
+
+from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.model.nodes import Protocol
+from subio_v2.parser.surge import SurgeParser
+from subio_v2.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    SURGE_CODEC_BY_KEYWORD,
+    SURGE_CODEC_SPECS,
+    SURGE_COMMON_PARAMETERS,
+    SURGE_COMMON_PARAMETER_PATHS,
+    SURGE_EMITTER_HANDLERS,
+    SURGE_NODE_PROTOCOLS,
+    SurgePolicyKind,
+    SurgeUdpBehavior,
+)
+from subio_v2.surge.syntax import parse_proxy_line
+
+
+FIXTURE_DIR = Path(__file__).parent / "fixtures" / "surge" / "official"
+
+
+def test_surge_capabilities_and_emitter_handlers_derive_from_codec_registry():
+    assert PLATFORM_CAPABILITIES["surge"]["protocols"] == set(SURGE_NODE_PROTOCOLS)
+    assert SurgeEmitter._HANDLERS == SURGE_EMITTER_HANDLERS
+    assert {protocol.value for protocol in SURGE_EMITTER_HANDLERS} == set(
+        SURGE_NODE_PROTOCOLS
+    )
+    for handler in SURGE_EMITTER_HANDLERS.values():
+        assert callable(getattr(SurgeEmitter, handler))
+
+
+def test_surge_codec_keywords_are_unique_and_cover_official_fixtures():
+    assert len(SURGE_CODEC_BY_KEYWORD) == len(SURGE_CODEC_SPECS)
+
+    fixture_keywords: set[str] = set()
+    for fixture in FIXTURE_DIR.glob("*.conf"):
+        in_proxy = False
+        for raw_line in fixture.read_text().splitlines():
+            line = raw_line.strip()
+            if line.lower() == "[proxy]":
+                in_proxy = True
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                in_proxy = False
+                continue
+            if in_proxy and line and not line.startswith(("#", "//")):
+                fixture_keywords.add(parse_proxy_line(line).type.lower())
+
+    assert fixture_keywords <= set(SURGE_CODEC_BY_KEYWORD)
+
+
+def test_every_consumed_parameter_has_an_emit_or_normalization_path():
+    assert SURGE_COMMON_PARAMETERS <= SURGE_COMMON_PARAMETER_PATHS
+    for codec in SURGE_CODEC_SPECS:
+        assert codec.consumed_parameters <= codec.parameter_path_sources, codec.keyword
+
+
+def test_every_node_codec_has_protocol_and_emitter_handler():
+    for codec in SURGE_CODEC_SPECS:
+        if codec.policy_kind != SurgePolicyKind.NODE:
+            continue
+        assert codec.protocol is not None
+        assert codec.emitter_handler is not None
+
+
+@pytest.mark.parametrize(
+    ("keyword", "line", "protocol"),
+    [
+        (
+            "ss",
+            "node = ss, example.com, 8388, encrypt-method=aes-256-gcm, password=p",
+            Protocol.SHADOWSOCKS,
+        ),
+        ("vmess", "node = vmess, example.com, 443, username=u", Protocol.VMESS),
+        ("trojan", "node = trojan, example.com, 443, password=p", Protocol.TROJAN),
+        ("socks5", "node = socks5, example.com, 1080", Protocol.SOCKS5),
+        (
+            "socks5-tls",
+            "node = socks5-tls, example.com, 1080",
+            Protocol.SOCKS5,
+        ),
+        ("http", "node = http, example.com, 80", Protocol.HTTP),
+        ("https", "node = https, example.com, 443", Protocol.HTTP),
+        (
+            "h2-connect",
+            "node = h2-connect, example.com, 443",
+            Protocol.HTTP,
+        ),
+        ("anytls", "node = anytls, example.com, 443, password=p", Protocol.ANYTLS),
+        (
+            "ssh",
+            "node = ssh, example.com, 22, username=root, password=p",
+            Protocol.SSH,
+        ),
+        (
+            "snell",
+            "node = snell, example.com, 443, psk=p, version=5",
+            Protocol.SNELL,
+        ),
+        ("tuic", "node = tuic, example.com, 443, token=t", Protocol.TUIC),
+        (
+            "tuic-v5",
+            "node = tuic-v5, example.com, 443, uuid=u, password=p",
+            Protocol.TUIC,
+        ),
+        (
+            "hysteria2",
+            "node = hysteria2, example.com, 443, password=p",
+            Protocol.HYSTERIA2,
+        ),
+    ],
+)
+def test_node_codec_keywords_have_parser_paths(keyword, line, protocol):
+    codec = SURGE_CODEC_BY_KEYWORD[keyword]
+    result = SurgeParser().parse_result(line)
+
+    assert result.issues == []
+    assert len(result.nodes) == 1
+    assert result.nodes[0].type == protocol == codec.protocol
+
+
+def test_parser_path_samples_cover_all_non_resource_node_codecs():
+    sampled = {
+        "ss",
+        "vmess",
+        "trojan",
+        "socks5",
+        "socks5-tls",
+        "http",
+        "https",
+        "h2-connect",
+        "anytls",
+        "ssh",
+        "snell",
+        "tuic",
+        "tuic-v5",
+        "hysteria2",
+    }
+    registered = {
+        codec.keyword
+        for codec in SURGE_CODEC_SPECS
+        if codec.policy_kind == SurgePolicyKind.NODE and codec.keyword != "wireguard"
+    }
+    assert sampled == registered
+
+
+@pytest.mark.parametrize(
+    ("behavior", "keywords"),
+    [
+        (
+            SurgeUdpBehavior.EXPLICIT,
+            {"ss", "socks5", "socks5-tls", "h2-connect", "external"},
+        ),
+        (
+            SurgeUdpBehavior.AUTOMATIC,
+            {
+                "vmess",
+                "trojan",
+                "tuic",
+                "tuic-v5",
+                "hysteria2",
+                "anytls",
+                "wireguard",
+                "tailscale",
+                "masque",
+                "direct",
+            },
+        ),
+        (SurgeUdpBehavior.VERSIONED, {"snell"}),
+        (
+            SurgeUdpBehavior.UNSUPPORTED,
+            {
+                "http",
+                "https",
+                "ssh",
+                "trust-tunnel",
+                "reject",
+                "reject-drop",
+                "reject-no-drop",
+                "reject-tinygif",
+            },
+        ),
+    ],
+)
+def test_surge_udp_behavior_matrix(behavior, keywords):
+    actual = {
+        codec.keyword for codec in SURGE_CODEC_SPECS if codec.udp_behavior == behavior
+    }
+    assert actual == keywords
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "http = http, example.com, 80, udp-relay=true",
+        "vmess = vmess, example.com, 443, username=u, udp-relay=false",
+        "snell = snell, example.com, 443, psk=p, version=5, udp-relay=true",
+        "masque = masque, example.com, 443, udp-relay=true",
+        "trust = trust-tunnel, example.com, 443, username=u, password=p, udp-relay=false",
+    ],
+)
+def test_non_explicit_udp_codecs_reject_udp_relay_parameter(line):
+    result = SurgeParser().parse_result(line)
+
+    assert result.nodes == []
+    assert result.resources.policies == []
+    assert result.issues[0].code == "parse.protocol-parameter"
+
+
+def test_latest_is_the_only_current_surge_target():
+    assert DEFAULT_SURGE_TARGET == "latest"
+    assert SurgeParser(target_version="latest").target_version == "latest"
+    assert SurgeEmitter(target_version="latest").target_version == "latest"
+    with pytest.raises(ValueError, match="latest Surge target"):
+        SurgeParser(target_version="6.8")
+    with pytest.raises(ValueError, match="latest Surge target"):
+        SurgeEmitter(target_version="6.8")

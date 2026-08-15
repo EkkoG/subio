@@ -97,6 +97,35 @@ Surge `h2-connect` 使用 `HttpNode.variant=HttpVariant.H2_CONNECT`，不得退�
 HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge 目标无法表达这些
 字段时必须由 descriptor 返回 capability error。
 
+### 1.5 Surge Codec 注册表
+
+`src/subio_v2/surge/codecs.py` 是 Surge policy keyword 的单一规格来源。每个
+`SurgeCodecSpec` 同时声明：
+
+- Surge keyword 与对应 `Protocol`；
+- 普通 Node、文档策略或 External 安全策略类型；
+- emitter handler；
+- 已消费参数、规范化参数和多值参数；
+- `EXPLICIT`、`AUTOMATIC`、`VERSIONED` 或 `UNSUPPORTED` UDP 行为。
+
+Surge capability 的协议集合、Emitter `_HANDLERS`、Parser consumed parameter 表和 UDP
+参数校验都从该注册表派生。新增或修改 Surge 协议时，应先更新 codec spec，再实现 parser /
+emitter 逻辑；`tests/test_subio_v2_surge_codec_invariants.py` 会检查 capability、handler、
+parser keyword、参数生成路径和 UDP 矩阵是否漂移。不要在 parser、emitter 或 capability 中
+另建一份 keyword 列表。
+
+当前目标版本常量为 `DEFAULT_SURGE_TARGET = "latest"`。Parser/Emitter 已保留
+`target_version` 构造参数，但在实现明确的版本字段裁剪前只接受 `latest`，不得通过传入旧
+版本字符串假装完成兼容。
+
+更新官方 fixture 时：
+
+1. 用 MarkItDown 或等价的只读网页提取工具读取官方页面；
+2. 在 `tests/fixtures/surge/official/` 保存最小、无真实凭据的离线示例；
+3. 在该目录 `README.md` 记录来源 URL 和复核日期；
+4. 更新 codec spec、字段/UDP 不变量和对应 round-trip/security 测试；
+5. 测试运行时不得访问网络。
+
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
 `ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。

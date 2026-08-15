@@ -188,8 +188,8 @@ def test_surge_udp_relay_is_emitted_only_for_opt_in_protocols():
 http = http, example.com, 80
 vmess = vmess, example.com, 443, username=u
 trojan = trojan, example.com, 443, password=p
-snell = snell, example.com, 443, psk=p, version=5, udp-relay=false
-tuic = tuic-v5, example.com, 443, uuid=u, password=p, udp-relay=false
+snell = snell, example.com, 443, psk=p, version=5
+tuic = tuic-v5, example.com, 443, uuid=u, password=p
 hysteria2 = hysteria2, example.com, 443, password=p
 socks = socks5, example.com, 1080, udp-relay=true
 ss = ss, example.com, 8388, encrypt-method=aes-256-gcm, password=p, udp-relay=true

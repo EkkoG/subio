@@ -359,6 +359,22 @@ class WorkflowEngine:
         target: str,
     ) -> list[ConversionIssue]:
         issues: list[ConversionIssue] = []
+        for key_id in resources.keystore:
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.ERROR,
+                    node=key_id,
+                    protocol="keystore",
+                    source=provider_name,
+                    target=target,
+                    field="resources.keystore",
+                    message=(
+                        f"Surge Keystore entry '{key_id}' cannot be represented by {target}"
+                    ),
+                    stage="conversion",
+                    code="conversion.unconsumed-source-resource",
+                )
+            )
         for policy in resources.policies:
             issues.append(
                 ConversionIssue(
@@ -371,6 +387,23 @@ class WorkflowEngine:
                     message=(
                         f"Surge document policy '{policy.name}' cannot be represented "
                         f"by {target}"
+                    ),
+                    stage="conversion",
+                    code="conversion.unconsumed-source-resource",
+                )
+            )
+        for section in resources.named_sections.values():
+            issues.append(
+                ConversionIssue(
+                    severity=IssueSeverity.WARNING,
+                    node=section.name,
+                    protocol=section.kind.lower(),
+                    source=provider_name,
+                    target=target,
+                    field="resources.named_sections",
+                    message=(
+                        f"Surge named section '{section.kind} {section.name}' has "
+                        f"no document-level representation in {target}"
                     ),
                     stage="conversion",
                     code="conversion.unconsumed-source-resource",

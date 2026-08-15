@@ -10,6 +10,8 @@ Platform Capabilities Definitions
 
 from typing import Dict, Any, Optional
 
+from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
+
 # ============== 通用常量 ==============
 
 # Shadowsocks 加密方法
@@ -83,19 +85,7 @@ TRANSPORT_XHTTP = "xhttp"
 PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     # ============== Surge ==============
     "surge": {
-        "protocols": {
-            "shadowsocks",
-            "vmess",
-            "trojan",
-            "http",
-            "socks5",
-            "snell",
-            "tuic",
-            "hysteria2",
-            "ssh",
-            "anytls",
-            "wireguard",
-        },
+        "protocols": set(SURGE_NODE_PROTOCOLS),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
             "transports": {TRANSPORT_TCP},

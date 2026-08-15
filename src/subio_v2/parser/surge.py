@@ -32,6 +32,16 @@ from subio_v2.surge.resources import (
     SurgeNamedSection,
     SurgeOpaquePolicy,
 )
+from subio_v2.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    SURGE_BUILTIN_ALIAS_TYPES,
+    SURGE_COMMON_PARAMETERS,
+    SURGE_MULTI_VALUE_PARAMETERS,
+    SURGE_OPAQUE_POLICY_TYPES,
+    SURGE_PROTOCOL_PARAMETERS,
+    SurgeUdpBehavior,
+    get_surge_codec,
+)
 from subio_v2.surge.syntax import (
     SurgeProxyRecord,
     parse_parameter_list,
@@ -41,123 +51,6 @@ from subio_v2.surge.syntax import (
 from subio_v2.utils.logger import logger
 
 
-_COMMON_PARAMETERS = {
-    "interface",
-    "allow-other-interface",
-    "dns-follow-interface",
-    "no-error-alert",
-    "ip-version",
-    "hybrid",
-    "tfo",
-    "tos",
-    "ecn",
-    "block-quic",
-    "test-url",
-    "test-timeout",
-    "test-udp",
-    "underlying-proxy",
-    "skip-cert-verify",
-    "sni",
-    "server-cert-verify-name",
-    "server-cert-fingerprint-sha256",
-    "alpn",
-    "client-cert",
-    "shadow-tls-password",
-    "shadow-tls-sni",
-    "shadow-tls-version",
-}
-
-_PROTOCOL_PARAMETERS = {
-    "ss": {
-        "encrypt-method",
-        "password",
-        "udp-relay",
-        "udp-port",
-        "obfs",
-        "obfs-host",
-    },
-    "vmess": {
-        "username",
-        "encrypt-method",
-        "vmess-aead",
-        "tls",
-        "ws",
-        "ws-path",
-        "ws-headers",
-        "udp-relay",
-    },
-    "trojan": {"password", "ws", "ws-path", "ws-headers", "udp-relay"},
-    "socks5": {"username", "password", "udp-relay"},
-    "socks5-tls": {"username", "password", "udp-relay"},
-    "http": {"username", "password"},
-    "https": {"username", "password"},
-    "h2-connect": {
-        "username",
-        "password",
-        "headers",
-        "max-streams",
-        "udp-relay",
-    },
-    "anytls": {"password", "reuse"},
-    "ssh": {
-        "username",
-        "password",
-        "private-key",
-        "idle-timeout",
-        "server-fingerprint",
-    },
-    "snell": {
-        "psk",
-        "version",
-        "reuse",
-        "udp-port",
-        "mode",
-        "obfs",
-        "obfs-host",
-        "udp-relay",
-    },
-    "tuic": {
-        "token",
-        "version",
-        "port-hopping",
-        "port-hopping-interval",
-        "udp-relay",
-    },
-    "tuic-v5": {
-        "uuid",
-        "password",
-        "port-hopping",
-        "port-hopping-interval",
-        "udp-relay",
-    },
-    "hysteria2": {
-        "password",
-        "download-bandwidth",
-        "upload-bandwidth",
-        "up",
-        "down",
-        "salamander-password",
-        "gecko-password",
-        "obfs",
-        "obfs-password",
-        "port-hopping",
-        "port-hopping-interval",
-        "udp-relay",
-    },
-    "wireguard": {"section-name"},
-}
-
-_MULTI_VALUE_PARAMETERS = {
-    "ssh": {"server-fingerprint"},
-}
-
-_BUILTIN_ALIAS_TYPES = {
-    "direct",
-    "reject",
-    "reject-drop",
-    "reject-no-drop",
-    "reject-tinygif",
-}
 _PREDEFINED_BUILTIN_NAMES = {
     "DIRECT",
     "REJECT",
@@ -171,20 +64,26 @@ _PREDEFINED_BUILTIN_NAMES = {
 }
 _NAMED_SECTION_KINDS = {"wireguard", "tailscale"}
 _NAMED_SECTION_RE = re.compile(r"^\[([^\]\s]+)\s+([^\]]+)\]$")
-_OPAQUE_POLICY_TYPES = {"masque", "trust-tunnel"}
 _SOURCE_KINDS = {"unknown", "local", "remote"}
 
 
 class SurgeParser(BaseParser):
     def __init__(
-        self, *, source_kind: str = "unknown", allow_unsafe_external: bool = False
+        self,
+        *,
+        source_kind: str = "unknown",
+        allow_unsafe_external: bool = False,
+        target_version: str = DEFAULT_SURGE_TARGET,
     ):
         if source_kind not in _SOURCE_KINDS:
             raise ValueError(f"Invalid Surge source kind: {source_kind}")
         if not isinstance(allow_unsafe_external, bool):
             raise TypeError("allow_unsafe_external must be a boolean")
+        if target_version != DEFAULT_SURGE_TARGET:
+            raise ValueError("Only the latest Surge target is currently supported")
         self.source_kind = source_kind
         self.allow_unsafe_external = allow_unsafe_external
+        self.target_version = target_version
         self.keystore: dict = {}  # Store Keystore entries for emitter: {key_id: {"type": "...", "base64": "..."}}
 
     def parse(self, content: Any) -> List[Node]:
@@ -283,6 +182,33 @@ class SurgeParser(BaseParser):
                     )
                     continue
                 name, protocol = record.name, record.type.lower()
+                codec = get_surge_codec(protocol)
+                if (
+                    codec
+                    and record.parameters.get("udp-relay") is not None
+                    and codec.udp_behavior != SurgeUdpBehavior.EXPLICIT
+                ):
+                    if codec.udp_behavior == SurgeUdpBehavior.UNSUPPORTED:
+                        message = f"Surge {protocol} does not support udp-relay"
+                    else:
+                        message = (
+                            f"Surge {protocol} uses implicit UDP behavior and does not "
+                            "accept udp-relay"
+                        )
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=name,
+                            protocol=protocol,
+                            source=None,
+                            target="ir",
+                            field=f"lines[{index}]",
+                            message=message,
+                            stage="parse",
+                            code="parse.protocol-parameter",
+                        )
+                    )
+                    continue
                 if protocol == "wireguard":
                     try:
                         node = self._parse_wireguard(record, resources)
@@ -322,7 +248,7 @@ class SurgeParser(BaseParser):
                             )
                         )
                     continue
-                if protocol in _OPAQUE_POLICY_TYPES:
+                if protocol in SURGE_OPAQUE_POLICY_TYPES:
                     try:
                         self._add_opaque_policy(record, resources, index)
                     except (TypeError, ValueError) as exc:
@@ -384,7 +310,7 @@ class SurgeParser(BaseParser):
                             )
                         )
                     continue
-                if protocol in _BUILTIN_ALIAS_TYPES:
+                if protocol in SURGE_BUILTIN_ALIAS_TYPES:
                     if name == "DIRECT":
                         issues.append(
                             ConversionIssue(
@@ -781,14 +707,17 @@ class SurgeParser(BaseParser):
             version=get_int("shadow-tls-version") or 2,
         )
 
-        consumed = _COMMON_PARAMETERS | _PROTOCOL_PARAMETERS.get(p_type, set())
+        consumed = SURGE_COMMON_PARAMETERS | SURGE_PROTOCOL_PARAMETERS.get(
+            p_type, frozenset()
+        )
         last_indexes = {
             parameter.key: index for index, parameter in enumerate(record.parameters)
         }
         preserved = [
             (parameter.key, parameter.value)
             for index, parameter in enumerate(record.parameters)
-            if parameter.key not in _MULTI_VALUE_PARAMETERS.get(p_type, set())
+            if parameter.key
+            not in SURGE_MULTI_VALUE_PARAMETERS.get(p_type, frozenset())
             and (parameter.key not in consumed or index != last_indexes[parameter.key])
         ]
         semantic_fields = [
