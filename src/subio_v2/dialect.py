@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any, Mapping
 
 
 @dataclass(frozen=True)
@@ -20,3 +21,39 @@ class DialectContext:
             not isinstance(self.version, str) or not self.version
         ):
             raise ValueError("Dialect version must be a non-empty string")
+
+
+_PLATFORM_DIALECTS = {
+    "clash-meta": "mihomo",
+    "clash": "clash",
+    "stash": "stash",
+    "surge": "surge",
+    "dae": "dae",
+    "v2rayn": "v2rayn",
+}
+
+
+def dialect_context_for_platform(platform: str) -> DialectContext:
+    dialect = _PLATFORM_DIALECTS.get(platform, platform)
+    format_name = "yaml" if platform in {"clash-meta", "clash", "stash"} else "text"
+    return DialectContext(dialect=dialect, format=format_name)
+
+
+def extension_semantic_fields(extension: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return source-only semantic fields without exposing attachment metadata."""
+    fields = {
+        str(field)
+        for field in extension.get("semantic_fields", [])
+        if isinstance(field, str) and field
+    }
+    parameters = extension.get("parameters", [])
+    if isinstance(parameters, list):
+        for item in parameters:
+            if (
+                isinstance(item, (list, tuple))
+                and item
+                and isinstance(item[0], str)
+                and item[0]
+            ):
+                fields.add(item[0])
+    return tuple(sorted(fields))

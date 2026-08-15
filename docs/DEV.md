@@ -89,10 +89,16 @@ Config / local snippet
 
 ### 3.2 同方言保真数据
 
+- `BaseNode.source_context` 记录节点输入方言；`extra_context` 分别记录主字典和嵌套 transport
+  未建模字段的来源；
 - `BaseNode.extra` 当前用于 Clash/Mihomo descriptor 未建模字段的同方言往返；
 - `TransportSettings.extra` 保存 `ws-opts`、`grpc-opts` 等嵌套块中的未建模字段；
 - `ClashPassthroughNode.raw` 保存 Mihomo-only 或未来未知的完整 proxy 字典；
 - `BaseNode.source_extensions[<dialect>]` 保存来源方言专属字段和节点附件。
+
+Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 descriptor 输出后再经过
+`post_descriptor_emit()`。未知字段只有来源和目标 dialect 相同时才能合并；跨方言未消费字段必须
+产生 `conversion.unconsumed-source-field`，不能依赖 capability 日志后仍写入结果。
 
 这些数据不是通用语义。Emitter 只能消费属于自己目标方言的扩展；跨方言未消费内容必须
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。

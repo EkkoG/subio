@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict, Optional, Set
 
+from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import (
     Network,
     SmuxSettings,
@@ -57,9 +58,15 @@ def parse_base_fields(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def assign_extra(node: Any, data: Dict[str, Any], handled: Set[str]) -> None:
+def assign_extra(
+    node: Any,
+    data: Dict[str, Any],
+    handled: Set[str],
+    context: DialectContext,
+) -> None:
     keys = handled | _BASE_FIELD_KEYS
     node.extra = {k: v for k, v in data.items() if k not in keys}
+    node.extra_context = context if node.extra else None
 
 
 def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSettings:
@@ -78,7 +85,9 @@ def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSett
     )
 
 
-def parse_transport(data: Dict[str, Any]) -> TransportSettings:
+def parse_transport(
+    data: Dict[str, Any], context: DialectContext | None = None
+) -> TransportSettings:
     net = data.get("network") or Network.TCP.value
     try:
         network: Network | str = Network(net)
@@ -142,6 +151,7 @@ def parse_transport(data: Dict[str, Any]) -> TransportSettings:
         max_early_data=ws_opts.get("max-early-data"),
         early_data_header_name=ws_opts.get("early-data-header-name"),
         extra=extra,
+        extra_context=context if extra else None,
     )
 
 
@@ -288,15 +298,33 @@ def emit_smux(base: Dict[str, Any], smux: Optional[SmuxSettings]) -> None:
     base["smux"] = payload
 
 
-def merge_extra(base: Dict[str, Any], node: Any) -> Dict[str, Any]:
+def merge_extra(
+    base: Dict[str, Any], node: Any, context: DialectContext | None = None
+) -> Dict[str, Any]:
     if getattr(node, "extra", None):
+        extra_context = getattr(node, "extra_context", None)
+        if (
+            context is not None
+            and extra_context is not None
+            and extra_context.dialect != context.dialect
+        ):
+            return base
         for key, value in node.extra.items():
             if key not in base:
                 base[key] = copy.deepcopy(value)
     return base
 
 
-def emit_passthrough(node: Any) -> Dict[str, Any]:
+def emit_passthrough(
+    node: Any, context: DialectContext | None = None
+) -> Dict[str, Any]:
+    source_context = getattr(node, "source_context", None)
+    if (
+        context is not None
+        and source_context is not None
+        and source_context.dialect != context.dialect
+    ):
+        raise ValueError("Clash passthrough nodes require the same source and target dialect")
     out = copy.deepcopy(node.raw)
     out["name"] = node.name
     if node.server:
@@ -315,5 +343,5 @@ def emit_passthrough(node: Any) -> Dict[str, Any]:
         out["interface-name"] = node.interface_name
     if node.routing_mark is not None:
         out["routing-mark"] = node.routing_mark
-    merge_extra(out, node)
+    merge_extra(out, node, context)
     return out

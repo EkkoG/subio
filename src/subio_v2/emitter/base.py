@@ -7,6 +7,10 @@ from subio_v2.capabilities.checker import (
     WarningLevel,
 )
 from subio_v2.conversion import ConversionIssue, EmissionResult, IssueSeverity
+from subio_v2.dialect import (
+    dialect_context_for_platform,
+    extension_semantic_fields,
+)
 from subio_v2.model.nodes import Node
 from subio_v2.utils.logger import logger
 
@@ -24,6 +28,7 @@ class BaseEmitter(ABC):
     platform: str = ""
 
     def __init__(self):
+        self.target_context = dialect_context_for_platform(self.platform)
         self._checker: Optional[CapabilityChecker] = None
         if self.platform:
             self._checker = CapabilityChecker(self.platform)
@@ -100,24 +105,62 @@ class BaseEmitter(ABC):
                     )
                 )
 
-            surge_extension = node.source_extensions.get("surge", {})
-            if self.platform != "surge" and (
-                surge_extension.get("parameters")
-                or surge_extension.get("semantic_fields")
+            for source_dialect, extension in node.source_extensions.items():
+                if source_dialect == self.target_context.dialect:
+                    continue
+                fields = extension_semantic_fields(extension)
+                if not fields:
+                    continue
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.WARNING,
+                        "Source-only fields cannot be represented by this target: "
+                        + ", ".join(fields),
+                        field=f"source_extensions.{source_dialect}",
+                        stage="conversion",
+                        code="conversion.unconsumed-source-field",
+                    )
+                )
+
+            extra_context = node.extra_context
+            if (
+                node.extra
+                and extra_context is not None
+                and extra_context.dialect != self.target_context.dialect
+            ):
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.WARNING,
+                        "Source-only fields cannot be represented by this target: "
+                        + ", ".join(sorted(node.extra)),
+                        field=f"extra.{extra_context.dialect}",
+                        stage="conversion",
+                        code="conversion.unconsumed-source-field",
+                    )
+                )
+
+            transport = getattr(node, "transport", None)
+            if (
+                transport is not None
+                and getattr(transport, "extra", None)
+                and getattr(transport, "extra_context", None) is not None
+                and transport.extra_context.dialect
+                != self.target_context.dialect
             ):
                 fields = sorted(
-                    {
-                        *surge_extension.get("semantic_fields", []),
-                        *(key for key, _ in surge_extension.get("parameters", [])),
-                    }
+                    f"transport.{block}.{key}"
+                    for block, values in transport.extra.items()
+                    for key in values
                 )
                 issues.append(
                     self.issue_for_node(
                         node,
                         IssueSeverity.WARNING,
-                        "Surge-only fields cannot be represented by this target: "
+                        "Source-only fields cannot be represented by this target: "
                         + ", ".join(fields),
-                        field="source_extensions.surge",
+                        field=f"transport.extra.{transport.extra_context.dialect}",
                         stage="conversion",
                         code="conversion.unconsumed-source-field",
                     )

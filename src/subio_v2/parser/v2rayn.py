@@ -4,6 +4,7 @@ import urllib.parse
 import sys
 from typing import List, Any
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.dialect import DialectContext
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node,
@@ -54,6 +55,7 @@ class V2RayNParser(BaseParser):
 
             node = self._parse_line(line)
             if node:
+                node.source_context = DialectContext("v2rayn", "text")
                 nodes.append(node)
                 continue
             scheme = line.partition("://")[0] or None

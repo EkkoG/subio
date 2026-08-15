@@ -6,6 +6,7 @@ import sys
 from typing import Any, List
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.dialect import DialectContext
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node,
@@ -116,6 +117,9 @@ class SurgeParser(BaseParser):
         def retain_node(node: Node, order: int) -> None:
             self._bind_referenced_keystore(node, keystore, keystore_errors)
             self._set_policy_order(node, order)
+            node.source_context = DialectContext(
+                "surge", "text", self.target_version
+            )
             nodes.append(node)
 
         # Bare proxy lists are supported, but entries inside any named section must

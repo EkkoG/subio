@@ -11,7 +11,7 @@ from typing import Any, Callable, Mapping
 import requests
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity
-from subio_v2.dialect import DialectContext
+from subio_v2.dialect import DialectContext, dialect_context_for_platform
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
@@ -174,6 +174,7 @@ class RuleSetRenderer:
         platform: str,
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
+        target_context = dialect_context_for_platform(platform)
         issues = [replace(issue, target=platform) for issue in ruleset.issues]
         lines: list[str] = []
 
@@ -187,6 +188,7 @@ class RuleSetRenderer:
                 ruleset.name,
                 entry.expression,
                 platform,
+                target_context,
                 policy,
                 nested=False,
             )
@@ -218,11 +220,12 @@ class RuleSetRenderer:
         source: str,
         expression: RuleExpression,
         platform: str,
+        target_context: DialectContext,
         policy: str | None,
         *,
         nested: bool,
     ) -> tuple[str | None, list[ConversionIssue]]:
-        rule_type = self._target_rule_type(expression, platform)
+        rule_type = self._target_rule_type(expression, platform, target_context)
         matcher = expression.matcher if isinstance(expression, Predicate) else ""
         if (
             platform == "clash-meta"
@@ -263,6 +266,7 @@ class RuleSetRenderer:
                     source,
                     operand,
                     platform,
+                    target_context,
                     None,
                     nested=True,
                 )
@@ -281,20 +285,25 @@ class RuleSetRenderer:
         fields.extend(self._serialize_option(option) for option in expression.options)
         return ",".join(fields), []
 
-    def _target_rule_type(self, expression: RuleExpression, platform: str) -> str:
+    def _target_rule_type(
+        self,
+        expression: RuleExpression,
+        platform: str,
+        target_context: DialectContext,
+    ) -> str:
         rule_type = (
             expression.operator
             if isinstance(expression, LogicalExpression)
             else expression.rule_type
         )
-        if platform == "surge":
+        if target_context.dialect == "surge":
             if rule_type == "MATCH":
                 return "FINAL"
             if rule_type == "DST-PORT":
                 return "DEST-PORT"
             if rule_type == "NETWORK":
                 return "PROTOCOL"
-        elif platform in CLASH_PLATFORMS:
+        elif target_context.dialect in {"mihomo", "clash", "stash"}:
             if rule_type == "FINAL":
                 return "MATCH"
             if rule_type == "DEST-PORT":

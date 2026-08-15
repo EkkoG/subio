@@ -2,6 +2,8 @@ from enum import StrEnum
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Union
 
+from subio_v2.dialect import DialectContext
+
 
 class Protocol(StrEnum):
     SHADOWSOCKS = "shadowsocks"
@@ -116,6 +118,9 @@ class TransportSettings:
     early_data_header_name: Optional[str] = None
     # Unmapped nested transport fields, keyed by Clash option block (e.g. ws-opts).
     extra: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    extra_context: Optional[DialectContext] = field(
+        default=None, repr=False, compare=False
+    )
 
     @property
     def network_value(self) -> str:
@@ -156,11 +161,17 @@ class BaseNode:
     routing_mark: Optional[int] = None
     # Unmapped Clash fields preserved for round-trip emit
     extra: Dict[str, Any] = field(default_factory=dict)
+    extra_context: Optional[DialectContext] = field(
+        default=None, repr=False, compare=False
+    )
     surge_options: SurgePolicyOptions = field(default_factory=SurgePolicyOptions)
     shadow_tls: ShadowTLSSettings = field(default_factory=ShadowTLSSettings)
     source_extensions: Dict[str, Any] = field(default_factory=dict, repr=False)
     # Workflow provenance for structured conversion issues; never emitted.
     source_provider: Optional[str] = field(default=None, repr=False, compare=False)
+    source_context: Optional[DialectContext] = field(
+        default=None, repr=False, compare=False
+    )
 
 
 @dataclass

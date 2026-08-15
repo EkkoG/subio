@@ -11,6 +11,7 @@ from subio_v2.clash.helpers import (
     parse_base_fields,
 )
 from subio_v2.model.nodes import Node, Protocol
+from subio_v2.dialect import DialectContext
 from subio_v2.protocols._fields import ClashFieldSpec
 
 
@@ -33,11 +34,15 @@ class ProtocolDescriptor(ABC):
     requires_endpoint: bool = True
 
     @abstractmethod
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
+    def parse_clash(
+        self, data: Dict[str, Any], context: DialectContext | None = None
+    ) -> Node:
         raise NotImplementedError
 
     @abstractmethod
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
+    def emit_clash(
+        self, node: Node, context: DialectContext | None = None
+    ) -> Dict[str, Any]:
         raise NotImplementedError
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
@@ -85,7 +90,10 @@ class StructuredProtocolDescriptor(ProtocolDescriptor):
     def after_emit(self, out: Dict[str, Any], node: Node) -> None:
         return None
 
-    def parse_clash(self, data: Dict[str, Any]) -> Node:
+    def parse_clash(
+        self, data: Dict[str, Any], context: DialectContext | None = None
+    ) -> Node:
+        context = context or DialectContext("mihomo", "yaml")
         kwargs: Dict[str, Any] = {
             "type": self.protocol,
             **parse_base_fields(data),
@@ -101,14 +109,21 @@ class StructuredProtocolDescriptor(ProtocolDescriptor):
             kwargs.update(parsed)
         kwargs = self.prepare_parse_kwargs(data, kwargs)
         node = self.node_class(**kwargs)
-        assign_extra(node, data, set(self.consumed_keys))
+        node.source_context = context
+        transport = getattr(node, "transport", None)
+        if transport is not None and getattr(transport, "extra", None):
+            transport.extra_context = context
+        assign_extra(node, data, set(self.consumed_keys), context)
         return self.after_parse(node, data)
 
-    def emit_clash(self, node: Node) -> Dict[str, Any]:
+    def emit_clash(
+        self, node: Node, context: DialectContext | None = None
+    ) -> Dict[str, Any]:
+        context = context or DialectContext("mihomo", "yaml")
         if not isinstance(node, self.node_class):
             raise TypeError(f"Expected {self.node_class.__name__}, got {type(node)}")
         out = emit_base(node)
         for field in self.fields:
             field.emit_into(out, node)
         self.after_emit(out, node)
-        return merge_extra(out, node)
+        return merge_extra(out, node, context)

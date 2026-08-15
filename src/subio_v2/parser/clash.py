@@ -4,13 +4,18 @@ from typing import Any, Dict, List
 import yaml
 
 import subio_v2.protocols as protocol_registry
+from subio_v2.clash.dialect import pre_descriptor_normalize
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import Protocol
 from subio_v2.parser.base import BaseParser
 from subio_v2.utils.logger import logger
 
 
 class ClashParser(BaseParser):
+    def __init__(self, context: DialectContext | None = None):
+        self.context = context or DialectContext("mihomo", "yaml")
+
     def parse(self, content: Any) -> List:
         try:
             return self.parse_result(content).nodes
@@ -81,6 +86,7 @@ class ClashParser(BaseParser):
         return ParseResult(nodes=nodes, issues=issues)
 
     def _parse_node(self, data: Dict[str, Any]):
+        data = pre_descriptor_normalize(data, self.context)
         node_type = data.get("type")
         if not node_type:
             return None
@@ -91,4 +97,4 @@ class ClashParser(BaseParser):
             logger.warning(
                 f"Unknown Clash proxy type '{node_type}' preserved for Mihomo output"
             )
-        return desc.parse_clash(data)
+        return desc.parse_clash(data, self.context)

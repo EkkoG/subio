@@ -143,10 +143,6 @@ def test_stash_domain_mrs_reuses_normal_rule_ir(monkeypatch):
     assert "- DOMAIN,exact.example.org,Proxy" in ruleset.render("stash", "Proxy")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 4: Mihomo extra fields still leak into Stash output",
-)
 def test_mihomo_unknown_extra_is_not_emitted_to_stash():
     parser = ParserFactory.get_parser("clash-meta")
     emitter = EmitterFactory.get_emitter("stash")
