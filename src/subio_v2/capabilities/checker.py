@@ -191,6 +191,13 @@ class CapabilityChecker:
                 field="dialer_proxy",
             )
 
+        if self.platform == "stash" and node.dialer_proxy and node.interface_name:
+            result.add_error(
+                "Stash dialer-proxy cannot be combined with interface-name",
+                field="dialer_proxy",
+                code="conversion.unsupported-field-combination",
+            )
+
 
 def check_node_for_platform(node: Node, platform: str) -> CheckResult:
     """

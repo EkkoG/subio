@@ -77,7 +77,7 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
                         field="obfs_password",
                     )
                 )
-        if node.dialer_proxy and node.ports:
+        if platform != "stash" and node.dialer_proxy and node.ports:
             warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.ERROR,

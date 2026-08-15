@@ -1,8 +1,6 @@
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.model.nodes import HttpNode, Protocol, SSHNode, TLSSettings
-from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.stash import StashParser
 
 
@@ -130,10 +128,3 @@ def test_internal_stash_emitter_crops_unsupported_shared_common_fields():
         and "routing-mark" in issue.message
         for issue in emission.issues
     )
-
-
-def test_stage8_keeps_public_stash_factories_unchanged():
-    assert ParserFactory.get_parser("stash") is None
-    emitter = EmitterFactory.get_emitter("stash")
-    assert type(emitter) is ClashEmitter
-    assert emitter.platform == "stash"

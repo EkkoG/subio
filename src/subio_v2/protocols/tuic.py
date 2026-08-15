@@ -21,6 +21,8 @@ class TUICDescriptor(StructuredProtocolDescriptor):
         scalar_field("token", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("uuid", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("ports", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field("hop-interval", "hop_interval", emit_policy=EmitPolicy.NOT_NONE),
         tls_group(
             consumed_keys=(
                 "tls",
@@ -94,7 +96,7 @@ class TUICDescriptor(StructuredProtocolDescriptor):
                         ),
                     )
                 )
-        if node.dialer_proxy and node.ports:
+        if platform != "stash" and node.dialer_proxy and node.ports:
             warnings.append(
                 CapabilityWarning(
                     level=WarningLevel.ERROR,

@@ -40,6 +40,13 @@ SS_CIPHERS_2022 = {
     "2022-blake3-chacha20-poly1305",
 }
 
+SS_CIPHERS_STASH = SS_CIPHERS_EXTENDED | {
+    "aes-192-gcm",
+    "chacha20",
+    "2022-blake3-aes-128-gcm",
+    "2022-blake3-aes-256-gcm",
+}
+
 # Surge supports the two AES-based 2022 methods plus its own legacy set.
 SS_CIPHERS_SURGE = {
     "2022-blake3-aes-128-gcm",
@@ -71,6 +78,8 @@ VMESS_CIPHERS = {
     "none",
     "zero",
 }
+
+VMESS_CIPHERS_STASH = VMESS_CIPHERS - {"zero"}
 
 # 传输方式
 TRANSPORT_TCP = "tcp"
@@ -345,24 +354,58 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     "stash": {
         "protocols": {
             "shadowsocks",
+            "shadowsocksr",
             "vmess",
+            "vless",
             "trojan",
             "http",
             "socks5",
             "snell",
             "wireguard",
+            "hysteria",
             "hysteria2",
+            "tuic",
+            "ssh",
+            "anytls",
+            "direct",
         },
         "shadowsocks": {
-            "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
+            "ciphers": SS_CIPHERS_STASH,
             "transports": {TRANSPORT_TCP, TRANSPORT_WS},
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls"},
             "features": {"udp"},
         },
+        "shadowsocksr": {
+            "ciphers": SS_CIPHERS_STASH,
+            "features": {"udp"},
+        },
         "vmess": {
-            "ciphers": VMESS_CIPHERS,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
+            "ciphers": VMESS_CIPHERS_STASH,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
             "features": {"udp", "tls"},
+        },
+        "vless": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+                TRANSPORT_XHTTP,
+            },
+            "features": {"udp", "tls", "reality"},
+            "flows": {
+                "xtls-rprx-origin",
+                "xtls-rprx-direct",
+                "xtls-rprx-splice",
+                "xtls-rprx-vision",
+            },
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC},
@@ -382,14 +425,31 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "wireguard": {
             "features": {"udp"},
         },
+        "hysteria": {
+            "features": {"udp", "obfs"},
+        },
         "hysteria2": {
-            "features": {"udp"},
+            "features": {"udp", "obfs"},
+            "obfs_modes": {"salamander", "gecko"},
+        },
+        "tuic": {
+            "versions": {4, 5},
+            "features": {"udp", "tls"},
+        },
+        "ssh": {
+            "auth_methods": {"password", "private_key"},
+        },
+        "anytls": {
+            "features": {"udp", "tls"},
+        },
+        "direct": {
+            "features": {"interface-binding"},
         },
         "global_features": {
             "udp_relay": True,
             "tfo": True,
             "mptcp": False,
-            "dialer_proxy": False,
+            "dialer_proxy": True,
         },
     },
     # ============== dae ==============

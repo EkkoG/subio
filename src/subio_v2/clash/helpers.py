@@ -106,6 +106,7 @@ def parse_transport(
     h2_opts = option_blocks.get("h2-opts", {})
     http_opts = option_blocks.get("http-opts", {})
     grpc_opts = option_blocks.get("grpc-opts", {})
+    xhttp_opts = option_blocks.get("xhttp-opts", {})
 
     modeled_keys = {
         "ws-opts": {
@@ -117,7 +118,7 @@ def parse_transport(
         "h2-opts": {"path", "host"},
         "http-opts": {"path", "headers", "method"},
         "grpc-opts": {"grpc-service-name"},
-        "xhttp-opts": set(),
+        "xhttp-opts": {"mode", "path", "host", "headers"},
     }
     active_option_key = {
         Network.WS.value: "ws-opts",
@@ -144,11 +145,21 @@ def parse_transport(
 
     return TransportSettings(
         network=network,
-        path=first_present((ws_opts, "path"), (h2_opts, "path"), (http_opts, "path")),
-        headers=first_present((ws_opts, "headers"), (http_opts, "headers")),
-        host=h2_opts.get("host"),
+        path=first_present(
+            (ws_opts, "path"),
+            (h2_opts, "path"),
+            (http_opts, "path"),
+            (xhttp_opts, "path"),
+        ),
+        headers=first_present(
+            (ws_opts, "headers"),
+            (http_opts, "headers"),
+            (xhttp_opts, "headers"),
+        ),
+        host=first_present((h2_opts, "host"), (xhttp_opts, "host")),
         method=http_opts.get("method"),
         grpc_service_name=grpc_opts.get("grpc-service-name"),
+        xhttp_mode=xhttp_opts.get("mode"),
         max_early_data=ws_opts.get("max-early-data"),
         early_data_header_name=ws_opts.get("early-data-header-name"),
         extra=extra,
@@ -283,6 +294,18 @@ def emit_transport(
             opts["grpc-service-name"] = transport.grpc_service_name
         if opts:
             base["grpc-opts"] = opts
+    elif network == Network.XHTTP.value:
+        opts = copy.deepcopy(transport.extra.get("xhttp-opts", {}))
+        if transport.xhttp_mode is not None:
+            opts["mode"] = transport.xhttp_mode
+        if transport.path is not None:
+            opts["path"] = transport.path
+        if transport.host is not None:
+            opts["host"] = transport.host
+        if transport.headers is not None:
+            opts["headers"] = transport.headers
+        if opts:
+            base["xhttp-opts"] = opts
 
 
 def emit_smux(base: Dict[str, Any], smux: Optional[SmuxSettings]) -> None:

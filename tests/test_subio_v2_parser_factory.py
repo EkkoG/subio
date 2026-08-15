@@ -2,6 +2,7 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.subio import SubioParser
 from subio_v2.parser.surge import SurgeParser
+from subio_v2.parser.stash import StashParser
 from subio_v2.parser.v2rayn import V2RayNParser
 from subio_v2.surge.resources import get_surge_node_attachments
 
@@ -9,6 +10,7 @@ from subio_v2.surge.resources import get_surge_node_attachments
 def test_parser_factory_returns_fresh_mapped_instances():
     clash = ParserFactory.get_parser("clash")
     clash_meta = ParserFactory.get_parser("clash-meta")
+    stash = ParserFactory.get_parser("stash")
     v2 = ParserFactory.get_parser("v2rayn")
     surge = ParserFactory.get_parser("surge")
     subio = ParserFactory.get_parser("subio")
@@ -16,6 +18,7 @@ def test_parser_factory_returns_fresh_mapped_instances():
     assert isinstance(clash, ClashParser)
     assert isinstance(clash_meta, ClashParser)
     assert clash_meta is not clash
+    assert isinstance(stash, StashParser)
     assert ParserFactory.get_parser("clash") is not clash
     assert isinstance(v2, V2RayNParser)
     assert isinstance(surge, SurgeParser)

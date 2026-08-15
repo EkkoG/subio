@@ -132,9 +132,10 @@ class TransportSettings:
     network: Union[Network, str] = Network.TCP
     path: Optional[Union[str, List[str]]] = None  # ws/h2/http path
     headers: Optional[Dict[str, Any]] = None  # ws/http headers
-    host: Optional[List[str]] = None  # h2 host
+    host: Optional[Union[str, List[str]]] = None  # h2/xhttp host
     method: Optional[str] = "GET"  # http method
     grpc_service_name: Optional[str] = None
+    xhttp_mode: Optional[str] = None
     max_early_data: Optional[int] = None
     early_data_header_name: Optional[str] = None
     # Unmapped nested transport fields, keyed by Clash option block (e.g. ws-opts).

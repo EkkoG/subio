@@ -4,6 +4,7 @@ from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.emitter.stash import StashEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 
 
@@ -11,7 +12,7 @@ class EmitterFactory:
     _factories: Dict[str, Callable[[], BaseEmitter]] = {
         "clash": lambda: ClashEmitter(platform="clash"),
         "clash-meta": lambda: ClashEmitter(platform="clash-meta"),
-        "stash": lambda: ClashEmitter(platform="stash"),
+        "stash": StashEmitter,
         "surge": SurgeEmitter,
         "v2rayn": V2RayNEmitter,
         "dae": DaeEmitter,
