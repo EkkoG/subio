@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 from typing import Any
 
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
@@ -32,6 +34,12 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
         smux_group(),
     )
 
+    def validate(self, node: Node):
+        errors = super().validate(node)
+        if isinstance(node, ShadowsocksNode) and node.cipher == "none":
+            return [error for error in errors if error.field != "password"]
+        return errors
+
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
         if not isinstance(node, ShadowsocksNode):
             return []
@@ -49,6 +57,35 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
                 )
             )
 
+        if platform == "surge":
+            if node.cipher == "none":
+                pass
+            elif not node.password:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message="Shadowsocks password is required for this cipher",
+                        field="password",
+                    )
+                )
+            elif node.cipher.startswith("2022-blake3-aes-"):
+                expected = 16 if "128" in node.cipher else 32
+                try:
+                    decoded = base64.b64decode(node.password, validate=True)
+                except (binascii.Error, ValueError):
+                    decoded = b""
+                if len(decoded) != expected:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.ERROR,
+                            message=(
+                                f"{node.cipher} requires a base64 key encoding "
+                                f"{expected} bytes"
+                            ),
+                            field="password",
+                        )
+                    )
+
         if node.plugin:
             supported_plugins = proto_caps.get("plugins", set())
             if node.plugin not in supported_plugins:
@@ -65,19 +102,6 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
                     )
                 )
 
-            if node.plugin == "obfs" and node.plugin_opts:
-                obfs_mode = node.plugin_opts.get("mode")
-                obfs_host = node.plugin_opts.get("host")
-                if obfs_mode == "tls" and obfs_host:
-                    warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.INFO,
-                            message=(
-                                f"obfs-host will be ignored when obfs mode is 'tls' on {platform}"
-                            ),
-                            field="plugin_opts",
-                        )
-                    )
         return warnings
 
 

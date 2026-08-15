@@ -56,6 +56,34 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
                     field="obfs",
                 )
             )
+        elif node.obfs:
+            supported_modes = proto_caps.get("obfs_modes", set())
+            if supported_modes and node.obfs not in supported_modes:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            f"Hysteria2 obfs mode '{node.obfs}' is not supported by {platform}"
+                        ),
+                        field="obfs",
+                    )
+                )
+            if not node.obfs_password:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message="Hysteria2 obfs requires a password",
+                        field="obfs_password",
+                    )
+                )
+        if node.dialer_proxy and node.ports:
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message="Hysteria2 port hopping cannot be combined with underlying-proxy",
+                    field="ports",
+                )
+            )
         return warnings
 
 

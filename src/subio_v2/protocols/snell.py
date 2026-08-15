@@ -72,7 +72,11 @@ class SnellDescriptor(StructuredProtocolDescriptor):
                     )
                 )
         if node.obfs:
-            supported_obfs = proto_caps.get("obfs_modes", set())
+            version = node.version or 1
+            by_version = proto_caps.get("obfs_modes_by_version", {})
+            supported_obfs = by_version.get(
+                version, proto_caps.get("obfs_modes", set())
+            )
             if supported_obfs and node.obfs not in supported_obfs:
                 warnings.append(
                     CapabilityWarning(
@@ -81,6 +85,33 @@ class SnellDescriptor(StructuredProtocolDescriptor):
                         field="obfs",
                     )
                 )
+            elif by_version and not supported_obfs:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            f"Snell version {version} does not support obfs on {platform}"
+                        ),
+                        field="obfs",
+                    )
+                )
+        version = node.version or 1
+        if node.udp_port is not None and version < 3:
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message=f"Snell version {version} does not support udp-port",
+                    field="udp_port",
+                )
+            )
+        if node.mode and version != 6:
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message="Snell mode is only supported by version 6",
+                    field="mode",
+                )
+            )
         return warnings
 
 

@@ -38,6 +38,29 @@ SS_CIPHERS_2022 = {
     "2022-blake3-chacha20-poly1305",
 }
 
+# Surge supports the two AES-based 2022 methods plus its own legacy set.
+SS_CIPHERS_SURGE = {
+    "2022-blake3-aes-128-gcm",
+    "2022-blake3-aes-256-gcm",
+    "aes-128-gcm",
+    "aes-192-gcm",
+    "aes-256-gcm",
+    "chacha20-ietf-poly1305",
+    "xchacha20-ietf-poly1305",
+    "rc4",
+    "rc4-md5",
+    "aes-128-cfb",
+    "aes-192-cfb",
+    "aes-256-cfb",
+    "aes-128-ctr",
+    "aes-192-ctr",
+    "aes-256-ctr",
+    "salsa20",
+    "chacha20",
+    "chacha20-ietf",
+    "none",
+}
+
 # VMess 加密方法
 VMESS_CIPHERS = {
     "auto",
@@ -72,7 +95,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "ssh",
         },
         "shadowsocks": {
-            "ciphers": SS_CIPHERS_BASIC | SS_CIPHERS_2022,
+            "ciphers": SS_CIPHERS_SURGE,
             "transports": {TRANSPORT_TCP},
             "plugins": {"obfs"},
             "features": {"udp"},
@@ -93,15 +116,24 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "features": {"tls", "udp"},  # socks5-tls
         },
         "snell": {
-            "versions": {3, 4, 5},
+            "versions": {1, 2, 3, 4, 5, 6},
             "obfs_modes": {"http", "tls"},
+            "obfs_modes_by_version": {
+                1: {"http", "tls"},
+                2: {"http", "tls"},
+                3: {"http", "tls"},
+                4: {"http"},
+                5: {"http"},
+                6: set(),
+            },
         },
         "tuic": {
             "versions": {4, 5},
             "features": {"udp"},
         },
         "hysteria2": {
-            "features": {"udp"},
+            "features": {"udp", "obfs"},
+            "obfs_modes": {"salamander", "gecko"},
         },
         "ssh": {
             "auth_methods": {"password", "private_key"},
@@ -111,7 +143,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "udp_relay": True,
             "tfo": True,
             "mptcp": False,
-            "dialer_proxy": False,
+            "dialer_proxy": True,
         },
     },
     # ============== Clash Meta ==============

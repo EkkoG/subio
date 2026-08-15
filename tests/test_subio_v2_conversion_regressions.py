@@ -348,5 +348,6 @@ proxies:
 """
     )[0]
 
-    assert SurgeEmitter().check_node(hysteria2).supported is False
+    assert SurgeEmitter().check_node(hysteria2).supported is True
+    assert "salamander-password=secret" in SurgeEmitter().emit([hysteria2])
     assert V2RayNEmitter().check_node(vmess).supported is False

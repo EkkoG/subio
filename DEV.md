@@ -59,6 +59,11 @@ Surge Parser 应先经过语法层，再把已知字段映射到 Node；Emitter 
 语法层生成文本。新增字段时不得恢复手写逗号拼接，也不得使用普通字典承载需要保序或
 允许重复的原始参数。
 
+UDP 参数必须按协议生成：只有 SOCKS5、Shadowsocks，以及未来的 External 和
+HTTP/2 CONNECT 使用显式 `udp-relay`。VMess、Trojan、TUIC、Hysteria 2 和 Snell v3+
+的 UDP 支持是协议能力，不应因为 `node.udp=True` 输出该参数；HTTP/HTTPS 和 SSH 不支持
+UDP relay。
+
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
 `ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。

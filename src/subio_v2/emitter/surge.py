@@ -182,16 +182,18 @@ class SurgeEmitter(BaseEmitter):
         assert isinstance(node, ShadowsocksNode)
         config_parts = ["ss", self._server_str(node), str(node.port)]
         config_parts.append(f"encrypt-method={node.cipher}")
-        config_parts.append(f"password={node.password}")
+        if node.password or node.cipher != "none":
+            config_parts.append(f"password={node.password}")
+        if node.udp_port is not None:
+            config_parts.append(f"udp-port={node.udp_port}")
         if node.plugin == "obfs":
             obfs_mode = (
                 node.plugin_opts.get("mode", "http") if node.plugin_opts else "http"
             )
             config_parts.append(f"obfs={obfs_mode}")
-            if obfs_mode != "tls":
-                obfs_host = node.plugin_opts.get("host", "") if node.plugin_opts else ""
-                if obfs_host:
-                    config_parts.append(f"obfs-host={obfs_host}")
+            obfs_host = node.plugin_opts.get("host", "") if node.plugin_opts else ""
+            if obfs_host:
+                config_parts.append(f"obfs-host={obfs_host}")
         return config_parts
 
     def _parts_vmess(self, node: Node, _: dict[int, str]) -> list[str]:
@@ -204,6 +206,8 @@ class SurgeEmitter(BaseEmitter):
         ]
         if node.vmess_aead:
             config_parts.append("vmess-aead=true")
+        if node.cipher and node.cipher != "aes-128-gcm":
+            config_parts.append(f"encrypt-method={node.cipher}")
         if node.transport.network == Network.WS:
             config_parts.append("ws=true")
             if node.transport.path:
@@ -278,6 +282,12 @@ class SurgeEmitter(BaseEmitter):
         ]
         if node.version:
             config_parts.append(f"version={node.version}")
+        if node.reuse is not None:
+            config_parts.append(f"reuse={str(node.reuse).lower()}")
+        if node.udp_port is not None:
+            config_parts.append(f"udp-port={node.udp_port}")
+        if node.mode:
+            config_parts.append(f"mode={node.mode}")
         if node.obfs:
             config_parts.append(f"obfs={node.obfs}")
         if node.obfs_host:
@@ -292,12 +302,20 @@ class SurgeEmitter(BaseEmitter):
                 config_parts.append(f"password={node.password}")
             if node.uuid:
                 config_parts.append(f"uuid={node.uuid}")
+            if node.ports:
+                config_parts.append(f"port-hopping={node.ports}")
+            if node.hop_interval is not None:
+                config_parts.append(f"port-hopping-interval={node.hop_interval}")
             return config_parts
         config_parts = ["tuic", self._server_str(node), str(node.port)]
         if node.token:
             config_parts.append(f"token={node.token}")
         if node.version:
             config_parts.append(f"version={node.version}")
+        if node.ports:
+            config_parts.append(f"port-hopping={node.ports}")
+        if node.hop_interval is not None:
+            config_parts.append(f"port-hopping-interval={node.hop_interval}")
         return config_parts
 
     def _parts_hysteria2(self, node: Node, _: dict[int, str]) -> list[str]:
@@ -309,10 +327,14 @@ class SurgeEmitter(BaseEmitter):
             config_parts.append(f"download-bandwidth={node.down}")
         if node.up:
             config_parts.append(f"upload-bandwidth={node.up}")
-        if node.obfs:
-            config_parts.append(f"obfs={node.obfs}")
-        if node.obfs_password:
-            config_parts.append(f"obfs-password={node.obfs_password}")
+        if node.obfs == "salamander" and node.obfs_password:
+            config_parts.append(f"salamander-password={node.obfs_password}")
+        elif node.obfs == "gecko" and node.obfs_password:
+            config_parts.append(f"gecko-password={node.obfs_password}")
+        if node.ports:
+            config_parts.append(f"port-hopping={node.ports}")
+        if node.hop_interval is not None:
+            config_parts.append(f"port-hopping-interval={node.hop_interval}")
         return config_parts
 
     def _common_opts(self, node: Node) -> list[str]:
@@ -347,11 +369,7 @@ class SurgeEmitter(BaseEmitter):
                 if node.tls.server_name:
                     config_parts.append(f"sni={node.tls.server_name}")
 
-        if (
-            hasattr(node, "udp")
-            and node.udp
-            and not isinstance(node, (SnellNode, SSHNode))
-        ):
+        if node.udp and isinstance(node, (ShadowsocksNode, Socks5Node)):
             config_parts.append("udp-relay=true")
 
         if hasattr(node, "tfo") and node.tfo:

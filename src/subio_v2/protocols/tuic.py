@@ -93,6 +93,14 @@ class TUICDescriptor(StructuredProtocolDescriptor):
                         ),
                     )
                 )
+        if node.dialer_proxy and node.ports:
+            warnings.append(
+                CapabilityWarning(
+                    level=WarningLevel.ERROR,
+                    message="TUIC port hopping cannot be combined with underlying-proxy",
+                    field="ports",
+                )
+            )
         return warnings
 
 

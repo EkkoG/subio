@@ -110,6 +110,7 @@ class BaseNode:
 class ShadowsocksNode(BaseNode):
     cipher: str = "chacha20-ietf-poly1305"
     password: str = ""
+    udp_port: Optional[int] = None
     plugin: Optional[str] = None
     plugin_opts: Optional[Dict[str, Any]] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -295,6 +296,9 @@ class SSHNode(BaseNode):
 class SnellNode(BaseNode):
     psk: str = ""
     version: Optional[int] = None
+    reuse: Optional[bool] = None
+    udp_port: Optional[int] = None
+    mode: Optional[str] = None
     obfs: Optional[str] = None  # http, tls (legacy)
     obfs_host: Optional[str] = None
     obfs_opts: Optional[Dict[str, Any]] = None
@@ -312,6 +316,8 @@ class TUICNode(BaseNode):
     password: Optional[str] = None  # TUIC v5 uses password
     uuid: Optional[str] = None  # TUIC v5 uses uuid
     version: Optional[int] = None  # 4 or 5
+    ports: Optional[str] = None
+    hop_interval: Optional[int] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 

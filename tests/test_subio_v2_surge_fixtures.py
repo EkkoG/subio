@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.parser.surge import SurgeParser
 
@@ -38,7 +36,6 @@ def test_official_quoted_alpn_regression_baseline():
     assert node.tls.alpn == ["h3", "h2"]
 
 
-@pytest.mark.xfail(reason="fixed by the Surge capability phase", strict=False)
 def test_official_udp_and_hysteria2_regression_baseline():
     content = """
 [Proxy]

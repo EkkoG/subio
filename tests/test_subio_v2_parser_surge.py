@@ -105,8 +105,8 @@ vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
     assert "encrypt-method" not in output3  # Should not output encrypt-method
 
 
-def test_surge_emitter_obfs_tls_no_host():
-    """Test that Surge emitter does not output obfs-host when obfs mode is tls"""
+def test_surge_emitter_preserves_obfs_host_for_tls_mode():
+    """Surge allows obfs-host for both supported simple-obfs modes."""
     from subio_v2.model.nodes import ShadowsocksNode, Protocol
 
     emitter = SurgeEmitter()
@@ -139,7 +139,7 @@ def test_surge_emitter_obfs_tls_no_host():
     )
     output2 = emitter.emit([node2])
     assert "obfs=tls" in output2
-    assert "obfs-host" not in output2  # Should not output obfs-host for tls mode
+    assert "obfs-host=bing.com" in output2
 
     # Test obfs=http with host (should output host)
     node3 = ShadowsocksNode(
@@ -155,6 +155,139 @@ def test_surge_emitter_obfs_tls_no_host():
     output3 = emitter.emit([node3])
     assert "obfs=http" in output3
     assert "obfs-host=bing.com" in output3  # Should output obfs-host for http mode
+
+
+def test_surge_parser_and_emitter_preserve_quoted_alpn_and_common_options():
+    result = SurgeParser().parse_result(
+        """
+[Proxy]
+tuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2", tfo=true, ip-version=prefer-v4, interface=en0, underlying-proxy=entry
+"""
+    )
+
+    assert result.issues == []
+    node = result.nodes[0]
+    assert node.tls.alpn == ["h3", "h2"]
+    assert node.tfo is True
+    assert node.ip_version == "prefer-v4"
+    assert node.interface_name == "en0"
+    assert node.dialer_proxy == "entry"
+
+    output = SurgeEmitter().emit(result.nodes)
+    assert 'alpn="h3,h2"' in output
+    assert "tfo=true" in output
+    assert "ip-version=prefer-v4" in output
+    assert "interface=en0" in output
+    assert "underlying-proxy=entry" in output
+
+
+def test_surge_udp_relay_is_emitted_only_for_opt_in_protocols():
+    nodes = SurgeParser().parse(
+        """
+[Proxy]
+http = http, example.com, 80
+vmess = vmess, example.com, 443, username=u
+trojan = trojan, example.com, 443, password=p
+snell = snell, example.com, 443, psk=p, version=5, udp-relay=false
+tuic = tuic-v5, example.com, 443, uuid=u, password=p, udp-relay=false
+hysteria2 = hysteria2, example.com, 443, password=p
+socks = socks5, example.com, 1080, udp-relay=true
+ss = ss, example.com, 8388, encrypt-method=aes-256-gcm, password=p, udp-relay=true
+"""
+    )
+
+    by_name = {node.name: node for node in nodes}
+    assert by_name["http"].udp is False
+    assert by_name["vmess"].udp is True
+    assert by_name["trojan"].udp is True
+    assert by_name["snell"].udp is True
+    assert by_name["snell"].tls.enabled is False
+    assert by_name["tuic"].udp is True
+    assert by_name["hysteria2"].udp is True
+
+    lines = {
+        line.split(" = ", 1)[0]: line
+        for line in SurgeEmitter().emit(nodes).splitlines()
+        if " = " in line
+    }
+    for name in ("http", "vmess", "trojan", "snell", "tuic", "hysteria2"):
+        assert "udp-relay" not in lines[name]
+    assert "udp-relay=true" in lines["socks"]
+    assert "udp-relay=true" in lines["ss"]
+
+
+def test_surge_hysteria2_uses_current_obfs_parameter_names():
+    result = SurgeParser().parse_result(
+        """
+[Proxy]
+salamander = hysteria2, example.com, 443, password=p, salamander-password=secret-a
+gecko = hysteria2, example.com, 443, password=p, gecko-password=secret-b
+invalid = hysteria2, example.com, 443, password=p, salamander-password=a, gecko-password=b
+"""
+    )
+
+    assert [(node.name, node.obfs, node.obfs_password) for node in result.nodes] == [
+        ("salamander", "salamander", "secret-a"),
+        ("gecko", "gecko", "secret-b"),
+    ]
+    assert [issue.node for issue in result.issues] == ["invalid"]
+
+    output = SurgeEmitter().emit(result.nodes)
+    assert "salamander-password=secret-a" in output
+    assert "gecko-password=secret-b" in output
+    assert "obfs=" not in output
+    assert "obfs-password=" not in output
+
+
+def test_surge_vmess_cipher_and_port_hopping_fields_round_trip():
+    result = SurgeParser().parse_result(
+        """
+[Proxy]
+default = vmess, example.com, 443, username=u
+custom = vmess, example.com, 443, username=u, encrypt-method=auto
+tuic = tuic-v5, example.com, 443, uuid=u, password=p, port-hopping="443,8443-8445", port-hopping-interval=30
+hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hopping-interval=20
+"""
+    )
+
+    assert result.issues == []
+    by_name = {node.name: node for node in result.nodes}
+    assert by_name["default"].cipher == "aes-128-gcm"
+    assert by_name["custom"].cipher == "auto"
+    assert by_name["tuic"].ports == "443,8443-8445"
+    assert by_name["tuic"].hop_interval == 30
+    assert by_name["hy2"].ports == "443-445"
+    assert by_name["hy2"].hop_interval == 20
+
+    output = SurgeEmitter().emit(result.nodes)
+    default_line = next(
+        line for line in output.splitlines() if line.startswith("default =")
+    )
+    custom_line = next(
+        line for line in output.splitlines() if line.startswith("custom =")
+    )
+    assert "encrypt-method" not in default_line
+    assert "encrypt-method=auto" in custom_line
+    assert 'port-hopping="443,8443-8445"' in output
+    assert "port-hopping-interval=30" in output
+
+
+def test_surge_snell_versioned_fields_round_trip():
+    nodes = SurgeParser().parse(
+        """
+[Proxy]
+snell = snell, example.com, 443, psk=p, version=6, reuse=false, udp-port=8443, mode=quic
+"""
+    )
+
+    node = nodes[0]
+    assert node.reuse is False
+    assert node.udp_port == 8443
+    assert node.mode == "quic"
+    output = SurgeEmitter().emit(nodes)
+    assert "reuse=false" in output
+    assert "udp-port=8443" in output
+    assert "mode=quic" in output
 
 
 def test_surge_emitter_ws_path_only_when_has_value():

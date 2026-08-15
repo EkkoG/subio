@@ -208,6 +208,12 @@ class SurgeParser(BaseParser):
                 return default
             return v.lower() == "true"
 
+        def get_int(k):
+            value = kv_args.get(k)
+            if value is None:
+                return None
+            return int(value)
+
         # Remove print(f"Parsing Surge content...") if it exists (already removed?)
 
         # Helper to parse alpn (can be single string or comma-separated)
@@ -275,6 +281,7 @@ class SurgeParser(BaseParser):
                     port=port,
                     cipher=cipher or "chacha20-ietf-poly1305",
                     password=password or "",
+                    udp_port=get_int("udp-port"),
                     plugin=plugin,
                     plugin_opts=plugin_opts,
                     udp=get_bool("udp-relay", False),
@@ -294,11 +301,11 @@ class SurgeParser(BaseParser):
                     server=server,
                     port=port,
                     uuid=kv_args.get("username", ""),
-                    cipher=kv_args.get("encrypt-method", "auto"),
+                    cipher=kv_args.get("encrypt-method", "aes-128-gcm"),
                     vmess_aead=get_bool("vmess-aead", False),
                     tls=tls,
                     transport=transport,
-                    udp=get_bool("udp-relay", False),
+                    udp=True,
                 )
                 return apply_common_options(node)
 
@@ -323,7 +330,7 @@ class SurgeParser(BaseParser):
                     password=kv_args.get("password", ""),
                     tls=tls,
                     transport=transport,
-                    udp=get_bool("udp-relay", False),
+                    udp=True,
                 )
                 return apply_common_options(node)
 
@@ -372,6 +379,7 @@ class SurgeParser(BaseParser):
                     username=username,
                     password=password,
                     tls=tls,
+                    udp=False,
                 )
                 return apply_common_options(node)
 
@@ -419,6 +427,7 @@ class SurgeParser(BaseParser):
                     password=password,
                     private_key=private_key,
                     keystore_id=keystore_id,
+                    udp=False,
                 )
                 return apply_common_options(node)
 
@@ -435,12 +444,6 @@ class SurgeParser(BaseParser):
                 obfs = kv_args.get("obfs")
                 obfs_host = kv_args.get("obfs-host")
 
-                # Snell always uses TLS
-                snell_tls = TLSSettings(
-                    enabled=True,
-                    skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
-                )
-
                 node = SnellNode(
                     name=name,
                     type=Protocol.SNELL,
@@ -448,10 +451,15 @@ class SurgeParser(BaseParser):
                     port=port,
                     psk=psk,
                     version=version,
+                    reuse=(
+                        get_bool("reuse") if kv_args.get("reuse") is not None else None
+                    ),
+                    udp_port=get_int("udp-port"),
+                    mode=kv_args.get("mode"),
                     obfs=obfs,
                     obfs_host=obfs_host,
-                    tls=snell_tls,
-                    udp=get_bool("udp-relay", False),
+                    tls=TLSSettings(enabled=False),
+                    udp=bool(version and version >= 3),
                 )
                 return apply_common_options(node)
 
@@ -485,8 +493,10 @@ class SurgeParser(BaseParser):
                     password=password,
                     uuid=uuid,
                     version=version,
+                    ports=kv_args.get("port-hopping"),
+                    hop_interval=get_int("port-hopping-interval"),
                     tls=tuic_tls,
-                    udp=get_bool("udp-relay", True),  # TUIC supports UDP by default
+                    udp=True,
                 )
                 return apply_common_options(node)
 
@@ -495,8 +505,20 @@ class SurgeParser(BaseParser):
                 password = kv_args.get("password", "")
                 up = kv_args.get("upload-bandwidth") or kv_args.get("up")
                 down = kv_args.get("download-bandwidth") or kv_args.get("down")
-                obfs = kv_args.get("obfs")
-                obfs_password = kv_args.get("obfs-password")
+                salamander_password = kv_args.get("salamander-password")
+                gecko_password = kv_args.get("gecko-password")
+                if salamander_password and gecko_password:
+                    return None
+                if salamander_password:
+                    obfs = "salamander"
+                    obfs_password = salamander_password
+                elif gecko_password:
+                    obfs = "gecko"
+                    obfs_password = gecko_password
+                else:
+                    # Accept the older generic spelling and normalize on emit.
+                    obfs = kv_args.get("obfs")
+                    obfs_password = kv_args.get("obfs-password")
 
                 hy_tls = TLSSettings(
                     enabled=True,
@@ -513,6 +535,8 @@ class SurgeParser(BaseParser):
                     password=password,
                     up=up,
                     down=down,
+                    ports=kv_args.get("port-hopping"),
+                    hop_interval=get_int("port-hopping-interval"),
                     obfs=obfs,
                     obfs_password=obfs_password,
                     tls=hy_tls,
