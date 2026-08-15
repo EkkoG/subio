@@ -14,15 +14,15 @@ def test_dae_macro_renders_function_call_syntax():
             RuleEntry(rule_type="MATCH", matcher="", policy=""),
         ],
     )
-    macro = rs.to_macro(platform="dae")
-    assert "domain(full: example.com) -> {{ rule }}" in macro
-    assert "domain(suffix: cn) -> {{ rule }}" in macro
-    assert "domain(keyword: apple) -> {{ rule }}" in macro
-    assert "dip(1.1.1.0/24) -> {{ rule }}" in macro
-    assert "dip(::1/128) -> {{ rule }}" in macro
-    assert "fallback: {{ rule }}" in macro
+    rendered = rs.render("dae", "direct")
+    assert "domain(full: example.com) -> direct" in rendered
+    assert "domain(suffix: cn) -> direct" in rendered
+    assert "domain(keyword: apple) -> direct" in rendered
+    assert "dip(1.1.1.0/24) -> direct" in rendered
+    assert "dip(::1/128) -> direct" in rendered
+    assert "fallback: direct" in rendered
     # dae 不使用 `- ` YAML 列表前缀
-    assert "- domain(" not in macro
+    assert "- domain(" not in rendered
 
 
 def test_dae_unsupported_rule_types_skipped():
@@ -35,10 +35,10 @@ def test_dae_unsupported_rule_types_skipped():
             RuleEntry(rule_type="DOMAIN", matcher="ok.com", policy=""),
         ],
     )
-    macro = rs.to_macro(platform="dae")
-    assert "PROCESS-NAME" not in macro
-    assert "RULE-SET" not in macro
-    assert "domain(full: ok.com)" in macro
+    rendered = rs.render("dae", "direct")
+    assert "PROCESS-NAME" not in rendered
+    assert "RULE-SET" not in rendered
+    assert "domain(full: ok.com)" in rendered
 
 
 def test_dae_explicit_policy_kept():
@@ -46,8 +46,10 @@ def test_dae_explicit_policy_kept():
         name="rs",
         args="rule",
         rules=[
-            RuleEntry(rule_type="DOMAIN-SUFFIX", matcher="google.com", policy="my_proxy"),
+            RuleEntry(
+                rule_type="DOMAIN-SUFFIX", matcher="google.com", policy="my_proxy"
+            ),
         ],
     )
-    macro = rs.to_macro(platform="dae")
-    assert "domain(suffix: google.com) -> my_proxy" in macro
+    rendered = rs.render("dae", "direct")
+    assert "domain(suffix: google.com) -> my_proxy" in rendered

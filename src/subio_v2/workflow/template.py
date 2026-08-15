@@ -1,16 +1,9 @@
-"""
-模板渲染模块
-
-使用方式：{{ ai('DIRECT') }}
-
-macro 内容根据目标平台动态生成，由 Jinja2 完成渲染
-"""
+"""Render artifact templates with data-only ruleset callables."""
 
 import jinja2
 import yaml
-import sys
 from typing import Any, Dict, Optional
-from subio_v2.utils.logger import logger
+from subio_v2.workflow.errors import TemplateRenderError
 from subio_v2.workflow.filters import all_filters
 from subio_v2.workflow.ruleset import RuleSetStore
 import os
@@ -35,11 +28,11 @@ class TemplateRenderer:
                     width=float("inf"),
                 ).strip()
             return str(value)
-        
+
         self.env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir),
-            undefined=jinja2.Undefined,
-            finalize=finalize_unicode
+            undefined=jinja2.StrictUndefined,
+            finalize=finalize_unicode,
         )
         self._register_base_filters()
         self._register_globals()
@@ -80,21 +73,26 @@ class TemplateRenderer:
             with open(template_path, "r", encoding="utf-8") as f:
                 template_source = f.read()
 
-            # 根据平台生成 macros
             platform = artifact_type or "clash-meta"
-            macros = ""
+            render_context = dict(context)
             if rulesets:
-                macros = rulesets.generate_macros(platform)
+                callables = rulesets.get_callables(platform)
+                conflicts = sorted(
+                    set(callables) & (set(render_context) | set(self.env.globals))
+                )
+                if conflicts:
+                    raise ValueError(
+                        "Ruleset callable name conflicts with template context/global: "
+                        + ", ".join(conflicts)
+                    )
+                render_context.update(callables)
 
-            # 将 macros 拼接到模板前面
-            full_source = f"{macros}\n{template_source}" if macros else template_source
+            template = self.env.from_string(template_source)
+            return template.render(**render_context)
 
-            template = self.env.from_string(full_source)
-            return template.render(**context)
-
-        except FileNotFoundError as e:
-            logger.error(f"Template error: {e}")
-            sys.exit(1)
+        except TemplateRenderError:
+            raise
         except Exception as e:
-            logger.error(f"Error rendering template {template_name}: {e}")
-            sys.exit(1)
+            raise TemplateRenderError(
+                f"Error rendering template '{template_name}': {e}"
+            ) from e

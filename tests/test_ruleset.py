@@ -5,6 +5,8 @@
 import tempfile
 import os
 
+import pytest
+
 from subio_v2.workflow.ruleset import (
     RuleSet,
     RuleSetStore,
@@ -17,6 +19,7 @@ from subio_v2.workflow.ruleset import (
     merge_stores,
 )
 from subio_v2.workflow.template import TemplateRenderer
+from subio_v2.workflow.errors import ConfigError
 
 
 class TestParseRuleLine:
@@ -142,29 +145,28 @@ class TestIsRuleSupported:
 class TestRuleSet:
     """测试 RuleSet 类"""
 
-    def test_to_macro_clash_basic(self):
-        """测试 Clash 平台基本 macro 生成"""
+    def test_render_clash_basic(self):
+        """测试 Clash 平台基本规则渲染"""
         rules = [
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "{% macro test(rule) -%}" in macro
-        assert "- DOMAIN,example.com,{{ rule }}" in macro
+        rendered = ruleset.render("clash", "DIRECT")
+        assert "- DOMAIN,example.com,DIRECT" in rendered
 
-    def test_to_macro_surge_no_prefix(self):
+    def test_render_surge_no_prefix(self):
         """测试 Surge 平台无前缀"""
         rules = [
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("surge")
-        assert "DOMAIN,example.com,{{ rule }}" in macro
-        assert "- DOMAIN" not in macro
+        rendered = ruleset.render("surge", "DIRECT")
+        assert "DOMAIN,example.com,DIRECT" in rendered
+        assert "- DOMAIN" not in rendered
 
-    def test_to_macro_with_existing_policy(self):
+    def test_render_with_existing_policy_placeholder(self):
         """测试已有 policy（Jinja2 变量）的规则"""
         rules = [
             RuleEntry(
@@ -173,20 +175,20 @@ class TestRuleSet:
         ]
         ruleset = RuleSet(name="test", args="api_rule, cdn_rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "- DOMAIN,example.com,{{ api_rule }}" in macro
+        rendered = ruleset.render("clash", "API", "CDN")
+        assert "- DOMAIN,example.com,API" in rendered
 
-    def test_to_macro_empty_policy_uses_first_arg(self):
+    def test_render_empty_policy_uses_first_arg(self):
         """测试空 policy 使用第一个参数"""
         rules = [
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
         ]
         ruleset = RuleSet(name="test", args="default_rule, api_rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "- DOMAIN,example.com,{{ default_rule }}" in macro
+        rendered = ruleset.render("clash", "DEFAULT", "API")
+        assert "- DOMAIN,example.com,DEFAULT" in rendered
 
-    def test_to_macro_filters_unsupported(self):
+    def test_render_filters_unsupported(self):
         """测试过滤不支持的规则"""
         rules = [
             RuleEntry(rule_type="DOMAIN", matcher="example.com", policy=""),
@@ -194,11 +196,11 @@ class TestRuleSet:
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "DOMAIN" in macro
-        assert "USER-AGENT" not in macro
+        rendered = ruleset.render("clash", "DIRECT")
+        assert "DOMAIN" in rendered
+        assert "USER-AGENT" not in rendered
 
-    def test_to_macro_preserves_comments(self):
+    def test_render_preserves_comments(self):
         """测试保留注释"""
         rules = [
             CommentEntry(content="# Test comment"),
@@ -206,33 +208,33 @@ class TestRuleSet:
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "# Test comment" in macro
+        rendered = ruleset.render("clash", "DIRECT")
+        assert "# Test comment" in rendered
 
-    def test_to_macro_match_to_final_surge(self):
+    def test_render_match_to_final_surge(self):
         """测试 Surge 中 MATCH 转为 FINAL"""
         rules = [RuleEntry(rule_type="MATCH", matcher="", policy="")]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("surge")
-        assert "FINAL,{{ rule }}" in macro
-        assert "MATCH" not in macro
+        rendered = ruleset.render("surge", "DIRECT")
+        assert "FINAL,DIRECT" in rendered
+        assert "MATCH" not in rendered
 
-    def test_to_macro_dst_port_to_dest_port_surge(self):
+    def test_render_dst_port_to_dest_port_surge(self):
         """测试 Surge 中 DST-PORT 转为 DEST-PORT"""
         rules = [RuleEntry(rule_type="DST-PORT", matcher="443", policy="")]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
         # Surge 应该转换为 DEST-PORT
-        macro = ruleset.to_macro("surge")
-        assert "DEST-PORT,443,{{ rule }}" in macro
-        assert "DST-PORT" not in macro
+        rendered = ruleset.render("surge", "DIRECT")
+        assert "DEST-PORT,443,DIRECT" in rendered
+        assert "DST-PORT" not in rendered
 
         # Clash 保持 DST-PORT
-        macro_clash = ruleset.to_macro("clash")
-        assert "- DST-PORT,443,{{ rule }}" in macro_clash
+        rendered_clash = ruleset.render("clash", "DIRECT")
+        assert "- DST-PORT,443,DIRECT" in rendered_clash
 
-    def test_to_macro_with_no_resolve_option(self):
+    def test_render_with_no_resolve_option(self):
         """测试 no-resolve 选项保留"""
         rules = [
             RuleEntry(
@@ -244,8 +246,40 @@ class TestRuleSet:
         ]
         ruleset = RuleSet(name="test", args="rule", rules=rules)
 
-        macro = ruleset.to_macro("clash")
-        assert "- IP-CIDR,10.0.0.0/8,{{ rule }},no-resolve" in macro
+        rendered = ruleset.render("clash", "DIRECT")
+        assert "- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve" in rendered
+
+    @pytest.mark.parametrize("name", ["bad-name", "_private", "中文"])
+    def test_rejects_invalid_callable_name(self, name):
+        with pytest.raises(ValueError, match="Invalid ruleset name"):
+            RuleSet(name=name, args="rule", rules=[])
+
+    @pytest.mark.parametrize("args", ["", "rule,", "rule, rule", "bad-name"])
+    def test_rejects_invalid_arguments(self, args):
+        with pytest.raises(ValueError, match="ruleset argument"):
+            RuleSet(name="test", args=args, rules=[])
+
+    def test_rejects_undeclared_policy_argument(self):
+        with pytest.raises(ValueError, match="undeclared argument 'missing'"):
+            RuleSet(
+                name="test",
+                args="rule",
+                rules=[
+                    RuleEntry(
+                        rule_type="DOMAIN",
+                        matcher="example.com",
+                        policy="{{ missing }}",
+                    )
+                ],
+            )
+
+    def test_callable_argument_errors_are_explicit(self):
+        ruleset = RuleSet(name="test", args="first, second", rules=[])
+
+        with pytest.raises(TypeError, match="missing required argument"):
+            ruleset.render("clash", "DIRECT")
+        with pytest.raises(TypeError, match="unexpected argument 'third'"):
+            ruleset.render("clash", first="DIRECT", second="PROXY", third="X")
 
 
 class TestRuleSetStore:
@@ -259,8 +293,8 @@ class TestRuleSetStore:
         assert store.get("test") is ruleset
         assert "test" in store
 
-    def test_generate_macros(self):
-        """测试生成所有 macro"""
+    def test_get_callables(self):
+        """测试生成平台专用 callable"""
         store = RuleSetStore()
 
         rules1 = [RuleEntry(rule_type="DOMAIN", matcher="a.com", policy="")]
@@ -273,9 +307,9 @@ class TestRuleSetStore:
             "ruleset_b", RuleSet(name="ruleset_b", args="rule", rules=rules2)
         )
 
-        macros = store.generate_macros("clash")
-        assert "macro ruleset_a" in macros
-        assert "macro ruleset_b" in macros
+        callables = store.get_callables("clash")
+        assert "- DOMAIN,a.com,DIRECT" == callables["ruleset_a"]("DIRECT")
+        assert "- DOMAIN,b.com,PROXY" == callables["ruleset_b"]("PROXY")
 
     def test_names_property(self):
         store = RuleSetStore()
@@ -283,6 +317,13 @@ class TestRuleSetStore:
         store.register("b", RuleSet(name="b", args="rule", rules=[]))
 
         assert set(store.names) == {"a", "b"}
+
+    def test_duplicate_registration_fails(self):
+        store = RuleSetStore()
+        store.register("same", RuleSet(name="same", args="rule", rules=[]))
+
+        with pytest.raises(ValueError, match="Duplicate ruleset name: same"):
+            store.register("same", RuleSet(name="same", args="rule", rules=[]))
 
 
 class TestLoadSnippets:
@@ -320,6 +361,15 @@ class TestLoadSnippets:
             store = load_snippets(tmpdir)
             assert len(store.names) == 0
 
+    def test_invalid_snippet_name_fails(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            snippet_path = os.path.join(tmpdir, "bad-name")
+            with open(snippet_path, "w") as f:
+                f.write("rule\nDOMAIN,example.com,{{ rule }}")
+
+            with pytest.raises(ConfigError, match="Invalid snippet 'bad-name'"):
+                load_snippets(tmpdir)
+
 
 class TestMergeStores:
     """测试合并存储"""
@@ -334,6 +384,15 @@ class TestMergeStores:
         merged = merge_stores(store1, store2)
         assert "a" in merged
         assert "b" in merged
+
+    def test_merge_rejects_name_conflicts(self):
+        store1 = RuleSetStore()
+        store1.register("same", RuleSet(name="same", args="rule", rules=[]))
+        store2 = RuleSetStore()
+        store2.register("same", RuleSet(name="same", args="rule", rules=[]))
+
+        with pytest.raises(ValueError, match="Duplicate ruleset name: same"):
+            merge_stores(store1, store2)
 
 
 class TestTemplateRendererIntegration:

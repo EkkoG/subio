@@ -4,18 +4,19 @@ RuleSet 模块 - 规则集的加载、存储和渲染
 设计理念：
 - snippet 和 remote ruleset 统一处理，remote ruleset 是 snippet 的特例
 - 规则只解析一次（加载时）
-- 根据目标平台动态生成 Jinja2 macro
-- 由 Jinja2 模板引擎完成最终渲染
+- 规则集作为模板上下文中的 Python callable 暴露
+- 远端规则内容永远不会被当作 Jinja2 源码编译
 """
 
 import hashlib
 import os
+import re
 import requests
-import sys
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Set
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.errors import ConfigError
 
 
 # ============== 平台配置 ==============
@@ -137,6 +138,36 @@ PLATFORM_RULES: Dict[str, Set[str]] = {
 }
 
 CLASH_PLATFORMS = {"clash", "clash-meta", "stash"}
+
+IDENTIFIER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+POLICY_PLACEHOLDER_RE = re.compile(r"^\{\{\s*([A-Za-z][A-Za-z0-9_]*)\s*\}\}$")
+
+
+def _validate_identifier(value: str, kind: str) -> str:
+    if not isinstance(value, str) or not IDENTIFIER_RE.fullmatch(value):
+        raise ValueError(
+            f"Invalid ruleset {kind} {value!r}: expected an ASCII identifier "
+            "starting with a letter"
+        )
+    return value
+
+
+def _parse_argument_names(args: str) -> tuple[str, ...]:
+    if not isinstance(args, str):
+        raise ValueError("Invalid ruleset arguments: expected a comma-separated string")
+
+    parts = tuple(part.strip() for part in args.split(","))
+    if not parts or any(not part for part in parts):
+        raise ValueError("Invalid ruleset arguments: argument names cannot be empty")
+    names = parts
+
+    seen = set()
+    for name in names:
+        _validate_identifier(name, "argument")
+        if name in seen:
+            raise ValueError(f"Duplicate ruleset argument: {name}")
+        seen.add(name)
+    return names
 
 
 # ============== 数据结构 ==============
@@ -292,8 +323,68 @@ class RuleSet:
     args: str  # 参数声明，如 "rule" 或 "default_rule, api_rule"
     rules: List[RuleLine] = field(default_factory=list)
 
-    def render_rule_for_macro(self, rule: RuleLine, platform: str) -> Optional[str]:
-        """渲染单条规则为 macro 模板格式"""
+    def __post_init__(self):
+        _validate_identifier(self.name, "name")
+        argument_names = self.argument_names
+        for rule in self.rules:
+            if not isinstance(rule, RuleEntry):
+                continue
+            match = POLICY_PLACEHOLDER_RE.fullmatch(rule.policy)
+            if match and match.group(1) not in argument_names:
+                raise ValueError(
+                    f"Ruleset {self.name!r} references undeclared argument "
+                    f"{match.group(1)!r}"
+                )
+
+    @property
+    def argument_names(self) -> tuple[str, ...]:
+        return _parse_argument_names(self.args)
+
+    def _bind_arguments(
+        self, values: tuple[Any, ...], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        names = self.argument_names
+        if len(values) > len(names):
+            raise TypeError(
+                f"Ruleset {self.name!r} expected at most {len(names)} argument(s), "
+                f"got {len(values)}"
+            )
+
+        bound = dict(zip(names, values))
+        for name, value in kwargs.items():
+            if name not in names:
+                raise TypeError(
+                    f"Ruleset {self.name!r} got an unexpected argument {name!r}"
+                )
+            if name in bound:
+                raise TypeError(
+                    f"Ruleset {self.name!r} got multiple values for argument {name!r}"
+                )
+            bound[name] = value
+
+        missing = [name for name in names if name not in bound]
+        if missing:
+            raise TypeError(
+                f"Ruleset {self.name!r} missing required argument(s): "
+                f"{', '.join(missing)}"
+            )
+        return bound
+
+    def _resolve_policy(self, policy: str, arguments: Mapping[str, Any]) -> str:
+        if not policy:
+            return str(arguments[self.argument_names[0]])
+
+        match = POLICY_PLACEHOLDER_RE.fullmatch(policy)
+        if match:
+            return str(arguments[match.group(1)])
+
+        # Jinja-looking remote input is plain data and is never re-evaluated.
+        return policy
+
+    def render_rule(
+        self, rule: RuleLine, platform: str, arguments: Mapping[str, Any]
+    ) -> Optional[str]:
+        """Render one parsed rule using already-bound callable arguments."""
         if rule is None:
             return None
 
@@ -307,12 +398,7 @@ class RuleSet:
         if not is_rule_supported(rule.rule_type, platform):
             return None
 
-        # 确定 policy
-        # 如果原 policy 为空，使用默认占位符（取 args 的第一个参数）
-        policy = rule.policy
-        if not policy:
-            first_arg = self.args.split(",")[0].strip()
-            policy = "{{ " + first_arg + " }}"
+        policy = self._resolve_policy(rule.policy, arguments)
 
         # dae 平台采用独立的语法（function-call 风格）
         if platform == "dae":
@@ -374,16 +460,22 @@ class RuleSet:
             return f"dip({rule.matcher}) -> {policy}"
         return None
 
-    def to_macro(self, platform: str) -> str:
-        """生成针对指定平台的 Jinja2 macro"""
+    def render(self, platform: str, *values: Any, **kwargs: Any) -> str:
+        """Render this ruleset as plain text for use as a Jinja callable."""
+        arguments = self._bind_arguments(values, kwargs)
         lines = []
         for rule in self.rules:
-            rendered = self.render_rule_for_macro(rule, platform)
+            rendered = self.render_rule(rule, platform, arguments)
             if rendered is not None:
                 lines.append(rendered)
+        return "\n".join(lines)
 
-        content = "\n".join(lines)
-        return f"{{% macro {self.name}({self.args}) -%}}\n{content}\n{{%- endmacro -%}}"
+    def as_callable(self, platform: str) -> Callable[..., str]:
+        def render_ruleset(*values: Any, **kwargs: Any) -> str:
+            return self.render(platform, *values, **kwargs)
+
+        render_ruleset.__name__ = self.name
+        return render_ruleset
 
 
 # ============== RuleSetStore ==============
@@ -396,6 +488,14 @@ class RuleSetStore:
         self._items: Dict[str, RuleSet] = {}
 
     def register(self, name: str, item: RuleSet):
+        _validate_identifier(name, "name")
+        if name != item.name:
+            raise ValueError(
+                f"Ruleset registration name {name!r} does not match item name "
+                f"{item.name!r}"
+            )
+        if name in self._items:
+            raise ValueError(f"Duplicate ruleset name: {name}")
         self._items[name] = item
 
     def get(self, name: str) -> Optional[RuleSet]:
@@ -408,12 +508,9 @@ class RuleSetStore:
     def names(self) -> List[str]:
         return list(self._items.keys())
 
-    def generate_macros(self, platform: str) -> str:
-        """生成所有规则集的 Jinja2 macro"""
-        macros = []
-        for item in self._items.values():
-            macros.append(item.to_macro(platform))
-        return "\n".join(macros)
+    def get_callables(self, platform: str) -> Dict[str, Callable[..., str]]:
+        """Build template callables without generating Jinja source code."""
+        return {name: item.as_callable(platform) for name, item in self._items.items()}
 
 
 # ============== 资源加载 ==============
@@ -438,16 +535,18 @@ def load_remote_resource(url: str, user_agent: str = None, debug: bool = False) 
                     f.write(text)
                 return text
             except Exception as e:
-                logger.error(f"Error fetching {url}: {e}")
-                sys.exit(1)
+                raise ConfigError(
+                    f"Failed to fetch remote ruleset: {type(e).__name__}"
+                ) from e
     else:
         try:
             resp = requests.get(url, headers=headers, timeout=10)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
-            sys.exit(1)
+            raise ConfigError(
+                f"Failed to fetch remote ruleset: {type(e).__name__}"
+            ) from e
 
 
 def load_rulesets(ruleset_configs: List[Dict[str, Any]]) -> RuleSetStore:
@@ -462,7 +561,7 @@ def load_rulesets(ruleset_configs: List[Dict[str, Any]]) -> RuleSetStore:
         name = conf.get("name")
         url = conf.get("url")
         if not name or not url:
-            continue
+            raise ConfigError("Every remote ruleset must define name and url")
 
         logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
         content = load_remote_resource(url, conf.get("user_agent"))
@@ -502,12 +601,11 @@ def load_snippets(snippet_dir: str) -> RuleSetStore:
 
             lines = text.splitlines()
             if not lines:
-                continue
+                raise ValueError("file is empty")
 
             args = lines[0].strip()
             if not args:
-                logger.warning(f"Snippet {snippet_file} missing args")
-                continue
+                raise ValueError("missing argument declaration")
 
             content = "\n".join(lines[1:])
             rules = parse_rules(content)
@@ -515,8 +613,10 @@ def load_snippets(snippet_dir: str) -> RuleSetStore:
             ruleset = RuleSet(name=snippet_file, args=args, rules=rules)
             store.register(snippet_file, ruleset)
 
+        except ValueError as e:
+            raise ConfigError(f"Invalid snippet {snippet_file!r}: {e}") from e
         except Exception as e:
-            logger.error(f"Error loading snippet {snippet_file}: {e}")
+            raise ConfigError(f"Failed to load snippet {snippet_file!r}: {e}") from e
 
     return store
 
