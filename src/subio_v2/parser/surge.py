@@ -21,6 +21,7 @@ from subio_v2.model.nodes import (
     TransportSettings,
     Network,
 )
+from subio_v2.surge.syntax import parse_parameter_list, parse_proxy_line
 from subio_v2.utils.logger import logger
 
 
@@ -46,8 +47,12 @@ class SurgeParser(BaseParser):
         in_proxy_section = False
         keystore = self.keystore
 
-        # Check if there are sections
-        has_sections = any(line.strip().lower() == "[proxy]" for line in lines)
+        # Bare proxy lists are supported, but entries inside any named section must
+        # only be interpreted according to that section.
+        has_sections = any(
+            line.strip().startswith("[") and line.strip().endswith("]")
+            for line in lines
+        )
 
         # First pass: collect Keystore entries
         in_keystore = False
@@ -65,16 +70,22 @@ class SurgeParser(BaseParser):
                 # Parse Keystore entries: key_id = type = openssh-private-key, base64 = ...
                 key_id, key_config = line.split("=", 1)
                 key_id = key_id.strip()
-                # Parse key_config: "type = openssh-private-key, base64 = ..."
-                keystore_entry = {}
-                parts = [p.strip() for p in key_config.split(",")]
-                for part in parts:
-                    if "=" in part:
-                        k, v = part.split("=", 1)
-                        k = k.strip()
-                        v = v.strip()
-                        keystore_entry[k] = v
-                keystore[key_id] = keystore_entry
+                try:
+                    keystore[key_id] = parse_parameter_list(key_config).last_values
+                except (TypeError, ValueError) as exc:
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=key_id or None,
+                            protocol="keystore",
+                            source=None,
+                            target="ir",
+                            field=f"lines[{index}]",
+                            message=f"Failed to parse Surge Keystore entry: {exc}",
+                            stage="parse",
+                            code="parse.keystore",
+                        )
+                    )
 
         # Second pass: parse proxy nodes
         for index, raw_line in enumerate(lines):
@@ -91,7 +102,25 @@ class SurgeParser(BaseParser):
 
             # If we are in proxy section or if the file has no sections (just a list of nodes), parse.
             if in_proxy_section or (not has_sections and "=" in line and "," in line):
-                name, protocol = self._line_identity(line)
+                try:
+                    record = parse_proxy_line(line)
+                except (TypeError, ValueError) as exc:
+                    name, protocol = self._line_identity(line)
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=name,
+                            protocol=protocol,
+                            source=None,
+                            target="ir",
+                            field=f"lines[{index}]",
+                            message=f"Failed to parse Surge proxy syntax: {exc}",
+                            stage="parse",
+                            code="parse.syntax",
+                        )
+                    )
+                    continue
+                name, protocol = record.name, record.type.lower()
                 if protocol == "wireguard":
                     issues.append(
                         ConversionIssue(
@@ -136,50 +165,41 @@ class SurgeParser(BaseParser):
 
     @staticmethod
     def _line_identity(line: str) -> tuple[str | None, str | None]:
-        if "=" not in line:
-            return None, None
-        name, config = line.split("=", 1)
-        protocol = config.split(",", 1)[0].strip().lower() or None
-        return name.strip() or None, protocol
+        try:
+            record = parse_proxy_line(line)
+        except (TypeError, ValueError):
+            if "=" not in line:
+                return None, None
+            name, config = line.split("=", 1)
+            protocol = config.split(",", 1)[0].strip().lower() or None
+            return name.strip() or None, protocol
+        return record.name, record.type.lower()
 
     def _parse_line(self, line: str, keystore: dict = None) -> Node | None:
         if keystore is None:
             keystore = {}
-        # Name = Type, Server, Port, ...
-        if "=" not in line:
+        try:
+            record = parse_proxy_line(line)
+        except (TypeError, ValueError):
             return None
 
-        name, config_str = line.split("=", 1)
-        name = name.strip()
-        # Surge allows commas inside values? Usually not for basic proxy line unless escaped?
-        parts = [p.strip() for p in config_str.split(",")]
-
-        if len(parts) < 1:
-            return None
-
-        p_type = parts[0].lower()
+        name = record.name
+        p_type = record.type.lower()
 
         # Skip wireguard nodes
         if p_type == "wireguard":
             return None
 
-        if len(parts) < 3:
+        if len(record.positional) < 2:
             return None
-        server = parts[1]
+        server = record.positional[0]
         try:
-            port = int(parts[2])
+            port = int(record.positional[1])
         except ValueError:
             return None
 
-        kv_args = {}
-        pos_args = []
-
-        for p in parts[3:]:
-            if "=" in p:
-                k, v = p.split("=", 1)
-                kv_args[k.strip()] = v.strip()
-            else:
-                pos_args.append(p)
+        kv_args = record.parameters.last_values
+        pos_args = list(record.positional[2:])
 
         # Helper to get bool
         def get_bool(k, default=False):
@@ -222,6 +242,13 @@ class SurgeParser(BaseParser):
         # Extract underlying-proxy (Surge) and convert to dialer_proxy (IR)
         dialer_proxy = kv_args.get("underlying-proxy")
 
+        def apply_common_options(node: Node) -> Node:
+            node.dialer_proxy = dialer_proxy
+            node.tfo = get_bool("tfo", False)
+            node.ip_version = kv_args.get("ip-version")
+            node.interface_name = kv_args.get("interface")
+            return node
+
         try:
             if p_type == "ss":
                 # ss, server, port, encrypt-method=..., password=...
@@ -252,9 +279,7 @@ class SurgeParser(BaseParser):
                     plugin_opts=plugin_opts,
                     udp=get_bool("udp-relay", False),
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type == "vmess":
                 # vmess, server, port, username=..., encrypt-method=..., vmess-aead=...
@@ -275,9 +300,7 @@ class SurgeParser(BaseParser):
                     transport=transport,
                     udp=get_bool("udp-relay", False),
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type == "trojan":
                 # trojan, server, port, password=...
@@ -302,9 +325,7 @@ class SurgeParser(BaseParser):
                     transport=transport,
                     udp=get_bool("udp-relay", False),
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type in ["socks5", "socks5-tls"]:
                 if p_type == "socks5-tls":
@@ -329,9 +350,7 @@ class SurgeParser(BaseParser):
                     tls=tls,
                     udp=get_bool("udp-relay", False),
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type in ["http", "https"]:
                 if p_type == "https":
@@ -354,9 +373,7 @@ class SurgeParser(BaseParser):
                     password=password,
                     tls=tls,
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type == "ssh":
                 # ssh, server, port, username=..., password=... or private-key=...
@@ -403,9 +420,7 @@ class SurgeParser(BaseParser):
                     private_key=private_key,
                     keystore_id=keystore_id,
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type == "snell":
                 # snell, server, port, psk=..., version=..., obfs=..., obfs-host=...
@@ -438,9 +453,7 @@ class SurgeParser(BaseParser):
                     tls=snell_tls,
                     udp=get_bool("udp-relay", False),
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type in ["tuic", "tuic-v5"]:
                 # tuic, server, port, token=..., alpn=..., skip-cert-verify=...
@@ -475,9 +488,7 @@ class SurgeParser(BaseParser):
                     tls=tuic_tls,
                     udp=get_bool("udp-relay", True),  # TUIC supports UDP by default
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
             elif p_type == "hysteria2":
                 # hysteria2, server, port, password=..., download-bandwidth=..., upload-bandwidth=...
@@ -507,9 +518,7 @@ class SurgeParser(BaseParser):
                     tls=hy_tls,
                     udp=True,  # Hysteria2 always supports UDP
                 )
-                if dialer_proxy:
-                    node.dialer_proxy = dialer_proxy
-                return node
+                return apply_common_options(node)
 
         except Exception as e:
             logger.warning(f"Error parsing line: {line}, error: {e}")

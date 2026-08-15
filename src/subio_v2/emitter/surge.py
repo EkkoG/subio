@@ -19,6 +19,13 @@ from subio_v2.model.nodes import (
     TUICNode,
     VmessNode,
 )
+from subio_v2.surge.syntax import (
+    SurgeParameter,
+    SurgeParameters,
+    SurgeProxyRecord,
+    serialize_parameter_list,
+    serialize_proxy_line,
+)
 
 
 class SurgeEmitter(BaseEmitter):
@@ -127,10 +134,14 @@ class SurgeEmitter(BaseEmitter):
                 if key_id in self.keystore:
                     entry = self.keystore[key_id]
                     if isinstance(entry, dict):
-                        parts = []
-                        for k, v in entry.items():
-                            parts.append(f"{k} = {v}")
-                        keystore_line = f"{key_id} = {', '.join(parts)}"
+                        parameters = [
+                            SurgeParameter(key=str(k), value=str(v))
+                            for k, v in entry.items()
+                        ]
+                        keystore_line = (
+                            f"{key_id} = "
+                            f"{serialize_parameter_list(parameters, spaced_equals=True)}"
+                        )
                         lines.append(keystore_line)
         return EmissionResult(
             content="\n".join(lines),
@@ -149,7 +160,23 @@ class SurgeEmitter(BaseEmitter):
         handler: Callable[..., list[str]] = getattr(self, handler_name)
         config_parts = handler(node, node_keystore_map)
         config_parts.extend(self._common_opts(node))
-        return f"{node.name} = {', '.join(config_parts)}"
+        proxy_type, *raw_parts = config_parts
+        positional: list[str] = []
+        parameters: list[SurgeParameter] = []
+        for part in raw_parts:
+            if "=" not in part:
+                positional.append(part)
+                continue
+            key, value = part.split("=", 1)
+            parameters.append(SurgeParameter(key=key, value=value))
+        return serialize_proxy_line(
+            SurgeProxyRecord(
+                name=node.name,
+                type=proxy_type,
+                positional=tuple(positional),
+                parameters=SurgeParameters(parameters),
+            )
+        )
 
     def _parts_ss(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, ShadowsocksNode)
@@ -339,4 +366,6 @@ class SurgeEmitter(BaseEmitter):
 
         if hasattr(node, "dialer_proxy") and node.dialer_proxy:
             config_parts.append(f"underlying-proxy={node.dialer_proxy}")
+        if hasattr(node, "interface_name") and node.interface_name:
+            config_parts.append(f"interface={node.interface_name}")
         return config_parts

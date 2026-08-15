@@ -30,7 +30,6 @@ def test_official_basic_proxy_fixture_is_parseable():
     assert len(SurgeParser().parse(SurgeEmitter().emit(result.nodes))) == 10
 
 
-@pytest.mark.xfail(reason="fixed by the Surge syntax phase", strict=False)
 def test_official_quoted_alpn_regression_baseline():
     node = SurgeParser().parse(
         '[Proxy]\ntuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2"'

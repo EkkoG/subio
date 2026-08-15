@@ -64,6 +64,18 @@ wg = wireguard, section-name, 0
     assert result.issues[0].field == "lines[3]"
 
 
+def test_surge_parse_result_reports_proxy_syntax_errors():
+    result = SurgeParser().parse_result(
+        '[Proxy]\nbad = ss, example.com, 8388, password="unterminated'
+    )
+
+    assert result.nodes == []
+    assert len(result.issues) == 1
+    assert result.issues[0].code == "parse.syntax"
+    assert result.issues[0].node == "bad"
+    assert "unterminated double quote" in result.issues[0].message
+
+
 def test_surge_parser_vmess_aead():
     """Test parsing vmess-aead parameter"""
     conf = """
@@ -114,7 +126,7 @@ def test_surge_emitter_obfs_tls_no_host():
     assert "obfs=tls" in output1
     assert "obfs-host" not in output1  # Should not output obfs-host for tls mode
 
-    # Test obfs=tls with host (should ignore host)
+    # Test obfs=tls with host
     node2 = ShadowsocksNode(
         name="ss-tls-host",
         type=Protocol.SHADOWSOCKS,
@@ -262,6 +274,22 @@ key-id = type = openssh-private-key, base64 = S0VZ
     assert "[Keystore]" in output
     assert "key-id = type = openssh-private-key, base64 = S0VZ" in output
     assert resources["keystore"]["key-id"]["base64"] == "S0VZ"
+
+
+def test_surge_keystore_parser_preserves_quoted_commas():
+    result = SurgeParser().parse_result(
+        """
+[Keystore]
+client-cert = type = p12, base64 = Q0VSVA==, password = "a,b"
+"""
+    )
+
+    assert result.issues == []
+    assert result.resources["keystore"]["client-cert"] == {
+        "type": "p12",
+        "base64": "Q0VSVA==",
+        "password": "a,b",
+    }
 
 
 def test_surge_parser_resets_keystore_between_parse_calls():

@@ -44,6 +44,21 @@ allow_conversion_errors = true
 
 该选项会放行全部转换错误，应只用于已审阅的配置，不应作为普通默认值。
 
+### 1.4 Surge 语法层
+
+Surge 代理行不能使用普通 `str.split(",")` 解析。参数值可以用双引号包含逗号，值内也
+可以包含等号；部分文档对象还允许重复参数。共享实现位于
+`src/subio_v2/surge/syntax.py`：
+
+- `parse_proxy_line()` 将一行代理解析为 `SurgeProxyRecord`；
+- `SurgeParameters` 按输入顺序保留参数和重复 key，`.get()` 返回最后一个值；
+- `serialize_proxy_line()` 根据逗号、引号和首尾空白自动引用参数值；
+- `parse_parameter_list()` / `serialize_parameter_list()` 用于 Keystore 等纯 key/value 列表。
+
+Surge Parser 应先经过语法层，再把已知字段映射到 Node；Emitter 应先构造 record，再由
+语法层生成文本。新增字段时不得恢复手写逗号拼接，也不得使用普通字典承载需要保序或
+允许重复的原始参数。
+
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
 `ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。
