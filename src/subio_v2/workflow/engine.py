@@ -288,14 +288,20 @@ class WorkflowEngine:
                 self.provider_issues[name] = [
                     replace(issue, source=name) for issue in parse_result.issues
                 ]
-                self.provider_resources[name] = copy.deepcopy(parse_result.resources)
-                surge_resources = coerce_surge_resources(parse_result.resources)
+                provider_resources = copy.deepcopy(parse_result.resources)
+                surge_resources = (
+                    provider_resources
+                    if isinstance(provider_resources, SurgeDocumentResources)
+                    else coerce_surge_resources(provider_resources)
+                )
 
                 # Apply Rename
                 rename_conf = prov_conf.get("rename")
                 if rename_conf:
                     self.provider_issues[name].extend(
-                        self._opaque_transform_issues(surge_resources, name, "rename")
+                        self._reject_document_policy_transform(
+                            surge_resources, name, "rename"
+                        )
                     )
                     processor = RenameProcessor(
                         prefix=rename_conf.get("add_prefix", ""),
@@ -306,6 +312,11 @@ class WorkflowEngine:
                 # Apply DialerProxy (dialer-proxy for Clash-like, underlying-proxy for Surge)
                 dialer_proxy = prov_conf.get("dialer_proxy")
                 if dialer_proxy:
+                    self.provider_issues[name].extend(
+                        self._reject_document_policy_transform(
+                            surge_resources, name, "dialer-proxy"
+                        )
+                    )
                     processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
                     nodes = processor.process(nodes)
 
@@ -313,7 +324,9 @@ class WorkflowEngine:
                 prov_filter_conf = prov_conf.get("filters")
                 if prov_filter_conf:
                     self.provider_issues[name].extend(
-                        self._opaque_transform_issues(surge_resources, name, "filter")
+                        self._reject_document_policy_transform(
+                            surge_resources, name, "filter"
+                        )
                     )
                     prov_filter = FilterProcessor(
                         include=prov_filter_conf.get("include"),
@@ -325,15 +338,17 @@ class WorkflowEngine:
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
                 )
                 self.providers[name] = nodes
+                self.provider_resources[name] = provider_resources
 
     @staticmethod
-    def _opaque_transform_issues(
+    def _reject_document_policy_transform(
         resources: SurgeDocumentResources,
         provider_name: str,
         transform: str,
     ) -> list[ConversionIssue]:
         issues: list[ConversionIssue] = []
-        for policy in [*resources.policies, *resources.external_policies]:
+        policies = [*resources.policies, *resources.external_policies]
+        for policy in policies:
             issues.append(
                 ConversionIssue(
                     severity=IssueSeverity.ERROR,
@@ -350,6 +365,8 @@ class WorkflowEngine:
                     code="conversion.opaque-policy-transform",
                 )
             )
+        resources.policies.clear()
+        resources.external_policies.clear()
         return issues
 
     @staticmethod
@@ -603,6 +620,26 @@ class WorkflowEngine:
         if global_filter:
             nodes = global_filter.process(nodes)
 
+        artifact_resource_issues: list[ConversionIssue] = []
+        artifact_provider_resources: dict[str, SurgeDocumentResources] = {}
+        for prov_name in art_conf.get("providers", []):
+            resources = coerce_surge_resources(
+                self.provider_resources.get(prov_name, {})
+            ).clone()
+            if username:
+                artifact_resource_issues.extend(
+                    self._reject_document_policy_transform(
+                        resources, prov_name, "user-override"
+                    )
+                )
+            if global_filter:
+                artifact_resource_issues.extend(
+                    self._reject_document_policy_transform(
+                        resources, prov_name, "global-filter"
+                    )
+                )
+            artifact_provider_resources[prov_name] = resources
+
         # Emit
         emitter = EmitterFactory.get_emitter(a_type)
 
@@ -610,9 +647,7 @@ class WorkflowEngine:
         if a_type == "surge" and isinstance(emitter, SurgeEmitter):
             merged_resources = SurgeDocumentResources()
             for prov_name in art_conf.get("providers", []):
-                provider_resources = coerce_surge_resources(
-                    self.provider_resources.get(prov_name, {})
-                )
+                provider_resources = artifact_provider_resources[prov_name]
                 try:
                     merged_resources.merge(provider_resources)
                 except ValueError as exc:
@@ -642,17 +677,12 @@ class WorkflowEngine:
                 for prov_name in art_conf.get("providers", [])
                 for issue in self.provider_issues.get(prov_name, [])
             ]
+            artifact_issues.extend(
+                replace(issue, artifact=name, user=username)
+                for issue in artifact_resource_issues
+            )
             for prov_name in art_conf.get("providers", []):
-                provider_resources = coerce_surge_resources(
-                    self.provider_resources.get(prov_name, {})
-                )
-                if global_filter:
-                    artifact_issues.extend(
-                        replace(issue, artifact=name, user=username)
-                        for issue in self._opaque_transform_issues(
-                            provider_resources, prov_name, "global-filter"
-                        )
-                    )
+                provider_resources = artifact_provider_resources[prov_name]
                 if a_type != "surge":
                     artifact_issues.extend(
                         replace(issue, artifact=name, user=username)

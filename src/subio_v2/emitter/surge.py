@@ -707,7 +707,6 @@ class SurgeEmitter(BaseEmitter):
             ("allow-other-interface", options.allow_other_interface),
             ("dns-follow-interface", options.dns_follow_interface),
             ("no-error-alert", options.no_error_alert),
-            ("test-udp", options.test_udp),
         ):
             if value is not None:
                 config_parts.append(f"{key}={str(value).lower()}")
@@ -718,6 +717,7 @@ class SurgeEmitter(BaseEmitter):
             ("block-quic", options.block_quic),
             ("test-url", options.test_url),
             ("test-timeout", options.test_timeout),
+            ("test-udp", options.test_udp),
         ):
             if value is not None:
                 config_parts.append(f"{key}={value}")

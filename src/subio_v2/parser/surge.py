@@ -699,7 +699,7 @@ class SurgeParser(BaseParser):
             block_quic=kv_args.get("block-quic"),
             test_url=kv_args.get("test-url"),
             test_timeout=get_int("test-timeout"),
-            test_udp=get_optional_bool("test-udp"),
+            test_udp=kv_args.get("test-udp"),
         )
         node.shadow_tls = ShadowTLSSettings(
             password=kv_args.get("shadow-tls-password"),

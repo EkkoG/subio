@@ -72,7 +72,7 @@ class SurgePolicyOptions:
     block_quic: Optional[str] = None
     test_url: Optional[str] = None
     test_timeout: Optional[int] = None
-    test_udp: Optional[bool] = None
+    test_udp: Optional[str] = None
 
 
 class Network(StrEnum):

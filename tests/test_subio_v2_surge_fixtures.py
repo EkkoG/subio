@@ -25,7 +25,9 @@ def test_official_basic_proxy_fixture_is_parseable():
         "hysteria2",
         "ssh",
     ]
-    assert len(SurgeParser().parse(SurgeEmitter().emit(result.nodes))) == 10
+    output = SurgeEmitter().emit(result.nodes)
+    assert "test-udp=probe.example@198.51.100.1" in output
+    assert len(SurgeParser().parse(output)) == 10
 
 
 def test_official_quoted_alpn_regression_baseline():

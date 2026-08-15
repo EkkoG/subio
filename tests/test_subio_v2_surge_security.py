@@ -277,6 +277,108 @@ providers = ["source"]
     assert exc_info.value.issues[0].code == "conversion.opaque-policy-transform"
 
 
+@pytest.mark.parametrize(
+    "provider_options",
+    [
+        '[provider.rename]\nadd_prefix = "renamed-"',
+        '[provider.filters]\nexclude = "masque"',
+        'dialer_proxy = "upstream"',
+    ],
+)
+def test_allowed_provider_transform_errors_drop_document_policies(
+    tmp_path, monkeypatch, provider_options
+):
+    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        f'''
+[[provider]]
+name = "source"
+type = "surge"
+file = "source.conf"
+{provider_options}
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["source"]
+allow_conversion_errors = true
+allow_empty = true
+''',
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert [issue.code for issue in result.errors] == [
+        "conversion.opaque-policy-transform"
+    ]
+    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+
+
+def test_allowed_global_filter_error_drops_document_policy(tmp_path, monkeypatch):
+    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        '''
+[filters]
+exclude = "masque"
+
+[[provider]]
+name = "source"
+type = "surge"
+file = "source.conf"
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["source"]
+allow_conversion_errors = true
+allow_empty = true
+''',
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert [issue.code for issue in result.errors] == [
+        "conversion.opaque-policy-transform"
+    ]
+    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+
+
+def test_allowed_user_override_error_drops_document_policy(tmp_path, monkeypatch):
+    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        '''
+[[provider]]
+name = "source"
+type = "surge"
+file = "source.conf"
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["source"]
+user = "alice"
+allow_conversion_errors = true
+allow_empty = true
+''',
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert [issue.code for issue in result.errors] == [
+        "conversion.opaque-policy-transform"
+    ]
+    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+
+
 def test_opaque_policies_report_cross_platform_loss(tmp_path, monkeypatch):
     write(tmp_path, "source.conf", "masque = masque, example.com, 443")
     cfg = write(
