@@ -1,13 +1,41 @@
 import os
 import sys
 import argparse
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.errors import WorkflowError
 from subio_v2.crypto import age
 from subio_v2.utils.logger import logger
 
 # Supported config file extensions in priority order
 CONFIG_EXTENSIONS = [".toml", ".yaml", ".yml", ".json", ".json5"]
+
+
+def _atomic_write_bytes(target: str, data: bytes) -> None:
+    target_path = Path(target).resolve()
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=f".{target_path.name}.", suffix=".tmp", dir=target_path.parent
+    )
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temp_name, target_path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(temp_name)
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def find_default_config() -> str | None:
@@ -70,8 +98,7 @@ def _cmd_age_encrypt(args):
         sys.stdout.buffer.write(encrypted)
     else:
         try:
-            with open(target, "wb") as f:
-                f.write(encrypted)
+            _atomic_write_bytes(target, encrypted)
             logger.success(f"Encrypted: {source} -> {target}")
         except Exception as e:
             logger.error(f"Failed to write target file: {e}")
@@ -105,8 +132,7 @@ def _cmd_age_decrypt(args):
         sys.stdout.buffer.write(decrypted)
     else:
         try:
-            with open(target, "wb") as f:
-                f.write(decrypted)
+            _atomic_write_bytes(target, decrypted)
             logger.success(f"Decrypted: {source} -> {target}")
         except Exception as e:
             logger.error(f"Failed to write target file: {e}")
@@ -132,7 +158,7 @@ def main():
     convert_parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Run without pushing to remote (clone, commit locally only)",
+        help="Generate and validate locally without contacting upload targets",
     )
     convert_parser.add_argument(
         "--clean-gist",
@@ -160,13 +186,23 @@ def main():
     encrypt = age_sub.add_parser("encrypt", help="Encrypt a file with age public key")
     encrypt.add_argument("public_key", help="Age public key (age1...)")
     encrypt.add_argument("source", help="Source file path (or '-' for stdin)")
-    encrypt.add_argument("target", nargs="?", default="-", help="Target file path (or '-' for stdout, default: '-')")
+    encrypt.add_argument(
+        "target",
+        nargs="?",
+        default="-",
+        help="Target file path (or '-' for stdout, default: '-')",
+    )
     encrypt.set_defaults(age_func=_cmd_age_encrypt)
 
     decrypt = age_sub.add_parser("decrypt", help="Decrypt an age-encrypted file")
     decrypt.add_argument("secret_key", help="Age secret key (AGE-SECRET-KEY-1...)")
     decrypt.add_argument("source", help="Source file path (or '-' for stdin)")
-    decrypt.add_argument("target", nargs="?", default="-", help="Target file path (or '-' for stdout, default: '-')")
+    decrypt.add_argument(
+        "target",
+        nargs="?",
+        default="-",
+        help="Target file path (or '-' for stdout, default: '-')",
+    )
     decrypt.set_defaults(age_func=_cmd_age_decrypt)
 
     args = parser.parse_args()
@@ -177,7 +213,7 @@ def main():
             args.age_func(args)
         else:
             age_parser.print_help()
-        return
+        return 0
 
     # Handle "convert" subcommand
     if args.subcommand == "convert":
@@ -187,20 +223,22 @@ def main():
             logger.error(
                 f"Config file not found. Looked for: {', '.join(f'config{ext}' for ext in CONFIG_EXTENSIONS)}"
             )
-            return
+            return 1
 
-        if not os.path.exists("dist"):
-            os.makedirs("dist")
-
-        engine = WorkflowEngine(
-            config_path, dry_run=args.dry_run, clean_gist=args.clean_gist
-        )
-        engine.run()
-        return
+        try:
+            engine = WorkflowEngine(
+                config_path, dry_run=args.dry_run, clean_gist=args.clean_gist
+            )
+            engine.run()
+        except WorkflowError as exc:
+            logger.error(str(exc))
+            return 1
+        return 0
 
     # No subcommand given
     parser.print_help()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

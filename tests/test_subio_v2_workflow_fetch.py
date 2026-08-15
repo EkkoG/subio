@@ -1,7 +1,9 @@
-import sys
 from pathlib import Path
 
+import pytest
+
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.errors import ProviderLoadError
 
 
 def write(tmp_path: Path, name: str, content: str):
@@ -20,20 +22,20 @@ def test_fetch_content_file_relative_to_config_and_provider_dir(tmp_path, monkey
     # Create target file in config dir
     f1 = write(cfg_dir, "nodes.json5", "{a:1}")
     # And in provider subdir
-    f2 = write(prov_dir, "nodes.json5", "{b:2}")
+    write(prov_dir, "nodes.json5", "{b:2}")
 
     eng = WorkflowEngine(str(cfg))
 
     # Case 1: file exists in config dir
     conf = {"file": "nodes.json5"}
     c1 = eng._fetch_content(conf)
-    assert "a:1" in c1 or "a: 1" in c1 or "\"a\": 1" in c1
+    assert "a:1" in c1 or "a: 1" in c1 or '"a": 1' in c1
 
     # Case 2: when not in config dir, should find in provider subdir
     # Remove config-dir copy to force provider lookup
     f1.unlink()
     c2 = eng._fetch_content(conf)
-    assert "b:2" in c2 or "b: 2" in c2 or "\"b\": 2" in c2
+    assert "b:2" in c2 or "b: 2" in c2 or '"b": 2' in c2
 
 
 def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
@@ -73,6 +75,6 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
     assert c == "hello"
     assert captured["headers"] == {"User-Agent": "UA"}
 
-    # Failure path returns None
-    c2 = eng._fetch_content({"url": "http://fail"})
-    assert c2 is None
+    # Failure path aborts instead of publishing a partial workflow.
+    with pytest.raises(ProviderLoadError, match="Failed to fetch provider"):
+        eng._fetch_content({"url": "http://fail"})

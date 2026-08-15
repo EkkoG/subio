@@ -1,18 +1,31 @@
+import copy
 import toml
 import json
 import json5
+import hashlib
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
-import sys
+import tempfile
+from dataclasses import replace
+from pathlib import Path
 from typing import Dict, List, Any
+from subio_v2.conversion import (
+    ConversionIssue,
+    IssueSeverity,
+    WorkflowResult,
+)
 from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.processor.common import FilterProcessor, RenameProcessor, DialerProxyProcessor
+from subio_v2.processor.common import (
+    FilterProcessor,
+    RenameProcessor,
+    DialerProxyProcessor,
+)
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.ruleset import (
     load_rulesets,
@@ -20,7 +33,12 @@ from subio_v2.workflow.ruleset import (
     merge_stores,
     RuleSetStore,
 )
-from subio_v2.workflow.uploader import upload, flush_uploads
+from subio_v2.workflow.errors import (
+    ArtifactGenerationError,
+    ConfigError,
+    ProviderLoadError,
+)
+from subio_v2.workflow.uploader import GistBatchUploader, upload
 from subio_v2.crypto import age
 from subio_v2.utils.logger import logger
 import yaml
@@ -33,10 +51,14 @@ class WorkflowEngine:
         self.config_path = config_path
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
-        self.provider_parsers: Dict[str, Any] = {}  # Store parser instances for keystore access
+        self.provider_issues: Dict[str, List[ConversionIssue]] = {}
+        self.provider_resources: Dict[str, Dict[str, Any]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
         self._url_cache: Dict[str, str] = {}  # Cache for URL content
+        self._staged_artifacts: Dict[str, str] = {}
+        self.issues: List[ConversionIssue] = []
+        self.batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
 
         # Age encryption keys
         self.global_age_secret_key = self.config.get("age_secret_key", "")
@@ -45,18 +67,14 @@ class WorkflowEngine:
         if self.global_age_secret_key:
             err = age.verify_secret_key(self.global_age_secret_key)
             if err:
-                logger.error(
-                    f"Invalid global age_secret_key: {err}"
-                )
-                sys.exit(1)
+                raise ConfigError(f"Invalid global age_secret_key: {err}")
 
         if self.global_age_public_key:
             err = age.verify_public_key(self.global_age_public_key)
             if err:
-                logger.error(
-                    f"Invalid global age_public_key: {err}"
-                )
-                sys.exit(1)
+                raise ConfigError(f"Invalid global age_public_key: {err}")
+
+        self._validate_config()
 
         # Parsers and Emitters are now managed by Factory
 
@@ -88,11 +106,9 @@ class WorkflowEngine:
             with open(self.config_path, "r") as f:
                 content = f.read()
         except FileNotFoundError:
-            logger.error(f"Config file not found: {self.config_path}")
-            sys.exit(1)
+            raise ConfigError(f"Config file not found: {self.config_path}")
         except Exception as e:
-            logger.error(f"Error reading config file: {e}")
-            sys.exit(1)
+            raise ConfigError(f"Error reading config file: {e}") from e
 
         # Determine format by file extension
         ext = os.path.splitext(self.config_path)[1].lower()
@@ -110,8 +126,7 @@ class WorkflowEngine:
                 # Try to auto-detect format
                 return self._parse_config_auto(content)
         except Exception as e:
-            logger.error(f"Error parsing config ({ext}): {e}")
-            sys.exit(1)
+            raise ConfigError(f"Error parsing config ({ext}): {e}") from e
 
     def _parse_config_auto(self, content: str) -> Dict[str, Any]:
         """Try to parse config content by attempting multiple formats."""
@@ -139,21 +154,75 @@ class WorkflowEngine:
         except Exception:
             pass
 
-        logger.error(
-            "Error parsing config: Unknown format (tried toml, json, json5, yaml)"
-        )
-        sys.exit(1)
+        raise ConfigError("Unknown config format (tried toml, json, json5, yaml)")
 
-    def run(self):
+    def _validate_config(self) -> None:
+        if not isinstance(self.config, dict):
+            raise ConfigError("Config root must be an object")
+
+        global_allow_errors = self.config.get("allow_conversion_errors", False)
+        if not isinstance(global_allow_errors, bool):
+            raise ConfigError("'allow_conversion_errors' must be a boolean")
+
+        for section in ("provider", "artifact", "uploader"):
+            entries = self.config.get(section, [])
+            if not isinstance(entries, list):
+                raise ConfigError(f"Config section '{section}' must be a list")
+            names: set[str] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise ConfigError(f"Entries in '{section}' must be objects")
+                name = entry.get("name")
+                if not isinstance(name, str) or not name:
+                    raise ConfigError(f"Every '{section}' entry must have a name")
+                if name in names:
+                    raise ConfigError(f"Duplicate {section} name: {name}")
+                names.add(name)
+                if section == "artifact" and not isinstance(
+                    entry.get("allow_conversion_errors", False), bool
+                ):
+                    raise ConfigError(
+                        f"Artifact '{name}' allow_conversion_errors must be a boolean"
+                    )
+
+        provider_names = {item["name"] for item in self.config.get("provider", [])}
+        for artifact in self.config.get("artifact", []):
+            missing = [
+                name
+                for name in artifact.get("providers", [])
+                if name not in provider_names
+            ]
+            if missing:
+                raise ConfigError(
+                    f"Artifact '{artifact['name']}' references missing provider(s): "
+                    f"{', '.join(missing)}"
+                )
+
+    def run(self) -> WorkflowResult:
         if self.dry_run:
             logger.info("--- Starting SubIO v2 Workflow (DRY-RUN) ---")
         else:
             logger.info("--- Starting SubIO v2 Workflow ---")
+        self._staged_artifacts.clear()
+        self.issues.clear()
+        self.provider_issues.clear()
+        self.provider_resources.clear()
         self._load_providers()
         self._generate_artifacts()
-        # Flush all pending uploads (batch upload to gist)
-        flush_uploads(dry_run=self.dry_run, clean_gist=self.clean_gist)
+        generated = list(self._staged_artifacts)
+        queued_uploads = [
+            f"{gist_id}:{filename}"
+            for gist_id, data in self.batch_uploader._pending.items()
+            for filename in data["files"]
+        ]
+        self._commit_artifacts()
+        self.batch_uploader.flush()
         logger.success("--- Finished ---")
+        return WorkflowResult(
+            generated=generated,
+            uploaded=[] if self.dry_run else queued_uploads,
+            issues=list(self.issues),
+        )
 
     def _load_providers(self):
         with logger.status("[bold green]Loading providers...") as status:
@@ -162,21 +231,35 @@ class WorkflowEngine:
                 p_type = prov_conf.get("type")
                 status.update(f"[bold green]Loading provider: {name} ({p_type})")
 
-                logger.info(f"Processing provider: [bold cyan]{name}[/bold cyan] ({p_type})")
+                logger.info(
+                    f"Processing provider: [bold cyan]{name}[/bold cyan] ({p_type})"
+                )
                 content = self._fetch_content(prov_conf)
                 if not content:
-                    logger.error(f"Failed to load provider {name}: No content")
-                    sys.exit(1)
+                    raise ProviderLoadError(f"Provider '{name}' returned empty content")
 
-                nodes = []
                 parser = ParserFactory.get_parser(p_type)
-
-                if parser:
-                    nodes = parser.parse(content)
-                    # Store parser instance for keystore access (for Surge)
-                    self.provider_parsers[name] = parser
-                else:
-                    logger.error(f"Unsupported provider type: {p_type}")
+                if parser is None:
+                    raise ProviderLoadError(
+                        f"Unsupported provider type '{p_type}' for provider '{name}'"
+                    )
+                try:
+                    parse_result = parser.parse_result(content)
+                    nodes = parse_result.nodes
+                except SystemExit as exc:
+                    raise ProviderLoadError(
+                        f"Parser for provider '{name}' terminated unexpectedly"
+                    ) from exc
+                except Exception as exc:
+                    raise ProviderLoadError(
+                        f"Failed to parse provider '{name}': {exc}"
+                    ) from exc
+                for node in nodes:
+                    node.source_provider = name
+                self.provider_issues[name] = [
+                    replace(issue, source=name) for issue in parse_result.issues
+                ]
+                self.provider_resources[name] = copy.deepcopy(parse_result.resources)
 
                 # Apply Rename
                 rename_conf = prov_conf.get("rename")
@@ -207,8 +290,9 @@ class WorkflowEngine:
                 )
                 self.providers[name] = nodes
 
-    def _fetch_content(self, conf: Dict[str, Any]) -> str | None:
+    def _fetch_content(self, conf: Dict[str, Any]) -> str:
         content: str | None = None
+        provider_name = conf.get("name", "unknown")
 
         if "url" in conf:
             # Create cache key based on URL and headers
@@ -219,7 +303,7 @@ class WorkflowEngine:
 
             # Check cache first
             if cache_key in self._url_cache:
-                logger.dim(f"Using cached content for {conf['url']}")
+                logger.dim(f"Using cached content for provider {provider_name}")
                 content = self._url_cache[cache_key]
             else:
                 try:
@@ -228,7 +312,13 @@ class WorkflowEngine:
                         total=3,  # Total number of retries
                         connect=3,  # Retry on connection errors
                         read=3,  # Retry on read timeout errors
-                        status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+                        status_forcelist=[
+                            429,
+                            500,
+                            502,
+                            503,
+                            504,
+                        ],  # HTTP status codes to retry on
                         backoff_factor=1,  # Backoff factor (1s, 2s, 4s, ...)
                         raise_on_status=False,  # Don't raise on bad status codes initially
                     )
@@ -248,12 +338,17 @@ class WorkflowEngine:
                         # Cache the raw content (before decryption)
                         self._url_cache[cache_key] = content
 
+                        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[
+                            :12
+                        ]
                         logger.dim(
-                            f"Fetched content from {conf['url']} (first 100 chars): {content[:100]}..."
+                            f"Fetched provider {provider_name}: {len(content.encode('utf-8'))} "
+                            f"bytes (sha256:{digest})"
                         )
                 except Exception as e:
-                    logger.error(f"Fetch error for {conf['url']}: {e}")
-                    return None
+                    raise ProviderLoadError(
+                        f"Failed to fetch provider '{provider_name}': {type(e).__name__}"
+                    ) from e
         elif "file" in conf:
             # Relative to config file location? Or CWD?
             # Usually relative to config file or CWD.
@@ -265,24 +360,27 @@ class WorkflowEngine:
             if os.path.exists(abs_path):
                 with open(abs_path, "r") as f:
                     content = f.read()
-                    logger.dim(
-                        f"Read file {path} (first 100 chars): {content[:100]}..."
-                    )
             else:
                 # Check 'provider' subfolder
                 abs_path = os.path.join(config_dir, "provider", path)
                 if os.path.exists(abs_path):
                     with open(abs_path, "r") as f:
                         content = f.read()
-                        logger.dim(
-                            f"Read file {path} (first 100 chars): {content[:100]}..."
-                        )
                 else:
-                    logger.error(f"File not found: {path}")
-                    return None
+                    raise ProviderLoadError(
+                        f"File for provider '{provider_name}' not found: {path}"
+                    )
+
+            digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:12]
+            logger.dim(
+                f"Read provider {provider_name} from {path}: "
+                f"{len(content.encode('utf-8'))} bytes (sha256:{digest})"
+            )
 
         if content is None:
-            return None
+            raise ProviderLoadError(
+                f"Provider '{provider_name}' must define either 'url' or 'file'"
+            )
 
         # Decrypt age-encrypted content if needed.
         # Provider-level key takes precedence over global key.
@@ -302,13 +400,13 @@ class WorkflowEngine:
                     content = age.decrypt_bytes(content_bytes, *secret_keys).decode(
                         "utf-8", errors="replace"
                     )
-                    logger.dim(f"Decrypted age-encrypted content for {conf.get('name', conf.get('url', conf.get('file', 'unknown')))}")
+                    logger.dim(
+                        f"Decrypted age-encrypted content for {conf.get('name', conf.get('url', conf.get('file', 'unknown')))}"
+                    )
             except Exception as e:
-                logger.error(
-                    f"Failed to decrypt age-encrypted content for "
-                    f"{conf.get('name', conf.get('url', conf.get('file', 'unknown')))}: {e}"
-                )
-                return None
+                raise ProviderLoadError(
+                    f"Failed to decrypt provider '{provider_name}': {e}"
+                ) from e
 
         return content
 
@@ -348,12 +446,20 @@ class WorkflowEngine:
         # Gather nodes from providers
         nodes = []
         for prov_name in art_conf.get("providers", []):
-            if prov_name in self.providers:
-                nodes.extend(self.providers[prov_name])
+            if prov_name not in self.providers:
+                raise ArtifactGenerationError(
+                    f"Artifact '{name}' references unloaded provider '{prov_name}'"
+                )
+            nodes.extend(self.providers[prov_name])
 
         # If username specified, process nodes for that user
         if username:
-            nodes = get_nodes_for_user(nodes, username)
+            try:
+                nodes = get_nodes_for_user(nodes, username)
+            except ValueError as exc:
+                raise ArtifactGenerationError(
+                    f"Invalid user overrides for artifact '{name}': {exc}"
+                ) from exc
 
         # Apply Global Filter
         if global_filter:
@@ -361,16 +467,25 @@ class WorkflowEngine:
 
         # Emit
         emitter = EmitterFactory.get_emitter(a_type)
-        
+
         # For Surge, collect keystore from all Surge providers
         if a_type == "surge" and isinstance(emitter, SurgeEmitter):
-            from subio_v2.parser.surge import SurgeParser
             merged_keystore = {}
             for prov_name in art_conf.get("providers", []):
-                if prov_name in self.provider_parsers:
-                    parser = self.provider_parsers[prov_name]
-                    if isinstance(parser, SurgeParser) and parser.keystore:
-                        merged_keystore.update(parser.keystore)
+                resources = self.provider_resources.get(prov_name, {})
+                provider_keystore = resources.get("keystore", {})
+                if not isinstance(provider_keystore, dict):
+                    raise ArtifactGenerationError(
+                        f"Provider '{prov_name}' returned an invalid Surge keystore"
+                    )
+                for key_id, entry in provider_keystore.items():
+                    existing = merged_keystore.get(key_id)
+                    if existing is not None and existing != entry:
+                        raise ArtifactGenerationError(
+                            f"Artifact '{name}' has conflicting Surge "
+                            f"keystore entry '{key_id}'"
+                        )
+                    merged_keystore[key_id] = copy.deepcopy(entry)
             # Create new emitter with merged keystore
             emitter = SurgeEmitter(keystore=merged_keystore)
 
@@ -383,17 +498,64 @@ class WorkflowEngine:
             logger.info(
                 f"Generating artifact: [bold cyan]{display_name}[/bold cyan] ({a_type}) - {len(nodes)} nodes"
             )
-            output = emitter.emit(nodes)
+            try:
+                emission = emitter.emit_result(nodes)
+            except Exception as exc:
+                raise ArtifactGenerationError(
+                    f"Failed to emit artifact '{display_name}': {exc}"
+                ) from exc
 
-            # Compute dae-specific extras (proxies_names + subscription URL list)
-            extra_context: Dict[str, Any] = {}
+            artifact_issues = [
+                replace(issue, artifact=name, user=username)
+                for prov_name in art_conf.get("providers", [])
+                for issue in self.provider_issues.get(prov_name, [])
+            ]
+            artifact_issues.extend(
+                replace(issue, artifact=name, user=username)
+                for issue in emission.issues
+            )
+            self.issues.extend(artifact_issues)
+            emitter.log_issues(artifact_issues)
+            errors = [
+                issue
+                for issue in artifact_issues
+                if issue.severity == IssueSeverity.ERROR
+            ]
+            allow_conversion_errors = bool(
+                self.config.get("allow_conversion_errors", False)
+                or art_conf.get("allow_conversion_errors", False)
+            )
+            if errors and not allow_conversion_errors:
+                raise ArtifactGenerationError(
+                    f"Artifact '{display_name}' has {len(errors)} conversion error(s)",
+                    issues=errors,
+                )
+            if errors:
+                logger.warning(
+                    f"Artifact '{display_name}' is continuing with {len(errors)} "
+                    "conversion error(s) because allow_conversion_errors=true"
+                )
+
+            supported_nodes = emission.supported_nodes
+            if not supported_nodes and not art_conf.get("allow_empty", False):
+                raise ArtifactGenerationError(
+                    f"Artifact '{display_name}' has no emit-capable nodes; "
+                    "set allow_empty=true to permit this",
+                    issues=errors,
+                )
+
+            output = emission.content
+            node_names = [node.name for node in supported_nodes]
+            extra_context: Dict[str, Any] = {"proxies_names": node_names}
+            if isinstance(emitter, SurgeEmitter):
+                extra_context["proxies_names"] = (
+                    f"PROXY = select, {', '.join(node_names)}"
+                )
             if isinstance(emitter, DaeEmitter):
-                supported_nodes, _ = emitter.emit_with_check(nodes)
-                # dae 过滤名单: 'name1', 'name2', ...
                 extra_context["proxies_names"] = ", ".join(
                     f"'{n.name}'" for n in supported_nodes
                 )
-                extra_context["subscription"] = emitter.emit_subscription(nodes)
+                extra_context["subscription"] = emission.extras["subscription"]
 
             # Use unified writer
             self._write_artifact(
@@ -407,7 +569,9 @@ class WorkflowEngine:
                 extra_context,
             )
         else:
-            logger.error(f"Unsupported artifact type: {a_type}")
+            raise ArtifactGenerationError(
+                f"Unsupported artifact type '{a_type}' for artifact '{name}'"
+            )
 
     def _write_artifact(
         self,
@@ -468,6 +632,18 @@ class WorkflowEngine:
         if username:
             actual_filename = filename.replace("{user}", username)
 
+        if (
+            not isinstance(actual_filename, str)
+            or not actual_filename
+            or actual_filename != os.path.basename(actual_filename)
+            or "/" in actual_filename
+            or "\\" in actual_filename
+            or actual_filename in {".", ".."}
+        ):
+            raise ArtifactGenerationError(
+                f"Invalid artifact filename: {actual_filename!r}"
+            )
+
         # Encrypt output with age if public key is configured.
         # Artifact-level key takes precedence over global key.
         artifact_public_key = (artifact_conf or {}).get("age_public_key", "")
@@ -476,13 +652,17 @@ class WorkflowEngine:
             try:
                 final_content_bytes = age.encrypt_bytes(final_content, public_key)
                 final_content = final_content_bytes.decode("ascii")
-                logger.dim(f"Encrypted artifact output with age public key")
+                logger.dim("Encrypted artifact output with age public key")
             except Exception as e:
-                logger.error(f"Failed to encrypt artifact output with age: {e}")
-                return
+                raise ArtifactGenerationError(
+                    f"Failed to encrypt artifact '{actual_filename}': {e}"
+                ) from e
 
-        with open(f"dist/{actual_filename}", "w") as f:
-            f.write(final_content)
+        if actual_filename in self._staged_artifacts:
+            raise ArtifactGenerationError(
+                f"Multiple artifacts would overwrite 'dist/{actual_filename}'"
+            )
+        self._staged_artifacts[actual_filename] = final_content
 
         # Upload
         if artifact_conf and artifact_conf.get("upload"):
@@ -490,10 +670,56 @@ class WorkflowEngine:
                 final_content,
                 artifact_conf,
                 self.config.get("uploader", []),
+                self.batch_uploader,
                 username,
-                self.dry_run,
-                self.clean_gist,
             )
+
+    def _commit_artifacts(self) -> None:
+        """Write all generated artifacts only after the whole generation phase succeeds."""
+        dist_dir = Path("dist").resolve()
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        prepared: list[tuple[str, Path]] = []
+
+        try:
+            for filename, content in self._staged_artifacts.items():
+                target = dist_dir / filename
+                if target.parent != dist_dir:
+                    raise ArtifactGenerationError(
+                        f"Artifact path escapes dist directory: {filename!r}"
+                    )
+                fd, temp_name = tempfile.mkstemp(
+                    prefix=f".{filename}.", suffix=".tmp", dir=dist_dir
+                )
+                try:
+                    os.fchmod(fd, 0o600)
+                    with os.fdopen(fd, "w", encoding="utf-8") as output:
+                        output.write(content)
+                        output.flush()
+                        os.fsync(output.fileno())
+                except Exception:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
+                    raise
+                prepared.append((temp_name, target))
+
+            for temp_name, target in prepared:
+                os.replace(temp_name, target)
+            prepared.clear()
+            self._staged_artifacts.clear()
+        except ArtifactGenerationError:
+            raise
+        except Exception as exc:
+            raise ArtifactGenerationError(
+                f"Failed to write generated artifacts: {exc}"
+            ) from exc
+        finally:
+            for temp_name, _ in prepared:
+                try:
+                    os.unlink(temp_name)
+                except FileNotFoundError:
+                    pass
 
     def _read_template(self, path: str) -> str | None:
         # This method is actually not used by TemplateRenderer directly,

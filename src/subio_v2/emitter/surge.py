@@ -1,7 +1,9 @@
-import hashlib
 import base64
+import copy
+import hashlib
 from typing import Callable, List
 
+from subio_v2.conversion import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
     HttpNode,
@@ -36,9 +38,8 @@ class SurgeEmitter(BaseEmitter):
 
     def __init__(self, keystore: dict | None = None):
         super().__init__()
-        self.keystore: dict = (
-            keystore or {}
-        )  # Keystore entries: {key_id: {"type": "...", "base64": "..."}}
+        # Emission may add generated keys, so do not mutate parser-owned resources.
+        self.keystore: dict = copy.deepcopy(keystore) if keystore else {}
 
     def _encode_to_base64(self, private_key: str) -> str:
         return base64.b64encode(private_key.encode("utf-8")).decode("utf-8")
@@ -56,30 +57,68 @@ class SurgeEmitter(BaseEmitter):
         return str(server)
 
     def emit(self, nodes: List[Node]) -> str:
-        supported_nodes, _ = self.emit_with_check(nodes)
+        result = self.emit_result(nodes)
+        self.log_issues(result.issues)
+        return result.content
+
+    def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
+        checked_nodes, issues = self.emit_with_check(nodes)
 
         lines: list[str] = []
         used_keystore_ids = set()
         node_keystore_map: dict[int, str] = {}
+        prepared_nodes: list[Node] = []
 
-        for node in supported_nodes:
+        for node in checked_nodes:
+            try:
+                if isinstance(node, SSHNode):
+                    if not node.keystore_id and node.private_key:
+                        keystore_id = self._generate_keystore_id(node)
+                        base64_key = self._encode_to_base64(node.private_key)
+                        self.keystore[keystore_id] = {
+                            "type": "openssh-private-key",
+                            "base64": base64_key,
+                        }
+                        node_keystore_map[id(node)] = keystore_id
+                prepared_nodes.append(node)
+            except Exception as exc:
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        f"Failed to prepare Surge node: {exc}",
+                    )
+                )
+
+        emitted_nodes: list[Node] = []
+        for node in prepared_nodes:
+            try:
+                line = self._emit_node(node, node_keystore_map)
+            except Exception as exc:
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        f"Failed to emit Surge proxy: {exc}",
+                    )
+                )
+                continue
+            if line is None:
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        "No Surge emitter is registered for this protocol",
+                        field="type",
+                    )
+                )
+                continue
+            lines.append(line)
+            emitted_nodes.append(node)
             if isinstance(node, SSHNode):
-                if node.keystore_id:
-                    used_keystore_ids.add(node.keystore_id)
-                elif node.private_key:
-                    keystore_id = self._generate_keystore_id(node)
+                keystore_id = node.keystore_id or node_keystore_map.get(id(node))
+                if keystore_id:
                     used_keystore_ids.add(keystore_id)
-                    base64_key = self._encode_to_base64(node.private_key)
-                    self.keystore[keystore_id] = {
-                        "type": "openssh-private-key",
-                        "base64": base64_key,
-                    }
-                    node_keystore_map[id(node)] = keystore_id
-
-        for node in supported_nodes:
-            line = self._emit_node(node, node_keystore_map)
-            if line:
-                lines.append(line)
 
         if used_keystore_ids and self.keystore:
             lines.append("")
@@ -93,9 +132,15 @@ class SurgeEmitter(BaseEmitter):
                             parts.append(f"{k} = {v}")
                         keystore_line = f"{key_id} = {', '.join(parts)}"
                         lines.append(keystore_line)
-        return "\n".join(lines)
+        return EmissionResult(
+            content="\n".join(lines),
+            supported_nodes=emitted_nodes,
+            issues=issues,
+        )
 
-    def _emit_node(self, node: Node, node_keystore_map: dict[int, str] | None = None) -> str | None:
+    def _emit_node(
+        self, node: Node, node_keystore_map: dict[int, str] | None = None
+    ) -> str | None:
         if node_keystore_map is None:
             node_keystore_map = {}
         handler_name = self._HANDLERS.get(node.type)
@@ -112,7 +157,9 @@ class SurgeEmitter(BaseEmitter):
         config_parts.append(f"encrypt-method={node.cipher}")
         config_parts.append(f"password={node.password}")
         if node.plugin == "obfs":
-            obfs_mode = node.plugin_opts.get("mode", "http") if node.plugin_opts else "http"
+            obfs_mode = (
+                node.plugin_opts.get("mode", "http") if node.plugin_opts else "http"
+            )
             config_parts.append(f"obfs={obfs_mode}")
             if obfs_mode != "tls":
                 obfs_host = node.plugin_opts.get("host", "") if node.plugin_opts else ""
@@ -122,7 +169,12 @@ class SurgeEmitter(BaseEmitter):
 
     def _parts_vmess(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, VmessNode)
-        config_parts = ["vmess", self._server_str(node), str(node.port), f"username={node.uuid}"]
+        config_parts = [
+            "vmess",
+            self._server_str(node),
+            str(node.port),
+            f"username={node.uuid}",
+        ]
         if node.vmess_aead:
             config_parts.append("vmess-aead=true")
         if node.transport.network == Network.WS:
@@ -130,7 +182,9 @@ class SurgeEmitter(BaseEmitter):
             if node.transport.path:
                 config_parts.append(f"ws-path={node.transport.path}")
             if node.transport.headers:
-                headers = "|".join([f"{k}:{v}" for k, v in node.transport.headers.items()])
+                headers = "|".join(
+                    [f"{k}:{v}" for k, v in node.transport.headers.items()]
+                )
                 config_parts.append(f"ws-headers={headers}")
         return config_parts
 
@@ -147,7 +201,9 @@ class SurgeEmitter(BaseEmitter):
             if node.transport.path:
                 config_parts.append(f"ws-path={node.transport.path}")
             if node.transport.headers:
-                headers = "|".join([f"{k}:{v}" for k, v in node.transport.headers.items()])
+                headers = "|".join(
+                    [f"{k}:{v}" for k, v in node.transport.headers.items()]
+                )
                 config_parts.append(f"ws-headers={headers}")
         return config_parts
 
@@ -187,7 +243,12 @@ class SurgeEmitter(BaseEmitter):
 
     def _parts_snell(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, SnellNode)
-        config_parts = ["snell", self._server_str(node), str(node.port), f"psk={node.psk}"]
+        config_parts = [
+            "snell",
+            self._server_str(node),
+            str(node.port),
+            f"psk={node.psk}",
+        ]
         if node.version:
             config_parts.append(f"version={node.version}")
         if node.obfs:
@@ -259,13 +320,21 @@ class SurgeEmitter(BaseEmitter):
                 if node.tls.server_name:
                     config_parts.append(f"sni={node.tls.server_name}")
 
-        if hasattr(node, "udp") and node.udp and not isinstance(node, (SnellNode, SSHNode)):
+        if (
+            hasattr(node, "udp")
+            and node.udp
+            and not isinstance(node, (SnellNode, SSHNode))
+        ):
             config_parts.append("udp-relay=true")
 
         if hasattr(node, "tfo") and node.tfo:
             config_parts.append("tfo=true")
 
-        if hasattr(node, "ip_version") and node.ip_version and node.ip_version != "dual":
+        if (
+            hasattr(node, "ip_version")
+            and node.ip_version
+            and node.ip_version != "dual"
+        ):
             config_parts.append(f"ip-version={node.ip_version}")
 
         if hasattr(node, "dialer_proxy") and node.dialer_proxy:

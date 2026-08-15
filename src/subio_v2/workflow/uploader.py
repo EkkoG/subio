@@ -1,16 +1,27 @@
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 from typing import Any, Dict, List
+
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.errors import UploadError
+
+
+_GIST_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _redact(value: str, secret: str | None) -> str:
+    if secret:
+        return value.replace(secret, "***")
+    return value
 
 
 class GistBatchUploader:
-    """Batch uploader for Gist - collects files and uploads them in one git operation."""
+    """Collect all files for a workflow run and upload each Gist once."""
 
     def __init__(self, dry_run: bool = False, clean_gist: bool = False):
-        # Structure: {gist_id: {"token": token, "files": {filename: content}, "clean": bool}}
         self._pending: Dict[str, Dict[str, Any]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
@@ -21,224 +32,204 @@ class GistBatchUploader:
         artifact_config: Dict[str, Any],
         upload_item: Dict[str, Any],
         uploader: Dict[str, Any],
-        username: str = None,
-    ):
-        """Add a file to the pending upload queue."""
-        # Resolve Token
+        username: str | None = None,
+    ) -> None:
         token = uploader.get("token", "")
         if token.startswith("ENV_"):
             env_var = token[4:]
-            token = os.getenv(env_var)
-            if not token:
-                logger.error(f"[Upload] Environment variable {env_var} not found")
-                return
+            token = os.getenv(env_var, "")
+            if not token and not self.dry_run:
+                raise UploadError(
+                    f"Environment variable {env_var} required by uploader "
+                    f"'{uploader.get('name', 'unknown')}' is not set"
+                )
+        elif not token and not self.dry_run:
+            raise UploadError(
+                f"Token required by uploader '{uploader.get('name', 'unknown')}' is missing"
+            )
 
         gist_id = uploader.get("id")
-        if not gist_id:
-            logger.error("[Upload] Gist ID missing")
-            return
-
-        # Validate gist_id
-        if not gist_id.replace("-", "").replace("_", "").isalnum():
-            logger.error(f"[Upload] Invalid gist ID: {gist_id}")
-            return
+        if not isinstance(gist_id, str) or not _GIST_ID_RE.fullmatch(gist_id):
+            raise UploadError(f"Invalid Gist ID: {gist_id!r}")
 
         file_name = upload_item.get("file_name") or artifact_config.get("name")
-
-        # Replace {user} placeholder if username is provided
-        if username:
+        if username and isinstance(file_name, str):
             file_name = file_name.replace("{user}", username)
+        if not isinstance(file_name, str) or not file_name:
+            raise UploadError("Upload filename is missing")
 
-        # Validate filename
         safe_filename = os.path.basename(file_name)
-        if safe_filename != file_name or ".." in safe_filename:
-            logger.error(f"[Upload] Invalid filename: {file_name}")
-            return
+        if safe_filename != file_name or safe_filename in {".", ".."}:
+            raise UploadError(f"Invalid upload filename: {file_name}")
 
-        # Add to pending
         if gist_id not in self._pending:
-            # CLI clean_gist overrides config clean setting
-            clean = self.clean_gist or uploader.get("clean", False)
+            clean = self.clean_gist or bool(uploader.get("clean", False))
             self._pending[gist_id] = {"token": token, "files": {}, "clean": clean}
 
-        self._pending[gist_id]["files"][safe_filename] = content
+        pending = self._pending[gist_id]
+        if pending["token"] != token:
+            raise UploadError(f"Conflicting credentials configured for Gist {gist_id}")
+        existing = pending["files"].get(safe_filename)
+        if existing is not None and existing != content:
+            raise UploadError(
+                f"Multiple artifacts would overwrite '{safe_filename}' in Gist {gist_id}"
+            )
+
+        pending["files"][safe_filename] = content
         logger.dim(f"[Upload] Queued {safe_filename} for Gist {gist_id}")
 
-    def flush(self):
-        """Upload all pending files to their respective gists."""
+    def flush(self) -> None:
         if not self._pending:
+            return
+
+        if self.dry_run:
+            for gist_id, data in self._pending.items():
+                names = ", ".join(data["files"])
+                logger.info(
+                    f"[Dry-run] Would upload {len(data['files'])} file(s) "
+                    f"to Gist {gist_id}: {names}"
+                )
+            self._pending.clear()
             return
 
         for gist_id, data in self._pending.items():
             self._upload_batch(
                 gist_id, data["token"], data["files"], data.get("clean", False)
             )
-
         self._pending.clear()
+
+    @staticmethod
+    def _git_env(askpass_path: str, token: str) -> Dict[str, str]:
+        env = os.environ.copy()
+        env.update(
+            {
+                "GIT_ASKPASS": askpass_path,
+                "GIT_TERMINAL_PROMPT": "0",
+                "SUBIO_GIST_TOKEN": token,
+            }
+        )
+        return env
+
+    @staticmethod
+    def _run_git(
+        args: List[str], env: Dict[str, str], token: str, *, check: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        try:
+            return subprocess.run(
+                args,
+                check=check,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+        except subprocess.CalledProcessError as exc:
+            detail = _redact((exc.stderr or exc.stdout or str(exc)).strip(), token)
+            raise UploadError(f"Git command failed: {detail}") from exc
 
     def _upload_batch(
         self, gist_id: str, token: str, files: Dict[str, str], clean: bool = False
-    ):
-        """Upload multiple files to a single gist in one git operation."""
+    ) -> None:
         if not files:
-            return
+            raise UploadError(f"Refusing to upload an empty file set to Gist {gist_id}")
 
-        file_names = list(files.keys())
+        file_names = list(files)
         logger.step(
-            f"Uploading [bold]{len(files)}[/bold] file(s) to Gist {gist_id}: {', '.join(file_names)}"
+            f"Uploading [bold]{len(files)}[/bold] file(s) to Gist {gist_id}: "
+            f"{', '.join(file_names)}"
         )
 
         temp_base = tempfile.mkdtemp(prefix="subio-v2-gist-")
         repo_dir = os.path.join(temp_base, gist_id)
+        askpass_path = os.path.join(temp_base, "askpass.sh")
 
         try:
-            clone_url = f"https://{token}@gist.github.com/{gist_id}.git"
+            with open(askpass_path, "w", encoding="ascii") as askpass:
+                askpass.write(
+                    "#!/bin/sh\n"
+                    'case "$1" in\n'
+                    "  *Username*) printf '%s\\n' oauth2 ;;\n"
+                    "  *) printf '%s\\n' \"$SUBIO_GIST_TOKEN\" ;;\n"
+                    "esac\n"
+                )
+            os.chmod(askpass_path, 0o700)
+            git_env = self._git_env(askpass_path, token)
+            clone_url = f"https://gist.github.com/{gist_id}.git"
 
-            # Clone
-            subprocess.run(
-                ["git", "clone", clone_url, repo_dir], check=True, capture_output=True
-            )
+            self._run_git(["git", "clone", clone_url, repo_dir], git_env, token)
 
-            # Clean existing files if requested
             if clean:
                 logger.dim(f"[Upload] Cleaning existing files in Gist {gist_id}")
                 for item in os.listdir(repo_dir):
                     if item == ".git":
                         continue
                     item_path = os.path.join(repo_dir, item)
-                    if os.path.isfile(item_path):
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
                         os.remove(item_path)
                     elif os.path.isdir(item_path):
                         shutil.rmtree(item_path)
 
-            # Write all files
             for filename, content in files.items():
                 file_path = os.path.join(repo_dir, filename)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(content)
+                with open(file_path, "w", encoding="utf-8") as output:
+                    output.write(content)
+                os.chmod(file_path, 0o600)
 
-            # Git add all
-            subprocess.run(
-                ["git", "-C", repo_dir, "add", "."], check=True, capture_output=True
-            )
-
-            # Check diff
-            result = subprocess.run(
+            self._run_git(["git", "-C", repo_dir, "add", "."], git_env, token)
+            diff = self._run_git(
                 ["git", "-C", repo_dir, "diff", "--cached", "--quiet"],
-                capture_output=True,
+                git_env,
+                token,
+                check=False,
             )
-
-            if result.returncode != 0:
-                # Commit with all filenames
-                commit_msg = f"update {', '.join(file_names)}"
-                subprocess.run(
-                    ["git", "-C", repo_dir, "commit", "-m", commit_msg],
-                    check=True,
-                    capture_output=True,
-                )
-
-                # Show the committed changes
-                try:
-                    show_result = subprocess.run(
-                        ["git", "-C", repo_dir, "show", "HEAD"],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if show_result.returncode == 0:
-                        logger.info(f"[Upload] Committed changes for Gist {gist_id}:")
-                        for line in show_result.stdout.strip().split('\n'):
-                            logger.dim(f"  {line}")
-                    else:
-                        logger.dim(f"[Upload] Could not show commit details for Gist {gist_id}")
-                except Exception as e:
-                    logger.dim(f"[Upload] Error showing commit details: {e}")
-                # Push (skip in dry-run mode)
-                if self.dry_run:
-                    logger.info(
-                        f"[Dry-run] Skipping push for Gist {gist_id} ({len(files)} file(s) committed locally)"
-                    )
-                    logger.info(f"[Dry-run] Repository location: {repo_dir}")
-                else:
-                    subprocess.run(
-                        ["git", "-C", repo_dir, "push"], check=True, capture_output=True
-                    )
-                    logger.success(
-                        f"[Upload] {len(files)} file(s) updated in Gist {gist_id}"
-                    )
-            else:
+            if diff.returncode == 0:
                 logger.dim(f"[Upload] No changes for Gist {gist_id}")
+                return
+            if diff.returncode != 1:
+                detail = _redact((diff.stderr or diff.stdout).strip(), token)
+                raise UploadError(f"Unable to inspect Gist changes: {detail}")
 
-        except subprocess.CalledProcessError as e:
-            logger.error(f"[Upload] Git Error: {e}")
-            if e.stderr:
-                logger.error(f"[Upload] Stderr: {e.stderr.decode()}")
-        except Exception as e:
-            logger.error(f"[Upload] Error: {e}")
+            stat = self._run_git(
+                ["git", "-C", repo_dir, "diff", "--cached", "--stat"],
+                git_env,
+                token,
+            )
+            if stat.stdout.strip():
+                logger.dim(f"[Upload] Change summary: {stat.stdout.strip()}")
+
+            commit_msg = f"update {', '.join(file_names)}"
+            self._run_git(
+                ["git", "-C", repo_dir, "commit", "-m", commit_msg],
+                git_env,
+                token,
+            )
+            self._run_git(["git", "-C", repo_dir, "push"], git_env, token)
+            logger.success(f"[Upload] {len(files)} file(s) updated in Gist {gist_id}")
         finally:
-            if os.path.exists(temp_base):
-                shutil.rmtree(temp_base, ignore_errors=True)
-
-
-# Global batch uploader instance
-_gist_batch_uploader: GistBatchUploader | None = None
-
-
-def get_gist_batch_uploader(
-    dry_run: bool = False, clean_gist: bool = False
-) -> GistBatchUploader:
-    """Get or create the global GistBatchUploader instance."""
-    global _gist_batch_uploader
-    if _gist_batch_uploader is None:
-        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
-    return _gist_batch_uploader
-
-
-def flush_uploads(dry_run: bool = False, clean_gist: bool = False):
-    """Flush all pending uploads."""
-    global _gist_batch_uploader
-    if _gist_batch_uploader is None:
-        _gist_batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
-    if _gist_batch_uploader:
-        _gist_batch_uploader.flush()
-        _gist_batch_uploader = None
+            shutil.rmtree(temp_base, ignore_errors=True)
 
 
 def upload(
     content: str,
     artifact_config: Dict[str, Any],
     uploader_configs: List[Dict[str, Any]],
-    username: str = None,
-    dry_run: bool = False,
-    clean_gist: bool = False,
-):
-    """Queue files for upload (will be uploaded when flush_uploads is called)."""
-    upload_list = artifact_config.get("upload", [])
-    if not upload_list:
-        return
-
-    for upload_item in upload_list:
+    batch_uploader: GistBatchUploader,
+    username: str | None = None,
+) -> None:
+    """Validate upload references and queue an artifact in the run-local uploader."""
+    for upload_item in artifact_config.get("upload", []):
         uploader_name = upload_item.get("to")
         if not uploader_name:
-            logger.error(
-                f"[Upload] 'to' not specified in artifact {artifact_config.get('name')}"
+            raise UploadError(
+                f"Upload target is missing in artifact {artifact_config.get('name')!r}"
             )
-            continue
 
-        # Find uploader config
         uploader = next(
-            (u for u in uploader_configs if u.get("name") == uploader_name), None
+            (item for item in uploader_configs if item.get("name") == uploader_name),
+            None,
         )
         if not uploader:
-            logger.error(f"[Upload] Uploader '{uploader_name}' not found")
-            continue
+            raise UploadError(f"Uploader {uploader_name!r} is not configured")
+        if uploader.get("type") != "gist":
+            raise UploadError(f"Unsupported uploader type: {uploader.get('type')!r}")
 
-        if uploader.get("type") == "gist":
-            # Add to batch uploader instead of uploading immediately
-            batch_uploader = get_gist_batch_uploader(
-                dry_run=dry_run, clean_gist=clean_gist
-            )
-            batch_uploader.add(
-                content, artifact_config, upload_item, uploader, username
-            )
-        else:
-            logger.error(f"[Upload] Unsupported uploader type: {uploader.get('type')}")
+        batch_uploader.add(content, artifact_config, upload_item, uploader, username)

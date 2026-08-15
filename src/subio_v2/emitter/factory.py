@@ -1,30 +1,23 @@
-from typing import Dict
+from typing import Callable, Dict
+
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
-from subio_v2.emitter.dae import DaeEmitter
 
 
 class EmitterFactory:
-    _emitters: Dict[str, BaseEmitter] = {}
+    _factories: Dict[str, Callable[[], BaseEmitter]] = {
+        "clash": lambda: ClashEmitter(platform="clash"),
+        "clash-meta": lambda: ClashEmitter(platform="clash-meta"),
+        "stash": lambda: ClashEmitter(platform="stash"),
+        "surge": SurgeEmitter,
+        "v2rayn": V2RayNEmitter,
+        "dae": DaeEmitter,
+    }
 
     @classmethod
     def get_emitter(cls, emitter_type: str) -> BaseEmitter | None:
-        if not cls._emitters:
-            cls._initialize_emitters()
-        return cls._emitters.get(emitter_type)
-
-    @classmethod
-    def _initialize_emitters(cls):
-        clash = ClashEmitter()
-        surge = SurgeEmitter()
-        v2rayn = V2RayNEmitter()
-        dae = DaeEmitter()
-
-        cls._emitters["clash"] = clash
-        cls._emitters["clash-meta"] = clash
-        cls._emitters["stash"] = clash
-        cls._emitters["surge"] = surge
-        cls._emitters["v2rayn"] = v2rayn
-        cls._emitters["dae"] = dae
+        factory = cls._factories.get(emitter_type)
+        return factory() if factory else None

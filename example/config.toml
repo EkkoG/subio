@@ -1,4 +1,5 @@
 log_level = "DEBUG"
+allow_conversion_errors = true
 
 [options]
 work_filter = '.*(香港|Hong Kong|HK|Japan|美国|United States|US).*(?<!\.)(1|2|3|4)|work|home-trojan-v6|ekko.*|dler.*'

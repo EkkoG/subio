@@ -1,6 +1,9 @@
-from typing import List, Any
-import sys
 import base64
+import copy
+import sys
+from typing import Any, List
+
+from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
     Node,
@@ -24,24 +27,32 @@ from subio_v2.utils.logger import logger
 class SurgeParser(BaseParser):
     def __init__(self):
         self.keystore: dict = {}  # Store Keystore entries for emitter: {key_id: {"type": "...", "base64": "..."}}
-    
+
     def parse(self, content: Any) -> List[Node]:
-        if not isinstance(content, str):
-            logger.error("Invalid content type for SurgeParser")
+        try:
+            return self.parse_result(content).nodes
+        except ValueError as exc:
+            logger.error(str(exc))
             sys.exit(1)
 
+    def parse_result(self, content: Any) -> ParseResult:
+        if not isinstance(content, str):
+            raise ValueError("Invalid content type for SurgeParser")
+
+        self.keystore = {}
         lines = content.splitlines()
-        nodes = []
+        nodes: list[Node] = []
+        issues: list[ConversionIssue] = []
         in_proxy_section = False
-        keystore = {}  # Store SSH private keys from Keystore section: {key_id: {"type": "...", "base64": "..."}}
+        keystore = self.keystore
 
         # Check if there are sections
-        has_sections = any(line.strip().startswith("[Proxy]") for line in lines)
+        has_sections = any(line.strip().lower() == "[proxy]" for line in lines)
 
         # First pass: collect Keystore entries
         in_keystore = False
-        for line in lines:
-            line = line.strip()
+        for index, raw_line in enumerate(lines):
+            line = raw_line.strip()
             if not line or line.startswith("#") or line.startswith("//"):
                 continue
             if line.lower().startswith("[keystore]"):
@@ -64,12 +75,10 @@ class SurgeParser(BaseParser):
                         v = v.strip()
                         keystore_entry[k] = v
                 keystore[key_id] = keystore_entry
-                # Also store in instance for emitter access
-                self.keystore[key_id] = keystore_entry
 
         # Second pass: parse proxy nodes
-        for line in lines:
-            line = line.strip()
+        for index, raw_line in enumerate(lines):
+            line = raw_line.strip()
             if not line or line.startswith("#") or line.startswith("//"):
                 continue
 
@@ -82,15 +91,58 @@ class SurgeParser(BaseParser):
 
             # If we are in proxy section or if the file has no sections (just a list of nodes), parse.
             if in_proxy_section or (not has_sections and "=" in line and "," in line):
+                name, protocol = self._line_identity(line)
+                if protocol == "wireguard":
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.INFO,
+                            node=name,
+                            protocol=protocol,
+                            source=None,
+                            target="ir",
+                            field=f"lines[{index}]",
+                            message=(
+                                "Surge WireGuard proxy lines are intentionally ignored; "
+                                "WireGuard sections are not represented by this parser"
+                            ),
+                            stage="parse",
+                            code="parse.unsupported-line",
+                        )
+                    )
+                    continue
                 node = self._parse_line(line, keystore)
                 if node:
                     nodes.append(node)
+                    continue
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=name,
+                        protocol=protocol,
+                        source=None,
+                        target="ir",
+                        field=f"lines[{index}]",
+                        message="Failed to parse Surge proxy line",
+                        stage="parse",
+                        code="parse.line",
+                    )
+                )
 
-        return nodes
+        return ParseResult(
+            nodes=nodes,
+            issues=issues,
+            resources={"keystore": copy.deepcopy(keystore)},
+        )
 
-    def _parse_line(
-        self, line: str, keystore: dict = None
-    ) -> Node | None:
+    @staticmethod
+    def _line_identity(line: str) -> tuple[str | None, str | None]:
+        if "=" not in line:
+            return None, None
+        name, config = line.split("=", 1)
+        protocol = config.split(",", 1)[0].strip().lower() or None
+        return name.strip() or None, protocol
+
+    def _parse_line(self, line: str, keystore: dict = None) -> Node | None:
         if keystore is None:
             keystore = {}
         # Name = Type, Server, Port, ...
@@ -230,7 +282,7 @@ class SurgeParser(BaseParser):
             elif p_type == "trojan":
                 # trojan, server, port, password=...
                 tls.enabled = True  # Always TLS
-                
+
                 # Parse ws-headers if ws is enabled
                 if kv_args.get("ws") == "true" and kv_args.get("ws-headers"):
                     headers = {}
@@ -312,7 +364,7 @@ class SurgeParser(BaseParser):
                 password = kv_args.get("password")
                 private_key = kv_args.get("private-key")
                 keystore_id = None
-                
+
                 # If private-key is a keystore ID, store the ID and decode base64 to raw format
                 if private_key and private_key in keystore:
                     keystore_id = private_key
@@ -325,14 +377,18 @@ class SurgeParser(BaseParser):
                         # Legacy format: "type = openssh-private-key, base64 = ..."
                         if "base64" in keystore_entry:
                             try:
-                                base64_key = keystore_entry.split("base64")[1].split("=")[1].strip()
-                            except:
+                                base64_key = (
+                                    keystore_entry.split("base64")[1]
+                                    .split("=")[1]
+                                    .strip()
+                                )
+                            except (IndexError, ValueError):
                                 pass
-                    
+
                     # Decode base64 to raw format for internal storage
                     if base64_key:
                         try:
-                            private_key = base64.b64decode(base64_key).decode('utf-8')
+                            private_key = base64.b64decode(base64_key).decode("utf-8")
                         except Exception:
                             # If decoding fails, keep the base64 value as fallback
                             private_key = base64_key
@@ -358,14 +414,17 @@ class SurgeParser(BaseParser):
                 if kv_args.get("version"):
                     try:
                         version = int(kv_args["version"])
-                    except:
+                    except (TypeError, ValueError):
                         pass
 
                 obfs = kv_args.get("obfs")
                 obfs_host = kv_args.get("obfs-host")
 
                 # Snell always uses TLS
-                snell_tls = TLSSettings(enabled=True, skip_cert_verify=kv_args.get("skip-cert-verify") == "true")
+                snell_tls = TLSSettings(
+                    enabled=True,
+                    skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
+                )
 
                 node = SnellNode(
                     name=name,
@@ -390,7 +449,7 @@ class SurgeParser(BaseParser):
                 if not version and kv_args.get("version"):
                     try:
                         version = int(kv_args["version"])
-                    except:
+                    except (TypeError, ValueError):
                         pass
 
                 token = kv_args.get("token")  # v4
@@ -451,7 +510,6 @@ class SurgeParser(BaseParser):
                 if dialer_proxy:
                     node.dialer_proxy = dialer_proxy
                 return node
-
 
         except Exception as e:
             logger.warning(f"Error parsing line: {line}, error: {e}")

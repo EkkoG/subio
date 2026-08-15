@@ -5,11 +5,18 @@ from subio_v2.model.nodes import Protocol
 
 def test_subio_parser_supports_multiple_formats_and_uses_clash_parser():
     proxies = [
-        {"name": "n1", "type": "ss", "server": "s", "port": 1, "cipher": "aes-256-gcm", "password": "p"},
+        {
+            "name": "n1",
+            "type": "ss",
+            "server": "s",
+            "port": 1,
+            "cipher": "aes-256-gcm",
+            "password": "p",
+        },
         {"name": "n2", "type": "vmess", "server": "s2", "port": 2, "uuid": "u"},
     ]
     # JSON
-    content_json = "{" + "\"proxies\": " + str(proxies).replace("'", '"') + "}"
+    content_json = "{" + '"proxies": ' + str(proxies).replace("'", '"') + "}"
     nodes_json = SubioParser().parse(content_json)
     assert [n.name for n in nodes_json] == ["n1", "n2"]
     assert nodes_json[0].type == Protocol.SHADOWSOCKS
@@ -25,7 +32,7 @@ def test_subio_parser_supports_multiple_formats_and_uses_clash_parser():
     assert len(nodes_json5) == 1
 
     # TOML
-    content_toml = "proxies = [{name = \"n1\", type = \"ss\", server = \"s\", port = 1, cipher = \"aes-256-gcm\", password = \"p\"}]"
+    content_toml = 'proxies = [{name = "n1", type = "ss", server = "s", port = 1, cipher = "aes-256-gcm", password = "p"}]'
     nodes_toml = SubioParser().parse(content_toml)
     assert len(nodes_toml) == 1
 
@@ -35,3 +42,33 @@ def test_subio_parser_errors_on_missing_proxies_or_type():
         SubioParser().parse("{}")
     with pytest.raises(SystemExit):
         SubioParser().parse(123)
+
+    with pytest.raises(ValueError, match="does not contain 'proxies'"):
+        SubioParser().parse_result("{}")
+    with pytest.raises(ValueError, match="Invalid content type"):
+        SubioParser().parse_result(123)
+
+
+def test_subio_parse_result_propagates_clash_node_issues():
+    result = SubioParser().parse_result(
+        """
+proxies:
+  - name: good
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: p
+  - name: bad
+    type: ss
+    server: example.com
+    port: invalid
+    cipher: aes-256-gcm
+    password: p
+"""
+    )
+
+    assert [node.name for node in result.nodes] == ["good"]
+    assert len(result.issues) == 1
+    assert result.issues[0].code == "parse.node"
+    assert result.issues[0].node == "bad"
