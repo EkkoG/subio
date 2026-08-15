@@ -58,9 +58,8 @@ def test_official_document_resource_fixture_is_parseable():
     result = SurgeParser().parse_result(content)
 
     assert result.issues == []
-    assert [node.name for node in result.nodes] == ["Office WG"]
+    assert [node.name for node in result.nodes] == ["Office WG", "My Tailnet"]
     assert [policy.name for policy in result.resources.policies] == [
-        "My Tailnet",
         "On",
         "Off",
     ]
@@ -78,7 +77,8 @@ def test_official_opaque_and_external_fixtures_follow_security_boundary():
     )
 
     assert opaque.issues == []
-    assert len(opaque.resources.policies) == 2
+    assert [node.type.value for node in opaque.nodes] == ["masque", "trusttunnel"]
+    assert opaque.resources.policies == []
     assert rejected.resources.external_policies == []
     assert rejected.issues[0].code == "security.external-rejected"
     assert len(allowed.resources.external_policies) == 1

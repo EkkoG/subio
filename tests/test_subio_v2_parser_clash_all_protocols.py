@@ -2,7 +2,12 @@
 
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.parser.clash import ClashParser
-from subio_v2.model.nodes import Protocol
+from subio_v2.model.nodes import (
+    MasqueNode,
+    Protocol,
+    TailscaleNode,
+    TrustTunnelNode,
+)
 
 
 def _roundtrip(yaml_text: str) -> list[dict]:
@@ -52,6 +57,10 @@ proxies:
     assert Protocol.SUDOKU in types
     assert Protocol.TAILSCALE in types
     assert Protocol.DIRECT in types
+    by_node_name = {node.name: node for node in nodes}
+    assert isinstance(by_node_name["mq1"], MasqueNode)
+    assert isinstance(by_node_name["tt1"], TrustTunnelNode)
+    assert isinstance(by_node_name["ts1"], TailscaleNode)
 
     proxies = _roundtrip(yaml_text)
     assert len(proxies) == 22

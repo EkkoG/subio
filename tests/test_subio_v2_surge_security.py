@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.model.nodes import MasqueNode, TrustTunnelNode
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
@@ -19,7 +20,7 @@ def write(tmp_path: Path, name: str, content: str) -> Path:
     return path
 
 
-def test_surge_masque_and_trust_tunnel_round_trip_as_opaque_policies():
+def test_surge_masque_and_trust_tunnel_round_trip_as_strong_nodes():
     content = """
 [Proxy]
 masque = masque, masque.example.com, 443, username=user, password=pass, port-hopping=8443;9443-9450, port-hopping-interval=20, sni=masque.example.com, future=one, future=two
@@ -28,15 +29,11 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
 
     result = SurgeParser(source_kind="remote").parse_result(content)
 
-    assert result.nodes == []
+    assert [type(node) for node in result.nodes] == [MasqueNode, TrustTunnelNode]
     assert result.issues == []
-    assert [policy.record.type for policy in result.resources.policies] == [
-        "masque",
-        "trust-tunnel",
-    ]
-    assert all(policy.source_kind == "remote" for policy in result.resources.policies)
+    assert result.resources.policies == []
 
-    emission = SurgeEmitter(resources=result.resources).emit_result([])
+    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
 
     assert emission.errors == []
     assert emission.emitted_policy_names == ["masque", "trust"]
@@ -62,12 +59,12 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
         ),
     ],
 )
-def test_surge_opaque_policy_constraints_are_validated(line, message):
+def test_surge_strong_protocol_constraints_are_validated(line, message):
     result = SurgeParser().parse_result(line)
 
     assert result.resources.policies == []
     assert result.issues[0].code in {
-        "parse.opaque-policy",
+        "parse.protocol",
         "parse.protocol-parameter",
     }
     assert message in result.issues[0].message
@@ -245,11 +242,11 @@ def test_authorized_local_external_is_limited_to_surge_output(tmp_path, monkeypa
     assert exc_info.value.issues[0].code == "security.external-cross-platform"
 
 
-def test_opaque_policies_report_unsupported_rename(tmp_path, monkeypatch):
+def test_document_policies_report_unsupported_rename(tmp_path, monkeypatch):
     write(
         tmp_path,
         "source.conf",
-        "masque = masque, example.com, 443",
+        "On = direct, interface=en0",
     )
     cfg = write(
         tmp_path,
@@ -281,18 +278,18 @@ providers = ["source"]
     "provider_options",
     [
         '[provider.rename]\nadd_prefix = "renamed-"',
-        '[provider.filters]\nexclude = "masque"',
+        '[provider.filters]\nexclude = "On"',
         'dialer_proxy = "upstream"',
     ],
 )
 def test_allowed_provider_transform_errors_drop_document_policies(
     tmp_path, monkeypatch, provider_options
 ):
-    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    write(tmp_path, "source.conf", "On = direct, interface=en0")
     cfg = write(
         tmp_path,
         "config.toml",
-        f'''
+        f"""
 [[provider]]
 name = "source"
 type = "surge"
@@ -305,7 +302,7 @@ type = "surge"
 providers = ["source"]
 allow_conversion_errors = true
 allow_empty = true
-''',
+""",
     )
     monkeypatch.chdir(tmp_path)
 
@@ -314,17 +311,17 @@ allow_empty = true
     assert [issue.code for issue in result.errors] == [
         "conversion.opaque-policy-transform"
     ]
-    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+    assert "On = direct" not in (tmp_path / "dist" / "out.conf").read_text()
 
 
 def test_allowed_global_filter_error_drops_document_policy(tmp_path, monkeypatch):
-    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    write(tmp_path, "source.conf", "On = direct, interface=en0")
     cfg = write(
         tmp_path,
         "config.toml",
-        '''
+        """
 [filters]
-exclude = "masque"
+exclude = "On"
 
 [[provider]]
 name = "source"
@@ -337,7 +334,7 @@ type = "surge"
 providers = ["source"]
 allow_conversion_errors = true
 allow_empty = true
-''',
+""",
     )
     monkeypatch.chdir(tmp_path)
 
@@ -346,15 +343,15 @@ allow_empty = true
     assert [issue.code for issue in result.errors] == [
         "conversion.opaque-policy-transform"
     ]
-    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+    assert "On = direct" not in (tmp_path / "dist" / "out.conf").read_text()
 
 
 def test_allowed_user_override_error_drops_document_policy(tmp_path, monkeypatch):
-    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+    write(tmp_path, "source.conf", "On = direct, interface=en0")
     cfg = write(
         tmp_path,
         "config.toml",
-        '''
+        """
 [[provider]]
 name = "source"
 type = "surge"
@@ -367,7 +364,7 @@ providers = ["source"]
 user = "alice"
 allow_conversion_errors = true
 allow_empty = true
-''',
+""",
     )
     monkeypatch.chdir(tmp_path)
 
@@ -376,11 +373,11 @@ allow_empty = true
     assert [issue.code for issue in result.errors] == [
         "conversion.opaque-policy-transform"
     ]
-    assert "masque = masque" not in (tmp_path / "dist" / "out.conf").read_text()
+    assert "On = direct" not in (tmp_path / "dist" / "out.conf").read_text()
 
 
-def test_opaque_policies_report_cross_platform_loss(tmp_path, monkeypatch):
-    write(tmp_path, "source.conf", "masque = masque, example.com, 443")
+def test_document_policies_report_cross_platform_loss(tmp_path, monkeypatch):
+    write(tmp_path, "source.conf", "On = direct, interface=en0")
     cfg = write(
         tmp_path,
         "config.toml",
@@ -407,8 +404,8 @@ providers = ["source"]
 def test_document_policy_conflicts_are_not_bypassed_by_allow_errors(
     tmp_path, monkeypatch
 ):
-    write(tmp_path, "first.conf", "shared = masque, first.example.com, 443")
-    write(tmp_path, "second.conf", "shared = masque, second.example.com, 443")
+    write(tmp_path, "first.conf", "shared = direct, interface=en0")
+    write(tmp_path, "second.conf", "shared = direct, interface=en1")
     cfg = write(
         tmp_path,
         "config.toml",

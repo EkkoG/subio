@@ -18,6 +18,10 @@ from subio_v2.model.nodes import (
     Socks5Node,
     SSHNode,
     TrojanNode,
+    TailscaleNode,
+    MasqueMode,
+    MasqueNode,
+    TrustTunnelNode,
     TUICNode,
     VmessNode,
     WireguardNode,
@@ -35,6 +39,7 @@ from subio_v2.surge.resources import (
     SurgeExternalPolicy,
     SurgeNamedSection,
     coerce_surge_resources,
+    get_surge_node_attachments,
 )
 
 
@@ -439,6 +444,115 @@ class SurgeEmitter(BaseEmitter):
         )
         return ["wireguard", f"section-name={section_name}"]
 
+    def _parts_tailscale(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, TailscaleNode)
+        extension = node.source_extensions.get("surge", {})
+        section_name = extension.get("section_name") or node.name
+        key = ("tailscale", section_name)
+        attached = get_surge_node_attachments(node).named_sections.get(key)
+        existing = self.resources.named_sections.get(key)
+        if attached and existing and attached.lines != existing.lines:
+            raise ValueError(f"conflicting Surge tailscale section '{section_name}'")
+        source = attached or existing
+        self.resources.named_sections[key] = SurgeNamedSection(
+            kind=source.kind if source else "Tailscale",
+            name=section_name,
+            lines=self._tailscale_section_lines(node, source),
+            order=(
+                source.order
+                if source
+                else int(extension.get("order", len(self.resources.named_sections)))
+            ),
+        )
+        return ["tailscale", f"section-name={section_name}"]
+
+    @staticmethod
+    def _tailscale_section_lines(
+        node: TailscaleNode, existing: SurgeNamedSection | None
+    ) -> tuple[str, ...]:
+        lines: list[str] = []
+        if node.auth_key:
+            lines.append(f"auth-key = {node.auth_key}")
+        elif node.interactive_login:
+            lines.append("interactive-login = true")
+        if node.control_url:
+            lines.append(f"control-url = {node.control_url}")
+        if node.hostname:
+            lines.append(f"hostname = {node.hostname}")
+        if node.derp_only:
+            lines.append("derp-only = true")
+        if node.auto_add_magic_dns_rule is not None:
+            lines.append(
+                "auto-add-magic-dns-rule = " + str(node.auto_add_magic_dns_rule).lower()
+            )
+        if node.exit_node:
+            lines.append(f"exit-node = {node.exit_node}")
+        if node.idle_keepalive is not None:
+            lines.append(f"idle-keepalive = {node.idle_keepalive}")
+        if node.prefer_ipv6:
+            lines.append("prefer-ipv6 = true")
+        if node.dns_servers:
+            lines.append("dns-server = " + ", ".join(node.dns_servers))
+        if node.mtu is not None:
+            lines.append(f"mtu = {node.mtu}")
+
+        known_keys = {
+            "auth-key",
+            "interactive-login",
+            "control-url",
+            "hostname",
+            "derp-only",
+            "auto-add-magic-dns-rule",
+            "exit-node",
+            "idle-keepalive",
+            "prefer-ipv6",
+            "dns-server",
+            "mtu",
+        }
+        for raw_line in existing.lines if existing else ():
+            stripped = raw_line.strip()
+            if not stripped or stripped.startswith(("#", "//")) or "=" not in stripped:
+                lines.append(raw_line)
+                continue
+            key = stripped.split("=", 1)[0].strip().lower()
+            if key not in known_keys:
+                lines.append(raw_line)
+        return tuple(lines)
+
+    def _parts_masque(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, MasqueNode)
+        if node.mode != MasqueMode.FORWARD_PROXY:
+            raise ValueError(f"Surge does not support MASQUE mode '{node.mode.value}'")
+        config_parts = ["masque", self._server_str(node), str(node.port)]
+        if node.username:
+            config_parts.append(f"username={node.username}")
+        if node.password:
+            config_parts.append(f"password={node.password}")
+        if node.ports:
+            config_parts.append(f"port-hopping={node.ports}")
+        if node.hop_interval is not None:
+            config_parts.append(f"port-hopping-interval={node.hop_interval}")
+        return config_parts
+
+    def _parts_trust_tunnel(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, TrustTunnelNode)
+        config_parts = [
+            "trust-tunnel",
+            self._server_str(node),
+            str(node.port),
+            f"username={node.username}",
+            f"password={node.password}",
+        ]
+        if node.headers:
+            config_parts.append(f"headers={node.headers}")
+        if node.max_streams is not None:
+            config_parts.append(f"max-streams={node.max_streams}")
+        if node.quic:
+            config_parts.append("h3=true")
+        if node.websocket:
+            config_parts.append("ws=true")
+        return config_parts
+
     @staticmethod
     def _wireguard_peer_parameters(
         node: WireguardNode,
@@ -665,9 +779,10 @@ class SurgeEmitter(BaseEmitter):
                 config_parts.append(f"sni={tls.server_name}")
             if tls.verify_name:
                 config_parts.append(f"server-cert-verify-name={tls.verify_name}")
-            if tls.certificate_sha256:
+            certificate_sha256 = tls.certificate_sha256 or tls.fingerprint
+            if certificate_sha256:
                 config_parts.append(
-                    f"server-cert-fingerprint-sha256={tls.certificate_sha256}"
+                    f"server-cert-fingerprint-sha256={certificate_sha256}"
                 )
             if tls.alpn:
                 alpn_str = (

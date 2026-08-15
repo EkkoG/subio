@@ -112,6 +112,16 @@ def test_every_node_codec_has_protocol_and_emitter_handler():
             "node = hysteria2, example.com, 443, password=p",
             Protocol.HYSTERIA2,
         ),
+        (
+            "masque",
+            "node = masque, example.com, 443, username=u, password=p",
+            Protocol.MASQUE,
+        ),
+        (
+            "trust-tunnel",
+            "node = trust-tunnel, example.com, 443, username=u, password=p",
+            Protocol.TRUSTTUNNEL,
+        ),
     ],
 )
 def test_node_codec_keywords_have_parser_paths(keyword, line, protocol):
@@ -139,11 +149,14 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         "tuic",
         "tuic-v5",
         "hysteria2",
+        "masque",
+        "trust-tunnel",
     }
     registered = {
         codec.keyword
         for codec in SURGE_CODEC_SPECS
-        if codec.policy_kind == SurgePolicyKind.NODE and codec.keyword != "wireguard"
+        if codec.policy_kind == SurgePolicyKind.NODE
+        and codec.keyword not in {"wireguard", "tailscale"}
     }
     assert sampled == registered
 

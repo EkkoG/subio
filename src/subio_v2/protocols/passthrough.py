@@ -43,10 +43,7 @@ class UnknownPassthroughDescriptor(PassthroughDescriptor):
 for _protocol, _clash_type in (
     (Protocol.MIERU, "mieru"),
     (Protocol.SUDOKU, "sudoku"),
-    (Protocol.MASQUE, "masque"),
-    (Protocol.TRUSTTUNNEL, "trusttunnel"),
     (Protocol.OPENVPN, "openvpn"),
-    (Protocol.TAILSCALE, "tailscale"),
     (Protocol.DIRECT, "direct"),
     (Protocol.DNS, "dns"),
 ):

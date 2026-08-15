@@ -83,6 +83,7 @@ class BaseEmitter(ABC):
                         field=warning.field,
                         suggestion=warning.suggestion,
                         stage="capability",
+                        code=warning.code,
                     )
                 )
 

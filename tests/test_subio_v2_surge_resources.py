@@ -1,6 +1,12 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.model.nodes import NativeNode, Protocol, SSHNode, WireguardNode
+from subio_v2.model.nodes import (
+    NativeNode,
+    Protocol,
+    SSHNode,
+    TailscaleNode,
+    WireguardNode,
+)
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
@@ -173,7 +179,7 @@ future-section-field = keep-me
     assert len(reparsed.nodes[0].peers) == 2
 
 
-def test_surge_tailscale_and_builtin_aliases_are_document_policies():
+def test_surge_tailscale_is_a_node_while_builtin_aliases_remain_document_policies():
     result = SurgeParser().parse_result(
         """
 [Proxy]
@@ -187,17 +193,20 @@ hostname = surge-client
 """
     )
 
-    assert result.nodes == []
+    assert len(result.nodes) == 1
+    assert isinstance(result.nodes[0], TailscaleNode)
+    assert result.nodes[0].hostname == "surge-client"
+    assert result.nodes[0].auth_key == "tskey-auth-example"
     assert result.issues == []
     assert [policy.name for policy in result.resources.policies] == [
-        "Tailnet",
         "On",
         "Off",
     ]
+    assert ("tailscale", "office") not in result.resources.named_sections
 
-    emission = SurgeEmitter(resources=result.resources).emit_result([])
+    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
 
-    assert emission.supported_nodes == []
+    assert emission.supported_nodes == result.nodes
     assert emission.emitted_policy_names == ["Tailnet", "On", "Off"]
     assert (
         "Tailnet = tailscale, section-name=office, test-timeout=8" in emission.content

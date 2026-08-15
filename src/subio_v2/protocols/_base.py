@@ -30,6 +30,7 @@ class ProtocolDescriptor(ABC):
     node_class: type[Node]
     passthrough: bool = False
     dynamic_clash_type: bool = False
+    requires_endpoint: bool = True
 
     @abstractmethod
     def parse_clash(self, data: Dict[str, Any]) -> Node:

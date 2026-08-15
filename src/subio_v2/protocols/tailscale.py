@@ -1,0 +1,162 @@
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from subio_v2.model.nodes import Node, Protocol, TailscaleNode
+from subio_v2.protocols import register
+from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+
+
+class TailscaleDescriptor(StructuredProtocolDescriptor):
+    protocol = Protocol.TAILSCALE
+    clash_type = "tailscale"
+    node_class = TailscaleNode
+    requires_endpoint = False
+    fields = (
+        scalar_field("hostname", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("auth-key", "auth_key", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("control-url", "control_url", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("state-dir", "state_dir", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("ephemeral", default=False, emit_policy=EmitPolicy.ALWAYS),
+        scalar_field(
+            "accept-routes",
+            "accept_routes",
+            default=False,
+            emit_policy=EmitPolicy.ALWAYS,
+        ),
+        scalar_field("exit-node", "exit_node", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field(
+            "exit-node-allow-lan-access",
+            "exit_node_allow_lan_access",
+            default=False,
+            emit_policy=EmitPolicy.ALWAYS,
+        ),
+        smux_group(),
+    )
+
+    def prepare_parse_kwargs(
+        self, data: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        kwargs["server"] = None
+        kwargs["port"] = None
+        if "udp" not in data:
+            kwargs["udp"] = False
+        return kwargs
+
+    def after_emit(self, out: Dict[str, Any], node: Node) -> None:
+        out.pop("server", None)
+        out.pop("port", None)
+        if isinstance(node, TailscaleNode) and node.exit_node == "none":
+            out.pop("exit-node", None)
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+        if not isinstance(node, TailscaleNode):
+            return []
+        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
+
+        warnings: list[Any] = []
+        if platform == "surge":
+            interactive_reference = bool(
+                node.source_extensions.get("surge", {}).get(
+                    "interactive_state_reference"
+                )
+            )
+            if not node.auth_key and not (
+                node.interactive_login and interactive_reference
+            ):
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            "Surge Tailscale output requires an auth-key or an "
+                            "existing Surge interactive-login state reference"
+                        ),
+                        field="auth_key",
+                    )
+                )
+            if node.interface_name:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message="Surge Tailscale does not support interface binding",
+                        field="interface_name",
+                    )
+                )
+            if node.exit_node == "auto:any":
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            "Mihomo exit-node 'auto:any' has no equivalent Surge "
+                            "selection semantics"
+                        ),
+                        field="exit_node",
+                        code="conversion.unsupported-protocol-variant",
+                    )
+                )
+            for field, value in (
+                ("state_dir", node.state_dir),
+                ("ephemeral", node.ephemeral),
+                ("accept_routes", node.accept_routes),
+                ("exit_node_allow_lan_access", node.exit_node_allow_lan_access),
+                ("routing_mark", node.routing_mark),
+            ):
+                if value:
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.WARNING,
+                            message=f"Tailscale field '{field}' is Mihomo-only",
+                            field=field,
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
+        elif platform == "clash-meta":
+            if node.interactive_login:
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            "Surge interactive-login references local identity state "
+                            "and cannot be converted to Mihomo"
+                        ),
+                        field="interactive_login",
+                        code="conversion.unsupported-auth-profile",
+                    )
+                )
+            if node.exit_node == "auto":
+                warnings.append(
+                    CapabilityWarning(
+                        level=WarningLevel.ERROR,
+                        message=(
+                            "Surge exit-node 'auto' only selects an unambiguous "
+                            "candidate and cannot be represented by Mihomo auto:any"
+                        ),
+                        field="exit_node",
+                        code="conversion.unsupported-protocol-variant",
+                    )
+                )
+            for field, value in (
+                ("derp_only", node.derp_only),
+                ("auto_add_magic_dns_rule", node.auto_add_magic_dns_rule),
+                ("idle_keepalive", node.idle_keepalive),
+                ("prefer_ipv6", node.prefer_ipv6),
+                ("dns_servers", node.dns_servers),
+                ("mtu", node.mtu),
+            ):
+                is_explicit_auto_rule = (
+                    field == "auto_add_magic_dns_rule" and value is not None
+                )
+                if is_explicit_auto_rule or (value is not None and value is not False):
+                    warnings.append(
+                        CapabilityWarning(
+                            level=WarningLevel.WARNING,
+                            message=f"Tailscale field '{field}' is Surge-only",
+                            field=field,
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
+        return warnings
+
+
+register(TailscaleDescriptor())

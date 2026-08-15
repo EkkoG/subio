@@ -91,6 +91,12 @@ class HttpVariant(StrEnum):
     H2_CONNECT = "h2-connect"
 
 
+class MasqueMode(StrEnum):
+    FORWARD_PROXY = "forward-proxy"
+    CONNECT_IP = "connect-ip"
+    H3_L4_PROXY = "h3-l4proxy"
+
+
 @dataclass
 class TransportSettings:
     network: Union[Network, str] = Network.TCP
@@ -273,6 +279,79 @@ class WireguardNode(BaseNode):
 
 
 @dataclass
+class TailscaleNode(BaseNode):
+    hostname: Optional[str] = None
+    auth_key: Optional[str] = field(default=None, repr=False)
+    interactive_login: bool = False
+    control_url: Optional[str] = None
+    state_dir: Optional[str] = None
+    ephemeral: bool = False
+    accept_routes: bool = False
+    exit_node: Optional[str] = None
+    exit_node_allow_lan_access: bool = False
+    derp_only: bool = False
+    auto_add_magic_dns_rule: Optional[bool] = None
+    idle_keepalive: Optional[int] = None
+    prefer_ipv6: bool = False
+    dns_servers: Optional[List[str]] = None
+    mtu: Optional[int] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.TAILSCALE:
+            self.type = Protocol.TAILSCALE
+
+
+@dataclass
+class MasqueNode(BaseNode):
+    mode: MasqueMode = MasqueMode.FORWARD_PROXY
+    transport: str = "h3"
+    username: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    private_key: Optional[str] = field(default=None, repr=False)
+    public_key: Optional[str] = None
+    interface_ip: Optional[str] = None
+    interface_ipv6: Optional[str] = None
+    mtu: Optional[int] = None
+    ports: Optional[str] = None
+    hop_interval: Optional[int] = None
+    remote_dns_resolve: bool = False
+    dns_servers: Optional[List[str]] = None
+    congestion_controller: Optional[str] = None
+    cwnd: Optional[int] = None
+    bbr_profile: Optional[str] = None
+    handshake_timeout: Optional[int] = None
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.MASQUE:
+            self.type = Protocol.MASQUE
+
+
+@dataclass
+class TrustTunnelNode(BaseNode):
+    username: str = ""
+    password: str = field(default="", repr=False)
+    headers: Optional[str] = None
+    max_streams: Optional[int] = None
+    quic: bool = False
+    websocket: bool = False
+    health_check: Optional[bool] = None
+    congestion_controller: Optional[str] = None
+    cwnd: Optional[int] = None
+    bbr_profile: Optional[str] = None
+    max_connections: Optional[int] = None
+    min_streams: Optional[int] = None
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.TRUSTTUNNEL:
+            self.type = Protocol.TRUSTTUNNEL
+
+
+@dataclass
 class AnyTLSNode(BaseNode):
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
@@ -401,6 +480,9 @@ Node = Union[
     Socks5Node,
     HttpNode,
     WireguardNode,
+    TailscaleNode,
+    MasqueNode,
+    TrustTunnelNode,
     AnyTLSNode,
     HysteriaNode,
     Hysteria2Node,
@@ -424,6 +506,7 @@ _USER_OVERRIDE_FIELDS = frozenset(
         "token",
         "auth",
         "auth_str",
+        "auth_key",
         "psk",
         "private_key",
         "private_key_passphrase",

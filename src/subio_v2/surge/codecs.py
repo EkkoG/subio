@@ -262,15 +262,15 @@ SURGE_CODEC_SPECS = (
     _spec(
         "tailscale",
         protocol=Protocol.TAILSCALE,
-        kind=SurgePolicyKind.DOCUMENT,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        handler="_parts_tailscale",
         consumed=("section-name",),
     ),
     _spec(
         "masque",
         protocol=Protocol.MASQUE,
-        kind=SurgePolicyKind.DOCUMENT,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        handler="_parts_masque",
         consumed=(
             "username",
             "password",
@@ -281,8 +281,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "trust-tunnel",
         protocol=Protocol.TRUSTTUNNEL,
-        kind=SurgePolicyKind.DOCUMENT,
         udp=SurgeUdpBehavior.UNSUPPORTED,
+        handler="_parts_trust_tunnel",
         consumed=("username", "password", "headers", "max-streams", "h3", "ws"),
     ),
     _spec(
@@ -335,11 +335,6 @@ SURGE_MULTI_VALUE_PARAMETERS = {
     for spec in SURGE_CODEC_SPECS
     if spec.multi_value_parameters
 }
-SURGE_OPAQUE_POLICY_TYPES = frozenset(
-    spec.keyword
-    for spec in SURGE_CODEC_SPECS
-    if spec.protocol in {Protocol.MASQUE, Protocol.TRUSTTUNNEL}
-)
 SURGE_BUILTIN_ALIAS_TYPES = frozenset(
     {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
 )

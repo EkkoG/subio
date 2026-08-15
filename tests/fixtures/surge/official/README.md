@@ -12,6 +12,9 @@ Sources were reviewed on 2026-08-15:
 - https://manual.nssurge.com/policies/masque.html
 - https://manual.nssurge.com/policies/trust-tunnel.html
 - https://manual.nssurge.com/policies/external.html
+- https://wiki.metacubex.one/config/proxies/tailscale/
+- https://wiki.metacubex.one/config/proxies/masque/
+- https://wiki.metacubex.one/config/proxies/trusttunnel/
 
 The fixture files contain minimal, non-secret examples distilled from the
 official syntax. Tests must not fetch the documentation at runtime.

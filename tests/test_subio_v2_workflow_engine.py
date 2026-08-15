@@ -647,9 +647,10 @@ auth-key = second-key
     )
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(ArtifactGenerationError, match="conflicting Surge tailscale"):
+    with pytest.raises(ArtifactGenerationError) as exc_info:
         WorkflowEngine(str(cfg), dry_run=True).run()
 
+    assert "conflicting Surge tailscale" in exc_info.value.issues[0].message
     assert not (tmp_path / "dist").exists()
 
 

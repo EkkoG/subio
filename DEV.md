@@ -69,22 +69,23 @@ Surge 已知但不跨平台的公共参数存入 `BaseNode.surge_options`，未�
 `BaseNode.source_extensions["surge"]`。Surge 输出会写回这些字段；其他目标输出必须返回
 `conversion.unconsumed-source-field` issue，不能静默丢弃。
 
-Keystore、命名 section 和 Surge-only policy 统一由
+过渡期内，尚未迁移的 Keystore、未引用命名 section 和真正的 Surge-only policy 仍由
 `src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
-检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message。
+检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message；不要再向这条文档旁路
+新增可跨平台协议。
 
-WireGuard 的 policy line 映射为强类型 `WireguardNode`，`[WireGuard <name>]` 仍由命名
-section 资源保留；多个 peer 会映射到 `WireguardNode.peers`，Surge 特有或未来 section 字段
-在 Surge -> Surge 时继续写回。Tailscale 和 `direct` / `reject*` alias 不伪造 server/port，
-而是作为文档策略保存在 `SurgeDocumentResources.policies`。因此 workflow 判断 Surge artifact
-是否为空、以及模板中的策略名时，必须使用 `EmissionResult.emitted_policy_names`，不能只看
-`supported_nodes`。
+WireGuard 的 policy line 映射为强类型 `WireguardNode`，多个 peer 会映射到
+`WireguardNode.peers`。Tailscale 映射为无伪造端点的 `TailscaleNode`，引用的
+`[Tailscale <name>]` section 绑定到该节点的 `SurgeNodeAttachments`；改名、过滤、用户覆盖和
+capability 检查都作用于节点。`direct` / `reject*` alias 仍是待迁移的文档策略，因此
+workflow 判断过渡期 Surge artifact 是否为空时仍需兼顾 `EmissionResult.emitted_policy_names`。
 
-MASQUE 和 Trust Tunnel 当前同样作为 `SurgeOpaquePolicy` 保留有序 token，并在 parser 中
-校验确定性的必填、互斥和 UDP 约束；它们只允许 Surge -> Surge。provider 或全局 filter、
-provider rename 无法安全处理 opaque policy 时必须返回
-`conversion.opaque-policy-transform`，非 Surge 输出必须返回
-`conversion.unconsumed-source-resource`，不得静默忽略。
+MASQUE 和 Trust Tunnel 均使用强类型节点。`MasqueNode.mode` 区分 Surge 的标准
+HTTP/3 CONNECT/CONNECT-UDP forward proxy、Mihomo CONNECT-IP 和 Mihomo
+`h3-l4proxy`；传输与 method/profile 分开表示。当前两端没有重叠的 MASQUE 部署/认证
+profile，跨端生成必须返回 `conversion.unsupported-protocol-variant`，不能伪造设备密钥、
+隧道地址或把 HTTP Basic 凭据推导成 WARP 凭据。Trust Tunnel 的 H2/H3、TLS 和
+`max-streams` 可跨平台映射；UDP、WebSocket、headers 和平台扩展按 capability 明确报告。
 
 External Proxy Program 使用独立的 `SurgeExternalPolicy`，不能进入普通 opaque 列表。默认
 拒绝所有来源；仅本地 `file` provider 显式设置 `allow_unsafe_external = true` 时允许，并且
@@ -136,7 +137,8 @@ parser keyword、参数生成路径和 UDP 矩阵是否漂移。不要在 parser
 |--------------|----------|--------|
 | `ss`, `vmess`, `vless`, `trojan`, `socks5`, `http` | 强类型 `*Node` | 可扩展 Surge / dae 等 |
 | `ssr`, `hysteria`, `tuic`, `snell`, `wireguard`, `hysteria2`, `anytls`, `ssh` | 强类型 + `BaseNode.extra` | 部分已有 / 可继续补 |
-| `mieru`, `sudoku`, `masque`, `trusttunnel`, `openvpn`, `tailscale`, `direct`, `dns` | `ClashPassthroughNode` | **仅 Clash 往返** |
+| `masque`, `trusttunnel`, `tailscale` | 强类型 + `BaseNode.extra` | Mihomo/Surge 按协议变体与字段能力转换 |
+| `mieru`, `sudoku`, `openvpn`, `direct`, `dns` | `ClashPassthroughNode` | **仅 Clash 往返** |
 | 未来未知 `type` | `ClashPassthroughNode(clash_type=...)` | **仅 Mihomo 往返** |
 
 ### 2.2 实现结构
@@ -292,6 +294,10 @@ register(ExampleDescriptor())
 5. 补充 Clash 往返 + 跨平台 golden 测试。
 
 迁移时可从 `ClashPassthroughNode.raw` 写一次性转换函数，无需用户重导订阅。建议优先 **强类型 + `extra`**（与 `TUICNode` 相同），不必维护两套逻辑。
+
+Tailscale 这类没有远端 `server/port` 的协议应将 descriptor 的 `requires_endpoint` 设为
+`False`，并在 Clash emitter 中删除空端点字段；不得用占位地址绕过通用校验。协议同名但
+method/profile 不同（如 MASQUE）时，应在节点模型和 capability 中显式分型。
 
 ## 6. 如何添加新平台
 

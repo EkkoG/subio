@@ -29,6 +29,7 @@ class CapabilityWarning:
     message: str
     field: Optional[str] = None  # 相关字段名
     suggestion: Optional[str] = None  # 建议
+    code: str = "conversion"
 
 
 @dataclass
@@ -90,17 +91,18 @@ class CapabilityChecker:
         if not node.name:
             result.add_error("Node name is required", field="name")
         if desc and not desc.passthrough:
-            if not node.server:
-                result.add_error("Server is required", field="server")
-            if (
-                not isinstance(node.port, int)
-                or isinstance(node.port, bool)
-                or not 1 <= node.port <= 65535
-            ):
-                result.add_error(
-                    f"Port must be between 1 and 65535, got {node.port!r}",
-                    field="port",
-                )
+            if desc.requires_endpoint:
+                if not node.server:
+                    result.add_error("Server is required", field="server")
+                if (
+                    not isinstance(node.port, int)
+                    or isinstance(node.port, bool)
+                    or not 1 <= node.port <= 65535
+                ):
+                    result.add_error(
+                        f"Port must be between 1 and 65535, got {node.port!r}",
+                        field="port",
+                    )
             for error in desc.validate(node):
                 result.add_error(error.message, field=error.field)
 

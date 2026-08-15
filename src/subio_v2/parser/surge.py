@@ -25,19 +25,23 @@ from subio_v2.model.nodes import (
     ShadowTLSSettings,
     SurgePolicyOptions,
     WireguardNode,
+    TailscaleNode,
+    MasqueMode,
+    MasqueNode,
+    TrustTunnelNode,
 )
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
     SurgeExternalPolicy,
     SurgeNamedSection,
     SurgeOpaquePolicy,
+    get_surge_node_attachments,
 )
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_BUILTIN_ALIAS_TYPES,
     SURGE_COMMON_PARAMETERS,
     SURGE_MULTI_VALUE_PARAMETERS,
-    SURGE_OPAQUE_POLICY_TYPES,
     SURGE_PROTOCOL_PARAMETERS,
     SurgeUdpBehavior,
     get_surge_codec,
@@ -232,7 +236,7 @@ class SurgeParser(BaseParser):
                     continue
                 if protocol == "tailscale":
                     try:
-                        self._add_tailscale_policy(record, resources, index)
+                        node = self._parse_tailscale(record, resources)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -247,10 +251,17 @@ class SurgeParser(BaseParser):
                                 code="parse.resource",
                             )
                         )
+                        continue
+                    self._set_policy_order(node, index)
+                    nodes.append(node)
                     continue
-                if protocol in SURGE_OPAQUE_POLICY_TYPES:
+                if protocol in {"masque", "trust-tunnel"}:
                     try:
-                        self._add_opaque_policy(record, resources, index)
+                        node = (
+                            self._parse_masque(record)
+                            if protocol == "masque"
+                            else self._parse_trust_tunnel(record)
+                        )
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -260,11 +271,14 @@ class SurgeParser(BaseParser):
                                 source=None,
                                 target="ir",
                                 field=f"lines[{index}]",
-                                message=f"Failed to parse Surge {protocol} policy: {exc}",
+                                message=f"Failed to parse Surge {protocol} node: {exc}",
                                 stage="parse",
-                                code="parse.opaque-policy",
+                                code="parse.protocol",
                             )
                         )
+                        continue
+                    self._set_policy_order(node, index)
+                    nodes.append(node)
                     continue
                 if protocol == "external":
                     if self.source_kind != "local":
@@ -542,12 +556,36 @@ class SurgeParser(BaseParser):
         }
         return self._apply_common_options(node, record, "wireguard")
 
-    def _add_tailscale_policy(
-        self,
-        record: SurgeProxyRecord,
-        resources: SurgeDocumentResources,
-        order: int,
-    ) -> None:
+    @staticmethod
+    def _strict_bool(
+        values: dict[str, str], key: str, *, default: bool = False
+    ) -> bool:
+        value = values.get(key)
+        if value is None:
+            return default
+        normalized = value.lower()
+        if normalized not in {"true", "false"}:
+            raise ValueError(f"{key} must be true or false")
+        return normalized == "true"
+
+    @staticmethod
+    def _surge_tls(values: dict[str, str], *, enabled: bool = True) -> TLSSettings:
+        sni = values.get("sni")
+        alpn = values.get("alpn")
+        return TLSSettings(
+            enabled=enabled,
+            server_name=None if sni == "off" else sni,
+            skip_cert_verify=values.get("skip-cert-verify") == "true",
+            alpn=[part.strip() for part in alpn.split(",")] if alpn else None,
+            sni_disabled=sni == "off",
+            verify_name=values.get("server-cert-verify-name"),
+            certificate_sha256=values.get("server-cert-fingerprint-sha256"),
+            client_cert_ref=values.get("client-cert"),
+        )
+
+    def _parse_tailscale(
+        self, record: SurgeProxyRecord, resources: SurgeDocumentResources
+    ) -> TailscaleNode:
         section_name = record.parameters.get("section-name")
         if not section_name:
             raise ValueError("section-name is required")
@@ -558,22 +596,79 @@ class SurgeParser(BaseParser):
                 f"referenced Tailscale section '{section_name}' is missing"
             )
         values = self._section_values(section)
-        auth_key = bool(values.get("auth-key", [""])[-1])
-        interactive = values.get("interactive-login", ["false"])[-1].lower()
-        if interactive not in {"true", "false"}:
-            raise ValueError("interactive-login must be true or false")
-        if auth_key == (interactive == "true"):
+        last_values = {key: entries[-1] for key, entries in values.items()}
+        auth_key = last_values.get("auth-key") or None
+        interactive_login = self._strict_bool(
+            last_values, "interactive-login", default=False
+        )
+        if bool(auth_key) == interactive_login:
             raise ValueError(
                 "exactly one of auth-key and interactive-login=true is required"
             )
-        resources.policies.append(
-            SurgeOpaquePolicy(
-                record=record,
-                order=order,
-                associated_section=section_key,
-                source_kind=self.source_kind,
-            )
+
+        mtu = int(last_values["mtu"]) if last_values.get("mtu") else None
+        if mtu is not None and not 576 <= mtu <= 1420:
+            raise ValueError("mtu must be between 576 and 1420")
+        idle_keepalive = (
+            int(last_values["idle-keepalive"])
+            if last_values.get("idle-keepalive")
+            else None
         )
+        dns_servers = [
+            value
+            for entry in values.get("dns-server", [])
+            for value in split_comma_separated(entry)
+        ]
+        node = TailscaleNode(
+            name=record.name,
+            type=Protocol.TAILSCALE,
+            server=None,
+            port=None,
+            udp=True,
+            hostname=last_values.get("hostname"),
+            auth_key=auth_key,
+            interactive_login=interactive_login,
+            control_url=last_values.get("control-url"),
+            exit_node=last_values.get("exit-node"),
+            derp_only=self._strict_bool(last_values, "derp-only"),
+            auto_add_magic_dns_rule=(
+                self._strict_bool(last_values, "auto-add-magic-dns-rule")
+                if "auto-add-magic-dns-rule" in last_values
+                else None
+            ),
+            idle_keepalive=idle_keepalive,
+            prefer_ipv6=self._strict_bool(last_values, "prefer-ipv6"),
+            dns_servers=dns_servers or None,
+            mtu=mtu,
+        )
+        extension = node.source_extensions.setdefault("surge", {})
+        extension.update(
+            {
+                "section_name": section_name,
+                "interactive_state_reference": interactive_login,
+            }
+        )
+        known_section_keys = {
+            "auth-key",
+            "interactive-login",
+            "control-url",
+            "hostname",
+            "derp-only",
+            "auto-add-magic-dns-rule",
+            "exit-node",
+            "idle-keepalive",
+            "prefer-ipv6",
+            "dns-server",
+            "mtu",
+        }
+        unknown_section_keys = sorted(set(values) - known_section_keys)
+        if unknown_section_keys:
+            extension["semantic_fields"] = unknown_section_keys
+        get_surge_node_attachments(node).named_sections[section_key] = copy.deepcopy(
+            section
+        )
+        resources.named_sections.pop(section_key, None)
+        return self._apply_common_options(node, record, "tailscale")
 
     @staticmethod
     def _validate_opaque_endpoint(record: SurgeProxyRecord) -> None:
@@ -583,49 +678,73 @@ class SurgeParser(BaseParser):
         if not record.positional[0] or not 1 <= port <= 65535:
             raise ValueError("host or port is invalid")
 
-    def _add_opaque_policy(
-        self,
-        record: SurgeProxyRecord,
-        resources: SurgeDocumentResources,
-        order: int,
-    ) -> None:
+    def _parse_masque(self, record: SurgeProxyRecord) -> MasqueNode:
         self._validate_opaque_endpoint(record)
-        protocol = record.type.lower()
         values = record.parameters.last_values
-
-        if protocol == "masque":
-            if values.get("port-hopping") and values.get("underlying-proxy"):
-                raise ValueError(
-                    "port-hopping cannot be combined with underlying-proxy"
-                )
-            if values.get("port-hopping-interval") is not None:
-                interval = int(values["port-hopping-interval"])
-                if interval <= 0:
-                    raise ValueError("port-hopping-interval must be positive")
-            if values.get("shadow-tls-password"):
-                raise ValueError("Shadow TLS cannot be combined with MASQUE")
-        elif protocol == "trust-tunnel":
-            if not values.get("username") or not values.get("password"):
-                raise ValueError("username and password are required")
-            for key in ("h3", "ws"):
-                if values.get(key) not in {None, "true", "false"}:
-                    raise ValueError(f"{key} must be true or false")
-            if values.get("h3") == "true" and values.get("ws") == "true":
-                raise ValueError("h3 and ws cannot be enabled together")
-            if values.get("udp-relay") is not None:
-                raise ValueError("Trust Tunnel does not support udp-relay")
-            if values.get("max-streams") is not None:
-                max_streams = int(values["max-streams"])
-                if max_streams <= 0:
-                    raise ValueError("max-streams must be positive")
-
-        resources.policies.append(
-            SurgeOpaquePolicy(
-                record=record,
-                order=order,
-                source_kind=self.source_kind,
-            )
+        if values.get("port-hopping") and values.get("underlying-proxy"):
+            raise ValueError("port-hopping cannot be combined with underlying-proxy")
+        hop_interval = (
+            int(values["port-hopping-interval"])
+            if values.get("port-hopping-interval") is not None
+            else None
         )
+        if hop_interval is not None and hop_interval <= 0:
+            raise ValueError("port-hopping-interval must be positive")
+        if values.get("shadow-tls-password"):
+            raise ValueError("Shadow TLS cannot be combined with MASQUE")
+        username = values.get("username")
+        password = values.get("password")
+        if bool(username) != bool(password):
+            raise ValueError(
+                "MASQUE Basic authentication requires both username and password"
+            )
+        node = MasqueNode(
+            name=record.name,
+            type=Protocol.MASQUE,
+            server=record.positional[0],
+            port=int(record.positional[1]),
+            udp=True,
+            mode=MasqueMode.FORWARD_PROXY,
+            transport="h3",
+            username=username,
+            password=password,
+            ports=values.get("port-hopping"),
+            hop_interval=hop_interval,
+            tls=self._surge_tls(values),
+        )
+        return self._apply_common_options(node, record, "masque")
+
+    def _parse_trust_tunnel(self, record: SurgeProxyRecord) -> TrustTunnelNode:
+        self._validate_opaque_endpoint(record)
+        values = record.parameters.last_values
+        if not values.get("username") or not values.get("password"):
+            raise ValueError("username and password are required")
+        h3 = self._strict_bool(values, "h3")
+        websocket = self._strict_bool(values, "ws")
+        if h3 and websocket:
+            raise ValueError("h3 and ws cannot be enabled together")
+        max_streams = (
+            int(values["max-streams"])
+            if values.get("max-streams") is not None
+            else None
+        )
+        if max_streams is not None and max_streams <= 0:
+            raise ValueError("max-streams must be positive")
+        node = TrustTunnelNode(
+            name=record.name,
+            type=Protocol.TRUSTTUNNEL,
+            server=record.positional[0],
+            port=int(record.positional[1]),
+            udp=False,
+            username=values["username"],
+            password=values["password"],
+            headers=values.get("headers"),
+            max_streams=max_streams,
+            quic=h3,
+            websocket=websocket,
+            tls=self._surge_tls(values),
+        )
+        return self._apply_common_options(node, record, "trust-tunnel")
 
     def _add_external_policy(
         self,

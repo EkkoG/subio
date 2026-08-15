@@ -136,6 +136,18 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "wireguard": {
             "features": {"udp", "multiple-peers", "named-section"},
         },
+        "tailscale": {
+            "features": {"udp", "named-section", "interactive-login"},
+        },
+        "masque": {
+            "modes": {"forward-proxy"},
+            "transports": {"h3"},
+            "features": {"udp", "tls", "basic-auth"},
+        },
+        "trusttunnel": {
+            "transports": {"h2", "h3", "ws"},
+            "features": {"tls"},
+        },
         # 全局特性
         "global_features": {
             "udp_relay": True,
@@ -229,10 +241,17 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "mieru": {"features": set()},
         "sudoku": {"features": set()},
-        "masque": {"features": set()},
-        "trusttunnel": {"features": set()},
+        "masque": {
+            "modes": {"connect-ip", "h3-l4proxy"},
+            "transports": {"h2", "h3"},
+            "features": {"udp", "tls"},
+        },
+        "trusttunnel": {
+            "transports": {"h2", "h3"},
+            "features": {"udp", "tls"},
+        },
         "openvpn": {"features": set()},
-        "tailscale": {"features": set()},
+        "tailscale": {"features": {"udp"}},
         "direct": {"features": set()},
         "dns": {"features": set()},
         "clash-unknown": {"features": set()},
