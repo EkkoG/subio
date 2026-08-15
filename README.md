@@ -44,6 +44,22 @@ uv run subio convert example/config.toml --dry-run
 - 可以在当前目录下创建 `snippet` 目录，用于存放参数化规则片段，参考 [pt](./example/snippet/pt)。第一行声明逗号分隔的 policy 参数，后续每行是规则；`{{ rule }}` 只表示已声明的 policy 参数引用，不是通用 Jinja 模板源码。
 - 可以在模板中引用远程规则集；远程规则集需要通过 `[[ruleset]]` 在配置文件中定义。
 
+#### 节点输入
+
+节点 provider 目前支持 `clash-meta`、`clash`、`stash`、`surge`、`v2rayn` 和 `subio`。例如读取
+Stash YAML 节点：
+
+```toml
+[[provider]]
+name = "stash_nodes"
+type = "stash"
+file = "stash.yaml"
+```
+
+具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
+
+#### 规则集输入
+
 远程规则集输入使用 `type`、`behavior` 和 `format` 显式选择 codec：
 
 ```toml
@@ -84,6 +100,11 @@ Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语�
 分别解析。引用外部脚本或其他规则资源的条目不会被执行；被当前目标无法精确表达的
 规则会产生结构化 conversion error，并在 artifact 写入或上传前阻断。
 
+已有 `[[ruleset]] name/url`、模板 callable、policy 参数和输出文本格式保持不变。Python API 中
+`EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取，模板
+变量从 `extras["template_context"]` 读取。`ParseResult.resources` 和
+`EmissionResult.emitted_resource_keys` 暂时保留兼容。
+
 然后执行 `subio` 命令即可。
 
 ```shell
@@ -107,5 +128,6 @@ subio convert example/config.toml --clean-gist
 ### 开发文档
 
 - [开发约束与架构](./docs/DEV.md)
-- [当前开发计划](./docs/development_plan.md)
+- [支持矩阵](./docs/support_matrix.md)
 - [文档索引](./docs/README.md)
+- [已完成的项目级计划](./docs/development_plan.md)

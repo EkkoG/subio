@@ -196,7 +196,7 @@ future-section-field = keep-me
     emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.errors == []
-    assert emission.emitted_policy_names == ["wg"]
+    assert [node.name for node in emission.supported_nodes] == ["wg"]
     assert "wireguard:office" in emission.emitted_resource_keys
     assert (
         "wg = wireguard, section-name=office, underlying-proxy=upstream"
@@ -240,7 +240,11 @@ hostname = surge-client
     emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.supported_nodes == result.nodes
-    assert emission.emitted_policy_names == ["Tailnet", "On", "Off"]
+    assert [node.name for node in emission.supported_nodes] == [
+        "Tailnet",
+        "On",
+        "Off",
+    ]
     assert (
         "Tailnet = tailscale, section-name=office, test-timeout=8" in emission.content
     )

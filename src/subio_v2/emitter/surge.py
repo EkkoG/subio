@@ -171,7 +171,7 @@ class SurgeEmitter(BaseEmitter):
             emitted_policy_name_set.add(node.name)
             emitted_attachments = merged_attachments
 
-        emitted_policy_names = [node.name for node in emitted_nodes]
+        policy_names = [node.name for node in emitted_nodes]
 
         if emitted_attachments.keystore:
             lines.append("")
@@ -208,11 +208,10 @@ class SurgeEmitter(BaseEmitter):
             extras={
                 "template_context": {
                     "proxies_names": (
-                        f"PROXY = select, {', '.join(emitted_policy_names)}"
+                        f"PROXY = select, {', '.join(policy_names)}"
                     )
                 }
             },
-            emitted_policy_names=emitted_policy_names,
             emitted_resource_keys=emitted_resource_keys,
         )
 

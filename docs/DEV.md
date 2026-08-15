@@ -1,7 +1,8 @@
 # SubIO v2 开发指南
 
-本文档描述当前有效的架构边界和扩展方法。历史实现过程见 `docs/v2_fix_plan.md` 和
-`docs/surge_support_plan.md`；后续工作以 `docs/development_plan.md` 为准。
+本文档描述当前有效的架构边界和扩展方法。当前能力见 `docs/support_matrix.md`；
+`docs/development_plan.md`、`docs/v2_fix_plan.md` 和 `docs/surge_support_plan.md` 只记录已完成的
+设计与实施过程。
 
 ## 1. 项目边界
 
@@ -40,7 +41,7 @@ Config
   -> Uploader
 ```
 
-规则集主线以 `docs/development_plan.md` 阶段 1～2 的契约为准，完成后只保留这一条语义路径：
+规则集主线已经收口为唯一语义路径：
 
 ```text
 Config / local snippet
@@ -104,8 +105,9 @@ Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 descriptor �
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。
 
 `ParseResult.resources` 和 `EmissionResult.emitted_resource_keys` 目前仅为兼容保留，不得承载新的
-完整文档资源设计。`EmissionResult.emitted_policy_names` 仍被 Workflow 用作 Surge 模板桥接，
-必须等平台模板上下文下沉后再移除。
+完整文档资源设计。`EmissionResult.emitted_policy_names` 已删除；成功生成的节点名称以
+`supported_nodes` 为准，平台模板数据只能放在 `extras["template_context"]`，Workflow 不读取
+Emitter 私有兼容字段。
 
 ### 3.3 节点附件
 
@@ -123,21 +125,20 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 ### 3.4 方言上下文
 
-`docs/development_plan.md` 阶段 1 和阶段 4 完成后，节点和规则集使用同一个轻量 `DialectContext`
-契约描述来源或目标方言。来源与目标分别传入上下文实例，不创建 `RuleSetSourceContext`、
-`NodeDialectContext` 或平台专属 context 等平行类型。
+节点和规则集使用同一个轻量 `DialectContext` 契约描述来源或目标方言。来源与目标分别传入上下文
+实例，不创建 `RuleSetSourceContext`、`NodeDialectContext` 或平台专属 context 等平行类型。
 
 - RuleSet input codec 负责最先定义并使用该契约；
 - Node Parser/Emitter、现有规则 renderer 和 extension 消费检查随后接入同一契约；
 - 通用 hook 只规定 normalizer、descriptor 和 emitter 的调用位置；
-- Stash 等平台的具体字段映射只在对应 parser/emitter 阶段实现；
-- 后续阶段不得重新设计已经验收的 RuleSet codec 接口。
+- Stash 等平台的具体字段映射只在对应 parser/emitter 方言模块实现；
+- 新工作不得重新设计已经验收的 RuleSet codec 接口。
 
 ## 4. Clash / Mihomo
 
 ### 4.1 Schema 基线
 
-Clash/Mihomo 改动以 `vendor/meta-json-schema` 为字段参考。当前计划的可复现审查基线是
+Clash/Mihomo 改动以 `vendor/meta-json-schema` 为字段参考。已归档项目计划的可复现审查基线是
 `88d5239`；开始新的 schema 对齐工作时应先更新到当时最新版本，记录新 commit，并同步离线快照。
 代理类型入口：
 
@@ -154,14 +155,15 @@ vendor/meta-json-schema/src/modules/adapter/outbound/<protocol>.json
 审查基线 `88d5239` 的 `proxies.json` 包含 26 个已知 type。不要维护脱离 commit 的手写数量；
 数量和字段应由带来源 commit 的 schema fixture 与注册表不变量生成或核对。
 
-复现当前计划基线：
+复现该审查基线：
 
 ```bash
 git clone https://github.com/dongchengjie/meta-json-schema.git vendor/meta-json-schema
 git -C vendor/meta-json-schema checkout --detach 88d5239
 ```
 
-需要核对更新时再 fetch 最新提交，并在计划与 fixture 中显式记录新 hash。`vendor/` 不进入主仓库提交。
+需要核对更新时再 fetch 最新提交，并在审计记录与 fixture 中显式记录新 hash。`vendor/` 不进入
+主仓库提交。
 
 ### 4.2 Descriptor 注册表
 
@@ -231,21 +233,21 @@ Parser/Capability 两侧失败关闭。
 
 Stash 属于 Clash-family，但不是 Mihomo 字段的无差别子集。它需要独立方言上下文：
 
-- `ParserFactory` 应提供 Stash parser，而不是让调用方假设普通 Clash 输入；
+- `ParserFactory` 提供 Stash parser，调用方不应把 Stash 输入当作普通 Clash；
 - 输入归一化必须发生在 descriptor 前，并记录原始方言；
 - Emitter 只生成 Stash 官方字段和值域；
 - Mihomo `extra` 不得直接泄漏到 Stash；
 - Stash 专属未知字段只在 Stash -> Stash 往返时保留；
 - 协议名相同但字段、枚举大小写或认证模型不同的情况必须显式适配。
 
-Stash 支持的实施顺序和具体协议矩阵见 `docs/development_plan.md`。
+Stash 当前开放 20 种协议。具体输入、目标协议和跨平台限制见 `docs/support_matrix.md`。
 
 ## 7. Rules 与 Workflow
 
 ### 7.1 可分享规则集
 
-以下内容是 `docs/development_plan.md` 已锁定、但尚未实施完成的目标契约。当前宽松 parser 的
-额外行为不构成兼容承诺，也不得写入新的用户示例。
+以下是当前已经实施并由测试固定的规则集契约。旧宽松 parser、URL/扩展名嗅探、policy 猜测和
+脚本处理路径均不属于兼容 API。
 
 SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集，不解析完整配置中的
 `rules`、`[Rule]`、script provider 或其他外部依赖资源。
@@ -276,7 +278,7 @@ Mihomo CLI 或系统 `zstd`。MRS 使用进程内 `zstandard` 和带输入/解�
 执行或转换脚本。
 
 “输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
-不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须按计划修正，不能用 golden 固化。
+不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
 
 ### 7.2 Workflow
 

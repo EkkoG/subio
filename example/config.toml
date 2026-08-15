@@ -33,6 +33,12 @@ file = "meta.yaml"
 # include = '.*'
 # exclude = '.*剩余流量.*'
 
+# Stash YAML 节点可直接作为输入；取消注释并提供对应文件即可。
+# [[provider]]
+# name = "Stash 节点"
+# type = "stash"
+# file = "stash.yaml"
+
 [[provider]]
 name = "Surge 测试本地"
 type = "surge"

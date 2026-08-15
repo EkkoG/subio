@@ -32,6 +32,7 @@ def test_builtin_emitters_provide_complete_template_context():
     assert surge.extras["template_context"] == {
         "proxies_names": "PROXY = select, proxy"
     }
+    assert not hasattr(surge, "emitted_policy_names")
 
     dae = DaeEmitter().emit_result([node])
     assert dae.extras["template_context"] == {

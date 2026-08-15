@@ -40,7 +40,7 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
     emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.errors == []
-    assert emission.emitted_policy_names == ["masque", "trust"]
+    assert [node.name for node in emission.supported_nodes] == ["masque", "trust"]
     assert "future=one, future=two" in emission.content
     assert 'headers="X-Padding:<random-string(16-32)>,X-Test:a=b"' in emission.content
     assert SurgeParser(source_kind="remote").parse_result(emission.content).issues == []
@@ -121,7 +121,7 @@ def test_authorized_local_external_preserves_repeated_parameters():
 
     emission = SurgeEmitter().emit_result(result.nodes)
     assert emission.errors == []
-    assert emission.emitted_policy_names == ["local"]
+    assert [node.name for node in emission.supported_nodes] == ["local"]
     assert "args=host, args=-D, args=127.0.0.1:1080" in emission.content
 
 
@@ -140,7 +140,7 @@ def test_emitter_rejects_forged_external_authorization():
 
     emission = SurgeEmitter().emit_result([node])
 
-    assert emission.emitted_policy_names == []
+    assert emission.supported_nodes == []
     assert emission.errors[0].code == "security.external-rejected"
     assert "exec" not in emission.errors[0].message
 
@@ -155,7 +155,7 @@ def test_authorized_external_marker_survives_deepcopy():
     emission = SurgeEmitter().emit_result([copy.deepcopy(node)])
 
     assert emission.errors == []
-    assert emission.emitted_policy_names == ["safe"]
+    assert [node.name for node in emission.supported_nodes] == ["safe"]
 
 
 @pytest.mark.parametrize(
@@ -176,7 +176,7 @@ def test_emitter_revalidates_authorized_external_raw_record(line):
 
     emission = SurgeEmitter().emit_result([node])
 
-    assert emission.emitted_policy_names == []
+    assert emission.supported_nodes == []
     assert len(emission.errors) == 1
 
 
@@ -186,7 +186,7 @@ def test_capability_rejects_mutated_invalid_reject_mode():
 
     emission = SurgeEmitter().emit_result([node])
 
-    assert emission.emitted_policy_names == []
+    assert emission.supported_nodes == []
     assert emission.errors[0].field == "mode"
 
 
@@ -196,7 +196,7 @@ def test_surge_emitter_rejects_duplicate_node_policy_names():
 
     emission = SurgeEmitter().emit_result([first, second])
 
-    assert emission.emitted_policy_names == ["same"]
+    assert [node.name for node in emission.supported_nodes] == ["same"]
     assert emission.errors[0].code == "conversion.resource-conflict"
     assert emission.content == "same = direct"
 
