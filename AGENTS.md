@@ -1,21 +1,10 @@
-示例项目运行方法
+# Repository Guidelines
 
-```bash
-uv run subio convert example/config.toml --dry-run
-```
-
-示例项目运行结果在 `./dist` 目录下
-
-先测试 example 目录再更新测试用例
-
-单元测试运行方法
-
-```bash
-uv run python -m pytest tests/
-```
-
-Clash 协议相关改动请先阅读 `DEV.md`（第 2～5 节）。字段定义可参考 `vendor/meta-json-schema/`（未克隆时见 DEV.md 说明）。Clash 单测：
-
-```bash
-uv run python -m pytest tests/test_subio_v2_parser_clash*.py -v
-```
+- 只维护 SubIO v2；协议或平台改动前先读 `docs/DEV.md`。
+- 项目只转换节点和规则，不建立完整平台配置 IR。
+- Mihomo 字段以 `vendor/meta-json-schema/` 为参考；`vendor/` 不提交。
+- 先运行 `uv run subio convert example/config.toml --dry-run`，再跑目标测试和
+  `uv run python -m pytest tests/`。
+- 保留用户已有改动；不要提交 `dist/`、凭据或无关格式化。
+- 一阶段一提交。修复提交写明问题、方案、验证；功能提交写明功能、实现、验证。
+- 可用时最多启用 3 个 subagent 做相互独立的只读审查或实现任务。

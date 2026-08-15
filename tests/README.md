@@ -40,4 +40,4 @@ uv run subio convert example/config.toml --dry-run
 ls dist/
 ```
 
-开发约定见仓库根目录 `AGENTS.md`、`DEV.md`。
+开发约定见仓库根目录 `AGENTS.md` 和 `docs/DEV.md`。
