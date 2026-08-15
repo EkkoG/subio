@@ -1,7 +1,7 @@
 # Repository Guidelines
 
-- 只维护 SubIO v2；协议或平台改动前先读 `docs/DEV.md`。
-- 项目只转换节点和规则，不建立完整平台配置 IR。
+- 只维护 SubIO v2；实施前先读 `docs/DEV.md` 和 `docs/development_plan.md`。
+- 项目只转换节点和平台官方可分享规则集，不建立完整平台配置 IR。
 - Mihomo 字段以 `vendor/meta-json-schema/` 为参考；`vendor/` 不提交。
 - 先运行 `uv run subio convert example/config.toml --dry-run`，再跑目标测试和
   `uv run python -m pytest tests/`。

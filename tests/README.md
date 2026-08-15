@@ -16,15 +16,30 @@
 
 ## 运行测试
 
+首次安装或依赖变化后执行：
+
 ```bash
 uv sync --dev
-uv run python -m pytest tests/ -v
 ```
 
-Clash 相关：
+每次改动先运行示例，再运行目标测试和全量测试：
+
+```bash
+uv run subio convert example/config.toml --dry-run
+uv run python -m pytest <目标测试> -v
+uv run python -m pytest tests/
+```
+
+Clash 相关目标测试：
 
 ```bash
 uv run python -m pytest tests/test_subio_v2_parser_clash*.py -v
+```
+
+规则集相关目标测试：
+
+```bash
+uv run python -m pytest tests/test_ruleset.py tests/test_subio_v2_template_ruleset*.py -v
 ```
 
 覆盖率（包名 `subio_v2`）：
@@ -33,7 +48,7 @@ uv run python -m pytest tests/test_subio_v2_parser_clash*.py -v
 uv run pytest tests/ --cov=subio_v2 --cov-report=term-missing
 ```
 
-## 端到端
+## 生成结果
 
 ```bash
 uv run subio convert example/config.toml --dry-run

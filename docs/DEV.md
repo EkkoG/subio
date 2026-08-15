@@ -8,7 +8,7 @@
 SubIO v2 只转换两类内容：
 
 1. 代理节点；
-2. 规则及规则集。
+2. Mihomo、Stash、Surge 官方定义的可独立分享规则集。
 
 SubIO 不是完整配置文件中转器。策略组、DNS、MITM、脚本、通用 section、客户端运行状态
 等内容，不应为了“无损转换”进入通用 IR 或 workflow。
@@ -26,6 +26,8 @@ SubIO 不是完整配置文件中转器。策略组、DNS、MITM、脚本、通�
 
 ## 2. 数据流
 
+节点主线：
+
 ```text
 Config
   -> Provider
@@ -38,6 +40,21 @@ Config
   -> Uploader
 ```
 
+规则集主线以 `docs/development_plan.md` 阶段 1 的契约为准，完成后只保留这一条语义路径：
+
+```text
+Config / local snippet
+  -> Mihomo / Stash / Surge RuleSetInputCodec
+  -> HeadlessRuleSet
+  -> ParameterizedRuleSet (policy binding)
+  -> existing rule renderer
+  -> Template / Artifact
+  -> Uploader
+```
+
+两条主线共享方言上下文、结构化 issue、模板和发布边界，但不共享 Node IR 与 RuleSet IR，
+也不扩展为完整平台配置 AST。
+
 主要目录：
 
 | 路径 | 职责 |
@@ -49,7 +66,7 @@ Config
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
 | `src/subio_v2/capabilities/` | 当前 serializer 能表达的平台能力 |
-| `src/subio_v2/workflow/` | provider、模板、artifact 和上传事务 |
+| `src/subio_v2/workflow/` | provider、规则集、模板、artifact 和上传事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
 `ParserFactory` 和 `EmitterFactory` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
@@ -97,11 +114,25 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 其他平台若出现同类需求，应复用“节点所有权”原则，而不是创建通用文档资源层。
 
+### 3.4 方言上下文
+
+`docs/development_plan.md` 阶段 1～3 完成后，节点和规则集使用同一个轻量 `DialectContext`
+契约描述来源或目标方言。来源与目标分别传入上下文实例，不创建 `RuleSetSourceContext`、
+`NodeDialectContext` 或平台专属 context 等平行类型。
+
+- RuleSet input codec 负责最先定义并使用该契约；
+- Node Parser/Emitter、现有规则 renderer 和 extension 消费检查随后接入同一契约；
+- 通用 hook 只规定 normalizer、descriptor 和 emitter 的调用位置；
+- Stash 等平台的具体字段映射只在对应 parser/emitter 阶段实现；
+- 后续阶段不得重新设计已经验收的 RuleSet codec 接口。
+
 ## 4. Clash / Mihomo
 
 ### 4.1 Schema 基线
 
-Clash/Mihomo 改动以最新 `vendor/meta-json-schema` 为字段参考。代理类型入口：
+Clash/Mihomo 改动以 `vendor/meta-json-schema` 为字段参考。当前计划的可复现审查基线是
+`88d5239`；开始新的 schema 对齐工作时应先更新到当时最新版本，记录新 commit，并同步离线快照。
+代理类型入口：
 
 ```text
 vendor/meta-json-schema/src/modules/config/proxies.json
@@ -113,16 +144,17 @@ vendor/meta-json-schema/src/modules/config/proxies.json
 vendor/meta-json-schema/src/modules/adapter/outbound/<protocol>.json
 ```
 
-截至 schema `88d5239`，`proxies.json` 包含 26 个已知 type。不要在文档或测试中固定一个
-无人维护的手写数量；应由 schema fixture 和注册表不变量生成或核对。
+审查基线 `88d5239` 的 `proxies.json` 包含 26 个已知 type。不要维护脱离 commit 的手写数量；
+数量和字段应由带来源 commit 的 schema fixture 与注册表不变量生成或核对。
 
-本地没有 schema 时：
+复现当前计划基线：
 
 ```bash
-git clone --depth 1 https://github.com/dongchengjie/meta-json-schema.git vendor/meta-json-schema
+git clone https://github.com/dongchengjie/meta-json-schema.git vendor/meta-json-schema
+git -C vendor/meta-json-schema checkout --detach 88d5239
 ```
 
-`vendor/` 不进入主仓库提交。
+需要核对更新时再 fetch 最新提交，并在计划与 fixture 中显式记录新 hash。`vendor/` 不进入主仓库提交。
 
 ### 4.2 Descriptor 注册表
 
@@ -203,9 +235,40 @@ Stash 支持的实施顺序和具体协议矩阵见 `docs/development_plan.md`�
 
 ## 7. Rules 与 Workflow
 
-Ruleset 是数据，不是 Jinja 源码。远程 matcher、policy、comment 中的模板表达式必须按普通
-文本输出。模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，
-CLI 返回非零并阻止部分发布。
+### 7.1 可分享规则集
+
+以下内容是阶段 1 已锁定的实现契约。当前宽松 parser 的额外行为不构成兼容承诺，也不得写入
+新的用户示例。
+
+SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集，不解析完整配置中的
+`rules`、`[Rule]`、script provider 或其他外部依赖资源。
+
+统一术语如下：
+
+- `RuleSetInputCodec`：按来源方言、format 和 behavior 解析输入；
+- `HeadlessRuleSet`：不带 policy 的有序规则语义；
+- `ParameterizedRuleSet`：在规则语义外增加参数声明和逐条 policy binding；
+- rule renderer：现有目标配置片段生成器，不新增对称的规则集输出 artifact。
+
+远程 `[[ruleset]]` 通过 `type = "mihomo" | "stash" | "surge"` 声明输入方言；未声明 `type`
+时必须严格按 Mihomo `classical` 解析。显式声明方言时使用对应 codec，不根据 URL、文件名或
+解析失败结果切换方言。不得保留 legacy parser、宽松 fallback 或根据逗号位置猜 policy。
+
+本地 snippet 是参数化的 Mihomo classical 规则集：第一行声明参数，后续规则不写 policy 时绑定
+第一个参数，`{{ name }}` 只能引用已声明参数，`DIRECT` 等值是固定 policy。移除 binding 后，
+规则本身必须通过同一 Mihomo classical grammar，不能把 snippet 当作任意文本或通用 Jinja 源码。
+
+远程 matcher、policy、comment 中的模板表达式一律作为普通数据。Stash 或 Surge 规则集中出现的
+`SCRIPT,name` 只代表完整配置中的外部依赖，必须产生结构化 unsupported issue；不得下载、保存、
+执行或转换脚本。
+
+“输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
+不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须按计划修正，不能用 golden 固化。
+
+### 7.2 Workflow
+
+模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并
+阻止部分发布。
 
 Artifact 应先全部生成成功，再开始上传。文件写入使用原子替换；日志、异常、命令参数和 Git
 配置不得泄露订阅正文、token、age key、密码或私钥。

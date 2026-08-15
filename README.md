@@ -1,12 +1,14 @@
-SubIO 是一个类似于 [Surgio](https://surgio.js.org/) 的订阅转换工具，但是更加轻量级，更易扩展新协议。
+SubIO 是一个类似于 [Surgio](https://surgio.js.org/) 的多平台代理节点与规则集转换工具，
+重点是轻量和易于扩展协议，不承担完整客户端配置的无损中转。
 
 ### 原理
 
-SubIO 通过将已知的配置格式转换成一个统一的内部数据结构，然后再根据配置将内部数据结构转换成目标格式。
+SubIO 将已知订阅中的代理节点和可分享规则集转换成统一语义，再按目标平台生成配置片段。
 
-SubIO 和 Surgio 一样，主要有两部分组成，一部分是解析器，负责解析订阅中的节点并转换成内部数据结构，另一部分是渲染器，负责将内部数据结构转换成目标格式。
+核心由输入 parser/codec 和目标 renderer 组成：前者把节点或规则集解析为语义模型，后者按目标
+平台生成配置片段；模板和 artifact 负责组合与发布结果。
 
-使用 SubIO 至少需要定义一个输入（provider）、一个转换规则（模板）和一个输出（artifact）。
+使用 SubIO 至少需要定义一个输入（provider）、一个转换模板（template）和一个输出（artifact）。
 
 ### 安装
 
@@ -31,33 +33,39 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 安装依赖并创建虚拟环境
 uv sync
 
-# 运行 subio
-uv run subio
+# 运行示例项目，不执行远程上传
+uv run subio convert example/config.toml --dry-run
 ```
 
 ### 使用
 
-- 在当前目录下，创建配置文件 `config.toml`，内容参考 [config.toml](./example/config.toml)。SubIO 也支持 yaml/json/json5 格式的配置
+- 在当前目录下创建配置文件 `config.toml`，内容参考 [config.toml](./example/config.toml)。SubIO 也支持 YAML、JSON 和 JSON5 配置。
 - 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/clash.yaml)。
-- 可以在当前目录下创建 `snippet` 目录，用于存放一些公共的配置片段，参考 [snippet](./example/snippet)。 snippet 语法参考 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/#macros)。
-- 可以在模板中引用远程规则集，规则集需要在配置文件中定义
+- 可以在当前目录下创建 `snippet` 目录，用于存放参数化规则片段，参考 [pt](./example/snippet/pt)。第一行声明逗号分隔的 policy 参数，后续每行是规则；`{{ rule }}` 只表示已声明的 policy 参数引用，不是通用 Jinja 模板源码。
+- 可以在模板中引用远程规则集；远程规则集需要通过 `[[ruleset]]` 在配置文件中定义。
 
 然后执行 `subio` 命令即可。
 
 ```shell
 # 使用默认配置文件（自动查找 config.toml/yaml/yml/json/json5）
-subio
+subio convert
 
 # 指定配置文件
-subio example/config.toml
+subio convert example/config.toml
 
 # 干运行模式（不推送到远程，仅本地生成）
-subio example/config.toml --dry-run
+subio convert example/config.toml --dry-run
 
 # 清理 gist 中所有现有文件后再上传
-subio example/config.toml --clean-gist
+subio convert example/config.toml --clean-gist
 ```
 
 ### 致谢
 
 - [Surgio](https://surgio.js.org/)
+
+### 开发文档
+
+- [开发约束与架构](./docs/DEV.md)
+- [当前开发计划](./docs/development_plan.md)
+- [文档索引](./docs/README.md)
