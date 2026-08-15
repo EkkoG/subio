@@ -12,6 +12,10 @@ def pre_descriptor_normalize(
     data: dict[str, Any], context: DialectContext
 ) -> dict[str, Any]:
     """Hook for source-dialect key normalization before shared descriptors."""
+    if context.dialect == "stash":
+        from subio_v2.clash.stash import normalize_stash_proxy
+
+        return normalize_stash_proxy(data)
     return copy.deepcopy(data)
 
 

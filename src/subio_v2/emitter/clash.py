@@ -75,6 +75,9 @@ class ClashEmitter(BaseEmitter):
         if not desc:
             return None, ()
         proxy = desc.emit_clash(node, self.target_context)
-        return post_descriptor_emit(
-            proxy, node, self.target_context, self.platform
-        )
+        return self._post_descriptor_emit(proxy, node)
+
+    def _post_descriptor_emit(
+        self, proxy: Dict[str, Any], node: Node
+    ) -> tuple[Dict[str, Any], tuple[str, ...]]:
+        return post_descriptor_emit(proxy, node, self.target_context, self.platform)
