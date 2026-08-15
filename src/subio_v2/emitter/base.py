@@ -50,6 +50,7 @@ class BaseEmitter(ABC):
         field: str | None = None,
         suggestion: str | None = None,
         stage: str = "emit",
+        code: str = "conversion",
     ) -> ConversionIssue:
         return ConversionIssue(
             severity=severity,
@@ -61,6 +62,7 @@ class BaseEmitter(ABC):
             message=message,
             suggestion=suggestion,
             stage=stage,
+            code=code,
         )
 
     def emit_with_check(
@@ -94,6 +96,29 @@ class BaseEmitter(ABC):
                         f"Node is not supported by {self.platform}",
                         field="type",
                         stage="capability",
+                    )
+                )
+
+            surge_extension = node.source_extensions.get("surge", {})
+            if self.platform != "surge" and (
+                surge_extension.get("parameters")
+                or surge_extension.get("semantic_fields")
+            ):
+                fields = sorted(
+                    {
+                        *surge_extension.get("semantic_fields", []),
+                        *(key for key, _ in surge_extension.get("parameters", [])),
+                    }
+                )
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.WARNING,
+                        "Surge-only fields cannot be represented by this target: "
+                        + ", ".join(fields),
+                        field="source_extensions.surge",
+                        stage="conversion",
+                        code="conversion.unconsumed-source-field",
                     )
                 )
 

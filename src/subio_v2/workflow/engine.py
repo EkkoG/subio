@@ -20,6 +20,10 @@ from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.surge.resources import (
+    SurgeDocumentResources,
+    coerce_surge_resources,
+)
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.processor.common import (
     FilterProcessor,
@@ -468,26 +472,20 @@ class WorkflowEngine:
         # Emit
         emitter = EmitterFactory.get_emitter(a_type)
 
-        # For Surge, collect keystore from all Surge providers
+        # Surge artifacts merge document resources before emission.
         if a_type == "surge" and isinstance(emitter, SurgeEmitter):
-            merged_keystore = {}
+            merged_resources = SurgeDocumentResources()
             for prov_name in art_conf.get("providers", []):
-                resources = self.provider_resources.get(prov_name, {})
-                provider_keystore = resources.get("keystore", {})
-                if not isinstance(provider_keystore, dict):
+                provider_resources = coerce_surge_resources(
+                    self.provider_resources.get(prov_name, {})
+                )
+                try:
+                    merged_resources.merge(provider_resources)
+                except ValueError as exc:
                     raise ArtifactGenerationError(
-                        f"Provider '{prov_name}' returned an invalid Surge keystore"
-                    )
-                for key_id, entry in provider_keystore.items():
-                    existing = merged_keystore.get(key_id)
-                    if existing is not None and existing != entry:
-                        raise ArtifactGenerationError(
-                            f"Artifact '{name}' has conflicting Surge "
-                            f"keystore entry '{key_id}'"
-                        )
-                    merged_keystore[key_id] = copy.deepcopy(entry)
-            # Create new emitter with merged keystore
-            emitter = SurgeEmitter(keystore=merged_keystore)
+                        f"Artifact '{name}' has {exc}"
+                    ) from exc
+            emitter = SurgeEmitter(resources=merged_resources)
 
         if emitter:
             # Determine display name and actual filename

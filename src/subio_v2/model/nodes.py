@@ -42,6 +42,35 @@ class TLSSettings:
     ech_opts: Optional[Dict[str, Any]] = None  # Hysteria2 ECH
     certificate: Optional[str] = None  # mTLS
     private_key: Optional[str] = None  # mTLS
+    sni_disabled: bool = False
+    verify_name: Optional[str] = None
+    certificate_sha256: Optional[str] = None
+    client_cert_ref: Optional[str] = None
+
+
+@dataclass
+class ShadowTLSSettings:
+    password: Optional[str] = field(default=None, repr=False)
+    server_name: Optional[str] = None
+    version: int = 2
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.password)
+
+
+@dataclass
+class SurgePolicyOptions:
+    allow_other_interface: Optional[bool] = None
+    dns_follow_interface: Optional[bool] = None
+    no_error_alert: Optional[bool] = None
+    hybrid: Optional[str] = None
+    tos: Optional[str] = None
+    ecn: Optional[str] = None
+    block_quic: Optional[str] = None
+    test_url: Optional[str] = None
+    test_timeout: Optional[int] = None
+    test_udp: Optional[bool] = None
 
 
 class Network(StrEnum):
@@ -102,6 +131,9 @@ class BaseNode:
     routing_mark: Optional[int] = None
     # Unmapped Clash fields preserved for round-trip emit
     extra: Dict[str, Any] = field(default_factory=dict)
+    surge_options: SurgePolicyOptions = field(default_factory=SurgePolicyOptions)
+    shadow_tls: ShadowTLSSettings = field(default_factory=ShadowTLSSettings)
+    source_extensions: Dict[str, Any] = field(default_factory=dict, repr=False)
     # Workflow provenance for structured conversion issues; never emitted.
     source_provider: Optional[str] = field(default=None, repr=False, compare=False)
 
@@ -109,7 +141,7 @@ class BaseNode:
 @dataclass
 class ShadowsocksNode(BaseNode):
     cipher: str = "chacha20-ietf-poly1305"
-    password: str = ""
+    password: str = field(default="", repr=False)
     udp_port: Optional[int] = None
     plugin: Optional[str] = None
     plugin_opts: Optional[Dict[str, Any]] = None
@@ -137,7 +169,7 @@ class ShadowsocksRNode(BaseNode):
 
 @dataclass
 class VmessNode(BaseNode):
-    uuid: str = ""
+    uuid: str = field(default="", repr=False)
     alter_id: int = 0
     cipher: str = "auto"
     global_padding: bool = False
@@ -154,7 +186,7 @@ class VmessNode(BaseNode):
 
 @dataclass
 class VlessNode(BaseNode):
-    uuid: str = ""
+    uuid: str = field(default="", repr=False)
     flow: Optional[str] = None  # xtls-rprx-vision
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
@@ -168,7 +200,7 @@ class VlessNode(BaseNode):
 
 @dataclass
 class TrojanNode(BaseNode):
-    password: str = ""
+    password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -181,7 +213,7 @@ class TrojanNode(BaseNode):
 @dataclass
 class Socks5Node(BaseNode):
     username: Optional[str] = None
-    password: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
 
     def __post_init__(self):
@@ -192,7 +224,7 @@ class Socks5Node(BaseNode):
 @dataclass
 class HttpNode(BaseNode):
     username: Optional[str] = None
-    password: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
     headers: Optional[Dict[str, str]] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
 
@@ -203,7 +235,7 @@ class HttpNode(BaseNode):
 
 @dataclass
 class WireguardNode(BaseNode):
-    private_key: str = ""
+    private_key: str = field(default="", repr=False)
     public_key: str = ""
     preshared_key: Optional[str] = None
     pre_shared_key: Optional[str] = None  # clash: pre-shared-key on peer
@@ -228,7 +260,7 @@ class WireguardNode(BaseNode):
 
 @dataclass
 class AnyTLSNode(BaseNode):
-    password: str = ""
+    password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
     idle_session_check_interval: Optional[int] = None
     idle_session_timeout: Optional[int] = None
@@ -262,13 +294,13 @@ class HysteriaNode(BaseNode):
 
 @dataclass
 class Hysteria2Node(BaseNode):
-    password: str = ""
+    password: str = field(default="", repr=False)
     ports: Optional[str] = None
     hop_interval: Optional[int] = None
     up: Optional[str] = None
     down: Optional[str] = None
     obfs: Optional[str] = None
-    obfs_password: Optional[str] = None
+    obfs_password: Optional[str] = field(default=None, repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
@@ -280,9 +312,9 @@ class Hysteria2Node(BaseNode):
 @dataclass
 class SSHNode(BaseNode):
     username: str = ""
-    password: Optional[str] = None
-    private_key: Optional[str] = None
-    private_key_passphrase: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    private_key: Optional[str] = field(default=None, repr=False)
+    private_key_passphrase: Optional[str] = field(default=None, repr=False)
     keystore_id: Optional[str] = None  # Reference to Keystore entry ID
     host_key: Optional[List[str]] = None
     host_key_algorithms: Optional[List[str]] = None
@@ -294,7 +326,7 @@ class SSHNode(BaseNode):
 
 @dataclass
 class SnellNode(BaseNode):
-    psk: str = ""
+    psk: str = field(default="", repr=False)
     version: Optional[int] = None
     reuse: Optional[bool] = None
     udp_port: Optional[int] = None
@@ -312,9 +344,9 @@ class SnellNode(BaseNode):
 
 @dataclass
 class TUICNode(BaseNode):
-    token: Optional[str] = None  # TUIC v4 uses token
-    password: Optional[str] = None  # TUIC v5 uses password
-    uuid: Optional[str] = None  # TUIC v5 uses uuid
+    token: Optional[str] = field(default=None, repr=False)  # TUIC v4 uses token
+    password: Optional[str] = field(default=None, repr=False)  # TUIC v5 password
+    uuid: Optional[str] = field(default=None, repr=False)  # TUIC v5 uses uuid
     version: Optional[int] = None  # 4 or 5
     ports: Optional[str] = None
     hop_interval: Optional[int] = None

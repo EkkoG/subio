@@ -26,6 +26,10 @@ from subio_v2.surge.syntax import (
     serialize_parameter_list,
     serialize_proxy_line,
 )
+from subio_v2.surge.resources import (
+    SurgeDocumentResources,
+    coerce_surge_resources,
+)
 
 
 class SurgeEmitter(BaseEmitter):
@@ -43,10 +47,19 @@ class SurgeEmitter(BaseEmitter):
         Protocol.HYSTERIA2: "_parts_hysteria2",
     }
 
-    def __init__(self, keystore: dict | None = None):
+    def __init__(
+        self,
+        keystore: dict | None = None,
+        resources: SurgeDocumentResources | None = None,
+    ):
         super().__init__()
+        self.resources = coerce_surge_resources(resources)
+        if keystore:
+            self.resources.merge(
+                SurgeDocumentResources(keystore=copy.deepcopy(keystore))
+            )
         # Emission may add generated keys, so do not mutate parser-owned resources.
-        self.keystore: dict = copy.deepcopy(keystore) if keystore else {}
+        self.keystore = self.resources.keystore
 
     def _encode_to_base64(self, private_key: str) -> str:
         return base64.b64encode(private_key.encode("utf-8")).decode("utf-8")
@@ -72,12 +85,50 @@ class SurgeEmitter(BaseEmitter):
         checked_nodes, issues = self.emit_with_check(nodes)
 
         lines: list[str] = []
-        used_keystore_ids = set()
         node_keystore_map: dict[int, str] = {}
         prepared_nodes: list[Node] = []
 
         for node in checked_nodes:
             try:
+                tls = getattr(node, "tls", None)
+                if (
+                    tls
+                    and tls.client_cert_ref
+                    and tls.client_cert_ref not in self.keystore
+                ):
+                    issues.append(
+                        self.issue_for_node(
+                            node,
+                            IssueSeverity.ERROR,
+                            f"Referenced Surge client certificate '{tls.client_cert_ref}' is missing",
+                            field="tls.client_cert_ref",
+                        )
+                    )
+                    continue
+                if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
+                    issues.append(
+                        self.issue_for_node(
+                            node,
+                            IssueSeverity.ERROR,
+                            "Shadow TLS version must be 2 or 3",
+                            field="shadow_tls.version",
+                        )
+                    )
+                    continue
+                if (
+                    node.shadow_tls.enabled
+                    and node.shadow_tls.version == 3
+                    and not node.shadow_tls.server_name
+                ):
+                    issues.append(
+                        self.issue_for_node(
+                            node,
+                            IssueSeverity.ERROR,
+                            "Shadow TLS version 3 requires shadow-tls-sni",
+                            field="shadow_tls.server_name",
+                        )
+                    )
+                    continue
                 if isinstance(node, SSHNode):
                     if not node.keystore_id and node.private_key:
                         keystore_id = self._generate_keystore_id(node)
@@ -122,22 +173,19 @@ class SurgeEmitter(BaseEmitter):
                 continue
             lines.append(line)
             emitted_nodes.append(node)
-            if isinstance(node, SSHNode):
-                keystore_id = node.keystore_id or node_keystore_map.get(id(node))
-                if keystore_id:
-                    used_keystore_ids.add(keystore_id)
-
-        if used_keystore_ids and self.keystore:
+        if self.keystore:
             lines.append("")
             lines.append("[Keystore]")
-            for key_id in sorted(used_keystore_ids):
+            for key_id in sorted(self.keystore):
                 if key_id in self.keystore:
                     entry = self.keystore[key_id]
                     if isinstance(entry, dict):
-                        parameters = [
-                            SurgeParameter(key=str(k), value=str(v))
-                            for k, v in entry.items()
-                        ]
+                        parameters = self.resources.keystore_tokens.get(key_id)
+                        if parameters is None:
+                            parameters = SurgeParameters(
+                                SurgeParameter(key=str(k), value=str(v))
+                                for k, v in entry.items()
+                            )
                         keystore_line = (
                             f"{key_id} = "
                             f"{serialize_parameter_list(parameters, spaced_equals=True)}"
@@ -162,7 +210,12 @@ class SurgeEmitter(BaseEmitter):
         config_parts.extend(self._common_opts(node))
         proxy_type, *raw_parts = config_parts
         positional: list[str] = []
-        parameters: list[SurgeParameter] = []
+        parameters: list[SurgeParameter] = [
+            SurgeParameter(key=key, value=value)
+            for key, value in node.source_extensions.get("surge", {}).get(
+                "parameters", []
+            )
+        ]
         for part in raw_parts:
             if "=" not in part:
                 positional.append(part)
@@ -339,35 +392,36 @@ class SurgeEmitter(BaseEmitter):
 
     def _common_opts(self, node: Node) -> list[str]:
         config_parts: list[str] = []
-        if hasattr(node, "tls") and node.tls and node.tls.enabled:
-            if isinstance(node, (Socks5Node, HttpNode)):
-                if node.tls.skip_cert_verify:
-                    config_parts.append("skip-cert-verify=true")
-                if node.tls.server_name:
-                    config_parts.append(f"sni={node.tls.server_name}")
-            elif isinstance(node, (SnellNode, TUICNode, Hysteria2Node)):
-                if node.tls.skip_cert_verify:
-                    config_parts.append("skip-cert-verify=true")
-                if node.tls.server_name:
-                    config_parts.append(f"sni={node.tls.server_name}")
-                if node.tls.alpn:
-                    alpn_str = (
-                        ",".join(node.tls.alpn)
-                        if isinstance(node.tls.alpn, list)
-                        else str(node.tls.alpn)
-                    )
-                    config_parts.append(f"alpn={alpn_str}")
-            elif isinstance(node, VmessNode):
+        tls = getattr(node, "tls", None)
+        if tls:
+            if isinstance(node, VmessNode) and tls.enabled:
                 config_parts.append("tls=true")
-                if node.tls.skip_cert_verify:
-                    config_parts.append("skip-cert-verify=true")
-                if node.tls.server_name:
-                    config_parts.append(f"sni={node.tls.server_name}")
-            elif isinstance(node, TrojanNode):
-                if node.tls.skip_cert_verify:
-                    config_parts.append("skip-cert-verify=true")
-                if node.tls.server_name:
-                    config_parts.append(f"sni={node.tls.server_name}")
+            if tls.skip_cert_verify:
+                config_parts.append("skip-cert-verify=true")
+            if tls.sni_disabled:
+                config_parts.append("sni=off")
+            elif tls.server_name:
+                config_parts.append(f"sni={tls.server_name}")
+            if tls.verify_name:
+                config_parts.append(f"server-cert-verify-name={tls.verify_name}")
+            if tls.certificate_sha256:
+                config_parts.append(
+                    f"server-cert-fingerprint-sha256={tls.certificate_sha256}"
+                )
+            if tls.alpn:
+                alpn_str = (
+                    ",".join(tls.alpn) if isinstance(tls.alpn, list) else str(tls.alpn)
+                )
+                config_parts.append(f"alpn={alpn_str}")
+            if tls.client_cert_ref:
+                config_parts.append(f"client-cert={tls.client_cert_ref}")
+
+        if node.shadow_tls.enabled:
+            config_parts.append(f"shadow-tls-password={node.shadow_tls.password}")
+            if node.shadow_tls.server_name:
+                config_parts.append(f"shadow-tls-sni={node.shadow_tls.server_name}")
+            if node.shadow_tls.version != 2:
+                config_parts.append(f"shadow-tls-version={node.shadow_tls.version}")
 
         if node.udp and isinstance(node, (ShadowsocksNode, Socks5Node)):
             config_parts.append("udp-relay=true")
@@ -386,4 +440,24 @@ class SurgeEmitter(BaseEmitter):
             config_parts.append(f"underlying-proxy={node.dialer_proxy}")
         if hasattr(node, "interface_name") and node.interface_name:
             config_parts.append(f"interface={node.interface_name}")
+
+        options = node.surge_options
+        for key, value in (
+            ("allow-other-interface", options.allow_other_interface),
+            ("dns-follow-interface", options.dns_follow_interface),
+            ("no-error-alert", options.no_error_alert),
+            ("test-udp", options.test_udp),
+        ):
+            if value is not None:
+                config_parts.append(f"{key}={str(value).lower()}")
+        for key, value in (
+            ("hybrid", options.hybrid),
+            ("tos", options.tos),
+            ("ecn", options.ecn),
+            ("block-quic", options.block_quic),
+            ("test-url", options.test_url),
+            ("test-timeout", options.test_timeout),
+        ):
+            if value is not None:
+                config_parts.append(f"{key}={value}")
         return config_parts

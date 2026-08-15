@@ -1,4 +1,3 @@
-import base64
 import copy
 import sys
 from typing import Any, List
@@ -20,9 +19,104 @@ from subio_v2.model.nodes import (
     TLSSettings,
     TransportSettings,
     Network,
+    ShadowTLSSettings,
+    SurgePolicyOptions,
 )
+from subio_v2.surge.resources import SurgeDocumentResources
 from subio_v2.surge.syntax import parse_parameter_list, parse_proxy_line
 from subio_v2.utils.logger import logger
+
+
+_COMMON_PARAMETERS = {
+    "interface",
+    "allow-other-interface",
+    "dns-follow-interface",
+    "no-error-alert",
+    "ip-version",
+    "hybrid",
+    "tfo",
+    "tos",
+    "ecn",
+    "block-quic",
+    "test-url",
+    "test-timeout",
+    "test-udp",
+    "underlying-proxy",
+    "skip-cert-verify",
+    "sni",
+    "server-cert-verify-name",
+    "server-cert-fingerprint-sha256",
+    "alpn",
+    "client-cert",
+    "shadow-tls-password",
+    "shadow-tls-sni",
+    "shadow-tls-version",
+}
+
+_PROTOCOL_PARAMETERS = {
+    "ss": {
+        "encrypt-method",
+        "password",
+        "udp-relay",
+        "udp-port",
+        "obfs",
+        "obfs-host",
+    },
+    "vmess": {
+        "username",
+        "encrypt-method",
+        "vmess-aead",
+        "tls",
+        "ws",
+        "ws-path",
+        "ws-headers",
+        "udp-relay",
+    },
+    "trojan": {"password", "ws", "ws-path", "ws-headers", "udp-relay"},
+    "socks5": {"username", "password", "udp-relay"},
+    "socks5-tls": {"username", "password", "udp-relay"},
+    "http": {"username", "password"},
+    "https": {"username", "password"},
+    "ssh": {"username", "password", "private-key"},
+    "snell": {
+        "psk",
+        "version",
+        "reuse",
+        "udp-port",
+        "mode",
+        "obfs",
+        "obfs-host",
+        "udp-relay",
+    },
+    "tuic": {
+        "token",
+        "version",
+        "port-hopping",
+        "port-hopping-interval",
+        "udp-relay",
+    },
+    "tuic-v5": {
+        "uuid",
+        "password",
+        "port-hopping",
+        "port-hopping-interval",
+        "udp-relay",
+    },
+    "hysteria2": {
+        "password",
+        "download-bandwidth",
+        "upload-bandwidth",
+        "up",
+        "down",
+        "salamander-password",
+        "gecko-password",
+        "obfs",
+        "obfs-password",
+        "port-hopping",
+        "port-hopping-interval",
+        "udp-relay",
+    },
+}
 
 
 class SurgeParser(BaseParser):
@@ -41,6 +135,7 @@ class SurgeParser(BaseParser):
             raise ValueError("Invalid content type for SurgeParser")
 
         self.keystore = {}
+        resources = SurgeDocumentResources(keystore=self.keystore)
         lines = content.splitlines()
         nodes: list[Node] = []
         issues: list[ConversionIssue] = []
@@ -71,7 +166,9 @@ class SurgeParser(BaseParser):
                 key_id, key_config = line.split("=", 1)
                 key_id = key_id.strip()
                 try:
-                    keystore[key_id] = parse_parameter_list(key_config).last_values
+                    parameters = parse_parameter_list(key_config)
+                    keystore[key_id] = parameters.last_values
+                    resources.keystore_tokens[key_id] = parameters
                 except (TypeError, ValueError) as exc:
                     issues.append(
                         ConversionIssue(
@@ -160,7 +257,7 @@ class SurgeParser(BaseParser):
         return ParseResult(
             nodes=nodes,
             issues=issues,
-            resources={"keystore": copy.deepcopy(keystore)},
+            resources=copy.deepcopy(resources),
         )
 
     @staticmethod
@@ -214,6 +311,12 @@ class SurgeParser(BaseParser):
                 return None
             return int(value)
 
+        def get_optional_bool(k):
+            value = kv_args.get(k)
+            if value is None:
+                return None
+            return value.lower() == "true"
+
         # Remove print(f"Parsing Surge content...") if it exists (already removed?)
 
         # Helper to parse alpn (can be single string or comma-separated)
@@ -225,12 +328,20 @@ class SurgeParser(BaseParser):
                 return [x.strip() for x in v.split(",")]
             return [v]
 
-        tls = TLSSettings(
-            enabled=kv_args.get("tls") == "true",
-            server_name=kv_args.get("sni"),
-            skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
-            alpn=get_alpn("alpn"),
-        )
+        def build_tls(enabled=False):
+            sni = kv_args.get("sni")
+            return TLSSettings(
+                enabled=enabled or kv_args.get("tls") == "true",
+                server_name=None if sni == "off" else sni,
+                skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
+                alpn=get_alpn("alpn"),
+                sni_disabled=sni == "off",
+                verify_name=kv_args.get("server-cert-verify-name"),
+                certificate_sha256=kv_args.get("server-cert-fingerprint-sha256"),
+                client_cert_ref=kv_args.get("client-cert"),
+            )
+
+        tls = build_tls()
 
         transport = TransportSettings()
         if kv_args.get("ws") == "true":
@@ -253,6 +364,61 @@ class SurgeParser(BaseParser):
             node.tfo = get_bool("tfo", False)
             node.ip_version = kv_args.get("ip-version")
             node.interface_name = kv_args.get("interface")
+            node.surge_options = SurgePolicyOptions(
+                allow_other_interface=get_optional_bool("allow-other-interface"),
+                dns_follow_interface=get_optional_bool("dns-follow-interface"),
+                no_error_alert=get_optional_bool("no-error-alert"),
+                hybrid=kv_args.get("hybrid"),
+                tos=kv_args.get("tos"),
+                ecn=kv_args.get("ecn"),
+                block_quic=kv_args.get("block-quic"),
+                test_url=kv_args.get("test-url"),
+                test_timeout=get_int("test-timeout"),
+                test_udp=get_optional_bool("test-udp"),
+            )
+            shadow_version = get_int("shadow-tls-version") or 2
+            node.shadow_tls = ShadowTLSSettings(
+                password=kv_args.get("shadow-tls-password"),
+                server_name=kv_args.get("shadow-tls-sni"),
+                version=shadow_version,
+            )
+
+            consumed = _COMMON_PARAMETERS | _PROTOCOL_PARAMETERS.get(p_type, set())
+            last_indexes = {
+                parameter.key: index
+                for index, parameter in enumerate(record.parameters)
+            }
+            preserved = [
+                (parameter.key, parameter.value)
+                for index, parameter in enumerate(record.parameters)
+                if parameter.key not in consumed or index != last_indexes[parameter.key]
+            ]
+            semantic_fields = [
+                key
+                for key in (
+                    "allow-other-interface",
+                    "dns-follow-interface",
+                    "no-error-alert",
+                    "hybrid",
+                    "tos",
+                    "ecn",
+                    "block-quic",
+                    "test-url",
+                    "test-timeout",
+                    "test-udp",
+                    "server-cert-verify-name",
+                    "server-cert-fingerprint-sha256",
+                    "client-cert",
+                    "shadow-tls-password",
+                )
+                if key in kv_args
+            ]
+            if preserved or semantic_fields:
+                node.source_extensions["surge"] = {
+                    "parameters": preserved,
+                    "positional": list(record.positional[2:]),
+                    "semantic_fields": semantic_fields,
+                }
             return node
 
         try:
@@ -390,33 +556,10 @@ class SurgeParser(BaseParser):
                 private_key = kv_args.get("private-key")
                 keystore_id = None
 
-                # If private-key is a keystore ID, store the ID and decode base64 to raw format
+                # Keep document-owned key material in the resource layer.
                 if private_key and private_key in keystore:
                     keystore_id = private_key
-                    # Extract base64 from keystore entry and decode to raw format
-                    keystore_entry = keystore[private_key]
-                    base64_key = None
-                    if isinstance(keystore_entry, dict) and "base64" in keystore_entry:
-                        base64_key = keystore_entry["base64"]
-                    elif isinstance(keystore_entry, str):
-                        # Legacy format: "type = openssh-private-key, base64 = ..."
-                        if "base64" in keystore_entry:
-                            try:
-                                base64_key = (
-                                    keystore_entry.split("base64")[1]
-                                    .split("=")[1]
-                                    .strip()
-                                )
-                            except (IndexError, ValueError):
-                                pass
-
-                    # Decode base64 to raw format for internal storage
-                    if base64_key:
-                        try:
-                            private_key = base64.b64decode(base64_key).decode("utf-8")
-                        except Exception:
-                            # If decoding fails, keep the base64 value as fallback
-                            private_key = base64_key
+                    private_key = None
 
                 node = SSHNode(
                     name=name,
@@ -477,12 +620,7 @@ class SurgeParser(BaseParser):
                 password = kv_args.get("password")  # v5
                 uuid = kv_args.get("uuid")  # v5
 
-                tuic_tls = TLSSettings(
-                    enabled=True,
-                    server_name=kv_args.get("sni"),
-                    skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
-                    alpn=get_alpn("alpn"),
-                )
+                tuic_tls = build_tls(enabled=True)
 
                 node = TUICNode(
                     name=name,
@@ -520,12 +658,7 @@ class SurgeParser(BaseParser):
                     obfs = kv_args.get("obfs")
                     obfs_password = kv_args.get("obfs-password")
 
-                hy_tls = TLSSettings(
-                    enabled=True,
-                    server_name=kv_args.get("sni"),
-                    skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
-                    alpn=get_alpn("alpn"),
-                )
+                hy_tls = build_tls(enabled=True)
 
                 node = Hysteria2Node(
                     name=name,
@@ -545,7 +678,7 @@ class SurgeParser(BaseParser):
                 return apply_common_options(node)
 
         except Exception as e:
-            logger.warning(f"Error parsing line: {line}, error: {e}")
+            logger.warning(f"Error parsing Surge policy '{name}' ({p_type}): {e}")
             return None
 
         return None

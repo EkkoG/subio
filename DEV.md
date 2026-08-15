@@ -64,6 +64,14 @@ HTTP/2 CONNECT 使用显式 `udp-relay`。VMess、Trojan、TUIC、Hysteria 2 和
 的 UDP 支持是协议能力，不应因为 `node.udp=True` 输出该参数；HTTP/HTTPS 和 SSH 不支持
 UDP relay。
 
+Surge 已知但不跨平台的公共参数存入 `BaseNode.surge_options`，未知参数按顺序存入
+`BaseNode.source_extensions["surge"]`。Surge 输出会写回这些字段；其他目标输出必须返回
+`conversion.unconsumed-source-field` issue，不能静默丢弃。
+
+Keystore、命名 section 和 Surge-only policy 统一由
+`src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
+检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message。
+
 ## 2. Clash / Mihomo 协议支持（Protocol Registry）
 
 `ClashParser` / `ClashEmitter` 对齐 [meta-json-schema](https://github.com/dongchengjie/meta-json-schema) 中 `proxies` 的 **22 种已知** `type`，并能把未来未知 `type` 作为 Mihomo-only 透传节点保留。
