@@ -8,6 +8,7 @@ from subio_v2.surge.syntax import (
     parse_proxy_line,
     serialize_parameter_list,
     serialize_proxy_line,
+    split_comma_separated,
 )
 
 
@@ -93,6 +94,17 @@ def test_parameter_list_supports_quoted_commas_and_repeated_keys():
     assert serialize_parameter_list(parameters, spaced_equals=True) == (
         'type = p12, password = "a,b", tag = one, tag = two'
     )
+
+
+def test_split_list_keeps_parenthesized_wireguard_peers_intact():
+    peers = split_comma_separated(
+        '(public-key = a, allowed-ips = "0.0.0.0/0, ::/0", endpoint = a:1), '
+        "(public-key = b, allowed-ips = 10.0.0.0/8, endpoint = b:2)"
+    )
+
+    assert len(peers) == 2
+    assert peers[0].startswith("(public-key = a")
+    assert peers[1].endswith("endpoint = b:2)")
 
 
 @pytest.mark.parametrize(

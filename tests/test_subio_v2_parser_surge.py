@@ -44,7 +44,7 @@ def test_surge_invalid_content_type_exits():
         SurgeParser().parse_result({"not": "str"})
 
 
-def test_surge_parse_result_reports_bad_lines_and_ignored_wireguard():
+def test_surge_parse_result_reports_bad_lines_and_missing_wireguard_resource():
     result = SurgeParser().parse_result(
         """
 [Proxy]
@@ -57,7 +57,7 @@ wg = wireguard, section-name, 0
     assert [node.name for node in result.nodes] == ["good"]
     assert [(issue.code, issue.severity) for issue in result.issues] == [
         ("parse.line", IssueSeverity.ERROR),
-        ("parse.unsupported-line", IssueSeverity.INFO),
+        ("parse.resource", IssueSeverity.ERROR),
     ]
     assert result.issues[0].node == "bad"
     assert result.issues[0].protocol == "vmess"

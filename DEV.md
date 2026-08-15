@@ -33,7 +33,7 @@ SubIO V2 采用 Pipeline 架构：
 v2 保留原有 `parse()` / `emit()` 兼容 API，同时提供用于 workflow 的结构化接口：
 
 - `ParseResult(nodes, issues, resources)`：返回成功解析的节点、单项解析问题和文档级资源；Surge keystore 通过 `resources["keystore"]` 传递，不再依赖 parser 实例旁路。
-- `EmissionResult(content, supported_nodes, issues, extras)`：返回实际输出、真正可生成的节点、转换问题和模板附加上下文。
+- `EmissionResult(content, supported_nodes, issues, extras, emitted_policy_names, emitted_resource_keys)`：返回实际输出、真正可生成的节点、转换问题、模板附加上下文，以及不依赖普通 Node 的文档策略/资源清单。
 - `WorkflowResult(generated, uploaded, issues)`：汇总本次运行的产物、上传结果和全部问题。
 
 `ConversionIssue` 包含 `severity`、`stage`、`code`、`source`、`artifact`、`user`、`node`、`protocol`、`target`、`field` 等上下文。默认只要存在 ERROR，artifact 就不会写入或上传；确需生成有损示例时，可在全局或单个 artifact 显式设置：
@@ -54,6 +54,7 @@ Surge 代理行不能使用普通 `str.split(",")` 解析。参数值可以用�
 - `SurgeParameters` 按输入顺序保留参数和重复 key，`.get()` 返回最后一个值；
 - `serialize_proxy_line()` 根据逗号、引号和首尾空白自动引用参数值；
 - `parse_parameter_list()` / `serialize_parameter_list()` 用于 Keystore 等纯 key/value 列表。
+- `split_comma_separated()` 额外识别括号嵌套，用于 WireGuard 的多个 `peer=(...)` 记录。
 
 Surge Parser 应先经过语法层，再把已知字段映射到 Node；Emitter 应先构造 record，再由
 语法层生成文本。新增字段时不得恢复手写逗号拼接，也不得使用普通字典承载需要保序或
@@ -71,6 +72,13 @@ Surge 已知但不跨平台的公共参数存入 `BaseNode.surge_options`，未�
 Keystore、命名 section 和 Surge-only policy 统一由
 `src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
 检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message。
+
+WireGuard 的 policy line 映射为强类型 `WireguardNode`，`[WireGuard <name>]` 仍由命名
+section 资源保留；多个 peer 会映射到 `WireguardNode.peers`，Surge 特有或未来 section 字段
+在 Surge -> Surge 时继续写回。Tailscale 和 `direct` / `reject*` alias 不伪造 server/port，
+而是作为文档策略保存在 `SurgeDocumentResources.policies`。因此 workflow 判断 Surge artifact
+是否为空、以及模板中的策略名时，必须使用 `EmissionResult.emitted_policy_names`，不能只看
+`supported_nodes`。
 
 Surge `h2-connect` 使用 `HttpNode.variant=HttpVariant.H2_CONNECT`，不得退化为普通
 HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge 目标无法表达这些

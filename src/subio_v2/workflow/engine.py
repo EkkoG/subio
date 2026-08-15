@@ -535,9 +535,14 @@ class WorkflowEngine:
                 )
 
             supported_nodes = emission.supported_nodes
-            if not supported_nodes and not art_conf.get("allow_empty", False):
+            has_emitted_policies = bool(emission.emitted_policy_names)
+            if (
+                not supported_nodes
+                and not has_emitted_policies
+                and not art_conf.get("allow_empty", False)
+            ):
                 raise ArtifactGenerationError(
-                    f"Artifact '{display_name}' has no emit-capable nodes; "
+                    f"Artifact '{display_name}' has no emit-capable nodes or policies; "
                     "set allow_empty=true to permit this",
                     issues=errors,
                 )
@@ -546,8 +551,9 @@ class WorkflowEngine:
             node_names = [node.name for node in supported_nodes]
             extra_context: Dict[str, Any] = {"proxies_names": node_names}
             if isinstance(emitter, SurgeEmitter):
+                policy_names = emission.emitted_policy_names
                 extra_context["proxies_names"] = (
-                    f"PROXY = select, {', '.join(node_names)}"
+                    f"PROXY = select, {', '.join(policy_names)}"
                 )
             if isinstance(emitter, DaeEmitter):
                 extra_context["proxies_names"] = ", ".join(

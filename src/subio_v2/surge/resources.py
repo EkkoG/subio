@@ -94,10 +94,11 @@ class SurgeDocumentResources(Mapping[str, Any]):
 
         for key, section in other.named_sections.items():
             existing = self.named_sections.get(key)
-            if existing is not None and existing != section:
+            if existing is not None and existing.lines != section.lines:
                 kind, name = key
                 raise ValueError(f"conflicting Surge {kind} section '{name}'")
-            self.named_sections[key] = copy.deepcopy(section)
+            if existing is None:
+                self.named_sections[key] = copy.deepcopy(section)
 
         self.policies.extend(copy.deepcopy(other.policies))
         self.external_policies.extend(copy.deepcopy(other.external_policies))

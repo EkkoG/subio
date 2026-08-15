@@ -1,9 +1,9 @@
 import base64
 import copy
 import hashlib
-from typing import Callable, List
+from typing import Any, Callable, List
 
-from subio_v2.conversion import EmissionResult, IssueSeverity
+from subio_v2.conversion import ConversionIssue, EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
     HttpNode,
@@ -20,6 +20,7 @@ from subio_v2.model.nodes import (
     TrojanNode,
     TUICNode,
     VmessNode,
+    WireguardNode,
 )
 from subio_v2.surge.syntax import (
     SurgeParameter,
@@ -30,6 +31,7 @@ from subio_v2.surge.syntax import (
 )
 from subio_v2.surge.resources import (
     SurgeDocumentResources,
+    SurgeNamedSection,
     coerce_surge_resources,
 )
 
@@ -48,6 +50,7 @@ class SurgeEmitter(BaseEmitter):
         Protocol.TUIC: "_parts_tuic",
         Protocol.HYSTERIA2: "_parts_hysteria2",
         Protocol.ANYTLS: "_parts_anytls",
+        Protocol.WIREGUARD: "_parts_wireguard",
     }
 
     def __init__(
@@ -176,6 +179,48 @@ class SurgeEmitter(BaseEmitter):
                 continue
             lines.append(line)
             emitted_nodes.append(node)
+
+        emitted_policy_names = [node.name for node in emitted_nodes]
+        emitted_policy_name_set = set(emitted_policy_names)
+        for policy in sorted(self.resources.policies, key=lambda item: item.order):
+            if policy.name in emitted_policy_name_set:
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=policy.name,
+                        protocol=policy.record.type,
+                        source=None,
+                        target="surge",
+                        field="resources.policies",
+                        message=f"Duplicate Surge policy name '{policy.name}'",
+                        stage="emit",
+                        code="conversion.resource-conflict",
+                    )
+                )
+                continue
+            if (
+                policy.associated_section
+                and policy.associated_section not in self.resources.named_sections
+            ):
+                kind, section_name = policy.associated_section
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=policy.name,
+                        protocol=policy.record.type,
+                        source=None,
+                        target="surge",
+                        field="resources.named_sections",
+                        message=f"Referenced Surge {kind} section '{section_name}' is missing",
+                        stage="emit",
+                        code="conversion.missing-resource",
+                    )
+                )
+                continue
+            lines.append(serialize_proxy_line(policy.record))
+            emitted_policy_names.append(policy.name)
+            emitted_policy_name_set.add(policy.name)
+
         if self.keystore:
             lines.append("")
             lines.append("[Keystore]")
@@ -194,10 +239,31 @@ class SurgeEmitter(BaseEmitter):
                             f"{serialize_parameter_list(parameters, spaced_equals=True)}"
                         )
                         lines.append(keystore_line)
+
+        for section in sorted(
+            self.resources.named_sections.values(),
+            key=lambda item: (item.order, item.kind.lower(), item.name),
+        ):
+            lines.append("")
+            lines.append(f"[{section.kind} {section.name}]")
+            lines.extend(section.lines)
+
+        emitted_resource_keys = [
+            *(f"keystore:{key_id}" for key_id in sorted(self.keystore)),
+            *(
+                f"{section.kind.lower()}:{section.name}"
+                for section in sorted(
+                    self.resources.named_sections.values(),
+                    key=lambda item: (item.order, item.kind.lower(), item.name),
+                )
+            ),
+        ]
         return EmissionResult(
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
             issues=issues,
+            emitted_policy_names=emitted_policy_names,
+            emitted_resource_keys=emitted_resource_keys,
         )
 
     def _emit_node(
@@ -339,6 +405,153 @@ class SurgeEmitter(BaseEmitter):
         if not node.reuse:
             config_parts.append("reuse=false")
         return config_parts
+
+    def _parts_wireguard(self, node: Node, _: dict[int, str]) -> list[str]:
+        assert isinstance(node, WireguardNode)
+        extension = node.source_extensions.get("surge", {})
+        section_name = extension.get("section_name") or node.name
+        key = ("wireguard", section_name)
+        existing = self.resources.named_sections.get(key)
+        self.resources.named_sections[key] = SurgeNamedSection(
+            kind=existing.kind if existing else "WireGuard",
+            name=section_name,
+            lines=self._wireguard_section_lines(node, existing),
+            order=(
+                existing.order
+                if existing
+                else int(extension.get("order", len(self.resources.named_sections)))
+            ),
+        )
+        return ["wireguard", f"section-name={section_name}"]
+
+    @staticmethod
+    def _wireguard_peer_parameters(
+        node: WireguardNode,
+    ) -> list[SurgeParameters]:
+        extension_peers = (
+            node.source_extensions.get("surge", {})
+            .get("wireguard", {})
+            .get("peers", [])
+        )
+
+        if node.peers:
+            peer_models: list[dict[str, Any]] = list(node.peers)
+        else:
+            peer_models = [
+                {
+                    "server": SurgeEmitter._server_str(node),
+                    "port": node.port,
+                    "public-key": node.public_key,
+                    "pre-shared-key": node.pre_shared_key or node.preshared_key,
+                    "allowed-ips": node.allowed_ips,
+                    "reserved": node.reserved,
+                    "keepalive": node.persistent_keepalive,
+                }
+            ]
+
+        peers: list[SurgeParameters] = []
+        for index, model in enumerate(peer_models):
+            values = (
+                dict(extension_peers[index]) if index < len(extension_peers) else {}
+            )
+            server = model.get("server")
+            port = model.get("port")
+            if not server or not port:
+                raise ValueError("WireGuard peer server and port are required")
+            public_key = model.get("public-key") or model.get("public_key")
+            allowed_ips = model.get("allowed-ips") or model.get("allowed_ips")
+            if not public_key:
+                raise ValueError("WireGuard peer public-key is required")
+            if not allowed_ips:
+                allowed_ips = ["0.0.0.0/0", "::/0"]
+            values["public-key"] = str(public_key)
+            values["allowed-ips"] = (
+                ", ".join(str(value) for value in allowed_ips)
+                if isinstance(allowed_ips, list)
+                else str(allowed_ips)
+            )
+            endpoint_server = str(server)
+            if ":" in endpoint_server and not endpoint_server.startswith("["):
+                endpoint_server = f"[{endpoint_server}]"
+            values["endpoint"] = f"{endpoint_server}:{port}"
+            preshared_key = model.get("pre-shared-key") or model.get("preshared-key")
+            if preshared_key:
+                values["preshared-key"] = str(preshared_key)
+            else:
+                values.pop("preshared-key", None)
+            reserved = model.get("reserved")
+            if reserved:
+                values["client-id"] = (
+                    "/".join(str(value) for value in reserved)
+                    if isinstance(reserved, list)
+                    else str(reserved)
+                )
+            keepalive = model.get("keepalive")
+            if keepalive is not None:
+                values["keepalive"] = str(keepalive)
+
+            ordered_keys = (
+                "public-key",
+                "allowed-ips",
+                "endpoint",
+                "preshared-key",
+                "keepalive",
+                "client-id",
+            )
+            parameters = [
+                SurgeParameter(key=key, value=values.pop(key))
+                for key in ordered_keys
+                if values.get(key) is not None
+            ]
+            parameters.extend(
+                SurgeParameter(key=str(key), value=str(value))
+                for key, value in values.items()
+            )
+            peers.append(SurgeParameters(parameters))
+        return peers
+
+    def _wireguard_section_lines(
+        self, node: WireguardNode, existing: SurgeNamedSection | None
+    ) -> tuple[str, ...]:
+        lines = [f"private-key = {node.private_key}"]
+        if node.interface_ip:
+            lines.append(f"self-ip = {node.interface_ip}")
+        if node.interface_ipv6:
+            lines.append(f"self-ip-v6 = {node.interface_ipv6}")
+        if node.dns_servers:
+            lines.append("dns-server = " + ", ".join(node.dns_servers))
+        prefer_ipv6 = (
+            node.source_extensions.get("surge", {})
+            .get("wireguard", {})
+            .get("prefer_ipv6")
+        )
+        if prefer_ipv6 is not None:
+            lines.append(f"prefer-ipv6 = {prefer_ipv6}")
+        if node.mtu is not None:
+            lines.append(f"mtu = {node.mtu}")
+        for peer in self._wireguard_peer_parameters(node):
+            lines.append(
+                "peer = (" + serialize_parameter_list(peer, spaced_equals=True) + ")"
+            )
+
+        known_keys = {
+            "private-key",
+            "self-ip",
+            "self-ip-v6",
+            "dns-server",
+            "prefer-ipv6",
+            "mtu",
+            "peer",
+        }
+        for raw_line in existing.lines if existing else ():
+            stripped = raw_line.strip()
+            if not stripped or stripped.startswith(("#", "//")) or "=" not in stripped:
+                lines.append(raw_line)
+                continue
+            key = stripped.split("=", 1)[0].strip().lower()
+            if key not in known_keys:
+                lines.append(raw_line)
+        return tuple(lines)
 
     def _parts_ssh(self, node: Node, node_keystore_map: dict[int, str]) -> list[str]:
         assert isinstance(node, SSHNode)

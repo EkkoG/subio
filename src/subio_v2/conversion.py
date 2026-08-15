@@ -43,6 +43,8 @@ class EmissionResult(Generic[ContentT]):
     supported_nodes: list[Node]
     issues: list[ConversionIssue] = field(default_factory=list)
     extras: dict[str, Any] = field(default_factory=dict)
+    emitted_policy_names: list[str] = field(default_factory=list)
+    emitted_resource_keys: list[str] = field(default_factory=list)
 
     @property
     def errors(self) -> list[ConversionIssue]:

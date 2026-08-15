@@ -1,4 +1,5 @@
 import copy
+import re
 import sys
 from typing import Any, List
 
@@ -23,9 +24,19 @@ from subio_v2.model.nodes import (
     HttpVariant,
     ShadowTLSSettings,
     SurgePolicyOptions,
+    WireguardNode,
 )
-from subio_v2.surge.resources import SurgeDocumentResources
-from subio_v2.surge.syntax import parse_parameter_list, parse_proxy_line
+from subio_v2.surge.resources import (
+    SurgeDocumentResources,
+    SurgeNamedSection,
+    SurgeOpaquePolicy,
+)
+from subio_v2.surge.syntax import (
+    SurgeProxyRecord,
+    parse_parameter_list,
+    parse_proxy_line,
+    split_comma_separated,
+)
 from subio_v2.utils.logger import logger
 
 
@@ -132,11 +143,33 @@ _PROTOCOL_PARAMETERS = {
         "port-hopping-interval",
         "udp-relay",
     },
+    "wireguard": {"section-name"},
 }
 
 _MULTI_VALUE_PARAMETERS = {
     "ssh": {"server-fingerprint"},
 }
+
+_BUILTIN_ALIAS_TYPES = {
+    "direct",
+    "reject",
+    "reject-drop",
+    "reject-no-drop",
+    "reject-tinygif",
+}
+_PREDEFINED_BUILTIN_NAMES = {
+    "DIRECT",
+    "REJECT",
+    "REJECT-DROP",
+    "REJECT-NO-DROP",
+    "REJECT-TINYGIF",
+    "CELLULAR",
+    "CELLULAR-ONLY",
+    "HYBRID",
+    "NO-HYBRID",
+}
+_NAMED_SECTION_KINDS = {"wireguard", "tailscale"}
+_NAMED_SECTION_RE = re.compile(r"^\[([^\]\s]+)\s+([^\]]+)\]$")
 
 
 class SurgeParser(BaseParser):
@@ -157,6 +190,7 @@ class SurgeParser(BaseParser):
         self.keystore = {}
         resources = SurgeDocumentResources(keystore=self.keystore)
         lines = content.splitlines()
+        resources.named_sections.update(self._collect_named_sections(lines))
         nodes: list[Node] = []
         issues: list[ConversionIssue] = []
         in_proxy_section = False
@@ -218,7 +252,7 @@ class SurgeParser(BaseParser):
                 continue
 
             # If we are in proxy section or if the file has no sections (just a list of nodes), parse.
-            if in_proxy_section or (not has_sections and "=" in line and "," in line):
+            if in_proxy_section or (not has_sections and "=" in line):
                 try:
                     record = parse_proxy_line(line)
                 except (TypeError, ValueError) as exc:
@@ -239,25 +273,81 @@ class SurgeParser(BaseParser):
                     continue
                 name, protocol = record.name, record.type.lower()
                 if protocol == "wireguard":
-                    issues.append(
-                        ConversionIssue(
-                            severity=IssueSeverity.INFO,
-                            node=name,
-                            protocol=protocol,
-                            source=None,
-                            target="ir",
-                            field=f"lines[{index}]",
-                            message=(
-                                "Surge WireGuard proxy lines are intentionally ignored; "
-                                "WireGuard sections are not represented by this parser"
-                            ),
-                            stage="parse",
-                            code="parse.unsupported-line",
+                    try:
+                        node = self._parse_wireguard(record, resources)
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=f"Failed to parse Surge WireGuard resource: {exc}",
+                                stage="parse",
+                                code="parse.resource",
+                            )
                         )
-                    )
+                        continue
+                    self._set_policy_order(node, index)
+                    nodes.append(node)
+                    continue
+                if protocol == "tailscale":
+                    try:
+                        self._add_tailscale_policy(record, resources, index)
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=f"Failed to parse Surge Tailscale resource: {exc}",
+                                stage="parse",
+                                code="parse.resource",
+                            )
+                        )
+                    continue
+                if protocol in _BUILTIN_ALIAS_TYPES:
+                    if name == "DIRECT":
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.INFO,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message="Surge ignores attempts to redefine DIRECT",
+                                stage="parse",
+                                code="parse.ignored-built-in-redefinition",
+                            )
+                        )
+                    elif name.upper() in _PREDEFINED_BUILTIN_NAMES:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target="ir",
+                                field=f"lines[{index}]",
+                                message=f"Surge built-in policy name '{name}' cannot be redefined",
+                                stage="parse",
+                                code="parse.invalid-built-in-redefinition",
+                            )
+                        )
+                    else:
+                        resources.policies.append(
+                            SurgeOpaquePolicy(record=record, order=index)
+                        )
                     continue
                 node = self._parse_line(line, keystore)
                 if node:
+                    self._set_policy_order(node, index)
                     nodes.append(node)
                     continue
                 issues.append(
@@ -281,6 +371,207 @@ class SurgeParser(BaseParser):
         )
 
     @staticmethod
+    def _collect_named_sections(
+        lines: list[str],
+    ) -> dict[tuple[str, str], SurgeNamedSection]:
+        sections: dict[tuple[str, str], SurgeNamedSection] = {}
+        current: SurgeNamedSection | None = None
+        body: list[str] = []
+
+        def finish() -> None:
+            nonlocal current, body
+            if current is None:
+                return
+            while body and not body[0].strip():
+                body.pop(0)
+            while body and not body[-1].strip():
+                body.pop()
+            current.lines = tuple(body)
+            sections[current.key] = current
+            current = None
+            body = []
+
+        for index, raw_line in enumerate(lines):
+            line = raw_line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                finish()
+                match = _NAMED_SECTION_RE.match(line)
+                if match and match.group(1).lower() in _NAMED_SECTION_KINDS:
+                    current = SurgeNamedSection(
+                        kind=match.group(1),
+                        name=match.group(2).strip(),
+                        order=index,
+                    )
+                continue
+            if current is not None:
+                body.append(raw_line)
+        finish()
+        return sections
+
+    @staticmethod
+    def _set_policy_order(node: Node, order: int) -> None:
+        node.source_extensions.setdefault("surge", {})["order"] = order
+
+    @staticmethod
+    def _section_values(section: SurgeNamedSection) -> dict[str, list[str]]:
+        values: dict[str, list[str]] = {}
+        for raw_line in section.lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or line.startswith("//"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            values.setdefault(key.strip().lower(), []).append(value.strip())
+        return values
+
+    @staticmethod
+    def _parse_endpoint(endpoint: str) -> tuple[str, int]:
+        endpoint = endpoint.strip()
+        if endpoint.startswith("["):
+            closing = endpoint.rfind("]:")
+            if closing < 0:
+                raise ValueError("WireGuard peer endpoint must include a port")
+            server = endpoint[1:closing]
+            port_value = endpoint[closing + 2 :]
+        else:
+            if ":" not in endpoint:
+                raise ValueError("WireGuard peer endpoint must include a port")
+            server, port_value = endpoint.rsplit(":", 1)
+        port = int(port_value)
+        if not server or not 1 <= port <= 65535:
+            raise ValueError("WireGuard peer endpoint is invalid")
+        return server, port
+
+    def _parse_wireguard(
+        self, record: SurgeProxyRecord, resources: SurgeDocumentResources
+    ) -> WireguardNode:
+        section_name = record.parameters.get("section-name")
+        if not section_name:
+            raise ValueError("section-name is required")
+        section = resources.named_sections.get(("wireguard", section_name))
+        if section is None:
+            raise ValueError(
+                f"referenced WireGuard section '{section_name}' is missing"
+            )
+
+        values = self._section_values(section)
+        private_key = values.get("private-key", [""])[-1]
+        self_ip = values.get("self-ip", [None])[-1]
+        self_ipv6 = values.get("self-ip-v6", [None])[-1]
+        if not private_key:
+            raise ValueError("private-key is required")
+        if not self_ip and not self_ipv6:
+            raise ValueError("self-ip or self-ip-v6 is required")
+
+        surge_peers: list[dict[str, str]] = []
+        clash_peers: list[dict[str, Any]] = []
+        for peer_line in values.get("peer", []):
+            for raw_peer in split_comma_separated(peer_line):
+                peer = raw_peer.strip()
+                if not (peer.startswith("(") and peer.endswith(")")):
+                    raise ValueError("peer entries must be parenthesized")
+                peer_values = parse_parameter_list(peer[1:-1]).last_values
+                missing = [
+                    key
+                    for key in ("public-key", "allowed-ips", "endpoint")
+                    if not peer_values.get(key)
+                ]
+                if missing:
+                    raise ValueError("WireGuard peer is missing " + ", ".join(missing))
+                server, port = self._parse_endpoint(peer_values["endpoint"])
+                allowed_ips = list(split_comma_separated(peer_values["allowed-ips"]))
+                clash_peer: dict[str, Any] = {
+                    "server": server,
+                    "port": port,
+                    "public-key": peer_values["public-key"],
+                    "allowed-ips": allowed_ips,
+                }
+                if peer_values.get("preshared-key"):
+                    clash_peer["pre-shared-key"] = peer_values["preshared-key"]
+                client_id = peer_values.get("client-id")
+                if client_id:
+                    parts = client_id.split("/")
+                    if len(parts) == 3 and all(part.isdigit() for part in parts):
+                        reserved = [int(part) for part in parts]
+                        if all(0 <= value <= 255 for value in reserved):
+                            clash_peer["reserved"] = reserved
+                surge_peers.append(peer_values)
+                clash_peers.append(clash_peer)
+
+        if not clash_peers:
+            raise ValueError("at least one peer is required")
+
+        first = clash_peers[0]
+        dns_servers = [
+            server
+            for dns_line in values.get("dns-server", [])
+            for server in split_comma_separated(dns_line)
+        ]
+        keepalive = surge_peers[0].get("keepalive")
+        node = WireguardNode(
+            name=record.name,
+            type=Protocol.WIREGUARD,
+            server=first["server"],
+            port=first["port"],
+            private_key=private_key,
+            public_key=(first["public-key"] if len(clash_peers) == 1 else ""),
+            pre_shared_key=(
+                first.get("pre-shared-key") if len(clash_peers) == 1 else None
+            ),
+            interface_ip=self_ip,
+            interface_ipv6=self_ipv6,
+            allowed_ips=(first["allowed-ips"] if len(clash_peers) == 1 else None),
+            reserved=(first.get("reserved") if len(clash_peers) == 1 else None),
+            mtu=(int(values["mtu"][-1]) if values.get("mtu") else None),
+            persistent_keepalive=(int(keepalive) if keepalive else None),
+            peers=(clash_peers if len(clash_peers) > 1 else None),
+            remote_dns_resolve=bool(dns_servers),
+            dns_servers=dns_servers or None,
+            udp=True,
+        )
+        node.source_extensions["surge"] = {
+            "section_name": section_name,
+            "wireguard": {
+                "prefer_ipv6": values.get("prefer-ipv6", [None])[-1],
+                "peers": surge_peers,
+            },
+        }
+        return self._apply_common_options(node, record, "wireguard")
+
+    def _add_tailscale_policy(
+        self,
+        record: SurgeProxyRecord,
+        resources: SurgeDocumentResources,
+        order: int,
+    ) -> None:
+        section_name = record.parameters.get("section-name")
+        if not section_name:
+            raise ValueError("section-name is required")
+        section_key = ("tailscale", section_name)
+        section = resources.named_sections.get(section_key)
+        if section is None:
+            raise ValueError(
+                f"referenced Tailscale section '{section_name}' is missing"
+            )
+        values = self._section_values(section)
+        auth_key = bool(values.get("auth-key", [""])[-1])
+        interactive = values.get("interactive-login", ["false"])[-1].lower()
+        if interactive not in {"true", "false"}:
+            raise ValueError("interactive-login must be true or false")
+        if auth_key == (interactive == "true"):
+            raise ValueError(
+                "exactly one of auth-key and interactive-login=true is required"
+            )
+        resources.policies.append(
+            SurgeOpaquePolicy(
+                record=record,
+                order=order,
+                associated_section=section_key,
+            )
+        )
+
+    @staticmethod
     def _line_identity(line: str) -> tuple[str | None, str | None]:
         try:
             record = parse_proxy_line(line)
@@ -291,6 +582,89 @@ class SurgeParser(BaseParser):
             protocol = config.split(",", 1)[0].strip().lower() or None
             return name.strip() or None, protocol
         return record.name, record.type.lower()
+
+    @staticmethod
+    def _apply_common_options(
+        node: Node, record: SurgeProxyRecord, p_type: str
+    ) -> Node:
+        kv_args = record.parameters.last_values
+
+        def get_bool(key: str, default: bool = False) -> bool:
+            value = kv_args.get(key)
+            return default if value is None else value.lower() == "true"
+
+        def get_optional_bool(key: str) -> bool | None:
+            value = kv_args.get(key)
+            return None if value is None else value.lower() == "true"
+
+        def get_int(key: str) -> int | None:
+            value = kv_args.get(key)
+            return None if value is None else int(value)
+
+        node.dialer_proxy = kv_args.get("underlying-proxy")
+        node.tfo = get_bool("tfo")
+        node.ip_version = kv_args.get("ip-version")
+        node.interface_name = kv_args.get("interface")
+        node.surge_options = SurgePolicyOptions(
+            allow_other_interface=get_optional_bool("allow-other-interface"),
+            dns_follow_interface=get_optional_bool("dns-follow-interface"),
+            no_error_alert=get_optional_bool("no-error-alert"),
+            hybrid=kv_args.get("hybrid"),
+            tos=kv_args.get("tos"),
+            ecn=kv_args.get("ecn"),
+            block_quic=kv_args.get("block-quic"),
+            test_url=kv_args.get("test-url"),
+            test_timeout=get_int("test-timeout"),
+            test_udp=get_optional_bool("test-udp"),
+        )
+        node.shadow_tls = ShadowTLSSettings(
+            password=kv_args.get("shadow-tls-password"),
+            server_name=kv_args.get("shadow-tls-sni"),
+            version=get_int("shadow-tls-version") or 2,
+        )
+
+        consumed = _COMMON_PARAMETERS | _PROTOCOL_PARAMETERS.get(p_type, set())
+        last_indexes = {
+            parameter.key: index for index, parameter in enumerate(record.parameters)
+        }
+        preserved = [
+            (parameter.key, parameter.value)
+            for index, parameter in enumerate(record.parameters)
+            if parameter.key not in _MULTI_VALUE_PARAMETERS.get(p_type, set())
+            and (parameter.key not in consumed or index != last_indexes[parameter.key])
+        ]
+        semantic_fields = [
+            key
+            for key in (
+                "allow-other-interface",
+                "dns-follow-interface",
+                "no-error-alert",
+                "hybrid",
+                "tos",
+                "ecn",
+                "block-quic",
+                "test-url",
+                "test-timeout",
+                "test-udp",
+                "server-cert-verify-name",
+                "server-cert-fingerprint-sha256",
+                "client-cert",
+                "shadow-tls-password",
+            )
+            if key in kv_args
+        ]
+        if p_type == "anytls" and kv_args.get("reuse") == "false":
+            semantic_fields.append("reuse")
+        if preserved or semantic_fields:
+            extension = node.source_extensions.setdefault("surge", {})
+            extension.update(
+                {
+                    "parameters": preserved,
+                    "positional": list(record.positional[2:]),
+                    "semantic_fields": semantic_fields,
+                }
+            )
+        return node
 
     def _parse_line(self, line: str, keystore: dict = None) -> Node | None:
         if keystore is None:
@@ -331,12 +705,6 @@ class SurgeParser(BaseParser):
                 return None
             return int(value)
 
-        def get_optional_bool(k):
-            value = kv_args.get(k)
-            if value is None:
-                return None
-            return value.lower() == "true"
-
         # Remove print(f"Parsing Surge content...") if it exists (already removed?)
 
         # Helper to parse alpn (can be single string or comma-separated)
@@ -376,76 +744,8 @@ class SurgeParser(BaseParser):
                         headers[hk.strip()] = hv.strip()
                 transport.headers = headers
 
-        # Extract underlying-proxy (Surge) and convert to dialer_proxy (IR)
-        dialer_proxy = kv_args.get("underlying-proxy")
-
         def apply_common_options(node: Node) -> Node:
-            node.dialer_proxy = dialer_proxy
-            node.tfo = get_bool("tfo", False)
-            node.ip_version = kv_args.get("ip-version")
-            node.interface_name = kv_args.get("interface")
-            node.surge_options = SurgePolicyOptions(
-                allow_other_interface=get_optional_bool("allow-other-interface"),
-                dns_follow_interface=get_optional_bool("dns-follow-interface"),
-                no_error_alert=get_optional_bool("no-error-alert"),
-                hybrid=kv_args.get("hybrid"),
-                tos=kv_args.get("tos"),
-                ecn=kv_args.get("ecn"),
-                block_quic=kv_args.get("block-quic"),
-                test_url=kv_args.get("test-url"),
-                test_timeout=get_int("test-timeout"),
-                test_udp=get_optional_bool("test-udp"),
-            )
-            shadow_version = get_int("shadow-tls-version") or 2
-            node.shadow_tls = ShadowTLSSettings(
-                password=kv_args.get("shadow-tls-password"),
-                server_name=kv_args.get("shadow-tls-sni"),
-                version=shadow_version,
-            )
-
-            consumed = _COMMON_PARAMETERS | _PROTOCOL_PARAMETERS.get(p_type, set())
-            last_indexes = {
-                parameter.key: index
-                for index, parameter in enumerate(record.parameters)
-            }
-            preserved = [
-                (parameter.key, parameter.value)
-                for index, parameter in enumerate(record.parameters)
-                if parameter.key not in _MULTI_VALUE_PARAMETERS.get(p_type, set())
-                and (
-                    parameter.key not in consumed
-                    or index != last_indexes[parameter.key]
-                )
-            ]
-            semantic_fields = [
-                key
-                for key in (
-                    "allow-other-interface",
-                    "dns-follow-interface",
-                    "no-error-alert",
-                    "hybrid",
-                    "tos",
-                    "ecn",
-                    "block-quic",
-                    "test-url",
-                    "test-timeout",
-                    "test-udp",
-                    "server-cert-verify-name",
-                    "server-cert-fingerprint-sha256",
-                    "client-cert",
-                    "shadow-tls-password",
-                )
-                if key in kv_args
-            ]
-            if p_type == "anytls" and kv_args.get("reuse") == "false":
-                semantic_fields.append("reuse")
-            if preserved or semantic_fields:
-                node.source_extensions["surge"] = {
-                    "parameters": preserved,
-                    "positional": list(record.positional[2:]),
-                    "semantic_fields": semantic_fields,
-                }
-            return node
+            return self._apply_common_options(node, record, p_type)
 
         try:
             if p_type == "ss":

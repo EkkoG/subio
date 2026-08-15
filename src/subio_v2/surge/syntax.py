@@ -154,6 +154,14 @@ def parse_parameter_list(payload: str) -> SurgeParameters:
     return SurgeParameters(entries)
 
 
+def split_comma_separated(payload: str) -> tuple[str, ...]:
+    """Split a Surge list while respecting quotes and parenthesized records."""
+
+    if not isinstance(payload, str):
+        raise TypeError("Surge list must be a string")
+    return tuple(_decode_atom(token) for token in _split_comma_separated(payload))
+
+
 def serialize_parameter_list(
     parameters: Iterable[SurgeParameter], *, spaced_equals: bool = False
 ) -> str:
@@ -172,6 +180,7 @@ def _split_comma_separated(payload: str) -> tuple[str, ...]:
     current: list[str] = []
     in_quotes = False
     escaped = False
+    parentheses = 0
 
     for char in payload:
         if escaped:
@@ -186,7 +195,13 @@ def _split_comma_separated(payload: str) -> tuple[str, ...]:
             current.append(char)
             in_quotes = not in_quotes
             continue
-        if char == "," and not in_quotes:
+        if not in_quotes and char == "(":
+            parentheses += 1
+        elif not in_quotes and char == ")":
+            if parentheses == 0:
+                raise ValueError("Surge list has an unexpected closing parenthesis")
+            parentheses -= 1
+        if char == "," and not in_quotes and parentheses == 0:
             tokens.append("".join(current))
             current = []
             continue
@@ -194,6 +209,8 @@ def _split_comma_separated(payload: str) -> tuple[str, ...]:
 
     if in_quotes:
         raise ValueError("Surge proxy line has an unterminated double quote")
+    if parentheses:
+        raise ValueError("Surge list has an unterminated parenthesized value")
     tokens.append("".join(current))
     return tuple(tokens)
 

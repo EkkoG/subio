@@ -588,6 +588,71 @@ shared-key = type = openssh-private-key, base64 = U0VDT05E
     assert not (tmp_path / "dist").exists()
 
 
+def test_surge_resource_only_artifact_is_not_treated_as_empty(tmp_path, monkeypatch):
+    write(
+        tmp_path,
+        "surge.tpl",
+        "[Proxy]\n{{ proxies }}\n\n[Proxy Group]\n{{ proxies_names }}\n",
+    )
+    cfg = _write_surge_workflow(
+        tmp_path,
+        providers=[
+            (
+                "source",
+                """
+[Proxy]
+Tailnet = tailscale, section-name=office
+On = direct
+[Tailscale office]
+auth-key = tskey-auth-example
+hostname = surge-client
+""",
+            )
+        ],
+        artifact_options='template = "surge.tpl"',
+    )
+    monkeypatch.chdir(tmp_path)
+
+    WorkflowEngine(str(cfg), dry_run=True).run()
+
+    output = (tmp_path / "dist" / "out.conf").read_text()
+    assert "Tailnet = tailscale" in output
+    assert "On = direct" in output
+    assert "PROXY = select, Tailnet, On" in output
+
+
+def test_surge_workflow_rejects_conflicting_named_sections(tmp_path, monkeypatch):
+    cfg = _write_surge_workflow(
+        tmp_path,
+        providers=[
+            (
+                "first",
+                """
+[Proxy]
+first = tailscale, section-name=shared
+[Tailscale shared]
+auth-key = first-key
+""",
+            ),
+            (
+                "second",
+                """
+[Proxy]
+second = tailscale, section-name=shared
+[Tailscale shared]
+auth-key = second-key
+""",
+            ),
+        ],
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ArtifactGenerationError, match="conflicting Surge tailscale"):
+        WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert not (tmp_path / "dist").exists()
+
+
 def test_warning_only_workflow_succeeds_and_checks_each_node_once(
     tmp_path, monkeypatch
 ):

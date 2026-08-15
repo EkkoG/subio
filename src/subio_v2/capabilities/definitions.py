@@ -94,6 +94,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "hysteria2",
             "ssh",
             "anytls",
+            "wireguard",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
@@ -141,6 +142,9 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "anytls": {
             "features": {"tls", "udp"},
+        },
+        "wireguard": {
+            "features": {"udp", "multiple-peers", "named-section"},
         },
         # 全局特性
         "global_features": {
