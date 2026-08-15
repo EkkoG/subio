@@ -1,4 +1,3 @@
-import copy
 import toml
 import json
 import json5
@@ -21,10 +20,6 @@ from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.surge.resources import (
-    SurgeDocumentResources,
-    coerce_surge_resources,
-)
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.processor.common import (
     FilterProcessor,
@@ -57,7 +52,6 @@ class WorkflowEngine:
         self.config = self._load_config()
         self.providers: Dict[str, List[Node]] = {}
         self.provider_issues: Dict[str, List[ConversionIssue]] = {}
-        self.provider_resources: Dict[str, Dict[str, Any]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
         self._url_cache: Dict[str, str] = {}  # Cache for URL content
@@ -227,7 +221,6 @@ class WorkflowEngine:
         self._staged_artifacts.clear()
         self.issues.clear()
         self.provider_issues.clear()
-        self.provider_resources.clear()
         self._load_providers()
         self._generate_artifacts()
         generated = list(self._staged_artifacts)
@@ -288,21 +281,9 @@ class WorkflowEngine:
                 self.provider_issues[name] = [
                     replace(issue, source=name) for issue in parse_result.issues
                 ]
-                provider_resources = copy.deepcopy(parse_result.resources)
-                surge_resources = (
-                    provider_resources
-                    if isinstance(provider_resources, SurgeDocumentResources)
-                    else coerce_surge_resources(provider_resources)
-                )
-
                 # Apply Rename
                 rename_conf = prov_conf.get("rename")
                 if rename_conf:
-                    self.provider_issues[name].extend(
-                        self._reject_document_policy_transform(
-                            surge_resources, name, "rename"
-                        )
-                    )
                     processor = RenameProcessor(
                         prefix=rename_conf.get("add_prefix", ""),
                         replace=rename_conf.get("replace", []),
@@ -312,22 +293,12 @@ class WorkflowEngine:
                 # Apply DialerProxy (dialer-proxy for Clash-like, underlying-proxy for Surge)
                 dialer_proxy = prov_conf.get("dialer_proxy")
                 if dialer_proxy:
-                    self.provider_issues[name].extend(
-                        self._reject_document_policy_transform(
-                            surge_resources, name, "dialer-proxy"
-                        )
-                    )
                     processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
                     nodes = processor.process(nodes)
 
                 # Apply provider-level filter (include/exclude, same structure as global [filters])
                 prov_filter_conf = prov_conf.get("filters")
                 if prov_filter_conf:
-                    self.provider_issues[name].extend(
-                        self._reject_document_policy_transform(
-                            surge_resources, name, "filter"
-                        )
-                    )
                     prov_filter = FilterProcessor(
                         include=prov_filter_conf.get("include"),
                         exclude=prov_filter_conf.get("exclude"),
@@ -338,112 +309,6 @@ class WorkflowEngine:
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
                 )
                 self.providers[name] = nodes
-                self.provider_resources[name] = provider_resources
-
-    @staticmethod
-    def _reject_document_policy_transform(
-        resources: SurgeDocumentResources,
-        provider_name: str,
-        transform: str,
-    ) -> list[ConversionIssue]:
-        issues: list[ConversionIssue] = []
-        policies = [*resources.policies, *resources.external_policies]
-        for policy in policies:
-            issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.ERROR,
-                    node=policy.name,
-                    protocol=policy.record.type,
-                    source=provider_name,
-                    target="ir",
-                    field=f"resources.{transform}",
-                    message=(
-                        f"Surge document policy '{policy.name}' cannot be safely "
-                        f"processed by provider {transform}"
-                    ),
-                    stage="processor",
-                    code="conversion.opaque-policy-transform",
-                )
-            )
-        resources.policies.clear()
-        resources.external_policies.clear()
-        return issues
-
-    @staticmethod
-    def _non_surge_resource_issues(
-        resources: SurgeDocumentResources,
-        provider_name: str,
-        target: str,
-    ) -> list[ConversionIssue]:
-        issues: list[ConversionIssue] = []
-        for key_id in resources.keystore:
-            issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.ERROR,
-                    node=key_id,
-                    protocol="keystore",
-                    source=provider_name,
-                    target=target,
-                    field="resources.keystore",
-                    message=(
-                        f"Surge Keystore entry '{key_id}' cannot be represented by {target}"
-                    ),
-                    stage="conversion",
-                    code="conversion.unconsumed-source-resource",
-                )
-            )
-        for policy in resources.policies:
-            issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.ERROR,
-                    node=policy.name,
-                    protocol=policy.record.type,
-                    source=provider_name,
-                    target=target,
-                    field="resources.policies",
-                    message=(
-                        f"Surge document policy '{policy.name}' cannot be represented "
-                        f"by {target}"
-                    ),
-                    stage="conversion",
-                    code="conversion.unconsumed-source-resource",
-                )
-            )
-        for section in resources.named_sections.values():
-            issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.WARNING,
-                    node=section.name,
-                    protocol=section.kind.lower(),
-                    source=provider_name,
-                    target=target,
-                    field="resources.named_sections",
-                    message=(
-                        f"Surge named section '{section.kind} {section.name}' has "
-                        f"no document-level representation in {target}"
-                    ),
-                    stage="conversion",
-                    code="conversion.unconsumed-source-resource",
-                )
-            )
-        for policy in resources.external_policies:
-            issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.ERROR,
-                    node=policy.name,
-                    protocol="external",
-                    source=provider_name,
-                    target=target,
-                    field="resources.external_policies",
-                    message=(
-                        f"Authorized local External policy '{policy.name}' is restricted "
-                        "to Surge output"
-                    ),
-                    stage="security",
-                    code="security.external-cross-platform",
-                )
-            )
-        return issues
 
     def _fetch_content(self, conf: Dict[str, Any]) -> str:
         content: str | None = None
@@ -620,41 +485,8 @@ class WorkflowEngine:
         if global_filter:
             nodes = global_filter.process(nodes)
 
-        artifact_resource_issues: list[ConversionIssue] = []
-        artifact_provider_resources: dict[str, SurgeDocumentResources] = {}
-        for prov_name in art_conf.get("providers", []):
-            resources = coerce_surge_resources(
-                self.provider_resources.get(prov_name, {})
-            ).clone()
-            if username:
-                artifact_resource_issues.extend(
-                    self._reject_document_policy_transform(
-                        resources, prov_name, "user-override"
-                    )
-                )
-            if global_filter:
-                artifact_resource_issues.extend(
-                    self._reject_document_policy_transform(
-                        resources, prov_name, "global-filter"
-                    )
-                )
-            artifact_provider_resources[prov_name] = resources
-
         # Emit
         emitter = EmitterFactory.get_emitter(a_type)
-
-        # Surge artifacts merge document resources before emission.
-        if a_type == "surge" and isinstance(emitter, SurgeEmitter):
-            merged_resources = SurgeDocumentResources()
-            for prov_name in art_conf.get("providers", []):
-                provider_resources = artifact_provider_resources[prov_name]
-                try:
-                    merged_resources.merge(provider_resources)
-                except ValueError as exc:
-                    raise ArtifactGenerationError(
-                        f"Artifact '{name}' has {exc}"
-                    ) from exc
-            emitter = SurgeEmitter(resources=merged_resources)
 
         if emitter:
             # Determine display name and actual filename
@@ -677,19 +509,6 @@ class WorkflowEngine:
                 for prov_name in art_conf.get("providers", [])
                 for issue in self.provider_issues.get(prov_name, [])
             ]
-            artifact_issues.extend(
-                replace(issue, artifact=name, user=username)
-                for issue in artifact_resource_issues
-            )
-            for prov_name in art_conf.get("providers", []):
-                provider_resources = artifact_provider_resources[prov_name]
-                if a_type != "surge":
-                    artifact_issues.extend(
-                        replace(issue, artifact=name, user=username)
-                        for issue in self._non_surge_resource_issues(
-                            provider_resources, prov_name, a_type
-                        )
-                    )
             artifact_issues.extend(
                 replace(issue, artifact=name, user=username)
                 for issue in emission.issues
@@ -717,14 +536,9 @@ class WorkflowEngine:
                 )
 
             supported_nodes = emission.supported_nodes
-            has_emitted_policies = bool(emission.emitted_policy_names)
-            if (
-                not supported_nodes
-                and not has_emitted_policies
-                and not art_conf.get("allow_empty", False)
-            ):
+            if not supported_nodes and not art_conf.get("allow_empty", False):
                 raise ArtifactGenerationError(
-                    f"Artifact '{display_name}' has no emit-capable nodes or policies; "
+                    f"Artifact '{display_name}' has no emit-capable nodes; "
                     "set allow_empty=true to permit this",
                     issues=errors,
                 )

@@ -32,8 +32,8 @@ SubIO V2 采用 Pipeline 架构：
 
 v2 保留原有 `parse()` / `emit()` 兼容 API，同时提供用于 workflow 的结构化接口：
 
-- `ParseResult(nodes, issues, resources)`：返回成功解析的节点、单项解析问题和文档级资源；Surge keystore 通过 `resources["keystore"]` 传递，不再依赖 parser 实例旁路。
-- `EmissionResult(content, supported_nodes, issues, extras, emitted_policy_names, emitted_resource_keys)`：返回实际输出、真正可生成的节点、转换问题、模板附加上下文，以及不依赖普通 Node 的文档策略/资源清单。
+- `ParseResult(nodes, issues, resources)`：返回成功解析的节点和单项解析问题；`resources` 仅为兼容字段。Surge 始终返回空资源，节点所需的 Keystore 和命名 section 绑定在节点附件中。
+- `EmissionResult(content, supported_nodes, issues, extras, emitted_policy_names, emitted_resource_keys)`：返回实际输出、真正成功生成的节点、转换问题和模板附加上下文；Surge 的两个 `emitted_*` 字段只记录已经提交到产物的节点名和附件键，供模板与诊断使用。
 - `WorkflowResult(generated, uploaded, issues)`：汇总本次运行的产物、上传结果和全部问题。
 
 `ConversionIssue` 包含 `severity`、`stage`、`code`、`source`、`artifact`、`user`、`node`、`protocol`、`target`、`field` 等上下文。默认只要存在 ERROR，artifact 就不会写入或上传；确需生成有损示例时，可在全局或单个 artifact 显式设置：
@@ -69,10 +69,17 @@ Surge 已知但不跨平台的公共参数存入 `BaseNode.surge_options`，未�
 `BaseNode.source_extensions["surge"]`。Surge 输出会写回这些字段；其他目标输出必须返回
 `conversion.unconsumed-source-field` issue，不能静默丢弃。
 
-过渡期内，尚未收口的 Keystore 和未引用命名 section 仍由
-`src/subio_v2/surge/resources.py` 中的 `SurgeDocumentResources` 承载。资源合并按类型和名称
-检测冲突，敏感内容不得进入 dataclass repr、日志或 issue message；`[Proxy]` 条目不得进入
-这条文档旁路。
+`src/subio_v2/surge/resources.py` 定义 `SurgeNodeAttachments`。Parser 可扫描 `[Keystore]`、
+`[WireGuard <name>]` 和 `[Tailscale <name>]` 作为当前输入的局部查找表，但只把节点实际引用的
+条目复制到 `BaseNode.source_extensions["surge"]["attachments"]`；未引用条目直接丢弃，
+`ParseResult.resources` 不承载 Surge 资源。SSH 引用 OpenSSH Keystore 时，同时把解码后的私钥
+写入 `SSHNode.private_key`，供其他平台使用，原始条目仍作为 Surge 输出附件保留。
+
+Surge Emitter 按节点事务生成：先通过 capability，再校验并只挑选该节点实际引用的附件，
+完成代理行序列化后，才把代理行和附件一起提交到本次输出。过滤、不支持、序列化失败或附件
+冲突的节点都不能留下附件；冲突产生 `conversion.attachment-conflict`，只丢弃后出现的节点。
+同值 Keystore 条目可去重，比较时不依赖 token 顺序。敏感内容不得进入 dataclass repr、日志
+或 issue message。通用 workflow 不得导入、保存或合并 Surge 附件。
 
 WireGuard 的 policy line 映射为强类型 `WireguardNode`，多个 peer 会映射到
 `WireguardNode.peers`。Tailscale 映射为无伪造端点的 `TailscaleNode`，引用的
@@ -105,7 +112,7 @@ HTTP/HTTPS；AnyTLS 的 `reuse=false` 也是有语义的来源字段。非 Surge
 `SurgeCodecSpec` 同时声明：
 
 - Surge keyword 与对应 `Protocol`；
-- 普通 Node 或过渡 document resource 类型；External 和 alias 都属于 Node；
+- 对应的普通、语义或受限原生 Node 类型；所有 `[Proxy]` 条目都属于 Node；
 - emitter handler；
 - 已消费参数、规范化参数和多值参数；
 - `EXPLICIT`、`AUTOMATIC`、`VERSIONED` 或 `UNSUPPORTED` UDP 行为。
@@ -309,7 +316,8 @@ method/profile 不同（如 MASQUE）时，应在节点模型和 capability 中�
 
 在 `src/subio_v2/parser/` 新建解析器，继承 `BaseParser`，实现 `parse_result()` 并在
 `parser/factory.py` 注册。单项失败应返回 `ConversionIssue`；顶层不可解析输入应抛
-`ValueError`。文档级 sidecar 数据通过 `ParseResult.resources` 返回。
+`ValueError`。组成单个代理节点所需的格式附属数据必须绑定到节点，并跟随 filter、rename
+和 capability 生命周期；不要让通用 workflow 理解或合并平台专属资源。
 
 ### 步骤 2：Emitter
 

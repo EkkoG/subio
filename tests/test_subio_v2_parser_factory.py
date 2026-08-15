@@ -3,6 +3,7 @@ from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.subio import SubioParser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.parser.v2rayn import V2RayNParser
+from subio_v2.surge.resources import get_surge_node_attachments
 
 
 def test_parser_factory_returns_fresh_mapped_instances():
@@ -41,8 +42,12 @@ shared = type = openssh-private-key, base64 = S0VZLUI=
     assert isinstance(parser_a, SurgeParser)
     assert isinstance(parser_b, SurgeParser)
 
-    parser_a.parse(provider_a)
-    parser_b.parse(provider_b)
+    nodes_a = parser_a.parse(provider_a)
+    nodes_b = parser_b.parse(provider_b)
 
-    assert parser_a.keystore["shared"]["base64"] == "S0VZLUE="
-    assert parser_b.keystore["shared"]["base64"] == "S0VZLUI="
+    entry_a = get_surge_node_attachments(nodes_a[0]).keystore["shared"]
+    entry_b = get_surge_node_attachments(nodes_b[0]).keystore["shared"]
+
+    assert entry_a.values["base64"] == "S0VZLUE="
+    assert entry_b.values["base64"] == "S0VZLUI="
+    assert entry_a is not entry_b

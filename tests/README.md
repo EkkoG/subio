@@ -36,7 +36,7 @@ uv run pytest tests/ --cov=subio_v2 --cov-report=term-missing
 ## 端到端
 
 ```bash
-uv run subio example/config.toml --dry-run
+uv run subio convert example/config.toml --dry-run
 ls dist/
 ```
 

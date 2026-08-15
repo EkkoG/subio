@@ -3,7 +3,7 @@ import copy
 import hashlib
 from typing import Any, Callable, List
 
-from subio_v2.conversion import ConversionIssue, EmissionResult, IssueSeverity
+from subio_v2.conversion import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
     HttpNode,
@@ -42,13 +42,19 @@ from subio_v2.surge.codecs import (
     SURGE_EMITTER_HANDLERS,
 )
 from subio_v2.surge.resources import (
-    SurgeDocumentResources,
-    SurgeExternalPolicy,
+    SurgeKeystoreEntry,
     SurgeNamedSection,
-    coerce_surge_resources,
-    get_surge_node_attachments,
+    SurgeNodeAttachments,
+    peek_surge_node_attachments,
 )
 from subio_v2.surge.security import validate_external_record
+
+
+class _SurgeEmissionError(ValueError):
+    def __init__(self, message: str, *, field: str, code: str = "conversion"):
+        super().__init__(message)
+        self.field = field
+        self.code = code
 
 
 class SurgeEmitter(BaseEmitter):
@@ -58,21 +64,12 @@ class SurgeEmitter(BaseEmitter):
 
     def __init__(
         self,
-        keystore: dict | None = None,
-        resources: SurgeDocumentResources | None = None,
         target_version: str = DEFAULT_SURGE_TARGET,
     ):
         super().__init__()
         if target_version != DEFAULT_SURGE_TARGET:
             raise ValueError("Only the latest Surge target is currently supported")
         self.target_version = target_version
-        self.resources = coerce_surge_resources(resources)
-        if keystore:
-            self.resources.merge(
-                SurgeDocumentResources(keystore=copy.deepcopy(keystore))
-            )
-        # Emission may add generated keys, so do not mutate parser-owned resources.
-        self.keystore = self.resources.keystore
 
     def _encode_to_base64(self, private_key: str) -> str:
         return base64.b64encode(private_key.encode("utf-8")).decode("utf-8")
@@ -98,72 +95,11 @@ class SurgeEmitter(BaseEmitter):
         checked_nodes, issues = self.emit_with_check(nodes)
 
         lines: list[str] = []
-        node_keystore_map: dict[int, str] = {}
-        prepared_nodes: list[Node] = []
-
-        for node in checked_nodes:
-            try:
-                tls = getattr(node, "tls", None)
-                if (
-                    tls
-                    and tls.client_cert_ref
-                    and tls.client_cert_ref not in self.keystore
-                ):
-                    issues.append(
-                        self.issue_for_node(
-                            node,
-                            IssueSeverity.ERROR,
-                            f"Referenced Surge client certificate '{tls.client_cert_ref}' is missing",
-                            field="tls.client_cert_ref",
-                        )
-                    )
-                    continue
-                if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
-                    issues.append(
-                        self.issue_for_node(
-                            node,
-                            IssueSeverity.ERROR,
-                            "Shadow TLS version must be 2 or 3",
-                            field="shadow_tls.version",
-                        )
-                    )
-                    continue
-                if (
-                    node.shadow_tls.enabled
-                    and node.shadow_tls.version == 3
-                    and not node.shadow_tls.server_name
-                ):
-                    issues.append(
-                        self.issue_for_node(
-                            node,
-                            IssueSeverity.ERROR,
-                            "Shadow TLS version 3 requires shadow-tls-sni",
-                            field="shadow_tls.server_name",
-                        )
-                    )
-                    continue
-                if isinstance(node, SSHNode):
-                    if not node.keystore_id and node.private_key:
-                        keystore_id = self._generate_keystore_id(node)
-                        base64_key = self._encode_to_base64(node.private_key)
-                        self.keystore[keystore_id] = {
-                            "type": "openssh-private-key",
-                            "base64": base64_key,
-                        }
-                        node_keystore_map[id(node)] = keystore_id
-                prepared_nodes.append(node)
-            except Exception as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Failed to prepare Surge node: {exc}",
-                    )
-                )
-
         emitted_nodes: list[Node] = []
         emitted_policy_name_set: set[str] = set()
-        for node in prepared_nodes:
+        emitted_attachments = SurgeNodeAttachments()
+
+        for node in checked_nodes:
             if node.name in emitted_policy_name_set:
                 issues.append(
                     self.issue_for_node(
@@ -176,7 +112,50 @@ class SurgeEmitter(BaseEmitter):
                 )
                 continue
             try:
+                if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
+                    raise _SurgeEmissionError(
+                        "Shadow TLS version must be 2 or 3",
+                        field="shadow_tls.version",
+                    )
+                if (
+                    node.shadow_tls.enabled
+                    and node.shadow_tls.version == 3
+                    and not node.shadow_tls.server_name
+                ):
+                    raise _SurgeEmissionError(
+                        "Shadow TLS version 3 requires shadow-tls-sni",
+                        field="shadow_tls.server_name",
+                    )
+
+                node_keystore_map: dict[int, str] = {}
+                node_attachments = self._attachments_for_node(node, node_keystore_map)
                 line = self._emit_node(node, node_keystore_map)
+                if line is None:
+                    raise _SurgeEmissionError(
+                        "No Surge emitter is registered for this protocol",
+                        field="type",
+                    )
+
+                merged_attachments = emitted_attachments.clone()
+                try:
+                    merged_attachments.merge(node_attachments)
+                except ValueError as exc:
+                    raise _SurgeEmissionError(
+                        str(exc),
+                        field="source_extensions.surge.attachments",
+                        code="conversion.attachment-conflict",
+                    ) from exc
+            except _SurgeEmissionError as exc:
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        str(exc),
+                        field=exc.field,
+                        code=exc.code,
+                    )
+                )
+                continue
             except Exception as exc:
                 issues.append(
                     self.issue_for_node(
@@ -186,102 +165,26 @@ class SurgeEmitter(BaseEmitter):
                     )
                 )
                 continue
-            if line is None:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        "No Surge emitter is registered for this protocol",
-                        field="type",
-                    )
-                )
-                continue
+
             lines.append(line)
             emitted_nodes.append(node)
             emitted_policy_name_set.add(node.name)
+            emitted_attachments = merged_attachments
 
         emitted_policy_names = [node.name for node in emitted_nodes]
-        document_policies = [
-            *self.resources.policies,
-            *self.resources.external_policies,
-        ]
-        for policy in sorted(document_policies, key=lambda item: item.order):
-            if policy.name in emitted_policy_name_set:
-                issues.append(
-                    ConversionIssue(
-                        severity=IssueSeverity.ERROR,
-                        node=policy.name,
-                        protocol=policy.record.type,
-                        source=None,
-                        target="surge",
-                        field="resources.policies",
-                        message=f"Duplicate Surge policy name '{policy.name}'",
-                        stage="emit",
-                        code="conversion.resource-conflict",
-                    )
-                )
-                continue
-            if isinstance(policy, SurgeExternalPolicy) and (
-                not policy.authorized or policy.source_kind != "local"
-            ):
-                issues.append(
-                    ConversionIssue(
-                        severity=IssueSeverity.ERROR,
-                        node=policy.name,
-                        protocol="external",
-                        source=None,
-                        target="surge",
-                        field="resources.external_policies",
-                        message="External policy is not authorized for Surge emission",
-                        stage="security",
-                        code="security.external-rejected",
-                    )
-                )
-                continue
-            if (
-                getattr(policy, "associated_section", None)
-                and policy.associated_section not in self.resources.named_sections
-            ):
-                kind, section_name = policy.associated_section
-                issues.append(
-                    ConversionIssue(
-                        severity=IssueSeverity.ERROR,
-                        node=policy.name,
-                        protocol=policy.record.type,
-                        source=None,
-                        target="surge",
-                        field="resources.named_sections",
-                        message=f"Referenced Surge {kind} section '{section_name}' is missing",
-                        stage="emit",
-                        code="conversion.missing-resource",
-                    )
-                )
-                continue
-            lines.append(serialize_proxy_line(policy.record))
-            emitted_policy_names.append(policy.name)
-            emitted_policy_name_set.add(policy.name)
 
-        if self.keystore:
+        if emitted_attachments.keystore:
             lines.append("")
             lines.append("[Keystore]")
-            for key_id in sorted(self.keystore):
-                if key_id in self.keystore:
-                    entry = self.keystore[key_id]
-                    if isinstance(entry, dict):
-                        parameters = self.resources.keystore_tokens.get(key_id)
-                        if parameters is None:
-                            parameters = SurgeParameters(
-                                SurgeParameter(key=str(k), value=str(v))
-                                for k, v in entry.items()
-                            )
-                        keystore_line = (
-                            f"{key_id} = "
-                            f"{serialize_parameter_list(parameters, spaced_equals=True)}"
-                        )
-                        lines.append(keystore_line)
+            for key_id in sorted(emitted_attachments.keystore):
+                entry = emitted_attachments.keystore[key_id]
+                lines.append(
+                    f"{key_id} = "
+                    f"{serialize_parameter_list(entry.tokens, spaced_equals=True)}"
+                )
 
         for section in sorted(
-            self.resources.named_sections.values(),
+            emitted_attachments.named_sections.values(),
             key=lambda item: (item.order, item.kind.lower(), item.name),
         ):
             lines.append("")
@@ -289,11 +192,11 @@ class SurgeEmitter(BaseEmitter):
             lines.extend(section.lines)
 
         emitted_resource_keys = [
-            *(f"keystore:{key_id}" for key_id in sorted(self.keystore)),
+            *(f"keystore:{key_id}" for key_id in sorted(emitted_attachments.keystore)),
             *(
                 f"{section.kind.lower()}:{section.name}"
                 for section in sorted(
-                    self.resources.named_sections.values(),
+                    emitted_attachments.named_sections.values(),
                     key=lambda item: (item.order, item.kind.lower(), item.name),
                 )
             ),
@@ -305,6 +208,81 @@ class SurgeEmitter(BaseEmitter):
             emitted_policy_names=emitted_policy_names,
             emitted_resource_keys=emitted_resource_keys,
         )
+
+    def _attachments_for_node(
+        self, node: Node, node_keystore_map: dict[int, str]
+    ) -> SurgeNodeAttachments:
+        source = peek_surge_node_attachments(node)
+        result = SurgeNodeAttachments()
+
+        def require_keystore(key_id: str, field: str) -> None:
+            entry = source.keystore.get(key_id) if source else None
+            if entry is None:
+                raise _SurgeEmissionError(
+                    f"Referenced Surge Keystore entry '{key_id}' is missing",
+                    field=field,
+                    code="conversion.missing-resource",
+                )
+            result.keystore[key_id] = copy.deepcopy(entry)
+
+        if isinstance(node, SSHNode):
+            if node.keystore_id:
+                require_keystore(node.keystore_id, "keystore_id")
+            elif node.private_key:
+                key_id = self._generate_keystore_id(node)
+                values = {
+                    "type": "openssh-private-key",
+                    "base64": self._encode_to_base64(node.private_key),
+                }
+                result.keystore[key_id] = SurgeKeystoreEntry(
+                    values=values,
+                    tokens=SurgeParameters(
+                        SurgeParameter(key=key, value=value)
+                        for key, value in values.items()
+                    ),
+                )
+                node_keystore_map[id(node)] = key_id
+
+        tls = getattr(node, "tls", None)
+        if tls and tls.client_cert_ref:
+            require_keystore(tls.client_cert_ref, "tls.client_cert_ref")
+
+        extension = node.source_extensions.get("surge", {})
+        if isinstance(node, WireguardNode):
+            section_name = extension.get("section_name") or node.name
+            key = ("wireguard", section_name)
+            existing = source.named_sections.get(key) if source else None
+            if extension.get("section_name") and existing is None:
+                raise _SurgeEmissionError(
+                    f"Referenced Surge WireGuard section '{section_name}' is missing",
+                    field="source_extensions.surge.section_name",
+                    code="conversion.missing-resource",
+                )
+            result.named_sections[key] = SurgeNamedSection(
+                kind=existing.kind if existing else "WireGuard",
+                name=section_name,
+                lines=self._wireguard_section_lines(node, existing),
+                order=(existing.order if existing else int(extension.get("order", 0))),
+            )
+
+        if isinstance(node, TailscaleNode):
+            section_name = extension.get("section_name") or node.name
+            key = ("tailscale", section_name)
+            existing = source.named_sections.get(key) if source else None
+            if extension.get("section_name") and existing is None:
+                raise _SurgeEmissionError(
+                    f"Referenced Surge Tailscale section '{section_name}' is missing",
+                    field="source_extensions.surge.section_name",
+                    code="conversion.missing-resource",
+                )
+            result.named_sections[key] = SurgeNamedSection(
+                kind=existing.kind if existing else "Tailscale",
+                name=section_name,
+                lines=self._tailscale_section_lines(node, existing),
+                order=(existing.order if existing else int(extension.get("order", 0))),
+            )
+
+        return result
 
     def _emit_node(
         self, node: Node, node_keystore_map: dict[int, str] | None = None
@@ -521,40 +499,12 @@ class SurgeEmitter(BaseEmitter):
         assert isinstance(node, WireguardNode)
         extension = node.source_extensions.get("surge", {})
         section_name = extension.get("section_name") or node.name
-        key = ("wireguard", section_name)
-        existing = self.resources.named_sections.get(key)
-        self.resources.named_sections[key] = SurgeNamedSection(
-            kind=existing.kind if existing else "WireGuard",
-            name=section_name,
-            lines=self._wireguard_section_lines(node, existing),
-            order=(
-                existing.order
-                if existing
-                else int(extension.get("order", len(self.resources.named_sections)))
-            ),
-        )
         return ["wireguard", f"section-name={section_name}"]
 
     def _parts_tailscale(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, TailscaleNode)
         extension = node.source_extensions.get("surge", {})
         section_name = extension.get("section_name") or node.name
-        key = ("tailscale", section_name)
-        attached = get_surge_node_attachments(node).named_sections.get(key)
-        existing = self.resources.named_sections.get(key)
-        if attached and existing and attached.lines != existing.lines:
-            raise ValueError(f"conflicting Surge tailscale section '{section_name}'")
-        source = attached or existing
-        self.resources.named_sections[key] = SurgeNamedSection(
-            kind=source.kind if source else "Tailscale",
-            name=section_name,
-            lines=self._tailscale_section_lines(node, source),
-            order=(
-                source.order
-                if source
-                else int(extension.get("order", len(self.resources.named_sections)))
-            ),
-        )
         return ["tailscale", f"section-name={section_name}"]
 
     @staticmethod

@@ -1,3 +1,5 @@
+import base64
+import binascii
 import copy
 import re
 import sys
@@ -35,7 +37,7 @@ from subio_v2.model.nodes import (
     RejectNode,
 )
 from subio_v2.surge.resources import (
-    SurgeDocumentResources,
+    SurgeKeystoreEntry,
     SurgeNamedSection,
     get_surge_node_attachments,
 )
@@ -91,7 +93,6 @@ class SurgeParser(BaseParser):
         self.source_kind = source_kind
         self.allow_unsafe_external = allow_unsafe_external
         self.target_version = target_version
-        self.keystore: dict = {}  # Store Keystore entries for emitter: {key_id: {"type": "...", "base64": "..."}}
 
     def parse(self, content: Any) -> List[Node]:
         try:
@@ -104,14 +105,18 @@ class SurgeParser(BaseParser):
         if not isinstance(content, str):
             raise ValueError("Invalid content type for SurgeParser")
 
-        self.keystore = {}
-        resources = SurgeDocumentResources(keystore=self.keystore)
         lines = content.splitlines()
-        resources.named_sections.update(self._collect_named_sections(lines))
+        named_sections = self._collect_named_sections(lines)
+        keystore: dict[str, SurgeKeystoreEntry] = {}
+        keystore_errors: dict[str, str] = {}
         nodes: list[Node] = []
         issues: list[ConversionIssue] = []
         in_proxy_section = False
-        keystore = self.keystore
+
+        def retain_node(node: Node, order: int) -> None:
+            self._bind_referenced_keystore(node, keystore, keystore_errors)
+            self._set_policy_order(node, order)
+            nodes.append(node)
 
         # Bare proxy lists are supported, but entries inside any named section must
         # only be interpreted according to that section.
@@ -138,22 +143,12 @@ class SurgeParser(BaseParser):
                 key_id = key_id.strip()
                 try:
                     parameters = parse_parameter_list(key_config)
-                    keystore[key_id] = parameters.last_values
-                    resources.keystore_tokens[key_id] = parameters
-                except (TypeError, ValueError) as exc:
-                    issues.append(
-                        ConversionIssue(
-                            severity=IssueSeverity.ERROR,
-                            node=key_id or None,
-                            protocol="keystore",
-                            source=None,
-                            target="ir",
-                            field=f"lines[{index}]",
-                            message=f"Failed to parse Surge Keystore entry: {exc}",
-                            stage="parse",
-                            code="parse.keystore",
-                        )
+                    keystore[key_id] = SurgeKeystoreEntry(
+                        values=parameters.last_values,
+                        tokens=parameters,
                     )
+                except (TypeError, ValueError) as exc:
+                    keystore_errors[key_id] = f"line {index}: {exc}"
 
         # Second pass: parse proxy nodes
         for index, raw_line in enumerate(lines):
@@ -218,7 +213,8 @@ class SurgeParser(BaseParser):
                     continue
                 if protocol == "wireguard":
                     try:
-                        node = self._parse_wireguard(record, resources)
+                        node = self._parse_wireguard(record, named_sections)
+                        retain_node(node, index)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -234,12 +230,11 @@ class SurgeParser(BaseParser):
                             )
                         )
                         continue
-                    self._set_policy_order(node, index)
-                    nodes.append(node)
                     continue
                 if protocol == "tailscale":
                     try:
-                        node = self._parse_tailscale(record, resources)
+                        node = self._parse_tailscale(record, named_sections)
+                        retain_node(node, index)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -255,8 +250,6 @@ class SurgeParser(BaseParser):
                             )
                         )
                         continue
-                    self._set_policy_order(node, index)
-                    nodes.append(node)
                     continue
                 if protocol in {"masque", "trust-tunnel"}:
                     try:
@@ -265,6 +258,7 @@ class SurgeParser(BaseParser):
                             if protocol == "masque"
                             else self._parse_trust_tunnel(record)
                         )
+                        retain_node(node, index)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -280,8 +274,6 @@ class SurgeParser(BaseParser):
                             )
                         )
                         continue
-                    self._set_policy_order(node, index)
-                    nodes.append(node)
                     continue
                 if protocol == "external":
                     if self.source_kind != "local":
@@ -312,6 +304,7 @@ class SurgeParser(BaseParser):
                         continue
                     try:
                         node = self._parse_external(record)
+                        retain_node(node, index)
                     except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
@@ -327,8 +320,6 @@ class SurgeParser(BaseParser):
                             )
                         )
                         continue
-                    self._set_policy_order(node, index)
-                    nodes.append(node)
                     continue
                 if protocol in SURGE_BUILTIN_ALIAS_TYPES:
                     if name == "DIRECT":
@@ -362,6 +353,7 @@ class SurgeParser(BaseParser):
                     else:
                         try:
                             node = self._parse_builtin_alias(record)
+                            retain_node(node, index)
                         except (TypeError, ValueError) as exc:
                             issues.append(
                                 ConversionIssue(
@@ -377,13 +369,26 @@ class SurgeParser(BaseParser):
                                 )
                             )
                             continue
-                        self._set_policy_order(node, index)
-                        nodes.append(node)
                     continue
-                node = self._parse_line(line, keystore)
-                if node:
-                    self._set_policy_order(node, index)
-                    nodes.append(node)
+                try:
+                    node = self._parse_line(line)
+                    if node:
+                        retain_node(node, index)
+                        continue
+                except (TypeError, ValueError) as exc:
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=name,
+                            protocol=protocol,
+                            source=None,
+                            target="ir",
+                            field=f"lines[{index}]",
+                            message=f"Failed to bind Surge node resources: {exc}",
+                            stage="parse",
+                            code="parse.resource",
+                        )
+                    )
                     continue
                 issues.append(
                     ConversionIssue(
@@ -399,11 +404,7 @@ class SurgeParser(BaseParser):
                     )
                 )
 
-        return ParseResult(
-            nodes=nodes,
-            issues=issues,
-            resources=copy.deepcopy(resources),
-        )
+        return ParseResult(nodes=nodes, issues=issues)
 
     @staticmethod
     def _collect_named_sections(
@@ -448,6 +449,49 @@ class SurgeParser(BaseParser):
         node.source_extensions.setdefault("surge", {})["order"] = order
 
     @staticmethod
+    def _bind_referenced_keystore(
+        node: Node,
+        keystore: dict[str, SurgeKeystoreEntry],
+        keystore_errors: dict[str, str],
+    ) -> None:
+        references: list[str] = []
+        if isinstance(node, SSHNode) and node.keystore_id:
+            references.append(node.keystore_id)
+        tls = getattr(node, "tls", None)
+        if tls and tls.client_cert_ref:
+            references.append(tls.client_cert_ref)
+
+        attachments = None
+        for key_id in dict.fromkeys(references):
+            if key_id in keystore_errors:
+                raise ValueError(
+                    f"referenced Surge Keystore entry '{key_id}' is invalid"
+                )
+            entry = keystore.get(key_id)
+            if entry is None:
+                raise ValueError(
+                    f"referenced Surge Keystore entry '{key_id}' is missing"
+                )
+            if attachments is None:
+                attachments = get_surge_node_attachments(node)
+            attachments.keystore[key_id] = copy.deepcopy(entry)
+
+            if (
+                isinstance(node, SSHNode)
+                and node.keystore_id == key_id
+                and entry.values.get("type") == "openssh-private-key"
+                and entry.values.get("base64")
+            ):
+                try:
+                    node.private_key = base64.b64decode(
+                        entry.values["base64"], validate=True
+                    ).decode("utf-8")
+                except (binascii.Error, UnicodeDecodeError) as exc:
+                    raise ValueError(
+                        f"Surge Keystore entry '{key_id}' has invalid OpenSSH key data"
+                    ) from exc
+
+    @staticmethod
     def _section_values(section: SurgeNamedSection) -> dict[str, list[str]]:
         values: dict[str, list[str]] = {}
         for raw_line in section.lines:
@@ -479,12 +523,15 @@ class SurgeParser(BaseParser):
         return server, port
 
     def _parse_wireguard(
-        self, record: SurgeProxyRecord, resources: SurgeDocumentResources
+        self,
+        record: SurgeProxyRecord,
+        named_sections: dict[tuple[str, str], SurgeNamedSection],
     ) -> WireguardNode:
         section_name = record.parameters.get("section-name")
         if not section_name:
             raise ValueError("section-name is required")
-        section = resources.named_sections.get(("wireguard", section_name))
+        section_key = ("wireguard", section_name)
+        section = named_sections.get(section_key)
         if section is None:
             raise ValueError(
                 f"referenced WireGuard section '{section_name}' is missing"
@@ -572,6 +619,25 @@ class SurgeParser(BaseParser):
                 "peers": surge_peers,
             },
         }
+        known_section_keys = {
+            "private-key",
+            "self-ip",
+            "self-ip-v6",
+            "dns-server",
+            "prefer-ipv6",
+            "mtu",
+            "peer",
+        }
+        semantic_fields = [
+            f"wireguard.{key}" for key in sorted(set(values) - known_section_keys)
+        ]
+        if "prefer-ipv6" in values:
+            semantic_fields.append("wireguard.prefer-ipv6")
+        if semantic_fields:
+            node.source_extensions["surge"]["semantic_fields"] = semantic_fields
+        get_surge_node_attachments(node).named_sections[section_key] = copy.deepcopy(
+            section
+        )
         return self._apply_common_options(node, record, "wireguard")
 
     @staticmethod
@@ -602,13 +668,15 @@ class SurgeParser(BaseParser):
         )
 
     def _parse_tailscale(
-        self, record: SurgeProxyRecord, resources: SurgeDocumentResources
+        self,
+        record: SurgeProxyRecord,
+        named_sections: dict[tuple[str, str], SurgeNamedSection],
     ) -> TailscaleNode:
         section_name = record.parameters.get("section-name")
         if not section_name:
             raise ValueError("section-name is required")
         section_key = ("tailscale", section_name)
-        section = resources.named_sections.get(section_key)
+        section = named_sections.get(section_key)
         if section is None:
             raise ValueError(
                 f"referenced Tailscale section '{section_name}' is missing"
@@ -685,7 +753,6 @@ class SurgeParser(BaseParser):
         get_surge_node_attachments(node).named_sections[section_key] = copy.deepcopy(
             section
         )
-        resources.named_sections.pop(section_key, None)
         return self._apply_common_options(node, record, "tailscale")
 
     @staticmethod
@@ -897,6 +964,9 @@ class SurgeParser(BaseParser):
             semantic_fields.append("reuse")
         if preserved or semantic_fields:
             extension = node.source_extensions.setdefault("surge", {})
+            semantic_fields = list(
+                dict.fromkeys([*extension.get("semantic_fields", []), *semantic_fields])
+            )
             extension.update(
                 {
                     "parameters": preserved,
@@ -906,9 +976,7 @@ class SurgeParser(BaseParser):
             )
         return node
 
-    def _parse_line(self, line: str, keystore: dict = None) -> Node | None:
-        if keystore is None:
-            keystore = {}
+    def _parse_line(self, line: str) -> Node | None:
         try:
             record = parse_proxy_line(line)
         except (TypeError, ValueError):
@@ -1148,11 +1216,8 @@ class SurgeParser(BaseParser):
                 username = kv_args.get("username", "")
                 password = kv_args.get("password")
                 private_key = kv_args.get("private-key")
-                keystore_id = None
-
-                # Keep document-owned key material in the resource layer.
-                if private_key and private_key in keystore:
-                    keystore_id = private_key
+                keystore_id = private_key or None
+                if keystore_id:
                     private_key = None
 
                 node = SSHNode(

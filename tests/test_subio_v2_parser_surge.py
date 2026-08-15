@@ -4,6 +4,10 @@ from subio_v2.conversion import IssueSeverity
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import Protocol
 from subio_v2.parser.surge import SurgeParser
+from subio_v2.surge.resources import (
+    get_surge_node_attachments,
+    peek_surge_node_attachments,
+)
 
 
 def test_surge_parser_proxy_section_and_no_sections():
@@ -365,8 +369,7 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
 [Keystore]
 111 = type = openssh-private-key, base64 = LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNEZmFQald3d2lEU28vdlJaeFdleHRCa1gxeUg0dkVjYTV1c0JkZ2pCNGtqQUFBQUppTGVMak1pM2k0CnpBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRGZhUGpXd3dpRFNvL3ZSWnhXZXh0QmtYMXlINHZFY2E1dXNCZGdqQjRrakEKQUFBRUNETFc5bWtRMzJpc1hLZEVOdW52SFUwLzc2eVZ1TjIyU3NGSjU3UXVZUVBkOW8rTmJEQ0lOS2orOUZuRlo3RzBHUgpmWElmaThSeHJtNndGMkNNSGlTTUFBQUFGSE56YUhCeWIzaDVRSFIxYm01bGJDMXZibXg1QVE9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K
 """
-    parser = SurgeParser()
-    nodes = parser.parse(conf)
+    nodes = SurgeParser().parse_result(conf).nodes
 
     # Check parsing
     assert len(nodes) == 2
@@ -374,13 +377,14 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
     ssh2 = [n for n in nodes if n.name == "ssh2"][0]
     assert ssh1.keystore_id is None
     assert ssh2.keystore_id == "111"
-    assert "111" in parser.keystore
-    assert parser.keystore["111"]["type"] == "openssh-private-key"
-    assert "base64" in parser.keystore["111"]
+    assert peek_surge_node_attachments(ssh1) is None
+    entry = get_surge_node_attachments(ssh2).keystore["111"]
+    assert entry.values["type"] == "openssh-private-key"
+    assert "base64" in entry.values
+    assert ssh2.private_key and "BEGIN OPENSSH PRIVATE KEY" in ssh2.private_key
 
     # Test emitter
-    emitter = SurgeEmitter(keystore=parser.keystore)
-    output = emitter.emit(nodes)
+    output = SurgeEmitter().emit(nodes)
 
     # Check output
     assert "ssh1 = ssh, 1.1.1.1, 22, username=root, password=123" in output
@@ -390,7 +394,7 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
     assert "base64 = LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K" in output
 
 
-def test_surge_parse_result_resources_rebuild_keystore_without_parser_state():
+def test_surge_node_attachment_rebuilds_keystore_without_parser_state():
     result = SurgeParser().parse_result(
         """
 [Proxy]
@@ -399,35 +403,41 @@ ssh = ssh, example.com, 22, username=root, private-key=key-id
 key-id = type = openssh-private-key, base64 = S0VZ
 """
     )
-    resources = result.resources
-
-    output = SurgeEmitter(keystore=resources["keystore"]).emit(result.nodes)
+    node = result.nodes[0]
+    attachment = get_surge_node_attachments(node).keystore["key-id"]
+    output = SurgeEmitter().emit(result.nodes)
 
     assert "private-key=key-id" in output
     assert "[Keystore]" in output
     assert "key-id = type = openssh-private-key, base64 = S0VZ" in output
-    assert resources["keystore"]["key-id"]["base64"] == "S0VZ"
+    assert attachment.values["base64"] == "S0VZ"
+    assert node.private_key == "KEY"
+    assert result.resources == {}
 
 
 def test_surge_keystore_parser_preserves_quoted_commas():
     result = SurgeParser().parse_result(
         """
+[Proxy]
+proxy = https, example.com, 443, client-cert=client-cert
 [Keystore]
 client-cert = type = p12, base64 = Q0VSVA==, password = "a,b"
 """
     )
 
     assert result.issues == []
-    assert result.resources["keystore"]["client-cert"] == {
+    entry = get_surge_node_attachments(result.nodes[0]).keystore["client-cert"]
+    assert entry.values == {
         "type": "p12",
         "base64": "Q0VSVA==",
         "password": "a,b",
     }
+    assert entry.tokens.get("password") == "a,b"
 
 
-def test_surge_parser_resets_keystore_between_parse_calls():
+def test_surge_parser_keystore_attachments_are_isolated_between_parse_calls():
     parser = SurgeParser()
-    parser.parse(
+    first = parser.parse(
         """
 [Proxy]
 first = ssh, first.example.com, 22, username=root, private-key=first-key
@@ -435,9 +445,10 @@ first = ssh, first.example.com, 22, username=root, private-key=first-key
 first-key = type = openssh-private-key, base64 = S0VZLTE=
 """
     )
-    assert set(parser.keystore) == {"first-key"}
+    first_attachments = get_surge_node_attachments(first[0])
+    assert set(first_attachments.keystore) == {"first-key"}
 
-    parser.parse(
+    second = parser.parse(
         """
 [Proxy]
 second = ssh, second.example.com, 22, username=root, private-key=second-key
@@ -446,8 +457,20 @@ second-key = type = openssh-private-key, base64 = S0VZLTI=
 """
     )
 
-    assert set(parser.keystore) == {"second-key"}
-    assert parser.keystore["second-key"]["base64"] == "S0VZLTI="
+    second_attachments = get_surge_node_attachments(second[0])
+    assert set(second_attachments.keystore) == {"second-key"}
+    assert second_attachments.keystore["second-key"].values["base64"] == "S0VZLTI="
+    assert set(first_attachments.keystore) == {"first-key"}
+
+
+def test_surge_missing_referenced_keystore_entry_is_a_parse_error():
+    result = SurgeParser().parse_result(
+        "[Proxy]\nssh = ssh, example.com, 22, username=root, private-key=missing"
+    )
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.resource"
+    assert "missing" in result.issues[0].message
 
 
 def test_surge_emitter_ssh_auto_keystore_from_clash():

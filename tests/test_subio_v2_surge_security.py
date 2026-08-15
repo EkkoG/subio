@@ -35,9 +35,9 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
 
     assert [type(node) for node in result.nodes] == [MasqueNode, TrustTunnelNode]
     assert result.issues == []
-    assert result.resources.policies == []
+    assert result.resources == {}
 
-    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
+    emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.errors == []
     assert emission.emitted_policy_names == ["masque", "trust"]
@@ -66,7 +66,7 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
 def test_surge_strong_protocol_constraints_are_validated(line, message):
     result = SurgeParser().parse_result(line)
 
-    assert result.resources.policies == []
+    assert result.resources == {}
     assert result.issues[0].code in {
         "parse.protocol",
         "parse.protocol-parameter",
@@ -87,7 +87,7 @@ def test_external_is_removed_by_default_without_leaking_command_details():
     ):
         result = parser.parse_result(content)
         assert result.nodes == []
-        assert result.resources.external_policies == []
+        assert result.resources == {}
         assert result.issues[0].code == "security.external-rejected"
         assert "/secret/program" not in result.issues[0].message
         assert "secret-argument" not in result.issues[0].message
@@ -105,7 +105,7 @@ def test_authorized_local_external_preserves_repeated_parameters():
     )
 
     assert result.issues == []
-    assert result.resources.external_policies == []
+    assert result.resources == {}
     node = result.nodes[0]
     assert isinstance(node, NativeNode)
     assert node.unsafe is True
@@ -119,7 +119,7 @@ def test_authorized_local_external_preserves_repeated_parameters():
         "198.51.100.2",
     )
 
-    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
+    emission = SurgeEmitter().emit_result(result.nodes)
     assert emission.errors == []
     assert emission.emitted_policy_names == ["local"]
     assert "args=host, args=-D, args=127.0.0.1:1080" in emission.content
@@ -482,7 +482,7 @@ providers = ["source"]
     assert "interface-name: en0" in output
 
 
-def test_keystore_resources_report_cross_platform_loss(tmp_path, monkeypatch):
+def test_surge_ssh_keystore_converts_through_strong_node_fields(tmp_path, monkeypatch):
     write(
         tmp_path,
         "source.conf",
@@ -510,11 +510,159 @@ providers = ["source"]
     )
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(ArtifactGenerationError) as exc_info:
-        WorkflowEngine(str(cfg), dry_run=True).run()
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
 
-    issue = next(
-        issue for issue in exc_info.value.issues if issue.field == "resources.keystore"
+    assert result.errors == []
+    output = (tmp_path / "dist" / "out.yaml").read_text()
+    assert "private-key: KEY" in output
+    assert "S0VZ" not in output
+
+
+def test_attachment_conflict_only_drops_the_conflicting_final_node(
+    tmp_path, monkeypatch
+):
+    write(
+        tmp_path,
+        "first.conf",
+        """
+[Proxy]
+first = ssh, first.example.com, 22, username=root, private-key=shared
+[Keystore]
+shared = type = openssh-private-key, base64 = S0VZLTE=
+""",
     )
-    assert issue.code == "conversion.unconsumed-source-resource"
-    assert "S0VZ" not in issue.message
+    write(
+        tmp_path,
+        "second.conf",
+        """
+[Proxy]
+second = ssh, second.example.com, 22, username=root, private-key=shared
+[Keystore]
+shared = type = openssh-private-key, base64 = S0VZLTI=
+""",
+    )
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "first"
+type = "surge"
+file = "first.conf"
+
+[[provider]]
+name = "second"
+type = "surge"
+file = "second.conf"
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["first", "second"]
+allow_conversion_errors = true
+""",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert [issue.code for issue in result.errors] == ["conversion.attachment-conflict"]
+    output = (tmp_path / "dist" / "out.conf").read_text()
+    assert "first = ssh" in output
+    assert "second = ssh" not in output
+    assert "base64 = S0VZLTE=" in output
+    assert "S0VZLTI=" not in output
+
+
+def test_filtered_node_attachments_do_not_conflict_or_leak(tmp_path, monkeypatch):
+    write(
+        tmp_path,
+        "first.conf",
+        """
+[Proxy]
+first = ssh, first.example.com, 22, username=root, private-key=shared
+[Keystore]
+shared = type = openssh-private-key, base64 = S0VZLTE=
+""",
+    )
+    write(
+        tmp_path,
+        "second.conf",
+        """
+[Proxy]
+second = ssh, second.example.com, 22, username=root, private-key=shared
+[Keystore]
+shared = type = openssh-private-key, base64 = S0VZLTI=
+""",
+    )
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "first"
+type = "surge"
+file = "first.conf"
+
+[[provider]]
+name = "second"
+type = "surge"
+file = "second.conf"
+[provider.filters]
+exclude = "second"
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["first", "second"]
+""",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert result.errors == []
+    output = (tmp_path / "dist" / "out.conf").read_text()
+    assert "first = ssh" in output
+    assert "second = ssh" not in output
+    assert "S0VZLTI=" not in output
+
+
+def test_unreferenced_keystore_conflicts_do_not_reach_workflow(tmp_path, monkeypatch):
+    write(
+        tmp_path,
+        "first.conf",
+        "[Proxy]\nfirst = direct\n[Keystore]\nshared = type = p12, base64 = RklSU1Q=",
+    )
+    write(
+        tmp_path,
+        "second.conf",
+        "[Proxy]\nsecond = direct\n[Keystore]\nshared = type = p12, base64 = U0VDT05E",
+    )
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "first"
+type = "surge"
+file = "first.conf"
+
+[[provider]]
+name = "second"
+type = "surge"
+file = "second.conf"
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["first", "second"]
+""",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert result.errors == []
+    output = (tmp_path / "dist" / "out.conf").read_text()
+    assert "[Keystore]" not in output

@@ -31,7 +31,7 @@ exit-node = 100.64.0.10
     assert len(result.nodes) == 1
     node = result.nodes[0]
     assert isinstance(node, TailscaleNode)
-    assert result.resources.named_sections == {}
+    assert result.resources == {}
 
     emission = ClashEmitter().emit_result(result.nodes)
 
@@ -301,7 +301,7 @@ Gif = reject-tinygif
         RejectMode.NO_DROP,
         RejectMode.TINYGIF,
     ]
-    assert parsed.resources.policies == []
+    assert parsed.resources == {}
 
     emission = SurgeEmitter().emit_result(parsed.nodes)
 

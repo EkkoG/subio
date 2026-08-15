@@ -1,20 +1,30 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import (
+    HttpNode,
     NativeNode,
     DirectNode,
     Protocol,
     RejectNode,
     SSHNode,
     TailscaleNode,
+    TLSSettings,
     WireguardNode,
 )
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.surge.resources import (
-    SurgeDocumentResources,
+    SurgeKeystoreEntry,
     SurgeNamedSection,
+    SurgeNodeAttachments,
     get_surge_node_attachments,
+    peek_surge_node_attachments,
 )
+from subio_v2.surge.syntax import parse_parameter_list
+
+
+def keystore_entry(config: str) -> SurgeKeystoreEntry:
+    tokens = parse_parameter_list(config)
+    return SurgeKeystoreEntry(values=tokens.last_values, tokens=tokens)
 
 
 def test_native_node_owns_surge_attachments_without_a_fake_endpoint():
@@ -63,7 +73,11 @@ unused = type = p12, base64 = VU5VU0VE
         ("future", "two"),
     ]
 
-    output = SurgeEmitter(resources=result.resources).emit(result.nodes)
+    attachments = get_surge_node_attachments(node)
+    assert set(attachments.keystore) == {"client"}
+    assert "unused" not in attachments.keystore
+
+    output = SurgeEmitter().emit(result.nodes)
     assert "sni=off" in output
     assert "server-cert-verify-name=verify.example.com" in output
     assert "server-cert-fingerprint-sha256=AA:BB" in output
@@ -73,13 +87,24 @@ unused = type = p12, base64 = VU5VU0VE
     assert "test-udp=probe.example@198.51.100.1" in output
     assert "future=one, future=two" in output
     assert 'password = "p,12"' in output
-    assert "unused = type = p12, base64 = VU5VU0VE" in output
+    assert "unused" not in output
 
 
 def test_surge_missing_client_certificate_is_an_emit_error():
-    node = SurgeParser().parse(
+    parsed = SurgeParser().parse_result(
         "[Proxy]\nproxy = https, example.com, 443, client-cert=missing"
-    )[0]
+    )
+    assert parsed.nodes == []
+    assert parsed.issues[0].code == "parse.resource"
+
+    node = HttpNode(
+        name="proxy",
+        type=Protocol.HTTP,
+        server="example.com",
+        port=443,
+        tls=TLSSettings(enabled=True, client_cert_ref="missing"),
+        udp=False,
+    )
 
     result = SurgeEmitter().emit_result([node])
 
@@ -114,20 +139,25 @@ def test_sensitive_surge_values_are_hidden_from_repr():
         password="password-secret",
         private_key="private-key-secret",
     )
-    resources = SurgeDocumentResources(
+    attachments = SurgeNodeAttachments(
         keystore={
-            "key": {
-                "type": "p12",
-                "base64": "certificate-secret",
-                "password": "keystore-secret",
-            }
+            "key": SurgeKeystoreEntry(
+                values={
+                    "type": "p12",
+                    "base64": "certificate-secret",
+                    "password": "keystore-secret",
+                },
+                tokens=parse_parameter_list(
+                    "type = p12, base64 = certificate-secret, password = keystore-secret"
+                ),
+            )
         }
     )
 
     assert "password-secret" not in repr(node)
     assert "private-key-secret" not in repr(node)
-    assert "certificate-secret" not in repr(resources)
-    assert "keystore-secret" not in repr(resources)
+    assert "certificate-secret" not in repr(attachments)
+    assert "keystore-secret" not in repr(attachments)
 
 
 def test_surge_wireguard_multiple_peers_and_section_round_trip():
@@ -161,8 +191,9 @@ future-section-field = keep-me
     assert node.peers and len(node.peers) == 2
     assert node.peers[1]["reserved"] == [83, 12, 235]
     assert node.dialer_proxy == "upstream"
+    assert ("wireguard", "office") in get_surge_node_attachments(node).named_sections
 
-    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
+    emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.errors == []
     assert emission.emitted_policy_names == ["wg"]
@@ -202,10 +233,11 @@ hostname = surge-client
     assert result.nodes[0].hostname == "surge-client"
     assert result.nodes[0].auth_key == "tskey-auth-example"
     assert result.issues == []
-    assert result.resources.policies == []
-    assert ("tailscale", "office") not in result.resources.named_sections
+    assert ("tailscale", "office") in get_surge_node_attachments(
+        result.nodes[0]
+    ).named_sections
 
-    emission = SurgeEmitter(resources=result.resources).emit_result(result.nodes)
+    emission = SurgeEmitter().emit_result(result.nodes)
 
     assert emission.supported_nodes == result.nodes
     assert emission.emitted_policy_names == ["Tailnet", "On", "Off"]
@@ -250,7 +282,6 @@ interactive-login = true
     )
 
     assert result.nodes == []
-    assert result.resources.policies == []
     assert len(result.issues) == 1
     assert result.issues[0].code == "parse.resource"
     assert "exactly one" in result.issues[0].message
@@ -265,8 +296,168 @@ REJECT = reject
 """
     )
 
-    assert result.resources.policies == []
     assert [issue.code for issue in result.issues] == [
         "parse.ignored-built-in-redefinition",
         "parse.invalid-built-in-redefinition",
     ]
+
+
+def test_unreferenced_surge_sections_and_keystore_are_not_returned():
+    result = SurgeParser().parse_result(
+        """
+[Proxy]
+On = direct
+[Keystore]
+unused = type = p12, base64 = VU5VU0VE
+[WireGuard unused]
+private-key = secret
+"""
+    )
+
+    assert result.issues == []
+    assert result.resources == {}
+    assert peek_surge_node_attachments(result.nodes[0]) is None
+    assert "unused" not in SurgeEmitter().emit(result.nodes)
+
+
+def test_emitter_ignores_unreferenced_entries_inside_node_attachments():
+    node = HttpNode(
+        name="proxy",
+        type=Protocol.HTTP,
+        server="example.com",
+        port=443,
+        tls=TLSSettings(enabled=True, client_cert_ref="client"),
+        udp=False,
+    )
+    attachments = get_surge_node_attachments(node)
+    attachments.keystore["client"] = keystore_entry("type = p12, base64 = Q0xJRU5U")
+    attachments.keystore["unused"] = keystore_entry("type = p12, base64 = VU5VU0VE")
+
+    output = SurgeEmitter().emit([node])
+
+    assert "client = type = p12" in output
+    assert "unused" not in output
+
+
+def test_surge_emitter_does_not_leak_attachments_between_calls():
+    emitter = SurgeEmitter()
+    ssh = SSHNode(
+        name="ssh",
+        type=Protocol.SSH,
+        server="example.com",
+        port=22,
+        username="root",
+        private_key="KEY",
+    )
+
+    first = emitter.emit([ssh])
+    second = emitter.emit([DirectNode(name="direct", type=Protocol.DIRECT)])
+
+    assert "[Keystore]" in first
+    assert "[Keystore]" not in second
+    assert second == "direct = direct"
+
+
+def test_capability_failed_node_does_not_emit_its_attachment():
+    node = SSHNode(
+        name="bad",
+        type=Protocol.SSH,
+        server=None,
+        port=None,
+        username="root",
+        keystore_id="key",
+    )
+    get_surge_node_attachments(node).keystore["key"] = keystore_entry(
+        "type = openssh-private-key, base64 = S0VZ"
+    )
+
+    emission = SurgeEmitter().emit_result([node])
+
+    assert emission.supported_nodes == []
+    assert "[Keystore]" not in emission.content
+
+
+def test_emit_failure_does_not_commit_generated_keystore(monkeypatch):
+    emitter = SurgeEmitter()
+    node = SSHNode(
+        name="ssh",
+        type=Protocol.SSH,
+        server="example.com",
+        port=22,
+        username="root",
+        private_key="KEY",
+    )
+
+    def fail_emit(*_args, **_kwargs):
+        raise ValueError("synthetic emit failure")
+
+    monkeypatch.setattr(emitter, "_emit_node", fail_emit)
+    emission = emitter.emit_result([node])
+
+    assert emission.supported_nodes == []
+    assert "[Keystore]" not in emission.content
+
+
+def test_identical_keystore_values_dedupe_despite_token_order():
+    first = SSHNode(
+        name="first",
+        type=Protocol.SSH,
+        server="first.example.com",
+        port=22,
+        username="root",
+        keystore_id="shared",
+    )
+    second = SSHNode(
+        name="second",
+        type=Protocol.SSH,
+        server="second.example.com",
+        port=22,
+        username="root",
+        keystore_id="shared",
+    )
+    get_surge_node_attachments(first).keystore["shared"] = keystore_entry(
+        "type = openssh-private-key, base64 = S0VZ"
+    )
+    get_surge_node_attachments(second).keystore["shared"] = keystore_entry(
+        "base64 = S0VZ, type = openssh-private-key"
+    )
+
+    emission = SurgeEmitter().emit_result([first, second])
+
+    assert emission.errors == []
+    assert [node.name for node in emission.supported_nodes] == ["first", "second"]
+    assert emission.content.count("shared = ") == 1
+
+
+def test_conflicting_final_sections_drop_only_the_second_node():
+    first = (
+        SurgeParser()
+        .parse_result(
+            """
+[Proxy]
+first = tailscale, section-name=shared
+[Tailscale shared]
+auth-key = first-key
+"""
+        )
+        .nodes[0]
+    )
+    second = (
+        SurgeParser()
+        .parse_result(
+            """
+[Proxy]
+second = tailscale, section-name=shared
+[Tailscale shared]
+auth-key = second-key
+"""
+        )
+        .nodes[0]
+    )
+
+    emission = SurgeEmitter().emit_result([first, second])
+
+    assert [node.name for node in emission.supported_nodes] == ["first"]
+    assert emission.errors[0].code == "conversion.attachment-conflict"
+    assert "first-key" in emission.content
+    assert "second-key" not in emission.content

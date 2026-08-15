@@ -52,7 +52,7 @@ hysteria2 = hysteria2, example.com, 443, password=p, gecko-password=secret
     assert "gecko-password=secret" in output
 
 
-def test_official_document_resource_fixture_is_parseable():
+def test_official_node_attachment_fixture_is_parseable():
     content = (FIXTURE_DIR / "document-resources.conf").read_text()
 
     result = SurgeParser().parse_result(content)
@@ -64,7 +64,7 @@ def test_official_document_resource_fixture_is_parseable():
         "On",
         "Off",
     ]
-    assert result.resources.policies == []
+    assert result.resources == {}
 
 
 def test_official_opaque_and_external_fixtures_follow_security_boundary():
@@ -80,8 +80,8 @@ def test_official_opaque_and_external_fixtures_follow_security_boundary():
 
     assert opaque.issues == []
     assert [node.type.value for node in opaque.nodes] == ["masque", "trusttunnel"]
-    assert opaque.resources.policies == []
-    assert rejected.resources.external_policies == []
+    assert opaque.resources == {}
+    assert rejected.resources == {}
     assert rejected.issues[0].code == "security.external-rejected"
     assert len(allowed.nodes) == 1
-    assert allowed.resources.external_policies == []
+    assert allowed.resources == {}

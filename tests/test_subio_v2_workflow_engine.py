@@ -531,7 +531,7 @@ bad = vmess, example.com, invalid, username=u
     assert "good = ss" in (tmp_path / "dist" / "out.conf").read_text()
 
 
-def test_surge_workflow_uses_parse_resources_for_keystore(tmp_path, monkeypatch):
+def test_surge_workflow_preserves_referenced_keystore_attachment(tmp_path, monkeypatch):
     cfg = _write_surge_workflow(
         tmp_path,
         providers=[
@@ -556,7 +556,7 @@ shared-key = type = openssh-private-key, base64 = S0VZ
     assert "shared-key = type = openssh-private-key, base64 = S0VZ" in output
 
 
-def test_surge_workflow_rejects_conflicting_keystore_resources(tmp_path, monkeypatch):
+def test_surge_workflow_rejects_conflicting_keystore_attachments(tmp_path, monkeypatch):
     cfg = _write_surge_workflow(
         tmp_path,
         providers=[
@@ -582,13 +582,19 @@ shared-key = type = openssh-private-key, base64 = U0VDT05E
     )
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(ArtifactGenerationError, match="conflicting Surge keystore"):
+    with pytest.raises(ArtifactGenerationError) as exc_info:
         WorkflowEngine(str(cfg), dry_run=True).run()
 
+    assert [issue.code for issue in exc_info.value.issues] == [
+        "conversion.attachment-conflict"
+    ]
+    assert "shared-key" in exc_info.value.issues[0].message
+    assert "FIRST" not in exc_info.value.issues[0].message
+    assert "SECOND" not in exc_info.value.issues[0].message
     assert not (tmp_path / "dist").exists()
 
 
-def test_surge_resource_only_artifact_is_not_treated_as_empty(tmp_path, monkeypatch):
+def test_surge_attachment_backed_nodes_are_not_treated_as_empty(tmp_path, monkeypatch):
     write(
         tmp_path,
         "surge.tpl",
