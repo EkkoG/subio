@@ -18,6 +18,7 @@ from subio_v2.model.rules import (
     RuleExpression,
 )
 from subio_v2.workflow.errors import ConfigError
+from subio_v2.workflow.mrs import decode_mrs
 from subio_v2.workflow.rule_parser import (
     ClassicalRuleParser,
     MIHOMO_CLASSICAL_PARSER,
@@ -184,31 +185,64 @@ class ScalarRuleSetCodec:
             text = _decode_utf8(content, name)
             values = list(enumerate(text.splitlines(), start=1))
 
-        entries: list[RuleSetEntry] = []
-        for line_number, raw_value in values:
-            value = raw_value.strip()
-            if not value:
-                continue
-            if value.startswith("#") or value.startswith("//"):
-                entries.append(RuleComment(value, line_number))
-                continue
-            if self.behavior == "domain":
-                entries.append(
-                    _parse_domain(value, context.dialect, name, line_number)
-                )
-            else:
-                entries.append(_parse_ipcidr(value, name, line_number))
-
-        if not entries:
-            raise ConfigError(f"Ruleset {name!r} contains no rules or comments")
-        return RuleSetParseResult(
-            ruleset=HeadlessRuleSet(
-                name=name,
-                source_context=context,
-                behavior=self.behavior,
-                entries=tuple(entries),
-            )
+        return _parse_scalar_values(
+            name=name,
+            values=values,
+            context=context,
+            behavior=self.behavior,
         )
+
+
+class MrsRuleSetCodec:
+    def __init__(self, behavior: str):
+        self.behavior = behavior
+
+    def parse(
+        self,
+        *,
+        name: str,
+        content: bytes,
+        context: DialectContext,
+    ) -> RuleSetParseResult:
+        values = list(enumerate(decode_mrs(content, self.behavior), start=1))
+        return _parse_scalar_values(
+            name=name,
+            values=values,
+            context=context,
+            behavior=self.behavior,
+        )
+
+
+def _parse_scalar_values(
+    *,
+    name: str,
+    values: list[tuple[int, str]],
+    context: DialectContext,
+    behavior: str,
+) -> RuleSetParseResult:
+    entries: list[RuleSetEntry] = []
+    for line_number, raw_value in values:
+        value = raw_value.strip()
+        if not value:
+            continue
+        if value.startswith("#") or value.startswith("//"):
+            entries.append(RuleComment(value, line_number))
+            continue
+        if behavior == "domain":
+            entries.append(_parse_domain(value, context.dialect, name, line_number))
+        else:
+            entries.append(_parse_ipcidr(value, name, line_number))
+
+    if not entries:
+        raise ConfigError(f"Ruleset {name!r} contains no rules or comments")
+    return RuleSetParseResult(
+        ruleset=HeadlessRuleSet(
+            name=name,
+            source_context=context,
+            behavior=behavior,
+            entries=tuple(entries),
+        )
+    )
 
 
 def _decode_utf8(content: bytes, name: str) -> str:
@@ -317,6 +351,12 @@ def create_default_ruleset_codec_registry() -> RuleSetInputCodecRegistry:
                 behavior,
                 "yaml",
                 ScalarRuleSetCodec(behavior, "yaml"),
+            )
+            registry.register(
+                dialect,
+                behavior,
+                "mrs",
+                MrsRuleSetCodec(behavior),
             )
 
     registry.register(

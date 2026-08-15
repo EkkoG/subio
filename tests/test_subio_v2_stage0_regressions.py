@@ -72,10 +72,6 @@ def test_arbitrary_text_snippet_is_rejected(tmp_path):
         ("ipcidr", "ipcidr.mrs", "- IP-CIDR,192.0.2.0/24,Proxy"),
     ],
 )
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 2: Mihomo MRS bytes do not have an internal decoder",
-)
 def test_mihomo_mrs_decodes_to_normal_rules(
     monkeypatch, behavior, fixture_name, expected_line
 ):
@@ -123,10 +119,6 @@ def test_mihomo_classical_mrs_is_rejected(monkeypatch):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="stage 2: Stash MRS does not yet reuse the shared decoder",
-)
 def test_stash_domain_mrs_reuses_normal_rule_ir(monkeypatch):
     content = (FIXTURES / "mrs/domain.mrs").read_bytes()
     monkeypatch.setattr(

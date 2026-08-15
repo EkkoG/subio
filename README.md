@@ -60,13 +60,25 @@ url = "https://example.com/rules.list"
 type = "surge"
 behavior = "classical"
 format = "text"
+
+[[ruleset]]
+name = "stash_ip"
+url = "https://example.com/ipcidr.mrs"
+type = "stash"
+behavior = "ipcidr"
+format = "mrs"
 ```
 
 当三个字段都未声明时，精确默认为 `mihomo + classical + text`；不根据 URL、
 扩展名或解析失败切换格式。当前文本输入的合法组合为：
 
-- Mihomo / Stash：`domain | ipcidr | classical` 与 `text | yaml`；
+- Mihomo / Stash：`domain | ipcidr | classical` 与 `text | yaml`；其中 MRS 只支持
+  `domain | ipcidr`；
 - Surge：`classical | domain` 与 `text`。
+
+MRS 由进程内 data-only decoder 解析，不调用 Mihomo CLI 或系统 `zstd`。解码器限制压缩输入和
+解压输出大小，并校验 MRS 版本、behavior、计数、trie/IP range 结构与尾部数据；
+`classical + mrs` 会直接拒绝。
 
 Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语义会按方言
 分别解析。引用外部脚本或其他规则资源的条目不会被执行；被当前目标无法精确表达的

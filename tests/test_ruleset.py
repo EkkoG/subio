@@ -203,10 +203,17 @@ def test_every_self_contained_predicate_has_same_dialect_lowering(
         for behavior in ("classical", "domain", "ipcidr")
         for format_name in ("text", "yaml")
     ]
+    + [
+        (dialect, behavior, "mrs")
+        for dialect in ("mihomo", "stash")
+        for behavior in ("domain", "ipcidr")
+    ]
     + [("surge", "classical", "text"), ("surge", "domain", "text")],
 )
-def test_registry_parses_every_stage1_combination(dialect, behavior, format_name):
-    if dialect == "surge":
+def test_registry_parses_every_supported_combination(dialect, behavior, format_name):
+    if format_name == "mrs":
+        fixture = FIXTURES / "mrs" / f"{behavior}.mrs"
+    elif dialect == "surge":
         fixture = FIXTURES / dialect / (
             "rule-set.list" if behavior == "classical" else "domain-set.list"
         )
@@ -230,10 +237,11 @@ def test_registry_parses_every_stage1_combination(dialect, behavior, format_name
         RuleSetInputSelection("surge", "classical", "yaml"),
         RuleSetInputSelection("surge", "ipcidr", "text"),
         RuleSetInputSelection("mihomo", "classical", "mrs"),
-        RuleSetInputSelection("stash", "domain", "mrs"),
+        RuleSetInputSelection("stash", "classical", "mrs"),
+        RuleSetInputSelection("surge", "domain", "mrs"),
     ],
 )
-def test_registry_rejects_unimplemented_or_illegal_combinations(selection):
+def test_registry_rejects_illegal_combinations(selection):
     with pytest.raises(ConfigError, match="Unsupported ruleset input combination"):
         DEFAULT_RULESET_CODEC_REGISTRY.get(selection)
 
