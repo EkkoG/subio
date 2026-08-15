@@ -20,6 +20,52 @@ class SurgeNamedSection:
 
 
 @dataclass
+class SurgeNodeAttachments:
+    """Surge source data required to emit one or more retained nodes."""
+
+    keystore: dict[str, dict[str, str]] = field(default_factory=dict, repr=False)
+    keystore_tokens: dict[str, SurgeParameters] = field(
+        default_factory=dict, repr=False
+    )
+    named_sections: dict[tuple[str, str], SurgeNamedSection] = field(
+        default_factory=dict, repr=False
+    )
+
+    def clone(self) -> "SurgeNodeAttachments":
+        return copy.deepcopy(self)
+
+    def merge(self, other: "SurgeNodeAttachments") -> None:
+        for key_id, entry in other.keystore.items():
+            existing = self.keystore.get(key_id)
+            if existing is not None and existing != entry:
+                raise ValueError(f"conflicting Surge keystore entry '{key_id}'")
+            self.keystore[key_id] = copy.deepcopy(entry)
+            if key_id in other.keystore_tokens:
+                self.keystore_tokens[key_id] = copy.deepcopy(
+                    other.keystore_tokens[key_id]
+                )
+
+        for key, section in other.named_sections.items():
+            existing = self.named_sections.get(key)
+            if existing is not None and existing.lines != section.lines:
+                kind, name = key
+                raise ValueError(f"conflicting Surge {kind} section '{name}'")
+            if existing is None:
+                self.named_sections[key] = copy.deepcopy(section)
+
+
+def get_surge_node_attachments(node: Any) -> SurgeNodeAttachments:
+    surge = node.source_extensions.setdefault("surge", {})
+    attachments = surge.get("attachments")
+    if attachments is None:
+        attachments = SurgeNodeAttachments()
+        surge["attachments"] = attachments
+    if not isinstance(attachments, SurgeNodeAttachments):
+        raise TypeError("Surge node attachments have an invalid type")
+    return attachments
+
+
+@dataclass
 class SurgeOpaquePolicy:
     record: SurgeProxyRecord = field(repr=False)
     order: int = 0

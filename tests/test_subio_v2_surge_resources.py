@@ -1,8 +1,30 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.model.nodes import Protocol, SSHNode, WireguardNode
+from subio_v2.model.nodes import NativeNode, Protocol, SSHNode, WireguardNode
 from subio_v2.parser.surge import SurgeParser
-from subio_v2.surge.resources import SurgeDocumentResources
+from subio_v2.surge.resources import (
+    SurgeDocumentResources,
+    SurgeNamedSection,
+    get_surge_node_attachments,
+)
+
+
+def test_native_node_owns_surge_attachments_without_a_fake_endpoint():
+    node = NativeNode(
+        name="Tailnet",
+        type=Protocol.TAILSCALE,
+        native_format="surge",
+    )
+    attachments = get_surge_node_attachments(node)
+    attachments.named_sections[("tailscale", "office")] = SurgeNamedSection(
+        kind="Tailscale",
+        name="office",
+        lines=("auth-key = secret",),
+    )
+
+    assert node.server is None
+    assert node.port is None
+    assert get_surge_node_attachments(node) is attachments
 
 
 def test_surge_common_tls_shadow_tls_and_unknown_parameters_round_trip():

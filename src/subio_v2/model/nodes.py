@@ -26,6 +26,8 @@ class Protocol(StrEnum):
     OPENVPN = "openvpn"
     TAILSCALE = "tailscale"
     DIRECT = "direct"
+    REJECT = "reject"
+    EXTERNAL = "external"
     DNS = "dns"
     CLASH_UNKNOWN = "clash-unknown"
 
@@ -122,8 +124,11 @@ class SmuxSettings:
 class BaseNode:
     name: str
     type: Protocol
-    server: str
-    port: int
+    # Some native proxy policies (for example Surge Tailscale and DIRECT aliases)
+    # have no remote endpoint. Concrete protocol validation decides whether these
+    # fields are required.
+    server: Optional[Union[str, List[str]]] = None
+    port: Optional[int] = None
     udp: bool = True  # Default true for most modern proxies
     ip_version: Optional[str] = None  # ipv4, ipv6, dual
     tfo: bool = False
@@ -378,6 +383,15 @@ class ClashPassthroughNode(BaseNode):
     clash_type: Optional[str] = None
 
 
+@dataclass
+class NativeNode(BaseNode):
+    """Source-format proxy record kept losslessly for same-format conversion."""
+
+    native_format: str = ""
+    raw: Any = field(default=None, repr=False)
+    unsafe: bool = False
+
+
 Node = Union[
     ShadowsocksNode,
     ShadowsocksRNode,
@@ -394,6 +408,7 @@ Node = Union[
     SnellNode,
     TUICNode,
     ClashPassthroughNode,
+    NativeNode,
 ]
 
 
