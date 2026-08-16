@@ -62,6 +62,7 @@ Config / local snippet
 |---|---|
 | `src/subio_v2/model/` | 跨平台节点语义和共享设置 |
 | `src/subio_v2/parser/` | 将来源格式解析成节点和结构化问题 |
+| `src/subio_v2/subio_format/` | 版本化原生 SubIO 节点 schema 与 object-to-Node codec |
 | `src/subio_v2/emitter/` | 将最终节点生成目标格式 |
 | `src/subio_v2/protocols/` | Clash/Mihomo 协议 descriptor 注册表 |
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
@@ -132,6 +133,44 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 - 通用 hook 只规定 normalizer、descriptor 和 emitter 的调用位置；
 - Stash 等平台的具体字段映射只在对应 parser/emitter 方言模块实现；
 - 新工作不得重新设计已经验收的 RuleSet codec 接口。
+
+### 3.5 原生 SubIO 节点格式
+
+`provider.type = "subio"` 有两条明确隔离的输入路径：
+
+```text
+version = 1 + nodes
+  -> serialization decoder
+  -> SubioNodeCodec
+  -> concrete Node IR
+
+legacy proxies
+  -> Mihomo-compatible ClashParser
+  -> concrete Node IR + migration WARNING
+```
+
+原生路径使用 `Protocol.value` 和 snake_case IR 字段，不调用 `parse_clash()`，也不接受单字段
+Mihomo alias。`src/subio_v2/subio_format/schema.py` 是公开字段 allowlist 与确定性 JSON Schema 的
+来源；`schemas/subio-node-v1.schema.json` 是提交仓库的机器可读快照。修改其中任一侧时必须运行
+schema 生成命令，并由测试证明快照、协议注册表和 runtime 字段一致。
+
+JSON Schema 只描述结构、允许字段、基础类型和 enum，不为组合校验建立复杂 conditional 生成器。
+required、范围和协议组合以 `validate_node()` 及 descriptor validation 为准；用户文档必须明确这
+两层职责，不能把 schema 单独描述为完整语义验证器。
+
+公开格式只包含 concrete Node 和已强类型化的嵌套设置。`source_context`、`source_provider`、
+`original_name`、`extra`、`source_extensions`、`transport.extra`、`SourcePassthroughNode` 和 Surge
+External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Tailscale
+`interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
+descriptor；codec 从现有协议注册表取得 Node class，但不能借用 Clash 字段规格。
+
+目标无关语义由 `src/subio_v2/validation.py` 校验，CapabilityChecker 复用同一结果后再检查目标
+平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
+override 字段必须同时属于 `USER_OVERRIDE_FIELDS` 和具体 Node 类型。新协议或字段进入 Node IR 时，
+必须明确选择加入 v1 或排除，并更新 schema、用户文档和注册表不变量测试。
+
+原生格式目前只有输入 codec，不增加 `artifact.type = "subio"`。版本兼容规则和公开字段说明见
+`docs/subio_node_format.md`。
 
 ## 4. Clash / Mihomo
 
@@ -339,6 +378,13 @@ uv run subio convert example/config.toml --dry-run
 
 ```bash
 uv run python -m pytest tests/test_subio_v2_parser_clash*.py -v
+```
+
+SubIO 原生节点格式：
+
+```bash
+uv run python -m pytest tests/test_subio_v2_parser_subio.py -v
+uv run python -m subio_v2.subio_format.schema schemas/subio-node-v1.schema.json
 ```
 
 Surge：

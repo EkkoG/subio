@@ -1,12 +1,13 @@
 # 多用户节点示例
 # Multi-user nodes example
 
-proxies:
+version: 1
+nodes:
   # ============ 多用户节点 ============
   # 只有在 users 列表中的用户才能使用这个节点
   # 每个用户会得到自己的密码
   
-  - type: ss
+  - type: shadowsocks
     name: premium-hk
     server: hk.example.com
     port: 8388
@@ -20,7 +21,7 @@ proxies:
       charlie:
         password: charlie_hk_password
 
-  - type: ss
+  - type: shadowsocks
     name: premium-jp
     server: jp.example.com
     port: 8388
@@ -62,7 +63,7 @@ proxies:
   # ============ 共享节点 ============
   # 没有 users 字段的节点，所有用户都能使用
   
-  - type: ss
+  - type: shadowsocks
     name: public-tw
     server: tw.example.com
     port: 8388
@@ -81,14 +82,14 @@ proxies:
     server: ssh.example.com
     port: 22
     username: admin
-    private-key: |
+    private_key: |
       -----BEGIN OPENSSH PRIVATE KEY-----
       b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtz
       c2gtZWQyNTUxOQAAACBbKjASFKj2f8Jv3RLqN9H6D2EXAMPLE1234567890ABC==
       AAAAQCiBBT8EXAMPLE1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
       ijklmnopqrstuvwxyz1234567890+/EXAMPLE==
       -----END OPENSSH PRIVATE KEY-----
-    private-key-passphrase: optional_passphrase
+    private_key_passphrase: optional_passphrase
 
   # SSH 节点也支持多用户（每个用户使用不同的私钥）
   - type: ssh
@@ -99,11 +100,10 @@ proxies:
     users:
       alice:
         username: alice
-        private-key: |
+        private_key: |
           -----BEGIN OPENSSH PRIVATE KEY-----
           alice_private_key_content_here
           -----END OPENSSH PRIVATE KEY-----
       bob:
         username: bob
         password: bob_ssh_password
-

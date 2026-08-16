@@ -69,14 +69,41 @@ type = "stash"
 file = "stash.yaml"
 ```
 
+读取平台无关的 SubIO 节点文件：
+
+```toml
+[[provider]]
+name = "self-hosted"
+type = "subio"
+file = "nodes.toml"
+```
+
+`nodes.toml` 使用版本化的原生节点语义，不是 Mihomo 字段的另一种序列化：
+
+```toml
+version = 1
+
+[[nodes]]
+name = "HK-01"
+type = "shadowsocks"
+server = "hk.example.com"
+port = 8388
+cipher = "aes-256-gcm"
+password = "secret"
+```
+
+原生格式同时支持 TOML、JSON、JSON5、YAML，四种序列化共享同一严格对象模型。完整字段、协议索引、
+多用户覆盖和旧 `proxies` 迁移见 [SubIO 节点文件格式 v1](./docs/subio_node_format.md)。
+
 `artifact.type` 使用同一命名契约：新配置用 `mihomo`，旧 `clash-meta` 配置保持兼容并产生替代
 提示，原版 `clash` 继续使用较小的独立能力范围并产生废弃提示。模板名、artifact 文件名和上传
 文件名中的 `clash` 只是用户自定义文本，不会自动重命名。
 
 具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
 
-固定 schema 基线中的 26 种 Mihomo 节点类型都进入强类型语义模型；真正未知的 YAML type 只允许
-回到其来源平台。Surge External 的本地 file provider 默认可输出回 Surge，远程 URL 默认忽略；
+原生 SubIO v1 可直接构造当前 27 种公开具体 Node IR；固定 schema 基线中的 26 种 Mihomo 节点
+类型和 Stash-only Juicity 均有明确模型。真正未知的 YAML type 只允许回到其来源平台，不能进入
+原生 SubIO 文件。Surge External 的本地 file provider 默认可输出回 Surge，远程 URL 默认忽略；
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
 跨平台转换，也不会由 SubIO 执行。
 
@@ -154,6 +181,7 @@ subio convert example/config.toml --clean-gist
 ### 开发文档
 
 - [开发约束与架构](./docs/DEV.md)
+- [SubIO 节点文件格式 v1](./docs/subio_node_format.md)
 - [支持矩阵](./docs/support_matrix.md)
 - [文档索引](./docs/README.md)
 - [已完成的项目级计划](./docs/development_plan.md)

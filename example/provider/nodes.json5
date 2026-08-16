@@ -1,9 +1,10 @@
 {
   // JSON5 格式示例
   // 支持注释、尾逗号、单引号等特性
-  "proxies": [
+  "version": 1,
+  "nodes": [
     {
-      "type": "ss",
+      "type": "shadowsocks",
       "name": "JSON5-香港-01",
       "server": "hk.json5.example.com",
       "port": 8388,
@@ -27,4 +28,3 @@
     },
   ],
 }
-
