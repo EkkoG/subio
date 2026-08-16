@@ -31,6 +31,7 @@ def _bootstrap() -> None:
     from subio_v2.protocols import (  # noqa: F401
         anytls,
         direct,
+        dns,
         http,
         hysteria,
         hysteria2,

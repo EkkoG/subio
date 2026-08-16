@@ -45,6 +45,5 @@ for _protocol, _clash_type in (
     (Protocol.SHADOWQUIC, "shadowquic"),
     (Protocol.SUDOKU, "sudoku"),
     (Protocol.OPENVPN, "openvpn"),
-    (Protocol.DNS, "dns"),
 ):
     register(PassthroughDescriptor(protocol=_protocol, clash_type=_clash_type))

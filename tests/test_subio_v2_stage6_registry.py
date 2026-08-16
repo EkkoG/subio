@@ -8,6 +8,7 @@ from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import (
     ClashPassthroughNode,
+    DNSNode,
     MieruNode,
     Protocol,
     RejectMode,
@@ -39,6 +40,8 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.MIERU).passthrough is False
     assert registry.get(Protocol.REJECT).node_class is RejectNode
     assert registry.get(Protocol.REJECT).requires_endpoint is False
+    assert registry.get(Protocol.DNS).node_class is DNSNode
+    assert registry.get(Protocol.DNS).passthrough is False
     registered_protocols = {
         descriptor.protocol.value
         for descriptor in descriptors
@@ -105,6 +108,30 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
     emission = ClashEmitter(platform="mihomo").emit_result(nodes)
     assert emission.errors == []
     assert emission.content == source
+
+
+def test_mihomo_dns_outbound_uses_strong_ir_and_smux():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "dns-out",
+                    "type": "dns",
+                    "dialer-proxy": "upstream",
+                    "smux": {"enabled": True, "max-connections": 3},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, DNSNode)
+    assert node.server is None
+    assert node.port is None
+    assert node.dialer_proxy == "upstream"
+    assert node.smux.max_connections == 3
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    assert emission.content["proxies"][0]["smux"]["max-connections"] == 3
 
 
 @pytest.mark.parametrize(

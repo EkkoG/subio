@@ -396,6 +396,17 @@ class DirectNode(BaseNode):
 
 
 @dataclass
+class DNSNode(BaseNode):
+    """Mihomo DNS outbound that redirects traffic to the internal DNS module."""
+
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.DNS:
+            self.type = Protocol.DNS
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -581,6 +592,7 @@ Node = Union[
     MasqueNode,
     TrustTunnelNode,
     DirectNode,
+    DNSNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,

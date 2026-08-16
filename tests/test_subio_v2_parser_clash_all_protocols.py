@@ -8,6 +8,7 @@ from subio_v2.dialect import DialectContext
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.stash import StashParser
 from subio_v2.model.nodes import (
+    DNSNode,
     DirectNode,
     MasqueNode,
     MieruNode,
@@ -71,6 +72,7 @@ proxies:
     assert isinstance(by_node_name["tt1"], TrustTunnelNode)
     assert isinstance(by_node_name["ts1"], TailscaleNode)
     assert isinstance(by_node_name["dr1"], DirectNode)
+    assert isinstance(by_node_name["dn1"], DNSNode)
 
     proxies = _roundtrip(yaml_text)
     assert len(proxies) == 22

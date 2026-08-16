@@ -261,7 +261,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "tailscale": {},
         "direct": {},
         "reject": {"modes": {"reject"}, "features": {"smux"}},
-        "dns": {},
+        "dns": {"features": {"smux"}},
         "wireguard": {},
         "ssh": {
             "auth_methods": {"password", "private_key"},
