@@ -1,6 +1,8 @@
 import json
+import types
 from dataclasses import fields
 from pathlib import Path
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import pytest
 import yaml
@@ -11,8 +13,10 @@ from subio_v2.parser.subio import SubioParser
 from subio_v2.subio_format.schema import (
     NON_PUBLIC_NODE_FIELDS,
     NON_PUBLIC_PROTOCOL_FIELDS,
+    PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
     build_json_schema,
+    public_mapping_spec,
     public_node_fields,
 )
 
@@ -347,6 +351,107 @@ nodes:
     assert "null-password" not in " ".join(issue.message for issue in result.issues)
 
 
+def test_subio_native_format_decodes_canonical_mapping_objects():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: ss-plugin
+    type: shadowsocks
+    server: example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: p
+    plugin: v2ray-plugin
+    plugin_opts:
+      mode: websocket
+      private_key: key
+      skip_cert_verify: true
+      ech_opts:
+        enable: true
+        query_server_name: ech.example.com
+    smux:
+      enabled: true
+      brutal_opts:
+        enabled: true
+        up: 10
+        down: 50
+  - name: vless-reality
+    type: vless
+    server: example.com
+    port: 443
+    uuid: u
+    tls:
+      enabled: true
+      reality_opts:
+        public_key: public
+        short_id: short
+      ech_opts:
+        config: ZWNo
+  - name: wireguard-amnezia
+    type: wireguard
+    server: example.com
+    port: 51820
+    private_key: private
+    public_key: public
+    amnezia_wg_option:
+      jc: 4
+      h1: header
+  - name: snell-obfs
+    type: snell
+    server: example.com
+    port: 443
+    psk: secret
+    obfs_opts:
+      mode: restls
+      version_hint: tls13
+      skip_cert_verify: true
+"""
+    )
+
+    assert result.issues == []
+    ss, vless, wireguard, snell = result.nodes
+    assert ss.plugin_opts == {
+        "mode": "websocket",
+        "private-key": "key",
+        "skip-cert-verify": True,
+        "ech-opts": {"enable": True, "query-server-name": "ech.example.com"},
+    }
+    assert ss.smux.brutal_opts == {"enabled": True, "up": 10, "down": 50}
+    assert vless.tls.reality_opts == {
+        "public-key": "public",
+        "short-id": "short",
+    }
+    assert vless.tls.ech_opts == {"config": "ZWNo"}
+    assert wireguard.amnezia_wg_option == {"jc": 4, "h1": "header"}
+    assert snell.obfs_opts == {
+        "mode": "restls",
+        "version-hint": "tls13",
+        "skip-cert-verify": True,
+    }
+
+
+def test_subio_native_format_rejects_unknown_mapping_fields():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: bad-ech
+    type: vless
+    server: example.com
+    port: 443
+    uuid: u
+    tls:
+      ech_opts:
+        query-server-name: wrong-key-style
+"""
+    )
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.subio.unknown-field"
+    assert result.issues[0].field == "nodes[0].tls.ech_opts.query-server-name"
+
+
 def test_subio_native_format_rejects_source_bound_resource_references():
     result = SubioParser().parse_result(
         """
@@ -423,6 +528,35 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
             model_fields - NON_PUBLIC_NODE_FIELDS
             - NON_PUBLIC_PROTOCOL_FIELDS.get(descriptor.protocol, frozenset())
         ), descriptor.protocol.value
+
+
+def test_subio_public_mapping_contract_covers_unconstrained_objects():
+    def contains_unconstrained_mapping(expected):
+        origin = get_origin(expected)
+        if origin in {Union, types.UnionType}:
+            return any(contains_unconstrained_mapping(arg) for arg in get_args(expected))
+        if origin is not dict:
+            return False
+        _, value_type = get_args(expected)
+        return value_type is Any
+
+    owners = list(PUBLIC_NESTED_FIELDS.items())
+    owners.extend(
+        (descriptor.node_class, public_node_fields(descriptor.protocol))
+        for descriptor in protocol_registry.all()
+    )
+
+    for owner, public_fields in owners:
+        hints = get_type_hints(owner)
+        for name in public_fields:
+            if name == "users":
+                continue
+            expected = hints[name]
+            if contains_unconstrained_mapping(expected):
+                assert public_mapping_spec(owner, name) is not None, (
+                    owner.__name__,
+                    name,
+                )
 
 
 def test_subio_json_schema_snapshot_matches_runtime_contract():

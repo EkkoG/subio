@@ -3,24 +3,202 @@ from __future__ import annotations
 import argparse
 import json
 import types
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Union, get_args, get_origin, get_type_hints
+from typing import Any, Mapping, Union, get_args, get_origin, get_type_hints
 
 from subio_v2.model.nodes import (
     Protocol,
     ShadowTLSSettings,
+    ShadowsocksNode,
     SmuxSettings,
+    SnellNode,
     SudokuHTTPMaskSettings,
     SurgePolicyOptions,
     TLSSettings,
     TransportSettings,
     USER_OVERRIDE_FIELDS,
+    WireguardNode,
     WireguardPeer,
 )
 
 SUBIO_FORMAT_VERSION = 1
+
+
+@dataclass(frozen=True)
+class PublicMappingField:
+    value_type: Any = Any
+    target_key: str | None = None
+    object_spec: str | None = None
+    required: bool = False
+
+
+@dataclass(frozen=True)
+class PublicMappingSpec:
+    fields: Mapping[str, PublicMappingField]
+    additional_value_type: Any | None = None
+
+
+def _mapping_field(
+    value_type: Any = Any,
+    *,
+    target_key: str | None = None,
+    object_spec: str | None = None,
+    required: bool = False,
+) -> PublicMappingField:
+    return PublicMappingField(
+        value_type=value_type,
+        target_key=target_key,
+        object_spec=object_spec,
+        required=required,
+    )
+
+
+_HTTP_HEADER_VALUE = str | list[str]
+_AMNEZIA_INTEGER_FIELDS = {
+    name: _mapping_field(int)
+    for name in ("jc", "jmin", "jmax", "s1", "s2", "s3", "s4", "itime")
+}
+_AMNEZIA_STRING_FIELDS = {
+    name: _mapping_field(str)
+    for name in (
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "i1",
+        "i2",
+        "i3",
+        "i4",
+        "i5",
+        "j1",
+        "j2",
+        "j3",
+    )
+}
+_KCPTUN_INTEGER_FIELDS = {
+    name: _mapping_field(int)
+    for name in (
+        "conn",
+        "autoexpire",
+        "scavengettl",
+        "mtu",
+        "ratelimit",
+        "sndwnd",
+        "rcvwnd",
+        "datashard",
+        "parityshard",
+        "dscp",
+        "nodelay",
+        "interval",
+        "resend",
+        "nc",
+        "sockbuf",
+        "smuxver",
+        "smuxbuf",
+        "framesize",
+        "streambuf",
+        "keepalive",
+    )
+}
+
+PUBLIC_MAPPING_SPECS: dict[str, PublicMappingSpec] = {
+    "HttpHeaders": PublicMappingSpec(fields={}, additional_value_type=_HTTP_HEADER_VALUE),
+    "RealityOptions": PublicMappingSpec(
+        fields={
+            "public_key": _mapping_field(
+                str, target_key="public-key", required=True
+            ),
+            "short_id": _mapping_field(str, target_key="short-id"),
+        }
+    ),
+    "ECHOptions": PublicMappingSpec(
+        fields={
+            "enable": _mapping_field(bool),
+            "config": _mapping_field(str),
+            "query_server_name": _mapping_field(
+                str, target_key="query-server-name"
+            ),
+        }
+    ),
+    "BrutalOptions": PublicMappingSpec(
+        fields={
+            "enabled": _mapping_field(bool),
+            "up": _mapping_field(int),
+            "down": _mapping_field(int),
+        }
+    ),
+    "AmneziaWGOptions": PublicMappingSpec(
+        fields={**_AMNEZIA_INTEGER_FIELDS, **_AMNEZIA_STRING_FIELDS}
+    ),
+    "ShadowsocksPluginOptions": PublicMappingSpec(
+        fields={
+            "mode": _mapping_field(str),
+            "host": _mapping_field(str),
+            "path": _mapping_field(str),
+            "tls": _mapping_field(bool),
+            "ech_opts": _mapping_field(
+                target_key="ech-opts", object_spec="ECHOptions"
+            ),
+            "fingerprint": _mapping_field(str),
+            "certificate": _mapping_field(str),
+            "private_key": _mapping_field(str, target_key="private-key"),
+            "headers": _mapping_field(object_spec="HttpHeaders"),
+            "skip_cert_verify": _mapping_field(
+                bool, target_key="skip-cert-verify"
+            ),
+            "verify_name": _mapping_field(str, target_key="name-cert-verify"),
+            "mux": _mapping_field(bool),
+            "v2ray_http_upgrade": _mapping_field(
+                bool, target_key="v2ray-http-upgrade"
+            ),
+            "v2ray_http_upgrade_fast_open": _mapping_field(
+                bool, target_key="v2ray-http-upgrade-fast-open"
+            ),
+            "password": _mapping_field(str),
+            "version": _mapping_field(int),
+            "version_hint": _mapping_field(str, target_key="version-hint"),
+            "restls_script": _mapping_field(str, target_key="restls-script"),
+            "username": _mapping_field(str),
+            "alpn": _mapping_field(list[str]),
+            "key": _mapping_field(str),
+            "crypt": _mapping_field(str),
+            **_KCPTUN_INTEGER_FIELDS,
+            "nocomp": _mapping_field(bool),
+            "acknodelay": _mapping_field(bool),
+        }
+    ),
+    "SnellObfsOptions": PublicMappingSpec(
+        fields={
+            "mode": _mapping_field(str),
+            "host": _mapping_field(str),
+            "password": _mapping_field(str),
+            "fingerprint": _mapping_field(str),
+            "certificate": _mapping_field(str),
+            "private_key": _mapping_field(str, target_key="private-key"),
+            "skip_cert_verify": _mapping_field(
+                bool, target_key="skip-cert-verify"
+            ),
+            "verify_name": _mapping_field(str, target_key="name-cert-verify"),
+            "version": _mapping_field(int),
+            "version_hint": _mapping_field(str, target_key="version-hint"),
+            "restls_script": _mapping_field(str, target_key="restls-script"),
+            "username": _mapping_field(str),
+            "alpn": _mapping_field(list[str]),
+        }
+    ),
+}
+
+PUBLIC_MAPPING_FIELDS: dict[tuple[type, str], str] = {
+    (TLSSettings, "reality_opts"): "RealityOptions",
+    (TLSSettings, "ech_opts"): "ECHOptions",
+    (TransportSettings, "headers"): "HttpHeaders",
+    (SmuxSettings, "brutal_opts"): "BrutalOptions",
+    (ShadowsocksNode, "plugin_opts"): "ShadowsocksPluginOptions",
+    (WireguardNode, "amnezia_wg_option"): "AmneziaWGOptions",
+    (SnellNode, "obfs_opts"): "SnellObfsOptions",
+}
 
 NON_PUBLIC_NODE_FIELDS = frozenset(
     {
@@ -367,6 +545,20 @@ def public_node_fields(protocol: Protocol) -> frozenset[str]:
     return PUBLIC_COMMON_FIELDS | PUBLIC_PROTOCOL_FIELDS[protocol]
 
 
+def public_user_override_fields(protocol: Protocol) -> frozenset[str]:
+    import subio_v2.protocols as protocol_registry
+
+    descriptor = protocol_registry.get(protocol)
+    if descriptor is None:
+        raise ValueError(f"Protocol has no registered node model: {protocol.value}")
+    return frozenset(USER_OVERRIDE_FIELDS & get_type_hints(descriptor.node_class).keys())
+
+
+def public_mapping_spec(owner: type, field_name: str) -> PublicMappingSpec | None:
+    spec_name = PUBLIC_MAPPING_FIELDS.get((owner, field_name))
+    return PUBLIC_MAPPING_SPECS.get(spec_name) if spec_name is not None else None
+
+
 def build_json_schema() -> dict[str, Any]:
     import subio_v2.protocols as protocol_registry
 
@@ -391,10 +583,12 @@ def build_json_schema() -> dict[str, Any]:
             "type": "object",
             "additionalProperties": False,
             "properties": {
-                name: _json_schema_for_type(hints[name])
+                name: _json_schema_for_field(cls, name, hints[name])
                 for name in sorted(allowed_fields)
             },
         }
+    for name, spec in PUBLIC_MAPPING_SPECS.items():
+        definitions[name] = _json_schema_for_mapping_spec(spec)
 
     node_schemas = []
     for protocol in sorted(PUBLIC_PROTOCOLS, key=lambda item: item.value):
@@ -407,7 +601,9 @@ def build_json_schema() -> dict[str, Any]:
             if name == "users":
                 properties[name] = _json_schema_for_users(hints)
             else:
-                properties[name] = _json_schema_for_type(hints[name])
+                properties[name] = _json_schema_for_field(
+                    descriptor.node_class, name, hints[name]
+                )
         properties["type"] = {"const": protocol.value}
         node_schemas.append(
             {
@@ -432,6 +628,37 @@ def build_json_schema() -> dict[str, Any]:
         },
         "$defs": definitions,
     }
+
+
+def _json_schema_for_field(owner: type, name: str, expected: Any) -> dict[str, Any]:
+    spec_name = PUBLIC_MAPPING_FIELDS.get((owner, name))
+    if spec_name is not None:
+        return {"$ref": f"#/$defs/{spec_name}"}
+    return _json_schema_for_type(expected)
+
+
+def _json_schema_for_mapping_spec(spec: PublicMappingSpec) -> dict[str, Any]:
+    properties = {}
+    required = []
+    for name, field_spec in sorted(spec.fields.items()):
+        if field_spec.object_spec is not None:
+            properties[name] = {"$ref": f"#/$defs/{field_spec.object_spec}"}
+        else:
+            properties[name] = _json_schema_for_type(field_spec.value_type)
+        if field_spec.required:
+            required.append(name)
+    schema: dict[str, Any] = {
+        "type": "object",
+        "additionalProperties": (
+            _json_schema_for_type(spec.additional_value_type)
+            if spec.additional_value_type is not None
+            else False
+        ),
+        "properties": properties,
+    }
+    if required:
+        schema["required"] = required
+    return schema
 
 
 def _json_schema_for_type(expected: Any) -> dict[str, Any]:

@@ -1,5 +1,133 @@
 {
   "$defs": {
+    "AmneziaWGOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "h1": {
+          "type": "string"
+        },
+        "h2": {
+          "type": "string"
+        },
+        "h3": {
+          "type": "string"
+        },
+        "h4": {
+          "type": "string"
+        },
+        "i1": {
+          "type": "string"
+        },
+        "i2": {
+          "type": "string"
+        },
+        "i3": {
+          "type": "string"
+        },
+        "i4": {
+          "type": "string"
+        },
+        "i5": {
+          "type": "string"
+        },
+        "itime": {
+          "type": "integer"
+        },
+        "j1": {
+          "type": "string"
+        },
+        "j2": {
+          "type": "string"
+        },
+        "j3": {
+          "type": "string"
+        },
+        "jc": {
+          "type": "integer"
+        },
+        "jmax": {
+          "type": "integer"
+        },
+        "jmin": {
+          "type": "integer"
+        },
+        "s1": {
+          "type": "integer"
+        },
+        "s2": {
+          "type": "integer"
+        },
+        "s3": {
+          "type": "integer"
+        },
+        "s4": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "BrutalOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "down": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "up": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ECHOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "query_server_name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "HttpHeaders": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        ]
+      },
+      "properties": {},
+      "type": "object"
+    },
+    "RealityOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "public_key": {
+          "type": "string"
+        },
+        "short_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "public_key"
+      ],
+      "type": "object"
+    },
     "ShadowTLSSettings": {
       "additionalProperties": false,
       "properties": {
@@ -15,14 +143,152 @@
       },
       "type": "object"
     },
+    "ShadowsocksPluginOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "acknodelay": {
+          "type": "boolean"
+        },
+        "alpn": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "autoexpire": {
+          "type": "integer"
+        },
+        "certificate": {
+          "type": "string"
+        },
+        "conn": {
+          "type": "integer"
+        },
+        "crypt": {
+          "type": "string"
+        },
+        "datashard": {
+          "type": "integer"
+        },
+        "dscp": {
+          "type": "integer"
+        },
+        "ech_opts": {
+          "$ref": "#/$defs/ECHOptions"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "framesize": {
+          "type": "integer"
+        },
+        "headers": {
+          "$ref": "#/$defs/HttpHeaders"
+        },
+        "host": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "keepalive": {
+          "type": "integer"
+        },
+        "key": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "mtu": {
+          "type": "integer"
+        },
+        "mux": {
+          "type": "boolean"
+        },
+        "nc": {
+          "type": "integer"
+        },
+        "nocomp": {
+          "type": "boolean"
+        },
+        "nodelay": {
+          "type": "integer"
+        },
+        "parityshard": {
+          "type": "integer"
+        },
+        "password": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "string"
+        },
+        "ratelimit": {
+          "type": "integer"
+        },
+        "rcvwnd": {
+          "type": "integer"
+        },
+        "resend": {
+          "type": "integer"
+        },
+        "restls_script": {
+          "type": "string"
+        },
+        "scavengettl": {
+          "type": "integer"
+        },
+        "skip_cert_verify": {
+          "type": "boolean"
+        },
+        "smuxbuf": {
+          "type": "integer"
+        },
+        "smuxver": {
+          "type": "integer"
+        },
+        "sndwnd": {
+          "type": "integer"
+        },
+        "sockbuf": {
+          "type": "integer"
+        },
+        "streambuf": {
+          "type": "integer"
+        },
+        "tls": {
+          "type": "boolean"
+        },
+        "username": {
+          "type": "string"
+        },
+        "v2ray_http_upgrade": {
+          "type": "boolean"
+        },
+        "v2ray_http_upgrade_fast_open": {
+          "type": "boolean"
+        },
+        "verify_name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "version_hint": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "SmuxSettings": {
       "additionalProperties": false,
       "properties": {
         "brutal_opts": {
-          "additionalProperties": {
-            "$ref": "#/$defs/jsonValue"
-          },
-          "type": "object"
+          "$ref": "#/$defs/BrutalOptions"
         },
         "enabled": {
           "type": "boolean"
@@ -40,6 +306,54 @@
           "type": "boolean"
         },
         "protocol": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "SnellObfsOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "alpn": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "certificate": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "string"
+        },
+        "restls_script": {
+          "type": "string"
+        },
+        "skip_cert_verify": {
+          "type": "boolean"
+        },
+        "username": {
+          "type": "string"
+        },
+        "verify_name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "version_hint": {
           "type": "string"
         }
       },
@@ -124,10 +438,7 @@
           "type": "string"
         },
         "ech_opts": {
-          "additionalProperties": {
-            "$ref": "#/$defs/jsonValue"
-          },
-          "type": "object"
+          "$ref": "#/$defs/ECHOptions"
         },
         "enabled": {
           "type": "boolean"
@@ -136,10 +447,7 @@
           "type": "string"
         },
         "reality_opts": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
+          "$ref": "#/$defs/RealityOptions"
         },
         "server_name": {
           "type": "string"
@@ -166,10 +474,7 @@
           "type": "string"
         },
         "headers": {
-          "additionalProperties": {
-            "$ref": "#/$defs/jsonValue"
-          },
-          "type": "object"
+          "$ref": "#/$defs/HttpHeaders"
         },
         "host": {
           "anyOf": [
@@ -2036,10 +2341,7 @@
                 "type": "string"
               },
               "plugin_opts": {
-                "additionalProperties": {
-                  "$ref": "#/$defs/jsonValue"
-                },
-                "type": "object"
+                "$ref": "#/$defs/ShadowsocksPluginOptions"
               },
               "port": {
                 "type": "integer"
@@ -2266,10 +2568,7 @@
                 "type": "string"
               },
               "obfs_opts": {
-                "additionalProperties": {
-                  "$ref": "#/$defs/jsonValue"
-                },
-                "type": "object"
+                "$ref": "#/$defs/SnellObfsOptions"
               },
               "port": {
                 "type": "integer"
@@ -3488,10 +3787,7 @@
                 "type": "array"
               },
               "amnezia_wg_option": {
-                "additionalProperties": {
-                  "$ref": "#/$defs/jsonValue"
-                },
-                "type": "object"
+                "$ref": "#/$defs/AmneziaWGOptions"
               },
               "dialer_proxy": {
                 "type": "string"

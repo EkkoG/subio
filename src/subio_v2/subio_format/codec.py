@@ -17,8 +17,11 @@ from subio_v2.model.nodes import (
 )
 from subio_v2.subio_format.schema import (
     PUBLIC_NESTED_FIELDS,
+    PUBLIC_MAPPING_SPECS,
     PUBLIC_PROTOCOLS,
     SUBIO_FORMAT_VERSION,
+    PublicMappingSpec,
+    public_mapping_spec,
     public_node_fields,
 )
 from subio_v2.validation import validate_node
@@ -163,7 +166,13 @@ class SubioNodeCodec:
                 if field_name == "users":
                     decoded = self._decode_users(value, desc.node_class, field_path)
                 else:
-                    decoded = self._decode_value(value, hints[field_name], field_path)
+                    decoded = self._decode_field(
+                        value,
+                        desc.node_class,
+                        field_name,
+                        hints[field_name],
+                        field_path,
+                    )
                 kwargs[field_name] = decoded
             except _FieldError as error:
                 decode_issues.append(
@@ -264,6 +273,60 @@ class SubioNodeCodec:
             users[username] = decoded_overrides
         return users
 
+    def _decode_field(
+        self,
+        value: Any,
+        owner: type,
+        field_name: str,
+        expected: Any,
+        path: str,
+    ) -> Any:
+        mapping_spec = public_mapping_spec(owner, field_name)
+        if mapping_spec is not None:
+            return self._decode_mapping(value, mapping_spec, path)
+        return self._decode_value(value, expected, path)
+
+    def _decode_mapping(
+        self, value: Any, spec: PublicMappingSpec, path: str
+    ) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            raise _FieldError(path, f"Field '{path}' must be an object")
+
+        decoded: dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise _FieldError(path, "SubIO v1 object keys must be strings")
+            field_spec = spec.fields.get(key)
+            if field_spec is None:
+                if spec.additional_value_type is None:
+                    raise _FieldError(
+                        f"{path}.{key}",
+                        f"Unknown SubIO v1 field '{key}'",
+                        code="parse.subio.unknown-field",
+                    )
+                decoded[key] = self._decode_value(
+                    item, spec.additional_value_type, f"{path}.{key}"
+                )
+                continue
+
+            if field_spec.object_spec is not None:
+                nested_spec = PUBLIC_MAPPING_SPECS[field_spec.object_spec]
+                decoded_value = self._decode_mapping(
+                    item, nested_spec, f"{path}.{key}"
+                )
+            else:
+                decoded_value = self._decode_value(
+                    item, field_spec.value_type, f"{path}.{key}"
+                )
+            decoded[field_spec.target_key or key] = decoded_value
+
+        for key, field_spec in spec.fields.items():
+            if field_spec.required and key not in value:
+                raise _FieldError(
+                    f"{path}.{key}", f"Field '{path}.{key}' is required"
+                )
+        return decoded
+
     def _decode_value(self, value: Any, expected: Any, path: str) -> Any:
         if value is None:
             raise _FieldError(path, "SubIO v1 optional fields must be omitted, not null")
@@ -343,7 +406,13 @@ class SubioNodeCodec:
 
         hints = _type_hints(cls)
         kwargs = {
-            field_name: self._decode_value(item, hints[field_name], f"{path}.{field_name}")
+            field_name: self._decode_field(
+                item,
+                cls,
+                field_name,
+                hints[field_name],
+                f"{path}.{field_name}",
+            )
             for field_name, item in value.items()
         }
         for item in fields(cls):
