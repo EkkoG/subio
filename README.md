@@ -75,6 +75,11 @@ file = "stash.yaml"
 
 具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
 
+固定 schema 基线中的 26 种 Mihomo 节点类型都进入强类型语义模型；真正未知的 YAML type 只允许
+回到其来源平台。Surge External 的本地 file provider 默认可输出回 Surge，远程 URL 默认忽略；
+确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
+跨平台转换，也不会由 SubIO 执行。
+
 #### 规则集输入
 
 远程规则集输入使用 `type`、`behavior` 和 `format` 显式选择 codec：
@@ -116,6 +121,10 @@ MRS 由进程内 data-only decoder 解析，不调用 Mihomo CLI 或系统 `zstd
 Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语义会按方言
 分别解析。引用外部脚本或其他规则资源的条目不会被执行；被当前目标无法精确表达的
 规则会产生结构化 conversion error，并在 artifact 写入或上传前阻断。
+
+classical 输入支持三平台官方自包含 predicate、options 和 `AND`/`OR`/`NOT`。转换会处理
+`MATCH`/`FINAL`、`DST-PORT`/`DEST-PORT`、来源 IP、TCP/UDP 网络类型和进程名/路径模式等已确认的
+等价语义；Stash `no-track` 与 Surge 专属 options 只输出到各自平台。
 
 已有 `[[ruleset]] name/url`、模板 callable、policy 参数和输出文本格式保持不变。Python API 中
 `EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取，模板

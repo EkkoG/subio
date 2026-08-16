@@ -93,7 +93,7 @@ Config / local snippet
 - `BaseNode.source_context` 是节点及其未建模字段的唯一来源方言；
 - `BaseNode.extra` 当前用于 Clash/Mihomo descriptor 未建模字段的同方言往返；
 - `TransportSettings.extra` 保存 `ws-opts`、`grpc-opts` 等嵌套块中的未建模字段；
-- `ClashPassthroughNode.raw` 保存 Mihomo-only 或未来未知的完整 proxy 字典；
+- `SourcePassthroughNode.raw` 只保存真正未知 YAML type 或 Surge External 的完整来源记录；
 - `BaseNode.source_extensions[<dialect>]` 保存来源方言专属字段和节点附件。
 
 Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 descriptor 输出后再经过
@@ -194,8 +194,9 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 - 强类型协议继承 `StructuredProtocolDescriptor`；
 - `ClashFieldSpec` 同时驱动 consumed keys、parse、emit 和 required 校验；
 - 特殊语义使用 descriptor hook 或 `check()`，不要在 Parser/Emitter 重建协议分支；
-- Mihomo-only 但暂不跨平台的已知协议使用显式 passthrough descriptor；
-- 未来未知 type 使用动态 `ClashPassthroughNode`，只允许 Mihomo 同方言输出。
+- 固定 schema 中的全部已知 type 都使用结构化 descriptor，即使当前只有 Mihomo 能输出；
+- 未来未知 type 不进入 descriptor 注册表，由 Parser 创建 `SourcePassthroughNode`，且只能回到
+  `source_context` 所记录的规范来源平台。
 
 `consumed_keys` 只能包含已经写入 IR、并能从同一规格重新生成的字段。未强类型化字段应留给
 `extra`，否则会出现“解析时消费、生成时丢失”。
@@ -216,8 +217,9 @@ Capability 表只记录 checker 或 serializer 实际读取的协议集合、值
 6. 增加 schema round-trip、required、组合字段和跨平台诊断测试；
 7. 先跑 example，再跑目标测试和全量测试。
 
-只有需要跨平台转换的协议才值得强类型化。Mihomo-only 协议可以先显式 passthrough；不要把
-所有 schema 字段机械复制进 IR。
+官方 schema 已定义且影响运行的稳定语义应进入具体 Node，即使当前只有一个目标平台支持；目标不支持
+时由 capability 产生精确 issue。纯序列化信息和真正未知的新字段留在同方言 `extra`，不要把所有
+schema 元数据机械复制进 IR。
 
 ## 5. Surge
 
@@ -250,9 +252,10 @@ Tailscale、MASQUE 和 Trust Tunnel 是跨平台协议，应使用强类型节�
 - MASQUE 需要区分 forward proxy、CONNECT-IP、`h3-l4proxy`、H2/H3 传输和认证模型；
 - Trust Tunnel 的公共认证/TLS 可映射，平台扩展按 capability 诊断。
 
-External Proxy Program 只允许本地 `file` provider 显式设置
-`allow_unsafe_external = true`，且只能输出到 Surge。远程来源、伪造授权和跨平台输出必须在
-Parser/Capability 两侧失败关闭。
+External Proxy Program 的本地 `file` provider 默认允许 Surge -> Surge 同平台透传；远程 URL
+provider 默认忽略，只有显式设置 `allow_unsafe_external = true` 才允许同平台透传并记录高可见度
+安全 WARNING。该开关只对远程 Surge provider 有意义，External 跨平台始终 WARNING 后跳过。
+直接调用 Parser 时，`source_kind = "unknown"` 按不可信输入处理，只有显式 `local` 使用本地语义。
 
 ## 6. Stash
 
@@ -301,6 +304,13 @@ Mihomo CLI 或系统 `zstd`。MRS 使用进程内 `zstandard` 和带输入/解�
 远程 matcher、policy、comment 中的模板表达式一律作为普通数据。Stash 或 Surge 规则集中出现的
 `SCRIPT,name` 只代表完整配置中的外部依赖，必须产生结构化 unsupported issue；不得下载、保存、
 执行或转换脚本。
+
+规则 IR 使用 `Predicate` 和 `LogicalExpression` 表示三平台自包含规则。来源方言只在 matcher 或
+option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT`/`DEST-PORT`、
+`NETWORK`/`PROTOCOL`、`SRC-IP-CIDR`/`SRC-IP`，以及 Stash/Surge `PROCESS-NAME` 的文件名、
+通配符、完整路径和 app bundle 前缀模式。Stash `no-track` 只输出回 Stash；Surge
+`extended-matching`、notification 和 capture 参数只输出到 Surge。无法证明等价时生成稳定 issue，
+不得因 rule type 字符串相同而直接透传成不同语义。
 
 “输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
 不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
@@ -351,5 +361,6 @@ git status --short
 git -C vendor/meta-json-schema status --short
 ```
 
-按计划一阶段一提交。问题修复的提交正文写明“问题、方案、验证”；新功能的提交正文写明
-“功能、实现、验证”。不要把 `vendor/`、生成的 `dist/` 或无关格式化混入提交。
+按能够独立解释、独立验证和方便 review 的边界及时提交，避免特大提交，不机械要求一阶段只有一个
+提交。问题修复的提交正文写明“问题、方案、验证”；新功能的提交正文写明“功能、实现、验证”。
+不要把 `vendor/`、生成的 `dist/` 或无关格式化混入提交。

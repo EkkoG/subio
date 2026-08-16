@@ -6,5 +6,5 @@
 - 先运行 `uv run subio convert example/config.toml --dry-run`，再跑目标测试和
   `uv run python -m pytest tests/`。
 - 保留用户已有改动；不要提交 `dist/`、凭据或无关格式化。
-- 一阶段一提交。修复提交写明问题、方案、验证；功能提交写明功能、实现、验证。
+- 按独立可 review 的边界及时提交，避免特大提交；提交正文写明问题/功能、方案和验证。
 - 可用时最多启用 3 个 subagent 做相互独立的只读审查或实现任务。
