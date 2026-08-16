@@ -170,19 +170,21 @@ class WorkflowEngine:
             if not isinstance(entries, list):
                 raise ConfigError(f"Config section '{section}' must be a list")
             name_positions: dict[str, int] = {}
+            artifact_outputs: dict[str, tuple[int, str | None]] = {}
             for position, entry in enumerate(entries, start=1):
                 if not isinstance(entry, dict):
                     raise ConfigError(f"Entries in '{section}' must be objects")
                 name = entry.get("name")
                 if not isinstance(name, str) or not name:
                     raise ConfigError(f"Every '{section}' entry must have a name")
-                first_position = name_positions.get(name)
-                if first_position is not None:
-                    raise ConfigError(
-                        f"Duplicate {section} name {name!r}: {section} entry "
-                        f"#{position} duplicates {section} entry #{first_position}"
-                    )
-                name_positions[name] = position
+                if section != "artifact":
+                    first_position = name_positions.get(name)
+                    if first_position is not None:
+                        raise ConfigError(
+                            f"Duplicate {section} name {name!r}: {section} entry "
+                            f"#{position} duplicates {section} entry #{first_position}"
+                        )
+                    name_positions[name] = position
                 if section == "provider":
                     has_url = "url" in entry
                     has_file = "file" in entry
@@ -223,6 +225,41 @@ class WorkflowEngine:
                         entry.get("options"), f"Artifact '{name}' options"
                     )
                     self._validate_artifact_users(entry, name)
+                    users = entry.get("users", [])
+                    if users and "{user}" not in name:
+                        raise ConfigError(
+                            f"Artifact entry #{position} {name!r} defines users, "
+                            "so its name must contain '{user}'"
+                        )
+                    usernames = users or (
+                        [entry["user"]] if entry.get("user") is not None else [None]
+                    )
+                    for username in usernames:
+                        output_name = (
+                            name.replace("{user}", username)
+                            if username is not None
+                            else name
+                        )
+                        previous = artifact_outputs.get(output_name)
+                        if previous is not None:
+                            first_position, first_user = previous
+                            if username is None and first_user is None:
+                                raise ConfigError(
+                                    f"Duplicate artifact name {output_name!r}: "
+                                    f"artifact entry #{position} duplicates artifact "
+                                    f"entry #{first_position}"
+                                )
+                            current_context = f"artifact entry #{position}"
+                            if username is not None:
+                                current_context += f" (user {username!r})"
+                            first_context = f"artifact entry #{first_position}"
+                            if first_user is not None:
+                                first_context += f" (user {first_user!r})"
+                            raise ConfigError(
+                                f"Duplicate artifact output name {output_name!r}: "
+                                f"{current_context} duplicates {first_context}"
+                            )
+                        artifact_outputs[output_name] = (position, username)
                     self._validate_artifact_uploads(entry.get("upload"), name)
                 if section == "uploader":
                     uploader_type = entry.get("type")

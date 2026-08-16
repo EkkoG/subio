@@ -180,6 +180,76 @@ type = "stash"
         WorkflowEngine(str(cfg), dry_run=True)
 
 
+def test_artifact_users_require_user_placeholder_in_name(tmp_path):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[artifact]]
+name = "clash-config-normal.yml"
+type = "clash-meta"
+users = ["laomu", "qiyu"]
+""".strip(),
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=(
+            r"Artifact entry #1 'clash-config-normal\.yml' defines users, "
+            r"so its name must contain '\{user\}'"
+        ),
+    ):
+        WorkflowEngine(str(cfg), dry_run=True)
+
+
+def test_duplicate_artifact_templates_allow_disjoint_users(tmp_path):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "clash-meta"
+users = ["alice"]
+
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "stash"
+users = ["bob"]
+""".strip(),
+    )
+
+    WorkflowEngine(str(cfg), dry_run=True)
+
+
+def test_duplicate_artifact_templates_report_overlapping_user(tmp_path):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "clash-meta"
+users = ["alice", "bob"]
+
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "stash"
+users = ["bob", "charlie"]
+""".strip(),
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=(
+            r"Duplicate artifact output name 'clash-for-bob\.yml': "
+            r"artifact entry #2 \(user 'bob'\) duplicates "
+            r"artifact entry #1 \(user 'bob'\)"
+        ),
+    ):
+        WorkflowEngine(str(cfg), dry_run=True)
+
+
 @pytest.mark.parametrize(
     ("content", "message"),
     [
