@@ -82,6 +82,31 @@ def test_template_missing_variable_fails(tmp_path):
         renderer.render("strict.j2", {}, artifact_type="clash")
 
 
+def test_template_include_and_extends_use_the_configured_loader(tmp_path):
+    (tmp_path / "base.j2").write_text("base:{% block body %}{% endblock %}")
+    (tmp_path / "fragment.j2").write_text("{{ value }}")
+    (tmp_path / "child.j2").write_text(
+        '{% extends "base.j2" %}{% block body %}{% include "fragment.j2" %}{% endblock %}'
+    )
+
+    renderer = TemplateRenderer(str(tmp_path))
+
+    assert renderer.render("child.j2", {"value": "ok"}) == "base:ok"
+
+
+@pytest.mark.parametrize("template_name", ["../outside.j2", "/outside.j2"])
+def test_template_loader_rejects_paths_outside_template_dir(
+    tmp_path, template_name
+):
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (tmp_path / "outside.j2").write_text("secret")
+    renderer = TemplateRenderer(str(template_dir))
+
+    with pytest.raises(TemplateRenderError, match="outside.j2"):
+        renderer.render(template_name, {})
+
+
 def test_ruleset_ssti_payload_is_plain_data(tmp_path, monkeypatch):
     (tmp_path / "safe.j2").write_text("{{ remote_evil('DIRECT') }}")
     payload = "{{ cycler.__init__.__globals__.os.popen('id').read() }}"

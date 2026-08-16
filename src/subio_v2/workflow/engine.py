@@ -883,10 +883,3 @@ class WorkflowEngine:
                     os.unlink(temp_name)
                 except FileNotFoundError:
                     pass
-
-    def _read_template(self, path: str) -> str | None:
-        # This method is actually not used by TemplateRenderer directly,
-        # but TemplateRenderer uses Jinja2 loader which might fail silently or raise error.
-        # TemplateRenderer.render catches FileNotFoundError and logs it.
-        # We should probably make TemplateRenderer exit if template not found.
-        pass

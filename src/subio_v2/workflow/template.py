@@ -4,11 +4,11 @@ import jinja2
 import yaml
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+
 from subio_v2.conversion import ConversionIssue
 from subio_v2.workflow.errors import TemplateRenderError
 from subio_v2.workflow.filters import all_filters
 from subio_v2.workflow.ruleset import RuleIssueCollector, RuleSetStore
-import os
 
 
 @dataclass(frozen=True)
@@ -88,13 +88,6 @@ class TemplateRenderer:
             渲染后的字符串
         """
         try:
-            template_path = os.path.join(self.env.loader.searchpath[0], template_name)
-            if not os.path.exists(template_path):
-                raise FileNotFoundError(f"Template not found: {template_name}")
-
-            with open(template_path, "r", encoding="utf-8") as f:
-                template_source = f.read()
-
             platform = artifact_type or "mihomo"
             render_context = dict(context)
             collector = RuleIssueCollector()
@@ -110,7 +103,7 @@ class TemplateRenderer:
                     )
                 render_context.update(callables)
 
-            template = self.env.from_string(template_source)
+            template = self.env.get_template(template_name)
             return TemplateRenderResult(
                 content=template.render(**render_context),
                 issues=tuple(collector.issues),
