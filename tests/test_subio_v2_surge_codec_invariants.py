@@ -231,7 +231,6 @@ def test_non_explicit_udp_codecs_reject_udp_relay_parameter(line):
     result = SurgeParser().parse_result(line)
 
     assert result.nodes == []
-    assert result.resources == {}
     assert result.issues[0].code == "parse.protocol-parameter"
 
 

@@ -195,7 +195,6 @@ future-section-field = keep-me
 
     assert emission.errors == []
     assert [node.name for node in emission.supported_nodes] == ["wg"]
-    assert "wireguard:office" in emission.emitted_resource_keys
     assert (
         "wg = wireguard, section-name=office, underlying-proxy=upstream"
         in emission.content
@@ -317,7 +316,6 @@ private-key = secret
     )
 
     assert result.issues == []
-    assert result.resources == {}
     assert peek_surge_node_attachments(result.nodes[0]) is None
     assert "unused" not in SurgeEmitter().emit(result.nodes)
 

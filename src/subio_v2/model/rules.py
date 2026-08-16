@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TypeAlias
 
 from subio_v2.conversion import ConversionIssue
@@ -41,7 +41,6 @@ class HeadlessRuleSet:
     source_context: DialectContext
     behavior: str
     entries: tuple[RuleSetEntry, ...]
-    source_extensions: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

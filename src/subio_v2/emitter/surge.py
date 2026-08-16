@@ -184,16 +184,6 @@ class SurgeEmitter(BaseEmitter):
             lines.append(f"[{section.kind} {section.name}]")
             lines.extend(section.lines)
 
-        emitted_resource_keys = [
-            *(f"keystore:{key_id}" for key_id in sorted(emitted_attachments.keystore)),
-            *(
-                f"{section.kind.lower()}:{section.name}"
-                for section in sorted(
-                    emitted_attachments.named_sections.values(),
-                    key=lambda item: (item.order, item.kind.lower(), item.name),
-                )
-            ),
-        ]
         return EmissionResult(
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
@@ -205,7 +195,6 @@ class SurgeEmitter(BaseEmitter):
                     )
                 }
             },
-            emitted_resource_keys=emitted_resource_keys,
         )
 
     def _attachments_for_node(

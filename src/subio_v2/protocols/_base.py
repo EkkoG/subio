@@ -68,10 +68,6 @@ class StructuredProtocolDescriptor(ProtocolDescriptor):
     def consumed_keys(self) -> frozenset[str]:
         return frozenset(key for field in self.fields for key in field.consumed_keys)
 
-    @property
-    def modeled_attrs(self) -> frozenset[str]:
-        return frozenset(attr for field in self.fields for attr in field.node_attrs)
-
     def validate(self, node: Node) -> list[NodeValidationError]:
         errors: list[NodeValidationError] = []
         for field in self.fields:

@@ -33,7 +33,6 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
 
     assert [type(node) for node in result.nodes] == [MasqueNode, TrustTunnelNode]
     assert result.issues == []
-    assert result.resources == {}
 
     emission = SurgeEmitter().emit_result(result.nodes)
 
@@ -64,7 +63,6 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, head
 def test_surge_strong_protocol_constraints_are_validated(line, message):
     result = SurgeParser().parse_result(line)
 
-    assert result.resources == {}
     assert result.issues[0].code in {
         "parse.protocol",
         "parse.protocol-parameter",
@@ -85,7 +83,6 @@ def test_untrusted_external_is_ignored_without_leaking_command_details():
     ):
         result = parser.parse_result(content)
         assert result.nodes == []
-        assert result.resources == {}
         assert result.issues[0].severity.value == "warning"
         assert result.issues[0].code == "security.remote-external-blocked"
         assert result.issues[0].target is None
@@ -112,7 +109,6 @@ def test_allowed_external_preserves_repeated_parameters(
     ).parse_result(content)
 
     assert result.issues == []
-    assert result.resources == {}
     node = result.nodes[0]
     assert isinstance(node, SourcePassthroughNode)
     assert node.original_type == "external"

@@ -42,7 +42,6 @@ class ConversionIssue:
 class ParseResult:
     nodes: list[Node]
     issues: list[ConversionIssue] = field(default_factory=list)
-    resources: dict[str, Any] = field(default_factory=dict)
 
 
 ContentT = TypeVar("ContentT")
@@ -54,7 +53,6 @@ class EmissionResult(Generic[ContentT]):
     supported_nodes: list[Node]
     issues: list[ConversionIssue] = field(default_factory=list)
     extras: dict[str, Any] = field(default_factory=dict)
-    emitted_resource_keys: list[str] = field(default_factory=list)
 
     @property
     def errors(self) -> list[ConversionIssue]:

@@ -71,8 +71,8 @@ conversion issue，并在未显式放行时阻止发布。
   Mihomo，也不会获得 Mihomo-only 能力；
 - 模板名、artifact 文件名和上传文件名中的 `clash` 是用户自定义文本，不自动重命名；
 - Stash 节点输入新增 `provider.type = "stash"`，现有配置无需修改；
-- `ParseResult.resources` 与 `EmissionResult.emitted_resource_keys` 暂时保留为兼容字段，不扩展为
-  通用文档资源 API；
+- Parser/Emitter 结构化结果不提供通用文档资源 API；Surge Keystore 和命名 section
+  仅作为节点附件随成功节点流转；
 - `EmissionResult.emitted_policy_names` 已移除；Python API 消费者应从 `supported_nodes` 读取成功
   节点名称，模板上下文使用 `extras["template_context"]`；
 - 为避免生成目标官方不接受的字段，部分旧 Stash 输出会被裁剪或拒绝。这是无效输出修正，不是

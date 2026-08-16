@@ -119,8 +119,8 @@ Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语�
 
 已有 `[[ruleset]] name/url`、模板 callable、policy 参数和输出文本格式保持不变。Python API 中
 `EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取，模板
-变量从 `extras["template_context"]` 读取。`ParseResult.resources` 和
-`EmissionResult.emitted_resource_keys` 暂时保留兼容。
+变量从 `extras["template_context"]` 读取。Parser 和 Emitter 的结构化结果只返回节点、内容和问题；
+Surge Keystore 及命名 section 作为节点附件随节点流转。
 
 然后执行 `subio` 命令即可。
 

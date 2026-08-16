@@ -413,7 +413,6 @@ key-id = type = openssh-private-key, base64 = S0VZ
     assert "key-id = type = openssh-private-key, base64 = S0VZ" in output
     assert attachment.values["base64"] == "S0VZ"
     assert node.private_key == "KEY"
-    assert result.resources == {}
 
 
 def test_surge_keystore_parser_preserves_quoted_commas():

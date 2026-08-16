@@ -16,7 +16,7 @@ class ClashParser(BaseParser):
     def __init__(self, context: DialectContext | None = None):
         context = context or DialectContext("mihomo", "yaml")
         self.context = DialectContext(
-            normalize_platform(context.dialect), context.format, context.version
+            normalize_platform(context.dialect), context.format
         )
 
     def parse_result(self, content: Any) -> ParseResult:

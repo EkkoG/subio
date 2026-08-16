@@ -104,8 +104,8 @@ Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 descriptor �
 这些数据不是通用语义。Emitter 只能消费属于自己目标方言的扩展；跨方言未消费内容必须
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。
 
-`ParseResult.resources` 和 `EmissionResult.emitted_resource_keys` 目前仅为兼容保留，不得承载新的
-完整文档资源设计。`EmissionResult.emitted_policy_names` 已删除；成功生成的节点名称以
+`ParseResult` 只承载节点和解析问题，`EmissionResult` 只承载输出、成功节点、问题和模板上下文；
+不提供通用文档资源旁路。`EmissionResult.emitted_policy_names` 已删除；成功生成的节点名称以
 `supported_nodes` 为准，平台模板数据只能放在 `extras["template_context"]`，Workflow 不读取
 Emitter 私有兼容字段。
 

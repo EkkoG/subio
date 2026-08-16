@@ -64,7 +64,6 @@ def test_official_node_attachment_fixture_is_parseable():
         "On",
         "Off",
     ]
-    assert result.resources == {}
 
 
 def test_official_opaque_and_external_fixtures_follow_security_boundary():
@@ -80,9 +79,6 @@ def test_official_opaque_and_external_fixtures_follow_security_boundary():
 
     assert opaque.issues == []
     assert [node.type.value for node in opaque.nodes] == ["masque", "trusttunnel"]
-    assert opaque.resources == {}
-    assert rejected.resources == {}
     assert rejected.issues[0].code == "security.remote-external-blocked"
     assert rejected.issues[0].severity.value == "warning"
     assert len(allowed.nodes) == 1
-    assert allowed.resources == {}
