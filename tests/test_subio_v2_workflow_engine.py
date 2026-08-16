@@ -151,6 +151,35 @@ providers = ["missing"]
         WorkflowEngine(str(cfg), dry_run=True)
 
 
+def test_duplicate_artifact_name_reports_both_entry_positions(tmp_path):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "clash-meta"
+
+[[artifact]]
+name = "other.yml"
+type = "clash-meta"
+
+[[artifact]]
+name = "clash-for-{user}.yml"
+type = "stash"
+""".strip(),
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=(
+            r"Duplicate artifact name 'clash-for-\{user\}\.yml': "
+            r"artifact entry #3 duplicates artifact entry #1"
+        ),
+    ):
+        WorkflowEngine(str(cfg), dry_run=True)
+
+
 @pytest.mark.parametrize(
     ("content", "message"),
     [

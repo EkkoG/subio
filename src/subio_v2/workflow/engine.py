@@ -169,16 +169,20 @@ class WorkflowEngine:
             entries = self.config.get(section, [])
             if not isinstance(entries, list):
                 raise ConfigError(f"Config section '{section}' must be a list")
-            names: set[str] = set()
-            for entry in entries:
+            name_positions: dict[str, int] = {}
+            for position, entry in enumerate(entries, start=1):
                 if not isinstance(entry, dict):
                     raise ConfigError(f"Entries in '{section}' must be objects")
                 name = entry.get("name")
                 if not isinstance(name, str) or not name:
                     raise ConfigError(f"Every '{section}' entry must have a name")
-                if name in names:
-                    raise ConfigError(f"Duplicate {section} name: {name}")
-                names.add(name)
+                first_position = name_positions.get(name)
+                if first_position is not None:
+                    raise ConfigError(
+                        f"Duplicate {section} name {name!r}: {section} entry "
+                        f"#{position} duplicates {section} entry #{first_position}"
+                    )
+                name_positions[name] = position
                 if section == "provider":
                     has_url = "url" in entry
                     has_file = "file" in entry
