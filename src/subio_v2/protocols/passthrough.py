@@ -6,7 +6,6 @@ from typing import Any, Dict
 from subio_v2.clash.helpers import emit_passthrough, parse_base_fields
 from subio_v2.model.nodes import ClashPassthroughNode, Node, Protocol
 from subio_v2.dialect import DialectContext
-from subio_v2.protocols import register
 from subio_v2.protocols._base import ProtocolDescriptor
 
 
@@ -37,7 +36,3 @@ class PassthroughDescriptor(ProtocolDescriptor):
         if not isinstance(node, ClashPassthroughNode):
             raise TypeError(f"Expected ClashPassthroughNode, got {type(node)}")
         return emit_passthrough(node, context or DialectContext("mihomo", "yaml"))
-
-
-for _protocol, _clash_type in ((Protocol.SUDOKU, "sudoku"),):
-    register(PassthroughDescriptor(protocol=_protocol, clash_type=_clash_type))

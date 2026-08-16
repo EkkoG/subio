@@ -17,6 +17,8 @@ from subio_v2.model.nodes import (
     RejectNode,
     ShadowQUICNode,
     SourcePassthroughNode,
+    SudokuHTTPMaskSettings,
+    SudokuNode,
 )
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
@@ -49,6 +51,8 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.SHADOWQUIC).passthrough is False
     assert registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
     assert registry.get(Protocol.OPENVPN).passthrough is False
+    assert registry.get(Protocol.SUDOKU).node_class is SudokuNode
+    assert registry.get(Protocol.SUDOKU).passthrough is False
     registered_protocols = {
         descriptor.protocol.value
         for descriptor in descriptors
@@ -276,6 +280,88 @@ def test_mihomo_openvpn_rejects_invalid_schema_combinations(
         "port": 1194,
         "ca": "ca-content",
         "username": "user",
+    }
+    proxy.update(overrides)
+    node = ClashParser().parse_result({"proxies": [proxy]}).nodes[0]
+
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+
+    assert emission.content["proxies"] == []
+    assert expected_fields <= {issue.field for issue in emission.errors}
+
+
+def test_mihomo_sudoku_uses_strong_ir_for_httpmask_and_legacy_fields():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "sudoku",
+                    "type": "sudoku",
+                    "server": "sudoku.example.com",
+                    "port": 443,
+                    "key": "private-key",
+                    "aead-method": "aes-128-gcm",
+                    "padding-min": 5,
+                    "padding-max": 40,
+                    "table-type": "up_ascii_down_entropy",
+                    "multiplex": "auto",
+                    "http-mask": True,
+                    "http-mask-mode": "stream",
+                    "http-mask-host": "legacy.example.com",
+                    "http-mask-multiplex": "auto",
+                    "httpmask": {
+                        "disable": False,
+                        "mode": "ws",
+                        "tls": True,
+                        "host": "mask.example.com",
+                        "path-root": "/tunnel/",
+                        "multiplex": "off",
+                    },
+                    "custom-table": "xxppvvvv",
+                    "custom-tables": ["xpxpvvvv", "ppxxvvvv"],
+                    "smux": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, SudokuNode)
+    assert isinstance(node.httpmask, SudokuHTTPMaskSettings)
+    assert node.httpmask.mode == "ws"
+    assert node.legacy_http_mask_mode == "stream"
+    assert node.custom_tables == ["xpxpvvvv", "ppxxvvvv"]
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    proxy = emission.content["proxies"][0]
+    assert proxy["http-mask-mode"] == "stream"
+    assert proxy["httpmask"]["path-root"] == "/tunnel/"
+    assert proxy["custom-table"] == "xxppvvvv"
+    assert proxy["smux"]["enabled"] is True
+
+
+@pytest.mark.parametrize(
+    "overrides, expected_fields",
+    [
+        ({"key": ""}, {"key"}),
+        ({"aead-method": "invalid"}, {"aead_method"}),
+        ({"padding-min": -1}, {"padding_min"}),
+        ({"padding-min": 50, "padding-max": 40}, {"padding_max"}),
+        (
+            {"enable-pure-downlink": False, "aead-method": "none"},
+            {"aead_method"},
+        ),
+        ({"httpmask": {"mode": "invalid"}}, {"httpmask.mode"}),
+        ({"custom-table": "xxxxxxxx"}, {"custom_table"}),
+        ({"custom-tables": ["xxppvvvv", "invalid"]}, {"custom_tables"}),
+    ],
+)
+def test_mihomo_sudoku_rejects_invalid_schema_values(overrides, expected_fields):
+    proxy = {
+        "name": "sudoku-invalid",
+        "type": "sudoku",
+        "server": "sudoku.example.com",
+        "port": 443,
+        "key": "private-key",
     }
     proxy.update(overrides)
     node = ClashParser().parse_result({"proxies": [proxy]}).nodes[0]

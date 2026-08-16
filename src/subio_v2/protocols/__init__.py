@@ -49,6 +49,7 @@ def _bootstrap() -> None:
         snell,
         socks5,
         ssh,
+        sudoku,
         trojan,
         trusttunnel,
         tuic,

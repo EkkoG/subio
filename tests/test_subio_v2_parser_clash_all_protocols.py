@@ -18,6 +18,7 @@ from subio_v2.model.nodes import (
     RematchNode,
     ShadowQUICNode,
     SourcePassthroughNode,
+    SudokuNode,
     TailscaleNode,
     TrustTunnelNode,
 )
@@ -79,6 +80,7 @@ proxies:
     assert isinstance(by_node_name["gr1"], GostRelayNode)
     assert isinstance(by_node_name["rm1"], RematchNode)
     assert isinstance(by_node_name["sq1"], ShadowQUICNode)
+    assert isinstance(by_node_name["sd1"], SudokuNode)
     assert isinstance(by_node_name["ov1"], OpenVPNNode)
     assert isinstance(by_node_name["tt1"], TrustTunnelNode)
     assert isinstance(by_node_name["ts1"], TailscaleNode)

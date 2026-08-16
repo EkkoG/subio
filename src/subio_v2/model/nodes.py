@@ -490,6 +490,42 @@ class OpenVPNNode(BaseNode):
 
 
 @dataclass
+class SudokuHTTPMaskSettings:
+    disable: Optional[bool] = None
+    mode: Optional[str] = None
+    tls: Optional[bool] = None
+    host: Optional[str] = None
+    path_root: Optional[str] = None
+    multiplex: Optional[str] = None
+
+
+@dataclass
+class SudokuNode(BaseNode):
+    key: str = field(default="", repr=False)
+    aead_method: str = "chacha20-poly1305"
+    padding_min: int = 10
+    padding_max: int = 30
+    table_type: str = "prefer_entropy"
+    enable_pure_downlink: bool = True
+    multiplex: str = "off"
+    httpmask: Optional[SudokuHTTPMaskSettings] = None
+    custom_table: Optional[str] = None
+    custom_tables: Optional[List[str]] = None
+    legacy_http_mask: Optional[bool] = None
+    legacy_http_mask_mode: Optional[str] = None
+    legacy_http_mask_tls: Optional[bool] = None
+    legacy_http_mask_host: Optional[str] = None
+    legacy_path_root: Optional[str] = None
+    legacy_http_mask_strategy: Optional[str] = None
+    legacy_http_mask_multiplex: Optional[str] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.SUDOKU:
+            self.type = Protocol.SUDOKU
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -680,6 +716,7 @@ Node = Union[
     GostRelayNode,
     ShadowQUICNode,
     OpenVPNNode,
+    SudokuNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,
