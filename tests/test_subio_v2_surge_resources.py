@@ -2,7 +2,6 @@ from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import (
     HttpNode,
-    NativeNode,
     DirectNode,
     Protocol,
     RejectNode,
@@ -27,11 +26,10 @@ def keystore_entry(config: str) -> SurgeKeystoreEntry:
     return SurgeKeystoreEntry(values=tokens.last_values, tokens=tokens)
 
 
-def test_native_node_owns_surge_attachments_without_a_fake_endpoint():
-    node = NativeNode(
+def test_endpointless_node_owns_surge_attachments_without_a_fake_endpoint():
+    node = TailscaleNode(
         name="Tailnet",
         type=Protocol.TAILSCALE,
-        native_format="surge",
     )
     attachments = get_surge_node_attachments(node)
     attachments.named_sections[("tailscale", "office")] = SurgeNamedSection(

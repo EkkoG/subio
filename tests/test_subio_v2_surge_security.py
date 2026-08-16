@@ -1,4 +1,3 @@
-import copy
 from pathlib import Path
 
 import pytest
@@ -7,13 +6,12 @@ from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import (
     DirectNode,
     MasqueNode,
-    NativeNode,
     Protocol,
     RejectNode,
+    SourcePassthroughNode,
     TrustTunnelNode,
 )
 from subio_v2.parser.surge import SurgeParser
-from subio_v2.surge.syntax import parse_proxy_line
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
 
@@ -74,7 +72,7 @@ def test_surge_strong_protocol_constraints_are_validated(line, message):
     assert message in result.issues[0].message
 
 
-def test_external_is_removed_by_default_without_leaking_command_details():
+def test_untrusted_external_is_ignored_without_leaking_command_details():
     content = (
         'unsafe = external, exec="/secret/program", args="secret-argument", '
         "local-port=1080, addresses=192.0.2.1"
@@ -82,33 +80,43 @@ def test_external_is_removed_by_default_without_leaking_command_details():
 
     for parser in (
         SurgeParser(source_kind="remote"),
-        SurgeParser(source_kind="remote", allow_unsafe_external=True),
-        SurgeParser(source_kind="local"),
+        SurgeParser(source_kind="unknown"),
+        SurgeParser(source_kind="unknown", allow_unsafe_external=True),
     ):
         result = parser.parse_result(content)
         assert result.nodes == []
         assert result.resources == {}
-        assert result.issues[0].code == "security.external-rejected"
+        assert result.issues[0].severity.value == "warning"
+        assert result.issues[0].code == "security.remote-external-blocked"
+        assert result.issues[0].target is None
         assert "/secret/program" not in result.issues[0].message
         assert "secret-argument" not in result.issues[0].message
         assert "192.0.2.1" not in result.issues[0].message
 
 
-def test_authorized_local_external_preserves_repeated_parameters():
+@pytest.mark.parametrize(
+    ("source_kind", "allow_unsafe_external"),
+    [("local", False), ("remote", True)],
+)
+def test_allowed_external_preserves_repeated_parameters(
+    source_kind, allow_unsafe_external
+):
     content = (
         'local = external, exec="/usr/bin/ssh", args=host, args=-D, '
         'args="127.0.0.1:1080", local-port=1080, addresses=192.0.2.1, '
         "addresses=198.51.100.2, udp-relay=true"
     )
-    result = SurgeParser(source_kind="local", allow_unsafe_external=True).parse_result(
-        content
-    )
+    result = SurgeParser(
+        source_kind=source_kind,
+        allow_unsafe_external=allow_unsafe_external,
+    ).parse_result(content)
 
     assert result.issues == []
     assert result.resources == {}
     node = result.nodes[0]
-    assert isinstance(node, NativeNode)
-    assert node.unsafe is True
+    assert isinstance(node, SourcePassthroughNode)
+    assert node.original_type == "external"
+    assert node.source_context.dialect == "surge"
     assert node.raw.parameters.get_all("args") == (
         "host",
         "-D",
@@ -125,39 +133,6 @@ def test_authorized_local_external_preserves_repeated_parameters():
     assert "args=host, args=-D, args=127.0.0.1:1080" in emission.content
 
 
-def test_emitter_rejects_forged_external_authorization():
-    node = NativeNode(
-        name="unsafe",
-        type=Protocol.EXTERNAL,
-        native_format="surge",
-        raw=parse_proxy_line("unsafe = external, exec=/bin/false, local-port=1080"),
-        unsafe=True,
-    )
-    node.source_extensions["surge"] = {
-        "source_kind": "local",
-        "authorized": True,
-    }
-
-    emission = SurgeEmitter().emit_result([node])
-
-    assert emission.supported_nodes == []
-    assert emission.errors[0].code == "security.external-rejected"
-    assert "exec" not in emission.errors[0].message
-
-
-def test_authorized_external_marker_survives_deepcopy():
-    node = (
-        SurgeParser(source_kind="local", allow_unsafe_external=True)
-        .parse_result("safe = external, exec=/bin/true, local-port=1080")
-        .nodes[0]
-    )
-
-    emission = SurgeEmitter().emit_result([copy.deepcopy(node)])
-
-    assert emission.errors == []
-    assert [node.name for node in emission.supported_nodes] == ["safe"]
-
-
 @pytest.mark.parametrize(
     "line",
     [
@@ -166,18 +141,15 @@ def test_authorized_external_marker_survives_deepcopy():
         "safe = external, exec=/bin/true, local-port=1080, udp-relay=invalid",
     ],
 )
-def test_emitter_revalidates_authorized_external_raw_record(line):
-    node = (
-        SurgeParser(source_kind="local", allow_unsafe_external=True)
-        .parse_result("safe = external, exec=/bin/true, local-port=1080")
-        .nodes[0]
-    )
-    node.raw = parse_proxy_line(line)
+def test_external_is_opaque_and_does_not_require_semantic_validation(line):
+    parsed = SurgeParser(source_kind="local").parse_result(line)
 
-    emission = SurgeEmitter().emit_result([node])
+    emission = SurgeEmitter().emit_result(parsed.nodes)
 
-    assert emission.supported_nodes == []
-    assert len(emission.errors) == 1
+    assert parsed.issues == []
+    assert len(emission.supported_nodes) == 1
+    assert emission.errors == []
+    assert emission.content == line
 
 
 def test_capability_rejects_mutated_invalid_reject_mode():
@@ -201,7 +173,7 @@ def test_surge_emitter_rejects_duplicate_node_policy_names():
     assert emission.content == "same = direct"
 
 
-def test_url_provider_cannot_enable_unsafe_external(tmp_path):
+def test_remote_surge_provider_can_enable_unsafe_external(tmp_path):
     cfg = write(
         tmp_path,
         "config.toml",
@@ -214,7 +186,124 @@ allow_unsafe_external = true
 """,
     )
 
-    with pytest.raises(ConfigError, match="cannot enable allow_unsafe_external"):
+    WorkflowEngine(str(cfg), dry_run=True)
+
+
+def _write_remote_external_workflow(
+    tmp_path: Path, *, allow_unsafe_external: bool, allow_empty: bool = False
+) -> Path:
+    allow_line = "allow_unsafe_external = true" if allow_unsafe_external else ""
+    empty_line = "allow_empty = true" if allow_empty else ""
+    return write(
+        tmp_path,
+        "config.toml",
+        f"""
+[[provider]]
+name = "remote"
+type = "surge"
+url = "https://example.com/subscription"
+{allow_line}
+
+[[artifact]]
+name = "out.conf"
+type = "surge"
+providers = ["remote"]
+{empty_line}
+""",
+    )
+
+
+def test_remote_external_opt_in_warns_once_and_allows_passthrough(
+    tmp_path, monkeypatch
+):
+    cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=True)
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        WorkflowEngine,
+        "_fetch_content",
+        lambda self, conf: "remote = external, local-port=invalid",
+    )
+    monkeypatch.setattr("subio_v2.workflow.engine.logger.warning", warnings.append)
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert result.issues == []
+    assert "remote = external, local-port=invalid" in (
+        tmp_path / "dist" / "out.conf"
+    ).read_text()
+    assert len([message for message in warnings if "remote Surge External" in message]) == 1
+
+
+def test_remote_external_only_failure_carries_the_ignore_warning(
+    tmp_path, monkeypatch
+):
+    cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=False)
+    monkeypatch.setattr(
+        WorkflowEngine,
+        "_fetch_content",
+        lambda self, conf: "remote = external, exec=/secret, local-port=1080",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ArtifactGenerationError) as exc_info:
+        WorkflowEngine(str(cfg), dry_run=True).run()
+
+    issue = exc_info.value.issues[0]
+    assert issue.code == "security.remote-external-blocked"
+    assert issue.severity.value == "warning"
+    assert issue.target is None
+    assert "/secret" not in issue.message
+
+
+def test_ignored_remote_external_does_not_block_other_nodes(tmp_path, monkeypatch):
+    cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=False)
+    monkeypatch.setattr(
+        WorkflowEngine,
+        "_fetch_content",
+        lambda self, conf: (
+            "remote = external, exec=/secret, local-port=1080\n"
+            "usable = direct"
+        ),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    assert result.errors == []
+    assert result.warnings[0].code == "security.remote-external-blocked"
+    output = (tmp_path / "dist" / "out.conf").read_text()
+    assert "usable = direct" in output
+    assert "remote = external" not in output
+
+
+@pytest.mark.parametrize(
+    ("source", "provider_type", "message"),
+    [
+        ('file = "local.conf"', "surge", "remote URL source"),
+        (
+            'url = "https://example.com/subscription"',
+            "mihomo",
+            "type is 'surge'",
+        ),
+    ],
+)
+def test_unsafe_external_option_is_limited_to_remote_surge_providers(
+    tmp_path, source, provider_type, message
+):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        f"""
+[[provider]]
+name = "source"
+type = "{provider_type}"
+{source}
+allow_unsafe_external = true
+""",
+    )
+
+    with pytest.raises(ConfigError, match=message):
         WorkflowEngine(str(cfg), dry_run=True)
 
 
@@ -238,7 +327,6 @@ file = "local.conf"
 def _write_local_external_workflow(
     tmp_path: Path,
     *,
-    allow_unsafe_external: bool,
     artifact_type: str = "surge",
     artifact_options: str = "",
     provider_options: str = "",
@@ -251,7 +339,6 @@ def _write_local_external_workflow(
 local = external, exec=/usr/bin/ssh, args=host, local-port=1080
 """,
     )
-    allow_line = "allow_unsafe_external = true" if allow_unsafe_external else ""
     return write(
         tmp_path,
         "config.toml",
@@ -260,7 +347,6 @@ local = external, exec=/usr/bin/ssh, args=host, local-port=1080
 name = "source"
 type = "surge"
 file = "source.conf"
-{allow_line}
 {provider_options}
 
 [[artifact]]
@@ -272,24 +358,25 @@ providers = ["source"]
     )
 
 
-def test_allow_conversion_errors_cannot_restore_rejected_external(
+def test_allow_conversion_errors_does_not_change_cross_platform_ignore(
     tmp_path, monkeypatch
 ):
     cfg = _write_local_external_workflow(
         tmp_path,
-        allow_unsafe_external=False,
+        artifact_type="mihomo",
         artifact_options="allow_conversion_errors = true\nallow_empty = true",
     )
     monkeypatch.chdir(tmp_path)
 
     result = WorkflowEngine(str(cfg), dry_run=True).run()
 
-    assert result.errors[0].code == "security.external-rejected"
+    assert result.errors == []
+    assert result.warnings[0].code == "conversion.ignored-source-passthrough"
     assert "external" not in (tmp_path / "dist" / "out.conf").read_text()
 
 
-def test_authorized_local_external_is_limited_to_surge_output(tmp_path, monkeypatch):
-    surge_cfg = _write_local_external_workflow(tmp_path, allow_unsafe_external=True)
+def test_local_external_is_limited_to_surge_output(tmp_path, monkeypatch):
+    surge_cfg = _write_local_external_workflow(tmp_path)
     monkeypatch.chdir(tmp_path)
 
     WorkflowEngine(str(surge_cfg), dry_run=True).run()
@@ -297,20 +384,19 @@ def test_authorized_local_external_is_limited_to_surge_output(tmp_path, monkeypa
 
     clash_cfg = _write_local_external_workflow(
         tmp_path,
-        allow_unsafe_external=True,
-        artifact_type="clash-meta",
+        artifact_type="mihomo",
     )
     with pytest.raises(ArtifactGenerationError) as exc_info:
         WorkflowEngine(str(clash_cfg), dry_run=True).run()
-    assert exc_info.value.issues[0].code == "security.external-cross-platform"
+    assert exc_info.value.issues[0].code == "conversion.ignored-source-passthrough"
+    assert exc_info.value.issues[0].severity.value == "warning"
 
 
-def test_authorized_external_follows_rename_and_filter_processors(
+def test_external_follows_rename_and_filter_processors(
     tmp_path, monkeypatch
 ):
     renamed_cfg = _write_local_external_workflow(
         tmp_path,
-        allow_unsafe_external=True,
         provider_options='[provider.rename]\nadd_prefix = "renamed-"',
     )
     monkeypatch.chdir(tmp_path)
@@ -326,7 +412,6 @@ def test_authorized_external_follows_rename_and_filter_processors(
 
     filtered_cfg = _write_local_external_workflow(
         tmp_path,
-        allow_unsafe_external=True,
         provider_options='[provider.filters]\nexclude = "local"',
         artifact_options="allow_empty = true",
     )
@@ -338,7 +423,6 @@ def test_authorized_external_follows_rename_and_filter_processors(
 
     dialer_cfg = _write_local_external_workflow(
         tmp_path,
-        allow_unsafe_external=True,
         provider_options='dialer_proxy = "upstream"',
     )
 

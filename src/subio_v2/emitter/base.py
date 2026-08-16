@@ -11,7 +11,7 @@ from subio_v2.dialect import (
     dialect_context_for_platform,
     extension_semantic_fields,
 )
-from subio_v2.model.nodes import Node
+from subio_v2.model.nodes import Node, SourcePassthroughNode
 from subio_v2.platforms import normalize_platform
 from subio_v2.utils.logger import logger
 
@@ -66,7 +66,11 @@ class BaseEmitter(ABC):
         return ConversionIssue(
             severity=severity,
             node=node.name,
-            protocol=node.type.value,
+            protocol=(
+                node.original_type
+                if isinstance(node, SourcePassthroughNode)
+                else node.type.value
+            ),
             source=node.source_provider,
             target=self.platform,
             field=field,
@@ -84,6 +88,28 @@ class BaseEmitter(ABC):
         issues: list[ConversionIssue] = []
 
         for node in nodes:
+            if isinstance(node, SourcePassthroughNode):
+                source_dialect = (
+                    node.source_context.dialect if node.source_context else None
+                )
+                if source_dialect == self.target_context.dialect:
+                    supported_nodes.append(node)
+                else:
+                    issues.append(
+                        self.issue_for_node(
+                            node,
+                            IssueSeverity.WARNING,
+                            "Source-bound proxy record was ignored: "
+                            f"type '{node.original_type}', source dialect "
+                            f"'{source_dialect or 'unknown'}', target "
+                            f"'{self.target_context.dialect}'",
+                            field="type",
+                            stage="conversion",
+                            code="conversion.ignored-source-passthrough",
+                        )
+                    )
+                continue
+
             result = self.check_node(node)
             for warning in result.warnings:
                 issues.append(

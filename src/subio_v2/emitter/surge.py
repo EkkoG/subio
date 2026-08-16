@@ -12,7 +12,6 @@ from subio_v2.model.nodes import (
     Hysteria2Node,
     DirectNode,
     Network,
-    NativeNode,
     Node,
     Protocol,
     RejectNode,
@@ -28,6 +27,7 @@ from subio_v2.model.nodes import (
     TUICNode,
     VmessNode,
     WireguardNode,
+    SourcePassthroughNode,
 )
 from subio_v2.surge.syntax import (
     SurgeParameter,
@@ -38,7 +38,6 @@ from subio_v2.surge.syntax import (
 )
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
-    SURGE_COMMON_PARAMETERS,
     SURGE_EMITTER_HANDLERS,
 )
 from subio_v2.surge.resources import (
@@ -47,7 +46,6 @@ from subio_v2.surge.resources import (
     SurgeNodeAttachments,
     peek_surge_node_attachments,
 )
-from subio_v2.surge.security import validate_external_record
 
 
 class _SurgeEmissionError(ValueError):
@@ -295,8 +293,8 @@ class SurgeEmitter(BaseEmitter):
     ) -> str | None:
         if node_keystore_map is None:
             node_keystore_map = {}
-        if isinstance(node, NativeNode) and node.type == Protocol.EXTERNAL:
-            return self._emit_external_node(node)
+        if isinstance(node, SourcePassthroughNode):
+            return self._emit_source_passthrough_node(node)
         handler_name = self._HANDLERS.get(node.type)
         if not handler_name:
             return None
@@ -326,22 +324,98 @@ class SurgeEmitter(BaseEmitter):
             )
         )
 
-    def _emit_external_node(self, node: NativeNode) -> str:
+    def _emit_source_passthrough_node(self, node: SourcePassthroughNode) -> str:
         record = node.raw
-        if node.native_format != "surge":
-            raise ValueError("External node does not contain a Surge proxy record")
-        validate_external_record(record)
+        if not isinstance(record, SurgeProxyRecord):
+            raise ValueError("Source passthrough node does not contain a Surge record")
 
-        replacements: dict[str, SurgeParameter] = {}
-        for option in self._common_opts(node):
-            key, value = option.split("=", 1)
-            if key in SURGE_COMMON_PARAMETERS:
-                replacements[key] = SurgeParameter(key=key, value=value)
-        if node.udp:
-            replacements["udp-relay"] = SurgeParameter(key="udp-relay", value="true")
+        values = record.parameters.last_values
+
+        def bool_value(key: str, default: bool = False) -> bool:
+            value = values.get(key)
+            return value == "true" if value in {"true", "false"} else default
+
+        def optional_bool_value(key: str) -> bool | None:
+            value = values.get(key)
+            return value == "true" if value in {"true", "false"} else None
+
+        def optional_int_value(key: str) -> int | None:
+            value = values.get(key)
+            try:
+                return int(value) if value is not None else None
+            except ValueError:
+                return None
+
+        changed: dict[str, str | None] = {}
+
+        def record_change(
+            key: str, current: Any, original: Any, *, omit_false: bool = True
+        ) -> None:
+            if current == original:
+                return
+            if current is None or (current is False and omit_false):
+                changed[key] = None
+            elif isinstance(current, bool):
+                changed[key] = str(current).lower()
+            else:
+                changed[key] = str(current)
+
+        record_change("udp-relay", node.udp, bool_value("udp-relay"))
+        record_change("tfo", node.tfo, bool_value("tfo"))
+        record_change("ip-version", node.ip_version, values.get("ip-version"))
+        record_change(
+            "underlying-proxy", node.dialer_proxy, values.get("underlying-proxy")
+        )
+        record_change("interface", node.interface_name, values.get("interface"))
+        options = node.surge_options
+        for key, current, original in (
+            (
+                "allow-other-interface",
+                options.allow_other_interface,
+                optional_bool_value("allow-other-interface"),
+            ),
+            (
+                "dns-follow-interface",
+                options.dns_follow_interface,
+                optional_bool_value("dns-follow-interface"),
+            ),
+            (
+                "no-error-alert",
+                options.no_error_alert,
+                optional_bool_value("no-error-alert"),
+            ),
+            ("hybrid", options.hybrid, values.get("hybrid")),
+            ("tos", options.tos, values.get("tos")),
+            ("ecn", options.ecn, values.get("ecn")),
+            ("block-quic", options.block_quic, values.get("block-quic")),
+            ("test-url", options.test_url, values.get("test-url")),
+            (
+                "test-timeout",
+                options.test_timeout,
+                optional_int_value("test-timeout"),
+            ),
+            ("test-udp", options.test_udp, values.get("test-udp")),
+        ):
+            record_change(
+                key,
+                current,
+                original,
+                omit_false=key
+                not in {
+                    "allow-other-interface",
+                    "dns-follow-interface",
+                    "no-error-alert",
+                },
+            )
+
+        replacements = {
+            key: SurgeParameter(key=key, value=value)
+            for key, value in changed.items()
+            if value is not None
+        }
 
         parameters = list(record.parameters)
-        managed_keys = SURGE_COMMON_PARAMETERS | {"udp-relay"}
+        managed_keys = set(changed)
         last_indexes = {
             parameter.key: index
             for index, parameter in enumerate(parameters)
@@ -353,11 +427,11 @@ class SurgeEmitter(BaseEmitter):
             if parameter.key not in managed_keys:
                 updated.append(parameter)
                 continue
-            replacement = replacements.get(parameter.key)
-            if replacement is None:
+            replacement_value = changed[parameter.key]
+            if replacement_value is None:
                 continue
             if index == last_indexes[parameter.key]:
-                updated.append(replacement)
+                updated.append(replacements[parameter.key])
                 emitted_replacements.add(parameter.key)
             else:
                 updated.append(parameter)
@@ -383,17 +457,6 @@ class SurgeEmitter(BaseEmitter):
     def _parts_reject(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, RejectNode)
         return [node.mode.value]
-
-    def _parts_external(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, NativeNode)
-        record = node.raw
-        if not isinstance(record, SurgeProxyRecord):
-            raise ValueError("External node does not contain a Surge proxy record")
-        return [
-            record.type,
-            *record.positional,
-            *(f"{parameter.key}={parameter.value}" for parameter in record.parameters),
-        ]
 
     def _parts_ss(self, node: Node, _: dict[int, str]) -> list[str]:
         assert isinstance(node, ShadowsocksNode)

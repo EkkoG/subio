@@ -17,7 +17,7 @@ class ConversionIssue:
     node: str | None
     protocol: str | None
     source: str | None
-    target: str
+    target: str | None
     field: str | None
     message: str
     suggestion: str | None = None

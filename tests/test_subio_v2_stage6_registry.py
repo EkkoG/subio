@@ -12,6 +12,7 @@ from subio_v2.model.nodes import (
     Protocol,
     RejectMode,
     RejectNode,
+    SourcePassthroughNode,
 )
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
@@ -154,7 +155,7 @@ def test_mihomo_reject_smux_uses_existing_strong_setting():
     }
 
 
-def test_future_unknown_type_still_uses_dynamic_passthrough():
+def test_future_unknown_type_uses_source_bound_passthrough():
     node = ClashParser().parse_result(
         {
             "proxies": [
@@ -169,6 +170,7 @@ def test_future_unknown_type_still_uses_dynamic_passthrough():
         }
     ).nodes[0]
 
-    assert node.type is Protocol.CLASH_UNKNOWN
-    assert node.clash_type == "future-protocol"
-    assert registry.get(Protocol.CLASH_UNKNOWN).dynamic_clash_type is True
+    assert isinstance(node, SourcePassthroughNode)
+    assert node.type is Protocol.SOURCE_PASSTHROUGH
+    assert node.original_type == "future-protocol"
+    assert registry.get(Protocol.SOURCE_PASSTHROUGH) is None

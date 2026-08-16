@@ -32,9 +32,8 @@ class Protocol(StrEnum):
     TAILSCALE = "tailscale"
     DIRECT = "direct"
     REJECT = "reject"
-    EXTERNAL = "external"
     DNS = "dns"
-    CLASH_UNKNOWN = "clash-unknown"
+    SOURCE_PASSTHROUGH = "source-passthrough"
 
 
 @dataclass
@@ -567,12 +566,12 @@ class ClashPassthroughNode(BaseNode):
 
 
 @dataclass
-class NativeNode(BaseNode):
-    """Source-format proxy record kept losslessly for same-format conversion."""
+class SourcePassthroughNode(BaseNode):
+    """Opaque source record that may only be emitted back to its source dialect."""
 
-    native_format: str = ""
+    type: Protocol = field(default=Protocol.SOURCE_PASSTHROUGH, init=False)
+    original_type: str = ""
     raw: Any = field(default=None, repr=False)
-    unsafe: bool = False
 
 
 Node = Union[
@@ -598,7 +597,7 @@ Node = Union[
     JuicityNode,
     TUICNode,
     ClashPassthroughNode,
-    NativeNode,
+    SourcePassthroughNode,
 ]
 
 

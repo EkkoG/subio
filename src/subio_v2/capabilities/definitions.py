@@ -164,7 +164,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"},
             "features": {"drop", "no-drop", "tinygif"},
         },
-        "external": {"features": {"udp", "ordered-arguments"}},
         # 全局特性
         "global_features": {
             "udp_relay": True,
@@ -202,7 +201,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "direct",
             "reject",
             "dns",
-            "clash-unknown",
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
@@ -295,7 +293,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "direct": {"features": set()},
         "reject": {"modes": {"reject"}, "features": {"smux"}},
         "dns": {"features": set()},
-        "clash-unknown": {"features": set()},
         "wireguard": {
             "features": {"udp"},
         },
@@ -620,7 +617,6 @@ PROTOCOL_NAME_MAP = {
     "tailscale": "tailscale",
     "direct": "direct",
     "reject": "reject",
-    "external": "external",
     "dns": "dns",
     "wireguard": "wireguard",
     "wg": "wireguard",

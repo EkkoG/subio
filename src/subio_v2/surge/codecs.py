@@ -304,14 +304,6 @@ SURGE_CODEC_SPECS = (
             "reject-tinygif",
         )
     ),
-    _spec(
-        "external",
-        protocol=Protocol.EXTERNAL,
-        udp=SurgeUdpBehavior.EXPLICIT,
-        handler="_parts_external",
-        consumed=("exec", "local-port", "args", "addresses", "udp-relay"),
-        multi=("args", "addresses"),
-    ),
 )
 
 

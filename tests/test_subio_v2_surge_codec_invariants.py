@@ -50,7 +50,8 @@ def test_surge_codec_keywords_are_unique_and_cover_official_fixtures():
             if in_proxy and line and not line.startswith(("#", "//")):
                 fixture_keywords.add(parse_proxy_line(line).type.lower())
 
-    assert fixture_keywords <= set(SURGE_CODEC_BY_KEYWORD)
+    assert fixture_keywords - {"external"} <= set(SURGE_CODEC_BY_KEYWORD)
+    assert "external" not in SURGE_CODEC_BY_KEYWORD
 
 
 def test_every_consumed_parameter_has_an_emit_or_normalization_path():
@@ -166,7 +167,7 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         codec.keyword
         for codec in SURGE_CODEC_SPECS
         if codec.policy_kind == SurgePolicyKind.NODE
-        and codec.keyword not in {"wireguard", "tailscale", "external"}
+        and codec.keyword not in {"wireguard", "tailscale"}
     }
     assert sampled == registered
 
@@ -176,7 +177,7 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
     [
         (
             SurgeUdpBehavior.EXPLICIT,
-            {"ss", "socks5", "socks5-tls", "h2-connect", "external"},
+            {"ss", "socks5", "socks5-tls", "h2-connect"},
         ),
         (
             SurgeUdpBehavior.AUTOMATIC,

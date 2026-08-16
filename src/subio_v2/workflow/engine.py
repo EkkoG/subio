@@ -199,9 +199,15 @@ class WorkflowEngine:
                         raise ConfigError(
                             f"Provider '{name}' allow_unsafe_external must be a boolean"
                         )
-                    if has_url and allow_unsafe_external:
+                    if allow_unsafe_external and entry.get("type") != "surge":
                         raise ConfigError(
-                            f"Provider '{name}' cannot enable allow_unsafe_external for a URL source"
+                            f"Provider '{name}' can only enable allow_unsafe_external "
+                            "when type is 'surge'"
+                        )
+                    if allow_unsafe_external and not has_url:
+                        raise ConfigError(
+                            f"Provider '{name}' can only enable allow_unsafe_external "
+                            "for a remote URL source"
                         )
                     self._validate_filters(
                         entry.get("filters"), f"Provider '{name}' filters"
@@ -419,6 +425,12 @@ class WorkflowEngine:
                 logger.info(
                     f"Processing provider: [bold cyan]{name}[/bold cyan] ({p_type})"
                 )
+                if prov_conf.get("allow_unsafe_external", False):
+                    logger.warning(
+                        f"Provider '{name}' enables remote Surge External passthrough; "
+                        "the generated Surge configuration may contain program entries "
+                        "supplied by that remote provider"
+                    )
                 content = self._fetch_content(prov_conf)
                 if not content:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
@@ -711,7 +723,7 @@ class WorkflowEngine:
                 raise ArtifactGenerationError(
                     f"Artifact '{display_name}' has no emit-capable nodes; "
                     "set allow_empty=true to permit this",
-                    issues=errors,
+                    issues=artifact_issues,
                 )
 
             output = emission.content

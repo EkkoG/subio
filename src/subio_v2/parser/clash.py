@@ -1,3 +1,4 @@
+import copy
 import sys
 from typing import Any, Dict, List
 
@@ -7,14 +8,18 @@ import subio_v2.protocols as protocol_registry
 from subio_v2.clash.dialect import pre_descriptor_normalize
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import Protocol
+from subio_v2.model.nodes import SourcePassthroughNode
 from subio_v2.parser.base import BaseParser
+from subio_v2.platforms import normalize_platform
 from subio_v2.utils.logger import logger
 
 
 class ClashParser(BaseParser):
     def __init__(self, context: DialectContext | None = None):
-        self.context = context or DialectContext("mihomo", "yaml")
+        context = context or DialectContext("mihomo", "yaml")
+        self.context = DialectContext(
+            normalize_platform(context.dialect), context.format, context.version
+        )
 
     def parse(self, content: Any) -> List:
         try:
@@ -56,7 +61,7 @@ class ClashParser(BaseParser):
                         node=None,
                         protocol=None,
                         source=None,
-                        target="ir",
+                        target=None,
                         field=f"proxies[{index}]",
                         message="Clash proxy entry must be an object",
                         stage="parse",
@@ -73,7 +78,7 @@ class ClashParser(BaseParser):
                         node=proxy.get("name"),
                         protocol=str(proxy.get("type")) if proxy.get("type") else None,
                         source=None,
-                        target="ir",
+                        target=None,
                         field=f"proxies[{index}]",
                         message=f"Failed to parse Clash proxy: {exc}",
                         stage="parse",
@@ -86,17 +91,33 @@ class ClashParser(BaseParser):
         return ParseResult(nodes=nodes, issues=issues)
 
     def _parse_node(self, data: Dict[str, Any]):
-        data = pre_descriptor_normalize(data, self.context)
         node_type = data.get("type")
         if not node_type:
             return None
 
-        desc = protocol_registry.by_clash_type(node_type)
-        if desc and not desc.supports_dialect(self.context.dialect):
-            desc = None
+        desc = protocol_registry.by_clash_type(str(node_type))
         if not desc:
-            desc = protocol_registry.get(Protocol.CLASH_UNKNOWN)
-            logger.warning(
-                f"Unknown Clash proxy type '{node_type}' preserved for Mihomo output"
+            node = SourcePassthroughNode(
+                name=data.get("name", "Unknown"),
+                original_type=str(node_type),
+                raw=copy.deepcopy(data),
+                server=data.get("server"),
+                port=data.get("port"),
+                udp=data.get("udp", True),
+                ip_version=data.get("ip-version"),
+                tfo=data.get("tfo", False),
+                mptcp=data.get("mptcp", False),
+                dialer_proxy=data.get("dialer-proxy"),
+                users=data.get("users"),
+                interface_name=data.get("interface-name"),
+                routing_mark=data.get("routing-mark"),
             )
-        return desc.parse_clash(data, self.context)
+            node.source_context = self.context
+            return node
+        if not desc.supports_dialect(self.context.dialect):
+            raise ValueError(
+                f"Known proxy type '{node_type}' is not supported by "
+                f"the {self.context.dialect} input dialect"
+            )
+        normalized = pre_descriptor_normalize(data, self.context)
+        return desc.parse_clash(normalized, self.context)

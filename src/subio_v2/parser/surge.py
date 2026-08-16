@@ -33,7 +33,7 @@ from subio_v2.model.nodes import (
     MasqueNode,
     TrustTunnelNode,
     DirectNode,
-    NativeNode,
+    SourcePassthroughNode,
     RejectMode,
     RejectNode,
 )
@@ -57,7 +57,6 @@ from subio_v2.surge.syntax import (
     parse_proxy_line,
     split_comma_separated,
 )
-from subio_v2.surge.security import authorize_local_external, validate_external_record
 from subio_v2.utils.logger import logger
 
 
@@ -280,50 +279,36 @@ class SurgeParser(BaseParser):
                         continue
                     continue
                 if protocol == "external":
-                    if self.source_kind != "local":
-                        reason = (
-                            "External policies are rejected from non-local providers"
-                        )
-                    elif not self.allow_unsafe_external:
-                        reason = (
-                            "External policies require allow_unsafe_external=true "
-                            "on a local file provider"
-                        )
-                    else:
-                        reason = None
-                    if reason:
+                    allowed = self.source_kind == "local" or (
+                        self.source_kind == "remote" and self.allow_unsafe_external
+                    )
+                    if not allowed:
+                        if self.source_kind == "remote":
+                            message = (
+                                "Remote External policy was ignored because "
+                                "allow_unsafe_external is disabled"
+                            )
+                        else:
+                            message = (
+                                "External policy was ignored because source kind "
+                                f"'{self.source_kind}' is not trusted"
+                            )
                         issues.append(
                             ConversionIssue(
-                                severity=IssueSeverity.ERROR,
+                                severity=IssueSeverity.WARNING,
                                 node=name,
                                 protocol=protocol,
                                 source=None,
-                                target="ir",
+                                target=None,
                                 field=f"lines[{index}]",
-                                message=reason,
+                                message=message,
                                 stage="security",
-                                code="security.external-rejected",
+                                code="security.remote-external-blocked",
                             )
                         )
                         continue
-                    try:
-                        node = self._parse_external(record)
-                        retain_node(node, index)
-                    except (TypeError, ValueError) as exc:
-                        issues.append(
-                            ConversionIssue(
-                                severity=IssueSeverity.ERROR,
-                                node=name,
-                                protocol=protocol,
-                                source=None,
-                                target="ir",
-                                field=f"lines[{index}]",
-                                message=f"Invalid authorized External policy: {exc}",
-                                stage="parse",
-                                code="parse.external-policy",
-                            )
-                        )
-                        continue
+                    node = self._parse_external(record)
+                    retain_node(node, index)
                     continue
                 if protocol in SURGE_BUILTIN_ALIAS_TYPES:
                     if name == "DIRECT":
@@ -835,24 +820,47 @@ class SurgeParser(BaseParser):
         )
         return self._apply_common_options(node, record, "trust-tunnel")
 
-    def _parse_external(self, record: SurgeProxyRecord) -> NativeNode:
-        values = validate_external_record(record)
-        node = NativeNode(
+    def _parse_external(self, record: SurgeProxyRecord) -> SourcePassthroughNode:
+        values = record.parameters.last_values
+
+        def optional_bool(key: str) -> bool | None:
+            value = values.get(key)
+            if value not in {"true", "false"}:
+                return None
+            return value == "true"
+
+        def optional_int(key: str) -> int | None:
+            value = values.get(key)
+            try:
+                return int(value) if value is not None else None
+            except ValueError:
+                return None
+
+        node = SourcePassthroughNode(
             name=record.name,
-            type=Protocol.EXTERNAL,
+            original_type="external",
             server=None,
             port=None,
             udp=values.get("udp-relay") == "true",
-            native_format="surge",
+            tfo=values.get("tfo") == "true",
+            ip_version=values.get("ip-version"),
+            dialer_proxy=values.get("underlying-proxy"),
+            interface_name=values.get("interface"),
+            surge_options=SurgePolicyOptions(
+                allow_other_interface=optional_bool("allow-other-interface"),
+                dns_follow_interface=optional_bool("dns-follow-interface"),
+                no_error_alert=optional_bool("no-error-alert"),
+                hybrid=values.get("hybrid"),
+                tos=values.get("tos"),
+                ecn=values.get("ecn"),
+                block_quic=values.get("block-quic"),
+                test_url=values.get("test-url"),
+                test_timeout=optional_int("test-timeout"),
+                test_udp=values.get("test-udp"),
+            ),
             raw=copy.deepcopy(record),
-            unsafe=True,
         )
-        node.source_extensions["surge"] = {
-            "source_kind": self.source_kind,
-            "authorized": True,
-        }
-        authorize_local_external(node)
-        return self._apply_common_options(node, record, "external")
+        return node
 
     def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
         if record.positional:

@@ -2,7 +2,6 @@ from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.model.nodes import (
-    ClashPassthroughNode,
     JuicityNode,
     MieruMultiplexing,
     MieruNode,
@@ -145,9 +144,10 @@ def test_juicity_is_stash_only_and_never_becomes_mihomo_strong_semantics():
                 }
             ]
         }
-    ).nodes[0]
-    assert isinstance(parsed_as_mihomo, ClashPassthroughNode)
-    assert parsed_as_mihomo.type is Protocol.CLASH_UNKNOWN
+    )
+    assert parsed_as_mihomo.nodes == []
+    assert parsed_as_mihomo.issues[0].severity.value == "error"
+    assert "Known proxy type 'juicity'" in parsed_as_mihomo.issues[0].message
 
 
 def test_stage10_capability_is_complete_for_mieru_and_juicity():

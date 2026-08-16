@@ -1,12 +1,18 @@
 """Round-trip tests for all Clash Meta proxy types (meta-json-schema)."""
 
+import pytest
+
 from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.emitter.stash import StashEmitter
+from subio_v2.dialect import DialectContext
 from subio_v2.parser.clash import ClashParser
+from subio_v2.parser.stash import StashParser
 from subio_v2.model.nodes import (
     DirectNode,
     MasqueNode,
     MieruNode,
     Protocol,
+    SourcePassthroughNode,
     TailscaleNode,
     TrustTunnelNode,
 )
@@ -149,8 +155,8 @@ proxies:
     nodes = ClashParser().parse(yaml_text)
 
     assert len(nodes) == 1
-    assert nodes[0].type == Protocol.CLASH_UNKNOWN
-    assert nodes[0].clash_type == "future-protocol"
+    assert isinstance(nodes[0], SourcePassthroughNode)
+    assert nodes[0].original_type == "future-protocol"
     assert nodes[0].raw["future-opts"] == {"enabled": False, "count": 0}
 
     proxies = ClashEmitter(platform="clash-meta").emit(nodes)["proxies"]
@@ -165,4 +171,54 @@ proxies:
         }
     ]
 
-    assert ClashEmitter(platform="clash").emit(nodes)["proxies"] == []
+    cross_platform = ClashEmitter(platform="clash").emit_result(nodes)
+    assert cross_platform.content["proxies"] == []
+    assert cross_platform.errors == []
+    assert cross_platform.issues[0].code == "conversion.ignored-source-passthrough"
+
+
+def test_clash_meta_source_context_is_normalized_to_mihomo():
+    node = ClashParser(DialectContext("clash-meta", "yaml")).parse_result(
+        {"proxies": [{"name": "future", "type": "future-protocol"}]}
+    ).nodes[0]
+
+    assert node.source_context.dialect == "mihomo"
+    assert ClashEmitter("mihomo").emit_result([node]).supported_nodes == [node]
+
+
+@pytest.mark.parametrize(
+    ("parser", "emitter", "cross_emitter"),
+    [
+        (ClashParser(), ClashEmitter("mihomo"), StashEmitter()),
+        (
+            ClashParser(DialectContext("clash", "yaml")),
+            ClashEmitter("clash"),
+            ClashEmitter("mihomo"),
+        ),
+        (StashParser(), StashEmitter(), ClashEmitter("mihomo")),
+    ],
+)
+def test_unknown_yaml_type_is_lossless_only_within_its_source_platform(
+    parser, emitter, cross_emitter
+):
+    source = {
+        "proxies": [
+            {
+                "name": "future",
+                "type": "future-protocol",
+                "enabled": False,
+                "count": 0,
+                "empty": "",
+            }
+        ]
+    }
+
+    node = parser.parse_result(source).nodes[0]
+    same_platform = emitter.emit_result([node])
+    cross_platform = cross_emitter.emit_result([node])
+
+    assert same_platform.content == source
+    assert same_platform.issues == []
+    assert cross_platform.content["proxies"] == []
+    assert cross_platform.errors == []
+    assert cross_platform.issues[0].code == "conversion.ignored-source-passthrough"

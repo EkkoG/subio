@@ -74,7 +74,7 @@ def test_official_opaque_and_external_fixtures_follow_security_boundary():
     rejected = SurgeParser(source_kind="remote").parse_result(
         (FIXTURE_DIR / "external.conf").read_text()
     )
-    allowed = SurgeParser(source_kind="local", allow_unsafe_external=True).parse_result(
+    allowed = SurgeParser(source_kind="local").parse_result(
         (FIXTURE_DIR / "external.conf").read_text()
     )
 
@@ -82,6 +82,7 @@ def test_official_opaque_and_external_fixtures_follow_security_boundary():
     assert [node.type.value for node in opaque.nodes] == ["masque", "trusttunnel"]
     assert opaque.resources == {}
     assert rejected.resources == {}
-    assert rejected.issues[0].code == "security.external-rejected"
+    assert rejected.issues[0].code == "security.remote-external-blocked"
+    assert rejected.issues[0].severity.value == "warning"
     assert len(allowed.nodes) == 1
     assert allowed.resources == {}

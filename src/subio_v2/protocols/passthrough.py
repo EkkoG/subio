@@ -39,15 +39,6 @@ class PassthroughDescriptor(ProtocolDescriptor):
         return emit_passthrough(node, context or DialectContext("mihomo", "yaml"))
 
 
-class UnknownPassthroughDescriptor(PassthroughDescriptor):
-    protocol = Protocol.CLASH_UNKNOWN
-    clash_type = "*"
-    dynamic_clash_type = True
-
-    def __init__(self):
-        pass
-
-
 for _protocol, _clash_type in (
     (Protocol.GOST_RELAY, "gost-relay"),
     (Protocol.REMATCH, "rematch"),
@@ -57,5 +48,3 @@ for _protocol, _clash_type in (
     (Protocol.DNS, "dns"),
 ):
     register(PassthroughDescriptor(protocol=_protocol, clash_type=_clash_type))
-
-register(UnknownPassthroughDescriptor())
