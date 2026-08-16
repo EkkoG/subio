@@ -1,16 +1,13 @@
 import json
-import sys
-from typing import Any, List
+from typing import Any
 
 import json5
 import toml
 import yaml
 
 from subio_v2.conversion import ParseResult
-from subio_v2.model.nodes import Node
 from subio_v2.parser.base import BaseParser
 from subio_v2.parser.clash import ClashParser
-from subio_v2.utils.logger import logger
 
 
 class SubioParser(BaseParser):
@@ -26,13 +23,6 @@ class SubioParser(BaseParser):
 
     def __init__(self):
         self.clash_parser = ClashParser()
-
-    def parse(self, content: Any) -> List[Node]:
-        try:
-            return self.parse_result(content).nodes
-        except ValueError as exc:
-            logger.error(str(exc))
-            sys.exit(1)
 
     def parse_result(self, content: Any) -> ParseResult:
         if not isinstance(content, str):

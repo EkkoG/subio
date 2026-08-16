@@ -35,13 +35,19 @@ class BaseEmitter(ABC):
         if self.platform:
             self._checker = CapabilityChecker(self.platform)
 
-    @abstractmethod
     def emit(self, nodes: List[Node]) -> Any:
         """Compatibility API returning only emitted content."""
+        result = self.emit_result(nodes)
+        self._raise_legacy_emit_error(result)
+        self.log_issues(result.issues)
+        return result.content
 
     @abstractmethod
     def emit_result(self, nodes: List[Node]) -> EmissionResult[Any]:
         """Return content, actually emitted nodes, and structured issues."""
+
+    def _raise_legacy_emit_error(self, result: EmissionResult[Any]) -> None:
+        """Compatibility hook for emitters that historically raised from emit()."""
 
     def check_node(self, node: Node) -> CheckResult:
         if not self._checker:

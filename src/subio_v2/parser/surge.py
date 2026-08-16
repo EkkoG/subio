@@ -2,8 +2,7 @@ import base64
 import binascii
 import copy
 import re
-import sys
-from typing import Any, List
+from typing import Any
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
@@ -93,13 +92,6 @@ class SurgeParser(BaseParser):
         self.source_kind = source_kind
         self.allow_unsafe_external = allow_unsafe_external
         self.target_version = target_version
-
-    def parse(self, content: Any) -> List[Node]:
-        try:
-            return self.parse_result(content).nodes
-        except ValueError as exc:
-            logger.error(str(exc))
-            sys.exit(1)
 
     def parse_result(self, content: Any) -> ParseResult:
         if not isinstance(content, str):

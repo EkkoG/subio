@@ -38,9 +38,9 @@ def test_subio_parser_supports_multiple_formats_and_uses_clash_parser():
 
 
 def test_subio_parser_errors_on_missing_proxies_or_type():
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="does not contain 'proxies'"):
         SubioParser().parse("{}")
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="Invalid content type"):
         SubioParser().parse(123)
 
     with pytest.raises(ValueError, match="does not contain 'proxies'"):

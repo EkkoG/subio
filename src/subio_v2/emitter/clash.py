@@ -15,11 +15,6 @@ class ClashEmitter(BaseEmitter):
         self.platform = platform
         super().__init__()
 
-    def emit(self, nodes: List[Node]) -> Dict[str, Any]:
-        result = self.emit_result(nodes)
-        self.log_issues(result.issues)
-        return result.content
-
     def emit_result(self, nodes: List[Node]) -> EmissionResult[Dict[str, Any]]:
         checked_nodes, issues = self.emit_with_check(nodes)
         emitted_nodes: list[Node] = []

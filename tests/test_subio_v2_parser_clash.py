@@ -45,13 +45,13 @@ proxies:
     assert nodes[3].type == Protocol.VLESS and nodes[3].flow == "xtls-rprx-vision"
 
 
-def test_clash_parser_invalid_yaml_exits():
-    with pytest.raises(SystemExit):
+def test_clash_parser_invalid_yaml_raises_value_error():
+    with pytest.raises(ValueError, match="YAML parse error"):
         ClashParser().parse("not: yaml: : :")
 
 
-def test_clash_parser_missing_proxies_exits():
-    with pytest.raises(SystemExit):
+def test_clash_parser_missing_proxies_raises_value_error():
+    with pytest.raises(ValueError, match="missing 'proxies'"):
         ClashParser().parse({"hello": "world"})
 
 

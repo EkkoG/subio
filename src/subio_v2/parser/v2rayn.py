@@ -1,8 +1,7 @@
 import base64
 import json
 import urllib.parse
-import sys
-from typing import List, Any
+from typing import Any
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
 from subio_v2.parser.base import BaseParser
@@ -27,13 +26,6 @@ class V2RayNParser(BaseParser):
             return Network(value)
         except ValueError:
             return value
-
-    def parse(self, content: Any) -> List[Node]:
-        try:
-            return self.parse_result(content).nodes
-        except ValueError as exc:
-            logger.error(str(exc))
-            sys.exit(1)
 
     def parse_result(self, content: Any) -> ParseResult:
         if not isinstance(content, str):

@@ -1,18 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import List, Any
+from typing import Any
 from subio_v2.conversion import ParseResult
 from subio_v2.model.nodes import Node
 
 
 class BaseParser(ABC):
-    @abstractmethod
-    def parse(self, content: Any) -> List[Node]:
-        """
-        Parse content into a list of Nodes.
-        content can be a string (raw text) or dict (parsed yaml/json).
-        """
-        pass
+    def parse(self, content: Any) -> list[Node]:
+        """Compatibility API returning only successfully parsed nodes."""
+        return self.parse_result(content).nodes
 
+    @abstractmethod
     def parse_result(self, content: Any) -> ParseResult:
-        """Structured parse API; parsers can override to report partial failures."""
-        return ParseResult(nodes=self.parse(content))
+        """Return parsed nodes and structured issues."""

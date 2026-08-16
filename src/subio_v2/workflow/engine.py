@@ -451,10 +451,6 @@ class WorkflowEngine:
                 try:
                     parse_result = parser.parse_result(content)
                     nodes = parse_result.nodes
-                except SystemExit as exc:
-                    raise ProviderLoadError(
-                        f"Parser for provider '{name}' terminated unexpectedly"
-                    ) from exc
                 except Exception as exc:
                     raise ProviderLoadError(
                         f"Failed to parse provider '{name}': {exc}"

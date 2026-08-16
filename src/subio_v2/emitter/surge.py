@@ -84,11 +84,6 @@ class SurgeEmitter(BaseEmitter):
             return str(server[0])
         return str(server)
 
-    def emit(self, nodes: List[Node]) -> str:
-        result = self.emit_result(nodes)
-        self.log_issues(result.issues)
-        return result.content
-
     def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
         checked_nodes, issues = self.emit_with_check(nodes)
 

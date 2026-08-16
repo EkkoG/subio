@@ -1,6 +1,5 @@
 import copy
-import sys
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import yaml
 
@@ -11,7 +10,6 @@ from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import SourcePassthroughNode
 from subio_v2.parser.base import BaseParser
 from subio_v2.platforms import normalize_platform
-from subio_v2.utils.logger import logger
 
 
 class ClashParser(BaseParser):
@@ -20,13 +18,6 @@ class ClashParser(BaseParser):
         self.context = DialectContext(
             normalize_platform(context.dialect), context.format, context.version
         )
-
-    def parse(self, content: Any) -> List:
-        try:
-            return self.parse_result(content).nodes
-        except ValueError as exc:
-            logger.error(str(exc))
-            sys.exit(1)
 
     def parse_result(self, content: Any) -> ParseResult:
         if isinstance(content, str):

@@ -83,8 +83,8 @@ def test_v2rayn_parse_subscription_base64_multiple_lines():
     assert len(nodes) == 2
 
 
-def test_v2rayn_invalid_content_type_exits():
-    with pytest.raises(SystemExit):
+def test_v2rayn_invalid_content_type_raises_value_error():
+    with pytest.raises(ValueError, match="Invalid content type"):
         V2RayNParser().parse({"bad": "type"})
 
 

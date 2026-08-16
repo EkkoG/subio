@@ -40,8 +40,8 @@ def test_surge_parser_invalid_types_and_values_skip_line():
     assert [n.name for n in nodes] == ["N"]
 
 
-def test_surge_invalid_content_type_exits():
-    with pytest.raises(SystemExit):
+def test_surge_invalid_content_type_raises_value_error():
+    with pytest.raises(ValueError, match="Invalid content type"):
         SurgeParser().parse({"not": "str"})
 
     with pytest.raises(ValueError, match="Invalid content type"):
