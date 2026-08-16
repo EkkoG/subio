@@ -87,7 +87,9 @@ def test_ruleset_fixtures_cover_advanced_and_rejected_syntax():
 
     assert ",src,no-resolve" in mihomo
     assert "AND,((" in mihomo and "OR,((" in mihomo and "NOT,((" in mihomo
+    assert "no-track" in stash
     assert "SCRIPT,quic" in stash
+    assert "URL-REGEX" in surge and "extended-matching" in surge
     assert "SCRIPT,ssid-rule,requires-resolve" in surge
     assert "FINAL" in surge_invalid
     assert "pre-matching" in surge_invalid

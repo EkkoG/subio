@@ -58,12 +58,48 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 本地 snippet 使用同一 Mihomo classical grammar，只额外提供参数声明和最外层 policy binding。
 `SCRIPT`、脚本快捷方式、脚本 provider 和其他完整配置依赖不会被下载、执行或转换。
 
+### 2.1 解析范围
+
+| 输入方言 | 可进入 RuleSet IR 的 classical 语义 | 规则内选项 |
+|---|---|---|
+| Mihomo | 官方 classical provider 中除 `RULE-SET`、`SUB-RULE` 外的 predicate、`MATCH`、`AND`/`OR`/`NOT` | 目标 IP 类规则的 `no-resolve`、`src` |
+| Stash | 官方 classical provider 的自包含 predicate、`MATCH`、`AND`/`OR`/`NOT` | IP 类规则的 `no-resolve`；任意规则的 `no-track` |
+| Surge | 官方 Rule Set 的自包含 predicate、`AND`/`OR`/`NOT`，逻辑嵌套最多 10 层 | `no-resolve`、`extended-matching`、notification 与 `always-capture` 参数 |
+
+这里的“自包含”表示 matcher 和 option 都在规则集文件内。Stash/Surge `SCRIPT` 依赖完整配置中的
+脚本定义；Stash/Surge `RULE-SET`、Surge `DOMAIN-SET` 依赖其他资源，因此会生成结构化 parse issue
+并跳过，不会建立 Script IR 或递归下载依赖。Surge `FINAL` 和 `pre-matching` 不是合法 Rule Set
+文件内容，继续拒绝。
+
+### 2.2 IR 规范化
+
+`Predicate` 与 `LogicalExpression` 保留完整 matcher、option、逻辑树和来源行号。转换时执行以下有
+明确语义等价关系的 lowering：
+
+- Mihomo `MATCH` 与 Surge `FINAL`；Mihomo/Stash `DST-PORT` 与 Surge `DEST-PORT`；
+- Mihomo `NETWORK,tcp|udp` 与 Stash/Surge `PROTOCOL,tcp|udp`；其他 `PROTOCOL` 值不伪装成 Mihomo `NETWORK`；
+- Mihomo `SRC-IP-CIDR`、Mihomo `IP-CIDR/IP-CIDR6 + src` 与 Stash/Surge `SRC-IP`；
+- Surge/Stash `PROCESS-NAME` 的文件名、通配符、完整路径和 app bundle 前缀语义，与 Mihomo
+  `PROCESS-NAME[-WILDCARD]`、`PROCESS-PATH[-WILDCARD]`；
+- domain behavior 中 Mihomo/Stash 与 Surge 对前导点的不同含义，以及可精确表示的域名通配符。
+
+不存在可证明等价关系时不猜测近似规则，交给目标 renderer 产生
+`ruleset.unsupported-target-rule` 或 `ruleset.unsupported-target-option`。
+
 ## 3. 规则输出
 
 现有 renderer 可为 `mihomo`、`clash`、`stash`、`surge` 和 `dae` 模板生成规则片段；
 `clash-meta` 是 `mihomo` 的兼容别名。SubIO 没有新增独立的规则集输出 artifact；规则仍通过
 现有模板 callable 绑定 policy。目标无法表示的规则类型、option 或逻辑表达式会生成结构化
 conversion issue，并在未显式放行时阻止发布。
+
+| 目标 | 输出边界 |
+|---|---|
+| `mihomo` / `clash-meta` | Mihomo 官方规则、options 和高级逻辑；不接收 User-Agent、URL 等 Mihomo 无对应语义的规则 |
+| `stash` | Stash 官方自包含规则、`no-track` 和高级逻辑 |
+| `surge` | Surge 官方自包含规则、Rule Set 内合法 options 和高级逻辑 |
+| `clash` | 原版 Clash 的有限规则子集；不继承 Mihomo 新规则 |
+| `dae` | 现有 domain/IP/fallback 模板片段子集 |
 
 ## 4. 兼容性
 

@@ -190,6 +190,7 @@ class RuleSetRenderer:
                 ruleset.name,
                 entry.expression,
                 platform,
+                ruleset.source_context,
                 target_context,
                 policy,
                 nested=False,
@@ -222,25 +223,21 @@ class RuleSetRenderer:
         source: str,
         expression: RuleExpression,
         platform: str,
+        source_context: DialectContext,
         target_context: DialectContext,
         policy: str | None,
         *,
         nested: bool,
     ) -> tuple[str | None, list[ConversionIssue]]:
-        rule_type = self._target_rule_type(expression, platform, target_context)
-        matcher = expression.matcher if isinstance(expression, Predicate) else ""
-        if (
-            platform == "mihomo"
-            and isinstance(expression, Predicate)
-            and expression.rule_type == "SRC-IP"
-        ):
-            try:
-                address = ipaddress.ip_address(expression.matcher)
-            except ValueError:
-                pass
-            else:
-                rule_type = "SRC-IP-CIDR"
-                matcher = f"{address}/{32 if address.version == 4 else 128}"
+        rule_type, matcher = self._canonical_expression(expression, source_context)
+        options = expression.options
+        rule_type, matcher, options = self._target_form(
+            rule_type,
+            matcher,
+            options,
+            platform,
+            target_context,
+        )
         if not self._is_supported(rule_type, platform):
             return None, [
                 self._issue(
@@ -252,7 +249,9 @@ class RuleSetRenderer:
                 )
             ]
 
-        option_issue = self._unsupported_option(source, expression, platform)
+        option_issue = self._unsupported_option(
+            source, expression, platform, options
+        )
         if option_issue is not None:
             return None, [option_issue]
 
@@ -268,6 +267,7 @@ class RuleSetRenderer:
                     source,
                     operand,
                     platform,
+                    source_context,
                     target_context,
                     None,
                     nested=True,
@@ -284,37 +284,113 @@ class RuleSetRenderer:
 
         if policy is not None:
             fields.append(self._serialize_token(policy))
-        fields.extend(self._serialize_option(option) for option in expression.options)
+        fields.extend(self._serialize_option(option) for option in options)
         return ",".join(fields), []
 
-    def _target_rule_type(
+    def _canonical_expression(
         self,
         expression: RuleExpression,
-        platform: str,
-        target_context: DialectContext,
-    ) -> str:
+        source_context: DialectContext,
+    ) -> tuple[str, str]:
         rule_type = (
             expression.operator
             if isinstance(expression, LogicalExpression)
             else expression.rule_type
         )
+        matcher = expression.matcher if isinstance(expression, Predicate) else ""
+
+        if rule_type == "FINAL":
+            rule_type = "MATCH"
+        elif rule_type == "DEST-PORT":
+            rule_type = "DST-PORT"
+
+        if not isinstance(expression, Predicate):
+            return rule_type, matcher
+
+        if source_context.dialect in {"stash", "surge"}:
+            if rule_type == "SRC-IP":
+                try:
+                    network = ipaddress.ip_network(matcher, strict=False)
+                except ValueError:
+                    pass
+                else:
+                    rule_type = "SRC-IP-CIDR"
+                    if "/" not in matcher:
+                        matcher = f"{matcher}/{network.max_prefixlen}"
+            elif rule_type == "PROTOCOL" and matcher.lower() in {"tcp", "udp"}:
+                rule_type = "NETWORK"
+            elif rule_type == "PROCESS-NAME":
+                rule_type, matcher = self._canonical_process_matcher(matcher)
+        return rule_type, matcher
+
+    @staticmethod
+    def _canonical_process_matcher(matcher: str) -> tuple[str, str]:
+        has_wildcard = "*" in matcher or "?" in matcher
+        if matcher.startswith("/"):
+            if matcher.endswith("/"):
+                return "PROCESS-PATH-WILDCARD", f"{matcher}*"
+            if has_wildcard:
+                return "PROCESS-PATH-WILDCARD", matcher
+            return "PROCESS-PATH", matcher
+        if has_wildcard:
+            return "PROCESS-NAME-WILDCARD", matcher
+        return "PROCESS-NAME", matcher
+
+    @staticmethod
+    def _target_form(
+        rule_type: str,
+        matcher: str,
+        options: tuple[str, ...],
+        platform: str,
+        target_context: DialectContext,
+    ) -> tuple[str, str, tuple[str, ...]]:
+        if (
+            target_context.dialect in {"stash", "surge"}
+            and rule_type in {"IP-CIDR", "IP-CIDR6"}
+            and "src" in options
+        ):
+            rule_type = "SRC-IP"
+            options = tuple(
+                option for option in options if option not in {"src", "no-resolve"}
+            )
+
         if target_context.dialect == "surge":
             if rule_type == "MATCH":
-                return "FINAL"
-            if rule_type == "DST-PORT":
-                return "DEST-PORT"
-            if rule_type == "NETWORK":
-                return "PROTOCOL"
-        elif target_context.dialect in {"mihomo", "clash", "stash"}:
-            if rule_type == "FINAL":
-                return "MATCH"
-            if rule_type == "DEST-PORT":
-                return "DST-PORT"
-            if platform == "mihomo" and rule_type == "PROTOCOL":
-                assert isinstance(expression, Predicate)
-                if expression.matcher.lower() in {"tcp", "udp"}:
-                    return "NETWORK"
-        return rule_type
+                rule_type = "FINAL"
+            elif rule_type == "DST-PORT":
+                rule_type = "DEST-PORT"
+            elif rule_type == "NETWORK":
+                rule_type = "PROTOCOL"
+            elif rule_type == "SRC-IP-CIDR":
+                rule_type = "SRC-IP"
+            elif rule_type in {
+                "PROCESS-NAME-WILDCARD",
+                "PROCESS-PATH",
+                "PROCESS-PATH-WILDCARD",
+            }:
+                rule_type = "PROCESS-NAME"
+        elif target_context.dialect == "stash":
+            if rule_type == "SRC-IP-CIDR":
+                rule_type = "SRC-IP"
+            elif rule_type in {
+                "PROCESS-NAME-WILDCARD",
+                "PROCESS-PATH-WILDCARD",
+            }:
+                rule_type = "PROCESS-NAME"
+        elif target_context.dialect in {"mihomo", "clash"}:
+            if platform == "mihomo" and rule_type == "SRC-IP":
+                try:
+                    network = ipaddress.ip_network(matcher, strict=False)
+                except ValueError:
+                    pass
+                else:
+                    rule_type = "SRC-IP-CIDR"
+                    if "/" not in matcher:
+                        matcher = f"{matcher}/{network.max_prefixlen}"
+            if rule_type == "PROTOCOL" and matcher.lower() in {"tcp", "udp"}:
+                rule_type = "NETWORK"
+
+        return rule_type, matcher, options
 
     def _is_supported(self, rule_type: str, platform: str) -> bool:
         return rule_type in PLATFORM_RULES[platform]
@@ -324,9 +400,18 @@ class RuleSetRenderer:
         source: str,
         expression: RuleExpression,
         platform: str,
+        options: tuple[str, ...],
     ) -> ConversionIssue | None:
-        for option in expression.options:
+        for option in options:
             if option == "src" and platform != "mihomo":
+                return self._issue(
+                    source,
+                    expression,
+                    platform,
+                    "ruleset.unsupported-target-option",
+                    f"Rule option {option!r} cannot be rendered for {platform}",
+                )
+            if option == "no-track" and platform != "stash":
                 return self._issue(
                     source,
                     expression,

@@ -168,6 +168,8 @@ def test_official_predicate_inventories_are_explicit():
         set(SURGE_CLASSICAL_SPEC.predicates)
         - set(SURGE_CLASSICAL_SPEC.external_dependency_rules)
     ) == EXPECTED_SELF_CONTAINED_RULES["surge"]
+    assert STASH_CLASSICAL_SPEC.global_options == {"no-track"}
+    assert "extended-matching" in SURGE_CLASSICAL_SPEC.allowed_options["URL-REGEX"]
 
 
 @pytest.mark.parametrize(
@@ -394,6 +396,21 @@ def test_surge_quoted_matcher_and_key_value_options_round_trip():
     )
 
 
+def test_surge_url_regex_accepts_extended_matching_inside_rule_set():
+    codec = DEFAULT_RULESET_CODEC_REGISTRY.get(
+        RuleSetInputSelection("surge", "classical", "text")
+    )
+    parsed = codec.parse(
+        name="extended_url",
+        content=b"URL-REGEX,^https://example.com/,extended-matching\n",
+        context=DialectContext("surge", "text"),
+    )
+
+    assert parameterize(parsed).render("surge", "Proxy") == (
+        "URL-REGEX,^https://example.com/,Proxy,extended-matching"
+    )
+
+
 def test_comma_port_matcher_is_not_misread_as_policy():
     parsed = MIHOMO_CLASSICAL_PARSER.parse_headless(
         name="ports",
@@ -456,6 +473,102 @@ def test_external_script_dependency_is_an_issue_not_an_expression():
     assert [issue.code for issue in result.issues] == [
         "ruleset.external-script-dependency"
     ]
+
+
+def test_stash_no_track_is_preserved_only_for_stash_targets():
+    codec = DEFAULT_RULESET_CODEC_REGISTRY.get(
+        RuleSetInputSelection("stash", "classical", "text")
+    )
+    parsed = codec.parse(
+        name="no_track",
+        content=b"DOMAIN,example.com,no-track\n",
+        context=DialectContext("stash", "text"),
+    )
+    ruleset = parameterize(parsed)
+
+    assert ruleset.render("stash", "Proxy") == (
+        "- DOMAIN,example.com,Proxy,no-track"
+    )
+    result = ruleset.render_result("mihomo", "Proxy")
+    assert result.content == ""
+    assert [issue.code for issue in result.issues] == [
+        "ruleset.unsupported-target-option"
+    ]
+
+
+def test_source_ip_rules_lower_between_mihomo_stash_and_surge():
+    surge = make_ruleset(
+        [bind(Predicate("SRC-IP", "192.0.2.0/24"))],
+        dialect="surge",
+    )
+    assert surge.render("mihomo", "Proxy") == (
+        "- SRC-IP-CIDR,192.0.2.0/24,Proxy"
+    )
+
+    mihomo = make_ruleset(
+        [bind(Predicate("SRC-IP-CIDR", "198.51.100.0/24"))],
+        dialect="mihomo",
+    )
+    assert mihomo.render("surge", "Proxy") == (
+        "SRC-IP,198.51.100.0/24,Proxy"
+    )
+    assert mihomo.render("stash", "Proxy") == (
+        "- SRC-IP,198.51.100.0/24,Proxy"
+    )
+
+    src_option = make_ruleset(
+        [
+            bind(
+                Predicate(
+                    "IP-CIDR",
+                    "203.0.113.0/24",
+                    ("src", "no-resolve"),
+                )
+            )
+        ],
+        dialect="mihomo",
+    )
+    assert src_option.render("mihomo", "Proxy") == (
+        "- IP-CIDR,203.0.113.0/24,Proxy,src,no-resolve"
+    )
+    assert src_option.render("surge", "Proxy") == (
+        "SRC-IP,203.0.113.0/24,Proxy"
+    )
+
+
+def test_process_matcher_semantics_lower_without_same_name_misrendering():
+    surge = make_ruleset(
+        [
+            bind(Predicate("PROCESS-NAME", "Chrome*")),
+            bind(Predicate("PROCESS-NAME", "/usr/bin/ssh")),
+            bind(Predicate("PROCESS-NAME", "/Applications/ChatGPT.app/")),
+        ],
+        dialect="surge",
+    )
+
+    assert surge.render("mihomo", "Proxy") == (
+        "- PROCESS-NAME-WILDCARD,Chrome*,Proxy\n"
+        "- PROCESS-PATH,/usr/bin/ssh,Proxy\n"
+        "- PROCESS-PATH-WILDCARD,/Applications/ChatGPT.app/*,Proxy"
+    )
+    clash = surge.render_result("clash", "Proxy")
+    assert clash.content == ""
+    assert len(clash.issues) == 3
+    assert all(
+        issue.code == "ruleset.unsupported-target-rule" for issue in clash.issues
+    )
+
+    mihomo = make_ruleset(
+        [
+            bind(Predicate("PROCESS-NAME-WILDCARD", "Telegram*")),
+            bind(Predicate("PROCESS-PATH-WILDCARD", "/Applications/*.app/*")),
+        ],
+        dialect="mihomo",
+    )
+    assert mihomo.render("surge", "Proxy") == (
+        "PROCESS-NAME,Telegram*,Proxy\n"
+        "PROCESS-NAME,/Applications/*.app/*,Proxy"
+    )
 
 
 def test_surge_final_and_pre_matching_are_rejected():

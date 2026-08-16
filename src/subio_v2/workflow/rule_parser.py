@@ -125,6 +125,7 @@ class ClassicalDialectSpec:
     external_dependency_rules: frozenset[str] = frozenset()
     external_ruleset_rules: frozenset[str] = frozenset()
     catch_all_rules: frozenset[str] = frozenset()
+    global_options: frozenset[str] = frozenset()
     option_prefixes: tuple[str, ...] = ()
     comment_prefixes: tuple[str, ...] = ("#", "//")
     max_logic_depth: int | None = None
@@ -153,6 +154,7 @@ STASH_CLASSICAL_SPEC = ClassicalDialectSpec(
     external_dependency_rules=frozenset({"SCRIPT"}),
     external_ruleset_rules=frozenset({"RULE-SET"}),
     catch_all_rules=frozenset({"MATCH"}),
+    global_options=frozenset({"no-track"}),
 )
 
 SURGE_CLASSICAL_SPEC = ClassicalDialectSpec(
@@ -163,6 +165,7 @@ SURGE_CLASSICAL_SPEC = ClassicalDialectSpec(
         "DOMAIN-SUFFIX": frozenset({"extended-matching"}),
         "DOMAIN-KEYWORD": frozenset({"extended-matching"}),
         "DOMAIN-WILDCARD": frozenset({"extended-matching"}),
+        "URL-REGEX": frozenset({"extended-matching"}),
         "IP-CIDR": frozenset({"no-resolve"}),
         "IP-CIDR6": frozenset({"no-resolve"}),
         "GEOIP": frozenset({"no-resolve"}),
@@ -748,7 +751,7 @@ class ClassicalRuleParser:
 
     def _is_option(self, rule_type: str, value: str) -> bool:
         allowed = self.spec.allowed_options.get(rule_type, frozenset())
-        return value in allowed or any(
+        return value in allowed or value in self.spec.global_options or any(
             value.startswith(prefix) for prefix in self.spec.option_prefixes
         )
 
