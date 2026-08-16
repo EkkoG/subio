@@ -44,6 +44,7 @@ def _bootstrap() -> None:
         rematch,
         shadowsocks,
         shadowsocksr,
+        shadowquic,
         snell,
         socks5,
         ssh,

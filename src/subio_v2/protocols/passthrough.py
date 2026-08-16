@@ -40,7 +40,6 @@ class PassthroughDescriptor(ProtocolDescriptor):
 
 
 for _protocol, _clash_type in (
-    (Protocol.SHADOWQUIC, "shadowquic"),
     (Protocol.SUDOKU, "sudoku"),
     (Protocol.OPENVPN, "openvpn"),
 ):

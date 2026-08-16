@@ -432,6 +432,32 @@ class GostRelayNode(BaseNode):
 
 
 @dataclass
+class ShadowQUICNode(BaseNode):
+    username: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
+    quic_versions: Optional[List[str]] = None
+    udp_over_stream: bool = False
+    zero_rtt: bool = False
+    keep_alive_interval: Optional[int] = None
+    congestion_controller: Optional[str] = None
+    up: Optional[str] = None
+    down: Optional[str] = None
+    cwnd: Optional[int] = None
+    bbr_profile: Optional[str] = None
+    recv_window_conn: Optional[int] = None
+    recv_window: Optional[int] = None
+    disable_mtu_discovery: bool = False
+    max_datagram_frame_size: Optional[int] = None
+    max_open_streams: Optional[int] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.SHADOWQUIC:
+            self.type = Protocol.SHADOWQUIC
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -620,6 +646,7 @@ Node = Union[
     DNSNode,
     RematchNode,
     GostRelayNode,
+    ShadowQUICNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,

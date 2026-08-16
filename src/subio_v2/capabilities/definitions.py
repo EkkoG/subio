@@ -253,7 +253,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "gost-relay": {"features": {"smux"}},
         "rematch": {"features": {"smux"}},
-        "shadowquic": {},
+        "shadowquic": {"features": {"smux"}},
         "sudoku": {},
         "masque": {},
         "trusttunnel": {},

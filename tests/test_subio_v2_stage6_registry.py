@@ -7,7 +7,6 @@ import subio_v2.protocols as registry
 from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import (
-    ClashPassthroughNode,
     DNSNode,
     GostRelayNode,
     MieruNode,
@@ -15,6 +14,7 @@ from subio_v2.model.nodes import (
     RematchNode,
     RejectMode,
     RejectNode,
+    ShadowQUICNode,
     SourcePassthroughNode,
 )
 from subio_v2.parser.clash import ClashParser
@@ -44,53 +44,14 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.REJECT).requires_endpoint is False
     assert registry.get(Protocol.DNS).node_class is DNSNode
     assert registry.get(Protocol.DNS).passthrough is False
+    assert registry.get(Protocol.SHADOWQUIC).node_class is ShadowQUICNode
+    assert registry.get(Protocol.SHADOWQUIC).passthrough is False
     registered_protocols = {
         descriptor.protocol.value
         for descriptor in descriptors
         if descriptor.supports_dialect("mihomo")
     }
     assert PLATFORM_CAPABILITIES["mihomo"]["protocols"] == registered_protocols
-
-
-@pytest.mark.parametrize(
-    ("protocol", "clash_type"),
-    [
-        (Protocol.SHADOWQUIC, "shadowquic"),
-    ],
-)
-def test_new_mihomo_only_types_use_explicit_passthrough(protocol, clash_type):
-    descriptor = registry.get(protocol)
-
-    assert descriptor is not None
-    assert descriptor.clash_type == clash_type
-    assert descriptor.passthrough is True
-    assert descriptor.dynamic_clash_type is False
-
-
-def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback():
-    source = {
-        "proxies": [
-            {
-                "name": "shadowquic",
-                "type": "shadowquic",
-                "server": "quic.example.com",
-                "port": 443,
-                "username": "user",
-                "password": "secret",
-                "zero-rtt": True,
-            },
-        ]
-    }
-
-    nodes = ClashParser().parse_result(source).nodes
-
-    assert [node.type for node in nodes] == [
-        Protocol.SHADOWQUIC,
-    ]
-    assert all(isinstance(node, ClashPassthroughNode) for node in nodes)
-    emission = ClashEmitter(platform="mihomo").emit_result(nodes)
-    assert emission.errors == []
-    assert emission.content == source
 
 
 def test_mihomo_dns_outbound_uses_strong_ir_and_smux():
@@ -182,6 +143,66 @@ def test_mihomo_gost_relay_uses_strong_ir_for_tls_and_mux():
     assert proxy["forward"] is True
     assert proxy["mux"] is True
     assert proxy["fingerprint"] == "AA:BB"
+
+
+def test_mihomo_shadowquic_uses_strong_ir_for_quic_tuning():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "shadowquic",
+                    "type": "shadowquic",
+                    "server": "quic.example.com",
+                    "port": 443,
+                    "username": "user",
+                    "password": "secret",
+                    "sni": "edge.example.com",
+                    "alpn": ["h3"],
+                    "quic-versions": ["v1", "v2"],
+                    "udp-over-stream": True,
+                    "zero-rtt": True,
+                    "keep-alive-interval": 15000,
+                    "congestion-controller": "bbr",
+                    "up": "20 Mbps",
+                    "down": "100 Mbps",
+                    "cwnd": 64,
+                    "bbr-profile": "aggressive",
+                    "recv-window-conn": 1048576,
+                    "recv-window": 2097152,
+                    "disable-mtu-discovery": True,
+                    "max-datagram-frame-size": 1350,
+                    "max-open-streams": 512,
+                    "smux": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, ShadowQUICNode)
+    assert node.quic_versions == ["v1", "v2"]
+    assert node.tls.server_name == "edge.example.com"
+    assert node.max_open_streams == 512
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    proxy = emission.content["proxies"][0]
+    assert proxy["quic-versions"] == ["v1", "v2"]
+    assert proxy["max-datagram-frame-size"] == 1350
+
+    invalid = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "invalid",
+                    "type": "shadowquic",
+                    "server": "quic.example.com",
+                    "port": 443,
+                    "congestion-controller": "unknown",
+                }
+            ]
+        }
+    ).nodes[0]
+    invalid_emission = ClashEmitter(platform="mihomo").emit_result([invalid])
+    assert invalid_emission.errors[0].field == "congestion_controller"
 
 
 @pytest.mark.parametrize(
