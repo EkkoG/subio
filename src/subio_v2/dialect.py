@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from subio_v2.platforms import normalize_platform
+
 
 @dataclass(frozen=True)
 class DialectContext:
@@ -24,7 +26,7 @@ class DialectContext:
 
 
 _PLATFORM_DIALECTS = {
-    "clash-meta": "mihomo",
+    "mihomo": "mihomo",
     "clash": "clash",
     "stash": "stash",
     "surge": "surge",
@@ -34,8 +36,9 @@ _PLATFORM_DIALECTS = {
 
 
 def dialect_context_for_platform(platform: str) -> DialectContext:
+    platform = normalize_platform(platform)
     dialect = _PLATFORM_DIALECTS.get(platform, platform)
-    format_name = "yaml" if platform in {"clash-meta", "clash", "stash"} else "text"
+    format_name = "yaml" if platform in {"mihomo", "clash", "stash"} else "text"
     return DialectContext(dialect=dialect, format=format_name)
 
 

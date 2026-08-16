@@ -11,6 +11,7 @@ from subio_v2.model.nodes import Protocol, VlessNode
 
 def test_emitter_factory_returns_fresh_platform_specific_instances():
     clash = EmitterFactory.get_emitter("clash")
+    mihomo = EmitterFactory.get_emitter("mihomo")
     clash_meta = EmitterFactory.get_emitter("clash-meta")
     stash = EmitterFactory.get_emitter("stash")
     surge = EmitterFactory.get_emitter("surge")
@@ -18,9 +19,10 @@ def test_emitter_factory_returns_fresh_platform_specific_instances():
     dae = EmitterFactory.get_emitter("dae")
 
     assert isinstance(clash, ClashEmitter) and clash.platform == "clash"
+    assert isinstance(mihomo, ClashEmitter) and mihomo.platform == "clash-meta"
     assert isinstance(clash_meta, ClashEmitter) and clash_meta.platform == "clash-meta"
     assert isinstance(stash, StashEmitter) and stash.platform == "stash"
-    assert len({id(clash), id(clash_meta), id(stash)}) == 3
+    assert len({id(clash), id(mihomo), id(clash_meta), id(stash)}) == 4
     assert EmitterFactory.get_emitter("clash") is not clash
     assert isinstance(surge, SurgeEmitter)
     assert isinstance(v2, V2RayNEmitter)
@@ -38,14 +40,14 @@ def test_clash_family_emitters_apply_their_own_capabilities():
     )
 
     clash = EmitterFactory.get_emitter("clash")
-    clash_meta = EmitterFactory.get_emitter("clash-meta")
+    mihomo = EmitterFactory.get_emitter("mihomo")
     stash = EmitterFactory.get_emitter("stash")
     assert isinstance(clash, ClashEmitter)
-    assert isinstance(clash_meta, ClashEmitter)
+    assert isinstance(mihomo, ClashEmitter)
     assert isinstance(stash, StashEmitter)
 
     assert clash.emit([node])["proxies"] == []
-    assert len(clash_meta.emit([node])["proxies"]) == 1
+    assert len(mihomo.emit([node])["proxies"]) == 1
     assert len(stash.emit([node])["proxies"]) == 1
 
 

@@ -151,6 +151,67 @@ providers = ["missing"]
         WorkflowEngine(str(cfg), dry_run=True)
 
 
+def test_clash_platform_entries_emit_one_deprecation_warning_each(
+    tmp_path, monkeypatch
+):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "legacy-source"
+type = "clash"
+file = "nodes.yml"
+
+[[artifact]]
+name = "legacy.yml"
+type = "clash"
+providers = ["legacy-source"]
+""".strip(),
+    )
+    messages = []
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.logger.warning", messages.append
+    )
+
+    WorkflowEngine(str(cfg), dry_run=True)
+
+    assert messages == [
+        "Provider 'legacy-source' uses deprecated platform type 'clash'; "
+        "use 'mihomo' for modern Mihomo configurations",
+        "Artifact 'legacy.yml' uses deprecated platform type 'clash'; "
+        "use 'mihomo' for modern Mihomo configurations",
+    ]
+
+
+def test_mihomo_and_clash_meta_entries_do_not_emit_deprecation_warning(
+    tmp_path, monkeypatch
+):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "modern-source"
+type = "mihomo"
+file = "nodes.yml"
+
+[[artifact]]
+name = "modern.yml"
+type = "clash-meta"
+providers = ["modern-source"]
+""".strip(),
+    )
+    messages = []
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.logger.warning", messages.append
+    )
+
+    WorkflowEngine(str(cfg), dry_run=True)
+
+    assert messages == []
+
+
 def test_duplicate_artifact_name_reports_both_entry_positions(tmp_path):
     cfg = write(
         tmp_path,

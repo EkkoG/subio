@@ -17,6 +17,7 @@ from subio_v2.conversion import (
     WorkflowResult,
 )
 from subio_v2.model.nodes import Node, get_nodes_for_user
+from subio_v2.platforms import resolve_platform
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.emitter.base import BaseEmitter
@@ -177,6 +178,17 @@ class WorkflowEngine:
                 name = entry.get("name")
                 if not isinstance(name, str) or not name:
                     raise ConfigError(f"Every '{section}' entry must have a name")
+                if section in {"provider", "artifact"}:
+                    platform = entry.get("type")
+                    resolution = (
+                        resolve_platform(platform) if isinstance(platform, str) else None
+                    )
+                    if resolution is not None and resolution.deprecated:
+                        logger.warning(
+                            f"{section.title()} {name!r} uses deprecated platform "
+                            f"type {platform!r}; use {resolution.replacement!r} for "
+                            "modern Mihomo configurations"
+                        )
                 if section != "artifact":
                     first_position = name_positions.get(name)
                     if first_position is not None:
