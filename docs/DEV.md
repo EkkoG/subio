@@ -136,7 +136,27 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 ## 4. Clash / Mihomo
 
-### 4.1 Schema 基线
+### 4.1 平台命名边界
+
+公开配置和内部注册表使用以下固定契约：
+
+| 名称 | 状态 | 语义 |
+|---|---|---|
+| `mihomo` | 规范名称 | 现代 Mihomo YAML |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，不产生废弃提示 |
+| `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 capability 和规则范围 |
+
+所有 parser、emitter、capability 和规则 renderer 的公开入口必须先通过
+`src/subio_v2/platforms.py` 规范化。内部注册表、descriptor 分支、`DialectContext` 和结构化
+issue 只使用 `mihomo` 规范名称；不得新增 `PLATFORM_CAPABILITIES["clash-meta"]`、
+`PLATFORM_RULES["clash-meta"]` 或散落的 `platform == "clash-meta"` 分支。
+
+`clash` 不得规范化为 `mihomo`。废弃状态只影响配置级提示和文档推荐，不得放宽原版 Clash 的
+协议、transport、cipher、feature 或规则能力。`ClashParser`、`ClashEmitter` 和
+`src/subio_v2/clash/` 是 Clash-family 共享实现名，不因公开平台命名而机械搬迁；模板文件名、
+artifact 文件名和上传文件名中的 `clash` 也不自动改写。
+
+### 4.2 Schema 基线
 
 Clash/Mihomo 改动以 `vendor/meta-json-schema` 为字段参考。已归档项目计划的可复现审查基线是
 `88d5239`；开始新的 schema 对齐工作时应先更新到当时最新版本，记录新 commit，并同步离线快照。
@@ -165,7 +185,7 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 需要核对更新时再 fetch 最新提交，并在审计记录与 fixture 中显式记录新 hash。`vendor/` 不进入
 主仓库提交。
 
-### 4.2 Descriptor 注册表
+### 4.3 Descriptor 注册表
 
 `ClashParser` 和 `ClashEmitter` 通过 `src/subio_v2/protocols/` 分发：
 
@@ -181,7 +201,7 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 未知 transport 和非 active transport option block 必须完整保留，不能降级为 TCP，也不能
 因为提取了一个子字段而删除整个嵌套配置。
 
-### 4.3 新增或完善协议
+### 4.4 新增或完善协议
 
 1. 从最新 schema 和目标平台官方文档建立字段矩阵；
 2. 判断字段属于跨平台语义、方言扩展还是同方言 passthrough；

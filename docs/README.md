@@ -13,6 +13,8 @@
 - `docs/v2_fix_plan.md`：安全、workflow 和 Clash/Mihomo 修复记录；
 - `docs/surge_support_plan.md`：Surge 支持阶段 0～11 的实施记录。
 - `docs/development_plan.md`：2026-08-16 项目级阶段 0～12 的完成记录。
+- `docs/mihomo_platform_naming_plan.md`：Mihomo 规范名称、`clash-meta` 别名和原版 Clash
+  废弃计划的完成记录。
 
 历史文档只用于解释设计演进，不再定义当前能力、支持矩阵或实施顺序。Stash 的独立计划已撤销，
 若历史结论与当前代码冲突，以 `docs/DEV.md`、`docs/support_matrix.md` 和测试为准。

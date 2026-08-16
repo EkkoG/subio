@@ -8,25 +8,27 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 
 ### 1.1 输入
 
-| `provider.type` | 输入 |
-|---|---|
-| `clash-meta` | Mihomo/Clash Meta YAML 节点 |
-| `clash` | Clash YAML 节点 |
-| `stash` | Stash YAML 节点 |
-| `surge` | Surge Proxy 内容，以及节点实际引用的 Keystore/WireGuard/Tailscale 附件 |
-| `v2rayn` | v2rayN 分享链接/订阅 |
-| `subio` | SubIO 本地节点格式 |
+| `provider.type` | 状态 | 输入 |
+|---|---|---|
+| `mihomo` | 推荐 | 现代 Mihomo YAML 节点 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，不产生废弃提示 |
+| `clash` | 已废弃但仍支持 | 原版 Clash YAML 节点；加载配置时提示改用 `mihomo` |
+| `stash` | 支持 | Stash YAML 节点 |
+| `surge` | 支持 | Surge Proxy 内容，以及节点实际引用的 Keystore/WireGuard/Tailscale 附件 |
+| `v2rayn` | 支持 | v2rayN 分享链接/订阅 |
+| `subio` | 支持 | SubIO 本地节点格式 |
 
 ### 1.2 输出协议
 
-| `artifact.type` | 当前协议能力 |
-|---|---|
-| `clash-meta` | 26 种当前 schema type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；未来未知 type 仅允许 Mihomo 同方言保真 |
-| `clash` | SS、VMess、Trojan、HTTP、SOCKS5 |
-| `stash` | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
-| `surge` | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
-| `dae` | SS、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria2、TUIC、AnyTLS |
-| `v2rayn` | SS、VMess、VLESS、Trojan、SOCKS5 |
+| `artifact.type` | 状态 | 当前协议能力 |
+|---|---|---|
+| `mihomo` | 推荐 | 26 种当前 schema type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；未来未知 type 仅允许 Mihomo 同方言保真 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 capability、emitter 和规则输出，不产生废弃提示 |
+| `clash` | 已废弃但仍支持 | SS、VMess、Trojan、HTTP、SOCKS5；保持原版 Clash 的独立能力边界 |
+| `stash` | 支持 | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
+| `surge` | 支持 | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
+| `dae` | 支持 | SS、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria2、TUIC、AnyTLS |
+| `v2rayn` | 支持 | SS、VMess、VLESS、Trojan、SOCKS5 |
 
 补充约束：
 
@@ -55,13 +57,19 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 
 ## 3. 规则输出
 
-现有 renderer 可为 `clash-meta`、`clash`、`stash`、`surge` 和 `dae` 模板生成规则片段。SubIO
-没有新增独立的规则集输出 artifact；规则仍通过现有模板 callable 绑定 policy。目标无法表示的
-规则类型、option 或逻辑表达式会生成结构化 conversion issue，并在未显式放行时阻止发布。
+现有 renderer 可为 `mihomo`、`clash`、`stash`、`surge` 和 `dae` 模板生成规则片段；
+`clash-meta` 是 `mihomo` 的兼容别名。SubIO 没有新增独立的规则集输出 artifact；规则仍通过
+现有模板 callable 绑定 policy。目标无法表示的规则类型、option 或逻辑表达式会生成结构化
+conversion issue，并在未显式放行时阻止发布。
 
 ## 4. 兼容性
 
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；
+- 新配置应使用 `mihomo`；旧 `clash-meta` 配置继续工作且不提示，内部 issue target 统一为
+  `mihomo`；
+- `clash` 继续表示原版 Clash，并在 provider/artifact 配置级产生废弃提示；它不会自动升级为
+  Mihomo，也不会获得 Mihomo-only 能力；
+- 模板名、artifact 文件名和上传文件名中的 `clash` 是用户自定义文本，不自动重命名；
 - Stash 节点输入新增 `provider.type = "stash"`，现有配置无需修改；
 - `ParseResult.resources` 与 `EmissionResult.emitted_resource_keys` 暂时保留为兼容字段，不扩展为
   通用文档资源 API；

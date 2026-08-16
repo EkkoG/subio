@@ -25,8 +25,10 @@ id = "a188d6b32ddf7cf3bbc9554055e5e2a4"
 
 [[provider]]
 name = "主力机场"
-type = "clash-meta"
+type = "mihomo"
 file = "meta.yaml"
+# 兼容旧配置：type = "clash-meta" 是 mihomo 的无警告别名。
+# 原版 Clash 仍可使用 type = "clash"，但会产生废弃提示。
 # url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
 # 可选：provider 级别 filters（与全局 [filters] 同结构，加载时应用，先于全局 filter）
 # [provider.filters]
@@ -87,7 +89,7 @@ file = 'nodes.json5'
 # Dialer Proxy 示例: 将某个 provider 中的所有节点都通过另一个代理连接
 # 适用于需要代理链的场景，例如：节点 -> 代理A -> 代理B -> 目标服务器
 #
-# 在 Clash/Clash Meta/Stash 中输出为 dialer-proxy 参数
+# 在 Mihomo/Clash/Stash 中输出为 dialer-proxy 参数
 # 在 Surge 中输出为 underlying-proxy 参数
 #
 # 注意：dialer_proxy 的值应该是另一个已定义的代理名称（需要在同一个 artifact 的 providers 中定义）
@@ -96,18 +98,18 @@ file = 'nodes.json5'
 # 如果订阅源的内容是 age 加密的，配置 age_secret_key 即可自动解密
 # [[provider]]
 # name = "加密订阅"
-# type = "clash-meta"
+# type = "mihomo"
 # url = "https://example.com/encrypted-sub.txt"
 # age_secret_key = "AGE-SECRET-KEY-1..."
 
-# 示例1: Clash Meta 中使用 dialer-proxy
+# 示例1: Mihomo 中使用 dialer-proxy
 # 将"主力机场"的所有节点通过"自建节点"中的某个节点连接
 # dialer_proxy 的值必须是同一个 artifact 中已存在的节点名称
 [[provider]]
 name = "主力机场-代理链"
-type = "clash-meta"
+type = "mihomo"
 file = "meta.yaml"
-dialer_proxy = "香港-IPLC-01"  # 该 provider 中的所有节点都会添加 dialer-proxy=香港-IPLC-01（Clash）或 underlying-proxy=香港-IPLC-01（Surge）
+dialer_proxy = "香港-IPLC-01"  # 该 provider 中的所有节点都会添加 dialer-proxy=香港-IPLC-01（Mihomo/Clash-family）或 underlying-proxy=香港-IPLC-01（Surge）
 [provider.rename]
 add_prefix = "代理链-"
 
@@ -123,7 +125,7 @@ add_prefix = "代理链-"
 
 [[artifact]]
 name = "ekko-meta.yaml"
-type = "clash-meta"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["自建节点", "主力机场", "Surge 测试"]
 [artifact.options]
@@ -131,7 +133,7 @@ work = true
 
 [[artifact]]
 name = "ekko2.yaml"
-type = "clash"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["自建节点", "主力机场"]
 [artifact.options]
@@ -186,7 +188,7 @@ providers = ["v2rayn"]
 # 测试 dialer-proxy 功能：生成带代理链的配置
 [[artifact]]
 name = "test-dialer-proxy.yaml"
-type = "clash-meta"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["自建节点", "主力机场-代理链"]
 [artifact.options]
@@ -204,7 +206,7 @@ work = false
 # 测试 Provider 级别 filters：仅香港节点（3 个）
 [[artifact]]
 name = "test-provider-filters.yaml"
-type = "clash-meta"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["自建节点-仅香港"]
 [artifact.options]
@@ -216,7 +218,7 @@ work = false
 # Mihomo 客户端可用 --age-secret-key 自动解密使用。
 # [[artifact]]
 # name = "ekko-meta-encrypted.yaml"
-# type = "clash-meta"
+# type = "mihomo"
 # template = "clash.yaml"
 # providers = ["自建节点", "主力机场"]
 # age_public_key = "age1..."
@@ -235,7 +237,7 @@ file = 'multiuser.yml'
 # 会生成: clash-for-alice.yml, clash-for-bob.yml, clash-for-charlie.yml
 [[artifact]]
 name = "clash-for-{user}.yml"
-type = "clash"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["多用户节点", "自建节点"]
 users = ["alice", "bob", "charlie"]
@@ -248,7 +250,7 @@ file_name = "clash-for-{user}.yml"
 # 方式2: 单用户配置 (混合多用户节点 + 自建节点 + 机场节点)
 [[artifact]]
 name = "clash-alice-full.yml"
-type = "clash"
+type = "mihomo"
 template = "clash.yaml"
 providers = ["多用户节点", "自建节点", "JSON5节点", "主力机场"]
 user = "alice"
