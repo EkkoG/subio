@@ -790,7 +790,7 @@ class ClassicalRuleParser:
             node=None,
             protocol=None,
             source=source,
-            target="ruleset-ir",
+            target=None,
             field=f"line {line_number}",
             message=message,
             stage="parse",

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -35,12 +34,10 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
         smux_group(),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, TrojanNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         supported_transports = proto_caps.get("transports", set())
         network = node.transport.network_value if node.transport else "tcp"
         unknown_network = node.transport and not isinstance(
@@ -52,8 +49,8 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
             and not (platform == "mihomo" and unknown_network)
         ):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Transport '{network}' is not supported by {platform}",
                     field="transport.network",
                     suggestion=f"Supported transports: {', '.join(sorted(supported_transports))}",
@@ -65,8 +62,8 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
             and "smux" not in proto_caps.get("features", set())
         ):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.WARNING,
+                IssueDraft(
+                    severity=IssueSeverity.WARNING,
                     message=f"SMUX is not supported by {platform}, will be ignored",
                     field="smux",
                 )
@@ -77,8 +74,8 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
             and "reality" not in proto_caps.get("features", set())
         ):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Reality is not supported for Trojan on {platform}",
                     field="reality",
                 )

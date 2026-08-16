@@ -12,6 +12,17 @@ class IssueSeverity(StrEnum):
 
 
 @dataclass(frozen=True)
+class IssueDraft:
+    """Target-independent diagnostic details produced during capability checks."""
+
+    severity: IssueSeverity
+    message: str
+    field: str | None = None
+    suggestion: str | None = None
+    code: str = "conversion"
+
+
+@dataclass(frozen=True)
 class ConversionIssue:
     severity: IssueSeverity
     node: str | None

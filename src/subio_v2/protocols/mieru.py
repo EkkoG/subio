@@ -4,6 +4,7 @@ import copy
 from typing import Any, Dict
 
 from subio_v2.dialect import DialectContext
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
@@ -123,12 +124,10 @@ class MieruDescriptor(StructuredProtocolDescriptor):
             )
         return errors
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, MieruNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         checks = (
             ("transport", node.transport, proto_caps.get("transports", set())),
             (
@@ -145,8 +144,8 @@ class MieruDescriptor(StructuredProtocolDescriptor):
         for field, value, supported in checks:
             if value is not None and value.value not in supported:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             f"Mieru {field} '{value.value}' is not supported by "
                             f"{platform}"
@@ -159,8 +158,8 @@ class MieruDescriptor(StructuredProtocolDescriptor):
             "features", set()
         ):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Mieru traffic-pattern is not supported by {platform}",
                     field="traffic_pattern",
                     code="conversion.unsupported-protocol-variant",

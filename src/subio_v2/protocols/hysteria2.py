@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Hysteria2Node, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -43,16 +42,14 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
         smux_group(),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, Hysteria2Node):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         if node.obfs and "obfs" not in proto_caps.get("features", set()):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Obfs is not supported for Hysteria2 on {platform}",
                     field="obfs",
                 )
@@ -61,8 +58,8 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
             supported_modes = proto_caps.get("obfs_modes", set())
             if supported_modes and node.obfs not in supported_modes:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             f"Hysteria2 obfs mode '{node.obfs}' is not supported by {platform}"
                         ),
@@ -71,16 +68,16 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
                 )
             if not node.obfs_password:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message="Hysteria2 obfs requires a password",
                         field="obfs_password",
                     )
                 )
         if platform != "stash" and node.dialer_proxy and node.ports:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message="Hysteria2 port hopping cannot be combined with underlying-proxy",
                     field="ports",
                 )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, Socks5Node
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -30,7 +29,7 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
         ),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, Socks5Node):
             return []
         if not node.tls or not node.tls.enabled:
@@ -38,11 +37,9 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
         if "tls" in proto_caps.get("features", set()):
             return []
 
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
         return [
-            CapabilityWarning(
-                level=WarningLevel.ERROR,
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
                 message=f"SOCKS5 TLS is not supported by {platform}",
                 field="tls",
             )

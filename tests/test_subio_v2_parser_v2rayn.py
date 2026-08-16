@@ -178,3 +178,4 @@ def test_v2rayn_parse_result_reports_unparseable_links():
     assert result.issues[0].node == "bad"
     assert result.issues[0].protocol == "unknown"
     assert result.issues[0].code == "parse.link"
+    assert result.issues[0].target is None

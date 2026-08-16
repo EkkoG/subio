@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TrustTunnelNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
@@ -71,17 +70,15 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             )
         return errors
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, TrustTunnelNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         if platform == "surge":
             if node.udp:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message="Surge Trust Tunnel does not support UDP",
                         field="udp",
                         code="conversion.unsupported-protocol-variant",
@@ -98,8 +95,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=f"Trust Tunnel field '{field}' is Mihomo-only",
                             field=field,
                             code="conversion.unconsumed-source-field",
@@ -112,8 +109,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.ERROR,
+                        IssueDraft(
+                            severity=IssueSeverity.ERROR,
                             message=(
                                 f"Trust Tunnel TLS field '{field}' cannot be represented by Surge"
                             ),
@@ -128,8 +125,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.ERROR,
+                        IssueDraft(
+                            severity=IssueSeverity.ERROR,
                             message=f"Trust Tunnel field '{field}' is Surge-only",
                             field=field,
                             code="conversion.unconsumed-source-field",
@@ -142,8 +139,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.ERROR,
+                        IssueDraft(
+                            severity=IssueSeverity.ERROR,
                             message=f"Trust Tunnel field '{field}' is Surge-only",
                             field=field,
                             code="conversion.unsupported-protocol-variant",
@@ -163,8 +160,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value is not None and value is not False:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=f"Trust Tunnel field '{field}' is Mihomo-only",
                             field=field,
                             code="conversion.unconsumed-source-field",
@@ -177,8 +174,8 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.ERROR,
+                        IssueDraft(
+                            severity=IssueSeverity.ERROR,
                             message=(
                                 f"Trust Tunnel TLS field '{field}' cannot be "
                                 "represented by Stash"

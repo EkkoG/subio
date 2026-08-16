@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import HttpNode, HttpVariant, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -31,24 +30,22 @@ class HttpDescriptor(StructuredProtocolDescriptor):
         ),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, HttpNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
         if node.variant == HttpVariant.H2_CONNECT:
             if "h2-connect" not in proto_caps.get("features", set()):
                 return [
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"HTTP/2 CONNECT is not supported by {platform}",
                         field="variant",
                     )
                 ]
             if node.udp and "connect-udp" not in proto_caps.get("features", set()):
                 return [
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"CONNECT-UDP is not supported by {platform}",
                         field="udp",
                     )
@@ -59,8 +56,8 @@ class HttpDescriptor(StructuredProtocolDescriptor):
 
         if "tls" not in proto_caps.get("features", set()):
             return [
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"HTTP TLS is not supported by {platform}",
                     field="tls",
                 )
@@ -91,8 +88,8 @@ class HttpDescriptor(StructuredProtocolDescriptor):
             return []
         fields = ", ".join(unsupported)
         return [
-            CapabilityWarning(
-                level=WarningLevel.ERROR,
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
                 message=(
                     f"HTTP TLS options cannot be represented by {platform}: {fields}"
                 ),

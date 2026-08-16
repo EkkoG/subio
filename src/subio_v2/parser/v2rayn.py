@@ -58,7 +58,7 @@ class V2RayNParser(BaseParser):
                     node=urllib.parse.unquote(fragment) if fragment else None,
                     protocol=scheme,
                     source=None,
-                    target="ir",
+                    target=None,
                     field=f"lines[{index}]",
                     message="Failed to parse v2rayN subscription link",
                     stage="parse",

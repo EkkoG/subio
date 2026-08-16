@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import AnyTLSNode, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -68,18 +69,16 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
         ),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if (
             not isinstance(node, AnyTLSNode)
             or node.reuse
             or platform in {"mihomo", "surge"}
         ):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
         return [
-            CapabilityWarning(
-                level=WarningLevel.ERROR,
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
                 message=f"AnyTLS reuse=false cannot be represented by {platform}",
                 field="reuse",
             )

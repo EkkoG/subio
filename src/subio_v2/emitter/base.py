@@ -4,7 +4,6 @@ from typing import Any, List, Optional
 from subio_v2.capabilities.checker import (
     CapabilityChecker,
     CheckResult,
-    WarningLevel,
 )
 from subio_v2.conversion import ConversionIssue, EmissionResult, IssueSeverity
 from subio_v2.dialect import (
@@ -14,14 +13,6 @@ from subio_v2.dialect import (
 from subio_v2.model.nodes import Node, SourcePassthroughNode
 from subio_v2.platforms import normalize_platform
 from subio_v2.utils.logger import logger
-
-
-_SEVERITY_BY_WARNING_LEVEL = {
-    WarningLevel.INFO: IssueSeverity.INFO,
-    WarningLevel.WARNING: IssueSeverity.WARNING,
-    WarningLevel.ERROR: IssueSeverity.ERROR,
-}
-
 
 class BaseEmitter(ABC):
     """Base class for checked, structured subscription emitters."""
@@ -121,7 +112,7 @@ class BaseEmitter(ABC):
                 issues.append(
                     self.issue_for_node(
                         node,
-                        _SEVERITY_BY_WARNING_LEVEL[warning.level],
+                        warning.severity,
                         warning.message,
                         field=warning.field,
                         suggestion=warning.suggestion,

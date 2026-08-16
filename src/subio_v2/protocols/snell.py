@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SnellNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -53,19 +54,17 @@ class SnellDescriptor(StructuredProtocolDescriptor):
         smux_group(),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, SnellNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         version = node.version or 1
         if node.version:
             supported_versions = proto_caps.get("versions", set())
             if supported_versions and node.version not in supported_versions:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"Snell version {node.version} is not supported by {platform}",
                         field="version",
                         suggestion=(
@@ -80,16 +79,16 @@ class SnellDescriptor(StructuredProtocolDescriptor):
             )
             if supported_obfs and node.obfs not in supported_obfs:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"Obfs mode '{node.obfs}' is not supported by {platform}",
                         field="obfs",
                     )
                 )
             elif by_version and not supported_obfs:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             f"Snell version {version} does not support obfs on {platform}"
                         ),
@@ -100,8 +99,8 @@ class SnellDescriptor(StructuredProtocolDescriptor):
             reuse_versions = proto_caps.get("reuse_versions", set())
             if reuse_versions and version not in reuse_versions:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             f"Snell version {version} does not support reuse on {platform}"
                         ),
@@ -110,16 +109,16 @@ class SnellDescriptor(StructuredProtocolDescriptor):
                 )
         if node.udp_port is not None and version < 3:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Snell version {version} does not support udp-port",
                     field="udp_port",
                 )
             )
         if node.udp_port is not None and platform != "surge":
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Snell udp-port cannot be represented by {platform}",
                     field="udp_port",
                     code="conversion.unconsumed-source-field",
@@ -127,8 +126,8 @@ class SnellDescriptor(StructuredProtocolDescriptor):
             )
         if node.mode and version != 6:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message="Snell mode is only supported by version 6",
                     field="mode",
                 )

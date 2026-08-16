@@ -66,6 +66,7 @@ wg = wireguard, section-name, 0
     assert result.issues[0].node == "bad"
     assert result.issues[0].protocol == "vmess"
     assert result.issues[0].field == "lines[3]"
+    assert all(issue.target is None for issue in result.issues)
 
 
 def test_surge_parse_result_reports_proxy_syntax_errors():

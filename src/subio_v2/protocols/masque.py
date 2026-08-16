@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any, Dict
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import MasqueMode, MasqueNode, Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
@@ -133,21 +134,19 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
             )
         return errors
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, MasqueNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
         supported_modes = {
             "surge": {MasqueMode.FORWARD_PROXY},
             "mihomo": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
             "stash": {MasqueMode.CONNECT_IP},
         }.get(platform)
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         if supported_modes is not None and node.mode not in supported_modes:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=(
                         f"MASQUE mode '{node.mode.value}' is not supported by {platform}"
                     ),
@@ -166,8 +165,8 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
             and node.transport not in supported_transports
         ):
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=(
                         f"MASQUE transport '{node.transport}' is not supported by "
                         f"{platform}"
@@ -188,8 +187,8 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
             ):
                 if value is not None and value is not False:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=f"MASQUE field '{field}' is Mihomo-only",
                             field=field,
                             code="conversion.unconsumed-source-field",

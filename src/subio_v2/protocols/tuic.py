@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TUICNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
@@ -71,12 +72,10 @@ class TUICDescriptor(StructuredProtocolDescriptor):
             )
         return errors
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, TUICNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         actual_version = node.version
         if actual_version is None:
             if node.uuid or node.password:
@@ -87,8 +86,8 @@ class TUICDescriptor(StructuredProtocolDescriptor):
             supported_versions = proto_caps.get("versions", set())
             if supported_versions and actual_version not in supported_versions:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"TUIC version {actual_version} is not supported by {platform}",
                         field="version",
                         suggestion=(
@@ -98,8 +97,8 @@ class TUICDescriptor(StructuredProtocolDescriptor):
                 )
         if platform != "stash" and node.dialer_proxy and node.ports:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message="TUIC port hopping cannot be combined with underlying-proxy",
                     field="ports",
                 )

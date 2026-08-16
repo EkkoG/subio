@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TailscaleNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -60,17 +61,15 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
             node.exit_node_auto_fallback = True
         return node
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, TailscaleNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         if platform == "surge":
             if node.exit_node_auto_fallback:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Stash automatic exit-node fallback has no equivalent "
                             "Surge selection semantics"
@@ -88,8 +87,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 node.interactive_login and interactive_reference
             ):
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Surge Tailscale output requires an auth-key or an "
                             "existing Surge interactive-login state reference"
@@ -99,16 +98,16 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
             if node.interface_name:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message="Surge Tailscale does not support interface binding",
                         field="interface_name",
                     )
                 )
             if node.exit_node == "auto:any":
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Mihomo exit-node 'auto:any' has no equivalent Surge "
                             "selection semantics"
@@ -126,8 +125,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
             ):
                 if value:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=f"Tailscale field '{field}' is Mihomo-only",
                             field=field,
                             code="conversion.unconsumed-source-field",
@@ -136,8 +135,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
         elif platform == "mihomo":
             if node.exit_node_auto_fallback:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Stash automatic exit-node fallback cannot be represented "
                             "by Mihomo"
@@ -148,8 +147,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
             if node.interactive_login:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Surge interactive-login references local identity state "
                             "and cannot be converted to Mihomo"
@@ -160,8 +159,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
             if node.exit_node == "auto":
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Surge exit-node 'auto' only selects an unambiguous "
                             "candidate and cannot be represented by Mihomo auto:any"
@@ -183,8 +182,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
                 if is_explicit_auto_rule or (value is not None and value is not False):
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=f"Tailscale field '{field}' is Surge-only",
                             field=field,
                             code="conversion.unconsumed-source-field",
@@ -193,8 +192,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
         elif platform == "stash":
             if node.interactive_login:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Surge interactive-login references local identity state "
                             "and cannot be converted to Stash"
@@ -205,8 +204,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
             if node.exit_node in {"auto", "auto:any"}:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             f"Tailscale exit-node selector '{node.exit_node}' has no "
                             "equivalent Stash selection semantics"
@@ -217,8 +216,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
             elif node.exit_node is None and not node.exit_node_auto_fallback:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=(
                             "Omitting exit-node enables automatic selection in Stash, "
                             "which differs from the source node"
@@ -248,8 +247,8 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                 )
                 if is_explicit_auto_rule or (value is not None and value is not False):
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.WARNING,
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
                             message=(
                                 f"Tailscale field '{field}' is not supported by Stash"
                             ),

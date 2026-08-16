@@ -5,32 +5,12 @@ Platform Capability Checker
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import List, Optional
 
 import subio_v2.protocols as protocol_registry
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, RejectMode, RejectNode
 from subio_v2.platforms import normalize_platform
 from .definitions import get_platform_capabilities, normalize_protocol_name
-
-
-class WarningLevel(Enum):
-    """警告级别"""
-
-    INFO = "info"  # 信息，不影响功能
-    WARNING = "warning"  # 警告，可能影响部分功能
-    ERROR = "error"  # 错误，节点无法使用
-
-
-@dataclass
-class CapabilityWarning:
-    """能力检查警告"""
-
-    level: WarningLevel
-    message: str
-    field: Optional[str] = None  # 相关字段名
-    suggestion: Optional[str] = None  # 建议
-    code: str = "conversion"
 
 
 @dataclass
@@ -38,35 +18,37 @@ class CheckResult:
     """检查结果"""
 
     supported: bool  # 是否支持（可渲染）
-    warnings: List[CapabilityWarning] = field(default_factory=list)
+    warnings: list[IssueDraft] = field(default_factory=list)
 
-    def add_warning(
+    def add_issue(
         self,
-        level: WarningLevel,
+        severity: IssueSeverity,
         message: str,
-        field: Optional[str] = None,
-        suggestion: Optional[str] = None,
+        field: str | None = None,
+        suggestion: str | None = None,
         code: str = "conversion",
-    ):
-        self.warnings.append(CapabilityWarning(level, message, field, suggestion, code))
+    ) -> None:
+        self.warnings.append(
+            IssueDraft(severity, message, field, suggestion, code)
+        )
 
     def add_error(
         self,
         message: str,
-        field: Optional[str] = None,
-        suggestion: Optional[str] = None,
+        field: str | None = None,
+        suggestion: str | None = None,
         code: str = "conversion",
-    ):
-        self.add_warning(WarningLevel.ERROR, message, field, suggestion, code)
+    ) -> None:
+        self.add_issue(IssueSeverity.ERROR, message, field, suggestion, code)
         self.supported = False
 
     def has_errors(self) -> bool:
-        return any(w.level == WarningLevel.ERROR for w in self.warnings)
+        return any(issue.severity == IssueSeverity.ERROR for issue in self.warnings)
 
     def has_warnings(self) -> bool:
         return any(
-            warning.level in {WarningLevel.WARNING, WarningLevel.INFO}
-            for warning in self.warnings
+            issue.severity in {IssueSeverity.WARNING, IssueSeverity.INFO}
+            for issue in self.warnings
         )
 
 
@@ -133,7 +115,7 @@ class CapabilityChecker:
         if desc:
             for warning in desc.check(node, proto_caps, self.platform):
                 result.warnings.append(warning)
-                if warning.level == WarningLevel.ERROR:
+                if warning.severity == IssueSeverity.ERROR:
                     result.supported = False
 
         self._check_global_features(node, result)
@@ -144,8 +126,8 @@ class CapabilityChecker:
         global_features = self.capabilities.get("global_features", {})
 
         if hasattr(node, "tfo") and node.tfo and not global_features.get("tfo", False):
-            result.add_warning(
-                WarningLevel.INFO,
+            result.add_issue(
+                IssueSeverity.INFO,
                 f"TFO is not supported by {self.platform}, will be ignored",
                 field="tfo",
             )
@@ -155,8 +137,8 @@ class CapabilityChecker:
             and node.mptcp
             and not global_features.get("mptcp", False)
         ):
-            result.add_warning(
-                WarningLevel.INFO,
+            result.add_issue(
+                IssueSeverity.INFO,
                 f"MPTCP is not supported by {self.platform}, will be ignored",
                 field="mptcp",
             )
@@ -166,8 +148,8 @@ class CapabilityChecker:
             and node.dialer_proxy
             and not global_features.get("dialer_proxy", False)
         ):
-            result.add_warning(
-                WarningLevel.INFO,
+            result.add_issue(
+                IssueSeverity.INFO,
                 f"Dialer proxy is not supported by {self.platform}, will be ignored",
                 field="dialer_proxy",
             )

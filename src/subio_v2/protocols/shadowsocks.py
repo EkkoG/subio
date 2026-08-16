@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import base64
 import binascii
-from typing import Any
 
+from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -40,17 +40,15 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
             return [error for error in errors if error.field != "password"]
         return errors
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, ShadowsocksNode):
             return []
-        from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel
-
-        warnings: list[Any] = []
+        warnings: list[IssueDraft] = []
         supported_ciphers = proto_caps.get("ciphers", set())
         if node.cipher and node.cipher not in supported_ciphers:
             warnings.append(
-                CapabilityWarning(
-                    level=WarningLevel.ERROR,
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
                     message=f"Cipher '{node.cipher}' is not supported by {platform}",
                     field="cipher",
                     suggestion=f"Supported ciphers: {', '.join(sorted(supported_ciphers))}",
@@ -62,8 +60,8 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
                 pass
             elif not node.password:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message="Shadowsocks password is required for this cipher",
                         field="password",
                     )
@@ -76,8 +74,8 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
                     decoded = b""
                 if len(decoded) != expected:
                     warnings.append(
-                        CapabilityWarning(
-                            level=WarningLevel.ERROR,
+                        IssueDraft(
+                            severity=IssueSeverity.ERROR,
                             message=(
                                 f"{node.cipher} requires a base64 key encoding "
                                 f"{expected} bytes"
@@ -90,8 +88,8 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
             supported_plugins = proto_caps.get("plugins", set())
             if node.plugin not in supported_plugins:
                 warnings.append(
-                    CapabilityWarning(
-                        level=WarningLevel.ERROR,
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
                         message=f"Plugin '{node.plugin}' is not supported by {platform}",
                         field="plugin",
                         suggestion=(

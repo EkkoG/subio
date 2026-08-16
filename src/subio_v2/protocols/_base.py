@@ -10,6 +10,7 @@ from subio_v2.clash.helpers import (
     merge_extra,
     parse_base_fields,
 )
+from subio_v2.conversion import IssueDraft
 from subio_v2.model.nodes import Node, Protocol
 from subio_v2.dialect import DialectContext
 from subio_v2.protocols._fields import ClashFieldSpec
@@ -49,7 +50,9 @@ class ProtocolDescriptor(ABC):
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[Any]:
+    def check(
+        self, node: Node, proto_caps: dict, platform: str
+    ) -> list[IssueDraft]:
         return []
 
     def validate(self, node: Node) -> list[NodeValidationError]:
