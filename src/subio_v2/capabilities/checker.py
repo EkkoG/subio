@@ -80,7 +80,7 @@ class CapabilityChecker:
                 "Reject mode is invalid",
                 field="mode",
             )
-        if desc and not desc.passthrough:
+        if desc:
             if desc.requires_endpoint:
                 if not node.server:
                     result.add_error("Server is required", field="server")

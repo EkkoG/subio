@@ -30,7 +30,6 @@ class ProtocolDescriptor(ABC):
     protocol: Protocol
     clash_type: str
     node_class: type[Node]
-    passthrough: bool = False
     dynamic_clash_type: bool = False
     requires_endpoint: bool = True
     clash_dialects: frozenset[str] = frozenset({"mihomo", "clash", "stash"})

@@ -205,7 +205,6 @@ def emit_base(node: Any) -> Dict[str, Any]:
         base["users"] = node.users
     return base
 
-
 def emit_tls(base: Dict[str, Any], tls: Optional[TLSSettings]) -> None:
     if not tls or not tls.enabled:
         return
@@ -334,35 +333,3 @@ def merge_extra(
             if key not in base:
                 base[key] = copy.deepcopy(value)
     return base
-
-
-def emit_passthrough(
-    node: Any, context: DialectContext | None = None
-) -> Dict[str, Any]:
-    source_context = getattr(node, "source_context", None)
-    if (
-        context is not None
-        and source_context is not None
-        and source_context.dialect != context.dialect
-    ):
-        raise ValueError("Clash passthrough nodes require the same source and target dialect")
-    out = copy.deepcopy(node.raw)
-    out["name"] = node.name
-    if node.server:
-        out["server"] = node.server
-    if node.port:
-        out["port"] = node.port
-    if node.ip_version:
-        out["ip-version"] = node.ip_version
-    if node.tfo:
-        out["tfo"] = True
-    if node.mptcp:
-        out["mptcp"] = True
-    if node.dialer_proxy:
-        out["dialer-proxy"] = node.dialer_proxy
-    if node.interface_name:
-        out["interface-name"] = node.interface_name
-    if node.routing_mark is not None:
-        out["routing-mark"] = node.routing_mark
-    merge_extra(out, node, context)
-    return out

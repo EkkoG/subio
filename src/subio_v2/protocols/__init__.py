@@ -40,7 +40,6 @@ def _bootstrap() -> None:
         masque,
         mieru,
         openvpn,
-        passthrough,
         reject,
         rematch,
         shadowsocks,

@@ -22,6 +22,7 @@ from subio_v2.model.nodes import (
 )
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
+from subio_v2.protocols._base import StructuredProtocolDescriptor
 
 
 SCHEMA_SNAPSHOT = (
@@ -41,18 +42,17 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
 
     assert known_types == set(snapshot["proxy_types"])
     assert len(known_types) == 26
+    assert all(
+        isinstance(descriptor, StructuredProtocolDescriptor)
+        for descriptor in descriptors
+    )
     assert registry.get(Protocol.MIERU).node_class is MieruNode
-    assert registry.get(Protocol.MIERU).passthrough is False
     assert registry.get(Protocol.REJECT).node_class is RejectNode
     assert registry.get(Protocol.REJECT).requires_endpoint is False
     assert registry.get(Protocol.DNS).node_class is DNSNode
-    assert registry.get(Protocol.DNS).passthrough is False
     assert registry.get(Protocol.SHADOWQUIC).node_class is ShadowQUICNode
-    assert registry.get(Protocol.SHADOWQUIC).passthrough is False
     assert registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
-    assert registry.get(Protocol.OPENVPN).passthrough is False
     assert registry.get(Protocol.SUDOKU).node_class is SudokuNode
-    assert registry.get(Protocol.SUDOKU).passthrough is False
     registered_protocols = {
         descriptor.protocol.value
         for descriptor in descriptors

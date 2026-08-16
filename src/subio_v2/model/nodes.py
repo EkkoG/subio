@@ -682,14 +682,6 @@ class TUICNode(BaseNode):
 
 
 @dataclass
-class ClashPassthroughNode(BaseNode):
-    """Clash Meta-only proxy; full YAML fields kept in `raw` for round-trip."""
-
-    raw: Dict[str, Any] = field(default_factory=dict)
-    clash_type: Optional[str] = None
-
-
-@dataclass
 class SourcePassthroughNode(BaseNode):
     """Opaque source record that may only be emitted back to its source dialect."""
 
@@ -726,7 +718,6 @@ Node = Union[
     MieruNode,
     JuicityNode,
     TUICNode,
-    ClashPassthroughNode,
     SourcePassthroughNode,
 ]
 
