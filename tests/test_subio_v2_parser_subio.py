@@ -223,6 +223,59 @@ server = "alice.example.com"
     }
 
 
+def test_subio_native_format_validates_user_specific_node_credentials():
+    result = SubioParser().parse_result(
+        """
+version = 1
+
+[[nodes]]
+name = "ssh"
+type = "ssh"
+server = "example.com"
+port = 22
+username = "default"
+
+[nodes.users.alice]
+username = "alice"
+private_key = "alice-key"
+
+[nodes.users.bob]
+username = "bob"
+password = "bob-password"
+"""
+    )
+
+    assert result.issues == []
+    assert len(result.nodes) == 1
+    assert result.nodes[0].users == {
+        "alice": {"username": "alice", "private_key": "alice-key"},
+        "bob": {"username": "bob", "password": "bob-password"},
+    }
+
+
+def test_subio_native_format_reports_invalid_user_specific_node():
+    result = SubioParser().parse_result(
+        """
+version = 1
+
+[[nodes]]
+name = "ssh"
+type = "ssh"
+server = "example.com"
+port = 22
+username = "default"
+
+[nodes.users.alice]
+username = "alice"
+"""
+    )
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.subio.invalid-combination"
+    assert result.issues[0].field == "nodes[0].users.alice.password"
+    assert "alice" in result.issues[0].message
+
+
 def test_subio_native_format_reports_structured_document_errors():
     missing = SubioParser().parse_result("{}")
     unsupported = SubioParser().parse_result("version = 2\nnodes = []")
@@ -334,7 +387,25 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
 
 
 def test_subio_json_schema_snapshot_matches_runtime_contract():
-    assert json.loads(SCHEMA_PATH.read_text(encoding="utf-8")) == build_json_schema()
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    assert schema == build_json_schema()
+
+    ssh_schema = next(
+        item
+        for item in schema["properties"]["nodes"]["items"]["oneOf"]
+        if item["title"] == "ssh"
+    )
+    user_schema = ssh_schema["properties"]["users"]
+    overrides = user_schema["additionalProperties"]
+    assert overrides["additionalProperties"] is False
+    assert set(overrides["properties"]) == {
+        "password",
+        "port",
+        "private_key",
+        "private_key_passphrase",
+        "server",
+        "username",
+    }
 
 
 def test_subio_native_format_constructs_every_public_protocol():

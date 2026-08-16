@@ -368,10 +368,32 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -440,10 +462,29 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -512,10 +553,29 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -599,10 +659,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -686,10 +771,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -803,10 +913,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "auth": {
+                      "type": "string"
+                    },
+                    "auth_str": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -899,10 +1034,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "obfs_password": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -974,10 +1134,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "uuid": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -1114,10 +1299,41 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "private_key": {
+                      "type": "string"
+                    },
+                    "public_key": {
+                      "type": "string"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1223,10 +1439,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1373,10 +1614,44 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "auth": {
+                      "type": "string"
+                    },
+                    "cipher": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "private_key": {
+                      "type": "string"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1454,10 +1729,29 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1532,10 +1826,29 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1655,10 +1968,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -1748,10 +2086,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "cipher": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1838,10 +2201,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "cipher": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -1937,10 +2325,32 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "psk": {
+                      "type": "string"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -2018,10 +2428,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -2123,10 +2558,41 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "private_key": {
+                      "type": "string"
+                    },
+                    "private_key_passphrase": {
+                      "type": "string"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -2249,10 +2715,29 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -2372,10 +2857,32 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "auth_key": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -2453,10 +2960,32 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               }
@@ -2561,10 +3090,35 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "username": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -2651,10 +3205,38 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "token": {
+                      "type": "string"
+                    },
+                    "uuid": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -2741,10 +3323,32 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "uuid": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -2834,10 +3438,38 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "alter_id": {
+                      "type": "integer"
+                    },
+                    "cipher": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "uuid": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },
@@ -2989,10 +3621,38 @@
               },
               "users": {
                 "additionalProperties": {
-                  "additionalProperties": {
-                    "$ref": "#/$defs/jsonValue"
+                  "additionalProperties": false,
+                  "properties": {
+                    "port": {
+                      "type": "integer"
+                    },
+                    "preshared_key": {
+                      "type": "string"
+                    },
+                    "private_key": {
+                      "type": "string"
+                    },
+                    "public_key": {
+                      "type": "string"
+                    },
+                    "server": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    }
                   },
                   "type": "object"
+                },
+                "propertyNames": {
+                  "minLength": 1
                 },
                 "type": "object"
               },

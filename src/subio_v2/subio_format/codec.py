@@ -9,7 +9,12 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 import subio_v2.protocols as protocol_registry
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import Node, Protocol, USER_OVERRIDE_FIELDS
+from subio_v2.model.nodes import (
+    Node,
+    Protocol,
+    USER_OVERRIDE_FIELDS,
+    clone_node_for_user,
+)
 from subio_v2.subio_format.schema import (
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
@@ -196,19 +201,39 @@ class SubioNodeCodec:
             ]
 
         node.source_context = DialectContext("subio", source_format)
-        validation_issues = [
-            self._issue(
-                "parse.subio.invalid-combination",
-                error.message,
-                field=f"{path}.{error.field}",
-                node=node.name,
-                protocol=protocol.value,
-            )
-            for error in validate_node(node)
-        ]
+        validation_issues = self._validate_node(node, path, protocol)
         if validation_issues:
             return None, validation_issues
         return node, []
+
+    def _validate_node(
+        self, node: Node, path: str, protocol: Protocol
+    ) -> list[ConversionIssue]:
+        validation_targets: list[tuple[str | None, Node]] = [(None, node)]
+        if node.users:
+            validation_targets = []
+            for username in node.users:
+                user_node = clone_node_for_user(node, username)
+                assert user_node is not None
+                validation_targets.append((username, user_node))
+
+        issues: list[ConversionIssue] = []
+        for username, candidate in validation_targets:
+            field_prefix = path if username is None else f"{path}.users.{username}"
+            for error in validate_node(candidate):
+                message = error.message
+                if username is not None:
+                    message = f"SubIO user '{username}' produces an invalid node: {message}"
+                issues.append(
+                    self._issue(
+                        "parse.subio.invalid-combination",
+                        message,
+                        field=f"{field_prefix}.{error.field}",
+                        node=node.name,
+                        protocol=protocol.value,
+                    )
+                )
+        return issues
 
     def _decode_users(self, value: Any, node_class: type, path: str) -> Any:
         if not isinstance(value, dict):

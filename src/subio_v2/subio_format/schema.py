@@ -16,6 +16,7 @@ from subio_v2.model.nodes import (
     SurgePolicyOptions,
     TLSSettings,
     TransportSettings,
+    USER_OVERRIDE_FIELDS,
     WireguardPeer,
 )
 
@@ -393,10 +394,12 @@ def build_json_schema() -> dict[str, Any]:
         if descriptor is None:
             raise ValueError(f"Protocol has no registered node model: {protocol.value}")
         hints = get_type_hints(descriptor.node_class)
-        properties = {
-            name: _json_schema_for_type(hints[name])
-            for name in sorted(public_node_fields(protocol) - {"type"})
-        }
+        properties = {}
+        for name in sorted(public_node_fields(protocol) - {"type"}):
+            if name == "users":
+                properties[name] = _json_schema_for_users(hints)
+            else:
+                properties[name] = _json_schema_for_type(hints[name])
         properties["type"] = {"const": protocol.value}
         node_schemas.append(
             {
@@ -456,6 +459,22 @@ def _json_schema_for_type(expected: Any) -> dict[str, Any]:
     if expected is str:
         return {"type": "string"}
     raise ValueError(f"Unsupported SubIO schema type: {expected}")
+
+
+def _json_schema_for_users(node_hints: dict[str, Any]) -> dict[str, Any]:
+    override_properties = {
+        name: _json_schema_for_type(node_hints[name])
+        for name in sorted(USER_OVERRIDE_FIELDS & node_hints.keys())
+    }
+    return {
+        "type": "object",
+        "propertyNames": {"minLength": 1},
+        "additionalProperties": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": override_properties,
+        },
+    }
 
 
 def write_json_schema(path: str | Path) -> None:
