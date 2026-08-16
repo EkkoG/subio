@@ -185,7 +185,7 @@ providers = ["legacy-source"]
     ]
 
 
-def test_mihomo_and_clash_meta_entries_do_not_emit_deprecation_warning(
+def test_mihomo_is_silent_and_clash_meta_entries_emit_replacement_warnings(
     tmp_path, monkeypatch
 ):
     cfg = write(
@@ -220,7 +220,12 @@ providers = ["alias-source"]
 
     WorkflowEngine(str(cfg), dry_run=True)
 
-    assert messages == []
+    assert messages == [
+        "Provider 'alias-source' uses platform type alias 'clash-meta'; "
+        "use 'mihomo' instead",
+        "Artifact 'alias.yml' uses platform type alias 'clash-meta'; "
+        "use 'mihomo' instead",
+    ]
 
 
 def test_mihomo_and_alias_workflows_preserve_same_dialect_extensions(

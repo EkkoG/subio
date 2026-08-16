@@ -27,7 +27,7 @@ id = "a188d6b32ddf7cf3bbc9554055e5e2a4"
 name = "主力机场"
 type = "mihomo"
 file = "meta.yaml"
-# 兼容旧配置：type = "clash-meta" 是 mihomo 的无警告别名。
+# 兼容旧配置：type = "clash-meta" 仍可使用，但会提示替换为 mihomo。
 # 原版 Clash 仍可使用 type = "clash"，但会产生废弃提示。
 # url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
 # 可选：provider 级别 filters（与全局 [filters] 同结构，加载时应用，先于全局 filter）

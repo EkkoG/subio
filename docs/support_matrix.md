@@ -11,7 +11,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 | `provider.type` | 状态 | 输入 |
 |---|---|---|
 | `mihomo` | 推荐 | 现代 Mihomo YAML 节点 |
-| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，不产生废弃提示 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，加载配置时提示替换为 `mihomo` |
 | `clash` | 已废弃但仍支持 | 原版 Clash YAML 节点；加载配置时提示改用 `mihomo` |
 | `stash` | 支持 | Stash YAML 节点 |
 | `surge` | 支持 | Surge Proxy 内容，以及节点实际引用的 Keystore/WireGuard/Tailscale 附件 |
@@ -23,7 +23,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 | `artifact.type` | 状态 | 当前协议能力 |
 |---|---|---|
 | `mihomo` | 推荐 | 26 种当前 schema type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；未来未知 type 仅允许 Mihomo 同方言保真 |
-| `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 capability、emitter 和规则输出，不产生废弃提示 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 capability、emitter 和规则输出，加载配置时产生替代提示 |
 | `clash` | 已废弃但仍支持 | SS、VMess、Trojan、HTTP、SOCKS5；保持原版 Clash 的独立能力边界 |
 | `stash` | 支持 | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
 | `surge` | 支持 | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
@@ -65,8 +65,8 @@ conversion issue，并在未显式放行时阻止发布。
 ## 4. 兼容性
 
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；
-- 新配置应使用 `mihomo`；旧 `clash-meta` 配置继续工作且不提示，内部 issue target 统一为
-  `mihomo`；
+- 新配置应使用 `mihomo`；旧 `clash-meta` 配置继续工作并产生配置级替代提示，内部 issue
+  target 统一为 `mihomo`；
 - `clash` 继续表示原版 Clash，并在 provider/artifact 配置级产生废弃提示；它不会自动升级为
   Mihomo，也不会获得 Mihomo-only 能力；
 - 模板名、artifact 文件名和上传文件名中的 `clash` 是用户自定义文本，不自动重命名；

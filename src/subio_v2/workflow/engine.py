@@ -75,7 +75,7 @@ class WorkflowEngine:
                 raise ConfigError(f"Invalid global age_public_key: {err}")
 
         self._validate_config()
-        self._warn_deprecated_platform_types()
+        self._warn_platform_type_replacements()
 
         # Parsers and Emitters are now managed by Factory
 
@@ -304,20 +304,26 @@ class WorkflowEngine:
                     f"{', '.join(missing_uploaders)}"
                 )
 
-    def _warn_deprecated_platform_types(self) -> None:
+    def _warn_platform_type_replacements(self) -> None:
         for section in ("provider", "artifact"):
             for entry in self.config.get(section, []):
                 platform = entry.get("type")
                 resolution = (
                     resolve_platform(platform) if isinstance(platform, str) else None
                 )
-                if resolution is None or not resolution.deprecated:
+                if resolution is None:
                     continue
-                logger.warning(
-                    f"{section.title()} {entry['name']!r} uses deprecated platform "
-                    f"type {platform!r}; use {resolution.replacement!r} for modern "
-                    "Mihomo configurations"
-                )
+                if resolution.deprecated:
+                    logger.warning(
+                        f"{section.title()} {entry['name']!r} uses deprecated "
+                        f"platform type {platform!r}; use {resolution.replacement!r} "
+                        "for modern Mihomo configurations"
+                    )
+                elif resolution.alias:
+                    logger.warning(
+                        f"{section.title()} {entry['name']!r} uses platform type "
+                        f"alias {platform!r}; use {resolution.replacement!r} instead"
+                    )
 
     @staticmethod
     def _validate_options(value: Any, label: str) -> None:

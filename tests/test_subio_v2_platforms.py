@@ -15,6 +15,7 @@ def test_platform_resolution_distinguishes_alias_and_deprecation():
     assert alias.canonical == "mihomo"
     assert alias.alias
     assert not alias.deprecated
+    assert alias.replacement == "mihomo"
 
     assert clash is not None
     assert clash.canonical == "clash"

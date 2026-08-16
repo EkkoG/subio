@@ -47,9 +47,9 @@ uv run subio convert example/config.toml --dry-run
 #### 节点输入
 
 节点 provider 目前支持 `mihomo`、`clash`、`stash`、`surge`、`v2rayn` 和 `subio`。现代
-Mihomo YAML 应使用 `type = "mihomo"`；`clash-meta` 仍作为完全等价的兼容别名，不产生废弃
-提示。`clash` 专指原版 Clash YAML，已废弃但仍按原版能力继续支持，配置加载时会提示迁移到
-`mihomo`。
+Mihomo YAML 应使用 `type = "mihomo"`；`clash-meta` 仍作为完全等价的兼容别名，但配置加载时会
+提示替换为 `mihomo`。`clash` 专指原版 Clash YAML，已废弃但仍按原版能力继续支持，配置加载时
+会提示迁移到 `mihomo`。
 
 例如读取 Mihomo YAML 节点：
 
@@ -69,9 +69,9 @@ type = "stash"
 file = "stash.yaml"
 ```
 
-`artifact.type` 使用同一命名契约：新配置用 `mihomo`，旧 `clash-meta` 配置保持兼容，原版
-`clash` 继续使用较小的独立能力范围并产生废弃提示。模板名、artifact 文件名和上传文件名中的
-`clash` 只是用户自定义文本，不会自动重命名。
+`artifact.type` 使用同一命名契约：新配置用 `mihomo`，旧 `clash-meta` 配置保持兼容并产生替代
+提示，原版 `clash` 继续使用较小的独立能力范围并产生废弃提示。模板名、artifact 文件名和上传
+文件名中的 `clash` 只是用户自定义文本，不会自动重命名。
 
 具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
 

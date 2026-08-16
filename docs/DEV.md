@@ -143,7 +143,7 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 | 名称 | 状态 | 语义 |
 |---|---|---|
 | `mihomo` | 规范名称 | 现代 Mihomo YAML |
-| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，不产生废弃提示 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，配置级提示替换为规范名称 |
 | `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 capability 和规则范围 |
 
 所有 parser、emitter、capability 和规则 renderer 的公开入口必须先通过
@@ -155,6 +155,9 @@ issue 只使用 `mihomo` 规范名称；不得新增 `PLATFORM_CAPABILITIES["cla
 协议、transport、cipher、feature 或规则能力。`ClashParser`、`ClashEmitter` 和
 `src/subio_v2/clash/` 是 Clash-family 共享实现名，不因公开平台命名而机械搬迁；模板文件名、
 artifact 文件名和上传文件名中的 `clash` 也不自动改写。
+
+`clash-meta` 不是废弃平台，也不改变转换结果；Workflow 只在 provider/artifact 配置级各提示
+一次改用 `mihomo`。Factory、Parser、Emitter、CapabilityChecker 和逐节点转换不得重复提示。
 
 ### 4.2 Schema 基线
 

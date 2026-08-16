@@ -40,12 +40,13 @@ def resolve_platform(platform: str) -> PlatformResolution | None:
     spec = _PLATFORM_NAMES.get(platform)
     if spec is None:
         return None
+    alias = platform != spec.name
     return PlatformResolution(
         requested=platform,
         canonical=spec.name,
-        alias=platform != spec.name,
+        alias=alias,
         deprecated=spec.deprecated,
-        replacement=spec.replacement,
+        replacement=spec.name if alias else spec.replacement,
     )
 
 
