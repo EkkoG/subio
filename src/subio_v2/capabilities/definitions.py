@@ -252,7 +252,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "features": {"smux", "traffic-pattern"},
         },
         "gost-relay": {},
-        "rematch": {},
+        "rematch": {"features": {"smux"}},
         "shadowquic": {},
         "sudoku": {},
         "masque": {},

@@ -407,6 +407,17 @@ class DNSNode(BaseNode):
 
 
 @dataclass
+class RematchNode(BaseNode):
+    target_rematch_name: Optional[str] = None
+    target_sub_rule: Optional[str] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.REMATCH:
+            self.type = Protocol.REMATCH
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -593,6 +604,7 @@ Node = Union[
     TrustTunnelNode,
     DirectNode,
     DNSNode,
+    RematchNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,

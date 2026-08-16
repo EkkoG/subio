@@ -41,7 +41,6 @@ class PassthroughDescriptor(ProtocolDescriptor):
 
 for _protocol, _clash_type in (
     (Protocol.GOST_RELAY, "gost-relay"),
-    (Protocol.REMATCH, "rematch"),
     (Protocol.SHADOWQUIC, "shadowquic"),
     (Protocol.SUDOKU, "sudoku"),
     (Protocol.OPENVPN, "openvpn"),

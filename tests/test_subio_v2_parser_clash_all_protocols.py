@@ -13,6 +13,7 @@ from subio_v2.model.nodes import (
     MasqueNode,
     MieruNode,
     Protocol,
+    RematchNode,
     SourcePassthroughNode,
     TailscaleNode,
     TrustTunnelNode,
@@ -43,6 +44,7 @@ proxies:
   - {name: at1, type: anytls, server: s13, port: 8443, password: apw, sni: a}
   - {name: sh1, type: ssh, server: s14, port: 22, username: u, password: p}
   - {name: mr1, type: mieru, server: s15, port: 2999, transport: TCP, username: mu, password: mp}
+  - {name: rm1, type: rematch, target-rematch-name: streaming}
   - {name: sd1, type: sudoku, server: s16, port: 8443, key: mykey}
   - {name: mq1, type: masque, server: s17, port: 443, private-key: pk2, public-key: pub2, ip: 10.1.0.2/32}
   - {name: tt1, type: trusttunnel, server: s18, port: 443, username: tu, password: tp}
@@ -58,7 +60,7 @@ proxies:
   - {name: dn1, type: dns}
 """
     nodes = ClashParser().parse(yaml_text)
-    assert len(nodes) == 22
+    assert len(nodes) == 23
     types = {n.type for n in nodes}
     assert Protocol.SHADOWSOCKS in types
     assert Protocol.SHADOWSOCKSR in types
@@ -69,13 +71,14 @@ proxies:
     by_node_name = {node.name: node for node in nodes}
     assert isinstance(by_node_name["mq1"], MasqueNode)
     assert isinstance(by_node_name["mr1"], MieruNode)
+    assert isinstance(by_node_name["rm1"], RematchNode)
     assert isinstance(by_node_name["tt1"], TrustTunnelNode)
     assert isinstance(by_node_name["ts1"], TailscaleNode)
     assert isinstance(by_node_name["dr1"], DirectNode)
     assert isinstance(by_node_name["dn1"], DNSNode)
 
     proxies = _roundtrip(yaml_text)
-    assert len(proxies) == 22
+    assert len(proxies) == 23
     by_name = {p["name"]: p for p in proxies}
     assert by_name["ssr1"]["type"] == "ssr"
     assert by_name["sn1"]["obfs-opts"]["mode"] == "tls"

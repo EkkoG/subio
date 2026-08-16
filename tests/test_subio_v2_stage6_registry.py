@@ -11,6 +11,7 @@ from subio_v2.model.nodes import (
     DNSNode,
     MieruNode,
     Protocol,
+    RematchNode,
     RejectMode,
     RejectNode,
     SourcePassthroughNode,
@@ -54,7 +55,6 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     ("protocol", "clash_type"),
     [
         (Protocol.GOST_RELAY, "gost-relay"),
-        (Protocol.REMATCH, "rematch"),
         (Protocol.SHADOWQUIC, "shadowquic"),
     ],
 )
@@ -81,11 +81,6 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
                 "password": "secret",
             },
             {
-                "name": "rematch",
-                "type": "rematch",
-                "target-rematch-name": "streaming",
-            },
-            {
                 "name": "shadowquic",
                 "type": "shadowquic",
                 "server": "quic.example.com",
@@ -101,7 +96,6 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
 
     assert [node.type for node in nodes] == [
         Protocol.GOST_RELAY,
-        Protocol.REMATCH,
         Protocol.SHADOWQUIC,
     ]
     assert all(isinstance(node, ClashPassthroughNode) for node in nodes)
@@ -132,6 +126,37 @@ def test_mihomo_dns_outbound_uses_strong_ir_and_smux():
     emission = ClashEmitter(platform="mihomo").emit_result([node])
     assert emission.errors == []
     assert emission.content["proxies"][0]["smux"]["max-connections"] == 3
+
+
+def test_mihomo_rematch_uses_strong_ir_and_requires_a_target():
+    parser = ClashParser()
+    node = parser.parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "rematch",
+                    "type": "rematch",
+                    "target-rematch-name": "streaming",
+                    "target-sub-rule": "media",
+                    "smux": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, RematchNode)
+    assert node.target_rematch_name == "streaming"
+    assert node.target_sub_rule == "media"
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    assert emission.content["proxies"][0]["target-sub-rule"] == "media"
+
+    invalid = parser.parse_result(
+        {"proxies": [{"name": "invalid", "type": "rematch"}]}
+    ).nodes[0]
+    invalid_emission = ClashEmitter(platform="mihomo").emit_result([invalid])
+    assert invalid_emission.content["proxies"] == []
+    assert invalid_emission.errors[0].field == "target_rematch_name"
 
 
 @pytest.mark.parametrize(

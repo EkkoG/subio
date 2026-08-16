@@ -33,7 +33,8 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 补充约束：
 
 - Stash capability 当前为 20 种协议；Stash-only 的 Juicity 不会伪装成 Mihomo 强类型协议；
-- Mihomo `dns` outbound 已使用强类型 IR；它只表示内部 DNS 模块出站，不扩展为 DNS section 转换；
+- Mihomo `dns` outbound 和 `rematch` 已使用强类型 IR；`dns` 只表示内部 DNS 模块出站，
+  不扩展为 DNS section 转换；
 - Mieru 是 Mihomo/Stash 共享强类型协议，但 Stash 仅接受其官方 TCP profile；
 - Tailscale、MASQUE、TrustTunnel 按 selection/profile/transport/auth 分型，不因协议同名而互转；
 - Surge External 只接受本地 file provider 的显式授权，且不能输出到其他平台；

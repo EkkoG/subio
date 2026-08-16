@@ -40,6 +40,7 @@ def _bootstrap() -> None:
         mieru,
         passthrough,
         reject,
+        rematch,
         shadowsocks,
         shadowsocksr,
         snell,
