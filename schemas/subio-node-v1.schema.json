@@ -1,0 +1,3024 @@
+{
+  "$defs": {
+    "ShadowTLSSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "password": {
+          "type": "string"
+        },
+        "server_name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "SmuxSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "brutal_opts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          },
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_connections": {
+          "type": "integer"
+        },
+        "max_streams": {
+          "type": "integer"
+        },
+        "min_streams": {
+          "type": "integer"
+        },
+        "padding": {
+          "type": "boolean"
+        },
+        "protocol": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "SudokuHTTPMaskSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "disable": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "multiplex": {
+          "type": "string"
+        },
+        "path_root": {
+          "type": "string"
+        },
+        "tls": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "SurgePolicyOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_other_interface": {
+          "type": "boolean"
+        },
+        "block_quic": {
+          "type": "string"
+        },
+        "dns_follow_interface": {
+          "type": "boolean"
+        },
+        "ecn": {
+          "type": "string"
+        },
+        "hybrid": {
+          "type": "string"
+        },
+        "no_error_alert": {
+          "type": "boolean"
+        },
+        "test_timeout": {
+          "type": "integer"
+        },
+        "test_udp": {
+          "type": "string"
+        },
+        "test_url": {
+          "type": "string"
+        },
+        "tos": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "TLSSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "alpn": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "certificate": {
+          "type": "string"
+        },
+        "certificate_sha256": {
+          "type": "string"
+        },
+        "client_cert_ref": {
+          "type": "string"
+        },
+        "client_fingerprint": {
+          "type": "string"
+        },
+        "ech_opts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          },
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "private_key": {
+          "type": "string"
+        },
+        "reality_opts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "server_name": {
+          "type": "string"
+        },
+        "skip_cert_verify": {
+          "type": "boolean"
+        },
+        "sni_disabled": {
+          "type": "boolean"
+        },
+        "verify_name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "TransportSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "early_data_header_name": {
+          "type": "string"
+        },
+        "grpc_service_name": {
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          },
+          "type": "object"
+        },
+        "host": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "max_early_data": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "network": {
+          "anyOf": [
+            {
+              "enum": [
+                "tcp",
+                "ws",
+                "http",
+                "h2",
+                "grpc",
+                "xhttp"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "xhttp_mode": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "WireguardPeer": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_ips": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "preshared_key": {
+          "type": "string"
+        },
+        "public_key": {
+          "type": "string"
+        },
+        "reserved": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "server": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "jsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/jsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/jsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "https://github.com/ekkog/subio/schemas/subio-node-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "nodes": {
+      "items": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "idle_session_check_interval": {
+                "type": "integer"
+              },
+              "idle_session_timeout": {
+                "type": "integer"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "min_idle_session": {
+                "type": "integer"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "reuse": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "anytls"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "anytls",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "direct"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "direct",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "dns"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "dns",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "forward": {
+                "type": "boolean"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "mux": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "gost-relay"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "gost-relay",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "headers": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "max_streams": {
+                "type": "integer"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "http"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "variant": {
+                "enum": [
+                  "auto",
+                  "http",
+                  "https",
+                  "h2-connect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "http",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "auth": {
+                "type": "string"
+              },
+              "auth_str": {
+                "type": "string"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "down": {
+                "type": "string"
+              },
+              "down_speed": {
+                "type": "integer"
+              },
+              "hop_interval": {
+                "type": "integer"
+              },
+              "hysteria_protocol": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "obfs": {
+                "type": "string"
+              },
+              "obfs_protocol": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "ports": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "hysteria"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "up": {
+                "type": "string"
+              },
+              "up_speed": {
+                "type": "integer"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "hysteria",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "down": {
+                "type": "string"
+              },
+              "hop_interval": {
+                "type": "integer"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "obfs": {
+                "type": "string"
+              },
+              "obfs_password": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "ports": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "hysteria2"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "up": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "hysteria2",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "juicity"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "uuid": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "juicity",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "bbr_profile": {
+                "type": "string"
+              },
+              "congestion_controller": {
+                "type": "string"
+              },
+              "connect_uri": {
+                "type": "string"
+              },
+              "cwnd": {
+                "type": "integer"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "dns_servers": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "handshake_timeout": {
+                "type": "integer"
+              },
+              "hop_interval": {
+                "type": "integer"
+              },
+              "interface_ip": {
+                "type": "string"
+              },
+              "interface_ipv6": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mode": {
+                "enum": [
+                  "forward-proxy",
+                  "connect-ip",
+                  "h3-l4proxy"
+                ],
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "mtu": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "ports": {
+                "type": "string"
+              },
+              "private_key": {
+                "type": "string"
+              },
+              "public_key": {
+                "type": "string"
+              },
+              "remote_dns_resolve": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "transport": {
+                "type": "string"
+              },
+              "type": {
+                "const": "masque"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "masque",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "handshake_mode": {
+                "enum": [
+                  "HANDSHAKE_DEFAULT",
+                  "HANDSHAKE_STANDARD",
+                  "HANDSHAKE_NO_WAIT"
+                ],
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "multiplexing": {
+                "enum": [
+                  "MULTIPLEXING_DEFAULT",
+                  "MULTIPLEXING_OFF",
+                  "MULTIPLEXING_LOW",
+                  "MULTIPLEXING_MIDDLE",
+                  "MULTIPLEXING_HIGH"
+                ],
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "port_range": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "traffic_pattern": {
+                "type": "string"
+              },
+              "transport": {
+                "enum": [
+                  "TCP",
+                  "UDP"
+                ],
+                "type": "string"
+              },
+              "type": {
+                "const": "mieru"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "mieru",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "auth": {
+                "type": "string"
+              },
+              "ca": {
+                "type": "string"
+              },
+              "certificate": {
+                "type": "string"
+              },
+              "cipher": {
+                "type": "string"
+              },
+              "comp_lzo": {
+                "type": "string"
+              },
+              "data_ciphers": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "data_ciphers_fallback": {
+                "type": "string"
+              },
+              "dev": {
+                "type": "string"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "dns_servers": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "handshake_timeout": {
+                "type": "integer"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "key_direction": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "mtu": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "peer_info": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "ping": {
+                "type": "integer"
+              },
+              "ping_restart": {
+                "type": "integer"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "private_key": {
+                "type": "string"
+              },
+              "proto": {
+                "type": "string"
+              },
+              "remote_dns_resolve": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls_auth": {
+                "type": "string"
+              },
+              "tls_crypt": {
+                "type": "string"
+              },
+              "tls_crypt_v2": {
+                "type": "string"
+              },
+              "type": {
+                "const": "openvpn"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "openvpn",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mode": {
+                "enum": [
+                  "reject",
+                  "reject-drop",
+                  "reject-no-drop",
+                  "reject-tinygif"
+                ],
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "reject"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "reject",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "target_rematch_name": {
+                "type": "string"
+              },
+              "target_sub_rule": {
+                "type": "string"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "rematch"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "rematch",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "bbr_profile": {
+                "type": "string"
+              },
+              "congestion_controller": {
+                "type": "string"
+              },
+              "cwnd": {
+                "type": "integer"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "disable_mtu_discovery": {
+                "type": "boolean"
+              },
+              "down": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "keep_alive_interval": {
+                "type": "integer"
+              },
+              "max_datagram_frame_size": {
+                "type": "integer"
+              },
+              "max_open_streams": {
+                "type": "integer"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "quic_versions": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "recv_window": {
+                "type": "integer"
+              },
+              "recv_window_conn": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "shadowquic"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "udp_over_stream": {
+                "type": "boolean"
+              },
+              "up": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "zero_rtt": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "shadowquic",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cipher": {
+                "type": "string"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "plugin": {
+                "type": "string"
+              },
+              "plugin_opts": {
+                "additionalProperties": {
+                  "$ref": "#/$defs/jsonValue"
+                },
+                "type": "object"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "shadowsocks"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "udp_port": {
+                "type": "integer"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "shadowsocks",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cipher": {
+                "type": "string"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "obfs": {
+                "type": "string"
+              },
+              "obfs_param": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "protocol_param": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "ssr_protocol": {
+                "type": "string"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "shadowsocksr"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "shadowsocksr",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "obfs": {
+                "type": "string"
+              },
+              "obfs_host": {
+                "type": "string"
+              },
+              "obfs_opts": {
+                "additionalProperties": {
+                  "$ref": "#/$defs/jsonValue"
+                },
+                "type": "object"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "psk": {
+                "type": "string"
+              },
+              "reuse": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "snell"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "udp_port": {
+                "type": "integer"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "snell",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "socks5"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "socks5",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "host_key": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "host_key_algorithms": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "idle_timeout": {
+                "type": "integer"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "keystore_id": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "private_key": {
+                "type": "string"
+              },
+              "private_key_passphrase": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "server_fingerprints": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "ssh"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "ssh",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "aead_method": {
+                "type": "string"
+              },
+              "custom_table": {
+                "type": "string"
+              },
+              "custom_tables": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "enable_pure_downlink": {
+                "type": "boolean"
+              },
+              "httpmask": {
+                "$ref": "#/$defs/SudokuHTTPMaskSettings"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "legacy_http_mask": {
+                "type": "boolean"
+              },
+              "legacy_http_mask_host": {
+                "type": "string"
+              },
+              "legacy_http_mask_mode": {
+                "type": "string"
+              },
+              "legacy_http_mask_multiplex": {
+                "type": "string"
+              },
+              "legacy_http_mask_strategy": {
+                "type": "string"
+              },
+              "legacy_http_mask_tls": {
+                "type": "boolean"
+              },
+              "legacy_path_root": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "multiplex": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "padding_max": {
+                "type": "integer"
+              },
+              "padding_min": {
+                "type": "integer"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "table_type": {
+                "type": "string"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "sudoku"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "sudoku",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "accept_routes": {
+                "type": "boolean"
+              },
+              "auth_key": {
+                "type": "string"
+              },
+              "auto_add_magic_dns_rule": {
+                "type": "boolean"
+              },
+              "control_url": {
+                "type": "string"
+              },
+              "derp_only": {
+                "type": "boolean"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "dns_servers": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "ephemeral": {
+                "type": "boolean"
+              },
+              "exit_node": {
+                "type": "string"
+              },
+              "exit_node_allow_lan_access": {
+                "type": "boolean"
+              },
+              "exit_node_auto_fallback": {
+                "type": "boolean"
+              },
+              "hostname": {
+                "type": "string"
+              },
+              "idle_keepalive": {
+                "type": "integer"
+              },
+              "interactive_login": {
+                "type": "boolean"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "mtu": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "prefer_ipv6": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "state_dir": {
+                "type": "string"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "tailscale"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "tailscale",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "transport": {
+                "$ref": "#/$defs/TransportSettings"
+              },
+              "type": {
+                "const": "trojan"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "trojan",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "bbr_profile": {
+                "type": "string"
+              },
+              "congestion_controller": {
+                "type": "string"
+              },
+              "cwnd": {
+                "type": "integer"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "string"
+              },
+              "health_check": {
+                "type": "boolean"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "max_connections": {
+                "type": "integer"
+              },
+              "max_streams": {
+                "type": "integer"
+              },
+              "min_streams": {
+                "type": "integer"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "quic": {
+                "type": "boolean"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "type": {
+                "const": "trusttunnel"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "username": {
+                "type": "string"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "websocket": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "trusttunnel",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "hop_interval": {
+                "type": "integer"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "ports": {
+                "type": "string"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "token": {
+                "type": "string"
+              },
+              "type": {
+                "const": "tuic"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "uuid": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "tuic",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "flow": {
+                "type": "string"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "packet_encoding": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "transport": {
+                "$ref": "#/$defs/TransportSettings"
+              },
+              "type": {
+                "const": "vless"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "uuid": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "vless",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "alter_id": {
+                "type": "integer"
+              },
+              "cipher": {
+                "type": "string"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "global_padding": {
+                "type": "boolean"
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "packet_encoding": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "tls": {
+                "$ref": "#/$defs/TLSSettings"
+              },
+              "transport": {
+                "$ref": "#/$defs/TransportSettings"
+              },
+              "type": {
+                "const": "vmess"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "uuid": {
+                "type": "string"
+              },
+              "vmess_aead": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "vmess",
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "allowed_ips": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "amnezia_wg_option": {
+                "additionalProperties": {
+                  "$ref": "#/$defs/jsonValue"
+                },
+                "type": "object"
+              },
+              "dialer_proxy": {
+                "type": "string"
+              },
+              "dns_servers": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "interface_ip": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "interface_ipv6": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "interface_name": {
+                "type": "string"
+              },
+              "ip_version": {
+                "type": "string"
+              },
+              "mptcp": {
+                "type": "boolean"
+              },
+              "mtu": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "peers": {
+                "items": {
+                  "$ref": "#/$defs/WireguardPeer"
+                },
+                "type": "array"
+              },
+              "persistent_keepalive": {
+                "type": "integer"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "preshared_key": {
+                "type": "string"
+              },
+              "private_key": {
+                "type": "string"
+              },
+              "public_key": {
+                "type": "string"
+              },
+              "refresh_server_ip_interval": {
+                "type": "integer"
+              },
+              "remote_dns_resolve": {
+                "type": "boolean"
+              },
+              "reserved": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "routing_mark": {
+                "type": "integer"
+              },
+              "server": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "shadow_tls": {
+                "$ref": "#/$defs/ShadowTLSSettings"
+              },
+              "smux": {
+                "$ref": "#/$defs/SmuxSettings"
+              },
+              "surge_options": {
+                "$ref": "#/$defs/SurgePolicyOptions"
+              },
+              "tfo": {
+                "type": "boolean"
+              },
+              "type": {
+                "const": "wireguard"
+              },
+              "udp": {
+                "type": "boolean"
+              },
+              "users": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/jsonValue"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "workers": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "title": "wireguard",
+            "type": "object"
+          }
+        ]
+      },
+      "type": "array"
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "version",
+    "nodes"
+  ],
+  "title": "SubIO node document v1",
+  "type": "object"
+}

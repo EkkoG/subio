@@ -731,7 +731,7 @@ Node = Union[
 ]
 
 
-_USER_OVERRIDE_FIELDS = frozenset(
+USER_OVERRIDE_FIELDS = frozenset(
     {
         "server",
         "port",
@@ -772,7 +772,7 @@ def clone_node_for_user(node: Node, username: str) -> Node | None:
     # User entries are credential/endpoint overrides, not arbitrary node patches.
     for key, value in user_overrides.items():
         normalized_key = key.replace("-", "_")
-        if normalized_key not in _USER_OVERRIDE_FIELDS or not hasattr(
+        if normalized_key not in USER_OVERRIDE_FIELDS or not hasattr(
             new_node, normalized_key
         ):
             raise ValueError(f"User '{username}' cannot override node field '{key}'")
