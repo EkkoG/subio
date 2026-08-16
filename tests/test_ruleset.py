@@ -278,6 +278,12 @@ def test_text_codecs_require_utf8():
     codec = DEFAULT_RULESET_CODEC_REGISTRY.get(
         RuleSetInputSelection("mihomo", "classical", "text")
     )
+    parsed = codec.parse(
+        name="bom",
+        content=b"\xef\xbb\xbfDOMAIN,example.com",
+        context=DialectContext("mihomo", "text"),
+    )
+    assert parsed.ruleset.entries
     with pytest.raises(ConfigError, match="valid UTF-8"):
         codec.parse(
             name="bad",

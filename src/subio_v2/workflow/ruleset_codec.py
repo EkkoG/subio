@@ -249,7 +249,7 @@ def _decode_utf8(content: bytes, name: str) -> str:
     if not isinstance(content, bytes):
         raise ConfigError(f"Ruleset {name!r} loader must return bytes")
     try:
-        return content.decode("utf-8")
+        return content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ConfigError(f"Ruleset {name!r} is not valid UTF-8") from exc
 

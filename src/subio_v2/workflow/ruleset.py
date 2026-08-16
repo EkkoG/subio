@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import ipaddress
 import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping
-
-import requests
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.dialect import DialectContext, dialect_context_for_platform
@@ -33,6 +30,7 @@ from subio_v2.workflow.rule_parser import (
     parse_argument_names,
     validate_identifier,
 )
+from subio_v2.workflow.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.workflow.ruleset_codec import (
     DEFAULT_RULESET_CODEC_REGISTRY,
     RuleSetInputCodecRegistry,
@@ -525,37 +523,26 @@ class RuleSetStore:
 
 
 def load_remote_resource(
-    url: str, user_agent: str | None = None, debug: bool = False
+    url: str,
+    user_agent: str | None = None,
+    debug: bool = False,
+    *,
+    loader: RunRemoteLoader | None = None,
 ) -> bytes:
     """Load remote ruleset bytes without text decoding or content sniffing."""
-
+    del debug
     headers = {"User-Agent": user_agent} if user_agent else {}
-    cache_file: str | None = None
-    if debug or os.getenv("DEBUG"):
-        os.makedirs("cache", exist_ok=True)
-        cache_file = f"cache/{hashlib.md5(url.encode('utf-8')).hexdigest()}"
-        if os.path.exists(cache_file):
-            with open(cache_file, "rb") as file:
-                return file.read()
-
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        content = response.content
-    except Exception as exc:
-        raise ConfigError(
-            f"Failed to fetch remote ruleset: {type(exc).__name__}"
-        ) from exc
-
-    if cache_file is not None:
-        with open(cache_file, "wb") as file:
-            file.write(content)
-    return content
+        return (loader or RunRemoteLoader()).fetch(url, headers=headers)
+    except RemoteLoadError as exc:
+        raise ConfigError(str(exc).replace("remote resource", "remote ruleset")) from exc
 
 
 def load_rulesets(
     ruleset_configs: list[dict[str, Any]],
     registry: RuleSetInputCodecRegistry = DEFAULT_RULESET_CODEC_REGISTRY,
+    *,
+    loader: RunRemoteLoader | None = None,
 ) -> RuleSetStore:
     store = RuleSetStore()
     if not isinstance(ruleset_configs, list):
@@ -583,7 +570,7 @@ def load_rulesets(
         selection = RuleSetInputSelection.from_config(config)
         codec = registry.get(selection)
         logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
-        content = load_remote_resource(url, user_agent)
+        content = load_remote_resource(url, user_agent, loader=loader)
         if not content:
             raise ConfigError(f"Ruleset {name!r} is empty")
 

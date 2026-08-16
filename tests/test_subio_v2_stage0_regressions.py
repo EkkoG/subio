@@ -282,7 +282,7 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
     engine = WorkflowEngine(str(config), dry_run=False)
     attempts = 0
 
-    monkeypatch.setattr(engine, "_load_providers", lambda: None)
+    monkeypatch.setattr(engine, "_load_providers", lambda loader: None)
     monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
     monkeypatch.setattr(engine.batch_uploader, "flush", lambda: None)
 

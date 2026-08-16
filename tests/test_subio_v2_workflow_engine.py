@@ -446,7 +446,7 @@ def test_config_shape_errors_are_reported_as_config_errors(
 def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
     engine = WorkflowEngine(str(cfg), dry_run=False)
-    monkeypatch.setattr(engine, "_load_providers", lambda: None)
+    monkeypatch.setattr(engine, "_load_providers", lambda loader: None)
 
     def generate():
         engine._staged_artifacts["out.txt"] = "content"
