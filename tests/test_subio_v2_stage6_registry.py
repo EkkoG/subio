@@ -10,6 +10,7 @@ from subio_v2.model.nodes import (
     DNSNode,
     GostRelayNode,
     MieruNode,
+    OpenVPNNode,
     Protocol,
     RematchNode,
     RejectMode,
@@ -46,6 +47,8 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.DNS).passthrough is False
     assert registry.get(Protocol.SHADOWQUIC).node_class is ShadowQUICNode
     assert registry.get(Protocol.SHADOWQUIC).passthrough is False
+    assert registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
+    assert registry.get(Protocol.OPENVPN).passthrough is False
     registered_protocols = {
         descriptor.protocol.value
         for descriptor in descriptors
@@ -203,6 +206,84 @@ def test_mihomo_shadowquic_uses_strong_ir_for_quic_tuning():
     ).nodes[0]
     invalid_emission = ClashEmitter(platform="mihomo").emit_result([invalid])
     assert invalid_emission.errors[0].field == "congestion_controller"
+
+
+def test_mihomo_openvpn_uses_strong_ir_for_credentials_and_runtime_options():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "openvpn",
+                    "type": "openvpn",
+                    "server": "vpn.example.com",
+                    "port": 1194,
+                    "proto": "tcp-client",
+                    "cipher": "AES-256-GCM",
+                    "data-ciphers": ["AES-256-GCM", "CHACHA20-POLY1305"],
+                    "ca": "ca-content",
+                    "cert": "cert-content",
+                    "key": "key-content",
+                    "tls-crypt-v2": "tls-key",
+                    "key-direction": 1,
+                    "peer-info": {"IV_VER": "3.10"},
+                    "ping": 10,
+                    "ping-restart": 30,
+                    "handshake-timeout": 15,
+                    "mtu": 1400,
+                    "remote-dns-resolve": True,
+                    "dns": ["1.1.1.1"],
+                    "smux": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, OpenVPNNode)
+    assert node.proto == "tcp-client"
+    assert node.private_key == "key-content"
+    assert node.key_direction == "1"
+    assert node.dns_servers == ["1.1.1.1"]
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    proxy = emission.content["proxies"][0]
+    assert proxy["cert"] == "cert-content"
+    assert proxy["key"] == "key-content"
+    assert proxy["key-direction"] == "1"
+    assert proxy["smux"]["enabled"] is True
+
+
+@pytest.mark.parametrize(
+    "overrides, expected_fields",
+    [
+        ({"ca": ""}, {"ca"}),
+        ({"cert": "cert", "username": "user"}, {"certificate"}),
+        ({"username": None}, {"username"}),
+        (
+            {"tls-auth": "a", "tls-crypt": "b"},
+            {"tls_auth"},
+        ),
+        ({"proto": "invalid"}, {"proto"}),
+        ({"data-ciphers": ["invalid"]}, {"data_ciphers"}),
+    ],
+)
+def test_mihomo_openvpn_rejects_invalid_schema_combinations(
+    overrides, expected_fields
+):
+    proxy = {
+        "name": "openvpn-invalid",
+        "type": "openvpn",
+        "server": "vpn.example.com",
+        "port": 1194,
+        "ca": "ca-content",
+        "username": "user",
+    }
+    proxy.update(overrides)
+    node = ClashParser().parse_result({"proxies": [proxy]}).nodes[0]
+
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+
+    assert emission.content["proxies"] == []
+    assert expected_fields <= {issue.field for issue in emission.errors}
 
 
 @pytest.mark.parametrize(

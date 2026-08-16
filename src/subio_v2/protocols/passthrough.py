@@ -39,8 +39,5 @@ class PassthroughDescriptor(ProtocolDescriptor):
         return emit_passthrough(node, context or DialectContext("mihomo", "yaml"))
 
 
-for _protocol, _clash_type in (
-    (Protocol.SUDOKU, "sudoku"),
-    (Protocol.OPENVPN, "openvpn"),
-):
+for _protocol, _clash_type in ((Protocol.SUDOKU, "sudoku"),):
     register(PassthroughDescriptor(protocol=_protocol, clash_type=_clash_type))

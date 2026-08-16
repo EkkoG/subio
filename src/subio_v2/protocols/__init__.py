@@ -39,6 +39,7 @@ def _bootstrap() -> None:
         juicity,
         masque,
         mieru,
+        openvpn,
         passthrough,
         reject,
         rematch,

@@ -257,7 +257,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "sudoku": {},
         "masque": {},
         "trusttunnel": {},
-        "openvpn": {},
+        "openvpn": {"features": {"smux"}},
         "tailscale": {},
         "direct": {},
         "reject": {"modes": {"reject"}, "features": {"smux"}},

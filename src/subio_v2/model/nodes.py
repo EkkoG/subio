@@ -458,6 +458,38 @@ class ShadowQUICNode(BaseNode):
 
 
 @dataclass
+class OpenVPNNode(BaseNode):
+    proto: str = "udp"
+    dev: str = "tun"
+    cipher: str = "AES-128-GCM"
+    data_ciphers: Optional[List[str]] = None
+    data_ciphers_fallback: Optional[str] = None
+    auth: str = "SHA256"
+    comp_lzo: str = "no"
+    ca: str = field(default="", repr=False)
+    certificate: Optional[str] = field(default=None, repr=False)
+    private_key: Optional[str] = field(default=None, repr=False)
+    tls_auth: Optional[str] = field(default=None, repr=False)
+    key_direction: Optional[str] = None
+    tls_crypt: Optional[str] = field(default=None, repr=False)
+    tls_crypt_v2: Optional[str] = field(default=None, repr=False)
+    username: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    peer_info: Optional[Dict[str, str]] = field(default=None, repr=False)
+    ping: int = 0
+    ping_restart: int = 0
+    handshake_timeout: int = 0
+    mtu: int = 1500
+    remote_dns_resolve: bool = False
+    dns_servers: Optional[List[str]] = None
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.OPENVPN:
+            self.type = Protocol.OPENVPN
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -647,6 +679,7 @@ Node = Union[
     RematchNode,
     GostRelayNode,
     ShadowQUICNode,
+    OpenVPNNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,
