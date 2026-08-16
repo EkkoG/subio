@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.conversion import IssueSeverity, WorkflowResult
+from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
+from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError, UploadError
@@ -532,6 +533,12 @@ type = "surge"
 def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
     cfg = _write_ruleset_issue_workflow(tmp_path, allow_errors=False)
     monkeypatch.chdir(tmp_path)
+    logged_issues = []
+    monkeypatch.setattr(
+        BaseEmitter,
+        "log_issues",
+        staticmethod(lambda issues: logged_issues.extend(issues)),
+    )
     monkeypatch.setattr(
         "subio_v2.workflow.ruleset.load_remote_resource",
         lambda *args, **kwargs: b"USER-AGENT,*Safari*\n",
@@ -546,8 +553,48 @@ def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
     ]
     assert exc_info.value.issues[0].artifact == "out.yaml"
     assert exc_info.value.issues[0].target == "clash-meta"
+    assert logged_issues == list(exc_info.value.issues)
     assert engine._staged_artifacts == {}
     assert not (tmp_path / "dist").exists()
+
+
+def test_ruleset_errors_are_logged_with_source_line_and_target(monkeypatch):
+    messages = []
+
+    class DummyLogger:
+        def error(self, message):
+            messages.append(("error", message))
+
+        def warning(self, message):
+            messages.append(("warning", message))
+
+        def dim(self, message):
+            messages.append(("dim", message))
+
+    monkeypatch.setattr("subio_v2.emitter.base.logger", DummyLogger())
+    BaseEmitter.log_issues(
+        [
+            ConversionIssue(
+                severity=IssueSeverity.ERROR,
+                node=None,
+                protocol=None,
+                source="remote_bad",
+                target="stash",
+                field="line 7",
+                message="Rule type IN-USER cannot be rendered for stash",
+                stage="render",
+                code="ruleset.unsupported-target-rule",
+            )
+        ]
+    )
+
+    assert messages == [
+        (
+            "error",
+            "Ruleset 'remote_bad' (line 7, target 'stash'): "
+            "Rule type IN-USER cannot be rendered for stash",
+        )
+    ]
 
 
 def test_allowed_ruleset_errors_are_returned_by_workflow(tmp_path, monkeypatch):

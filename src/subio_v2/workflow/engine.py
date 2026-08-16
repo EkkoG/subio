@@ -19,6 +19,7 @@ from subio_v2.conversion import (
 from subio_v2.model.nodes import Node, get_nodes_for_user
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
+from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.processor.common import (
     FilterProcessor,
@@ -722,6 +723,7 @@ class WorkflowEngine:
                 for issue in render_result.issues
             ]
             self.issues.extend(ruleset_issues)
+            BaseEmitter.log_issues(ruleset_issues)
             ruleset_errors = [
                 issue
                 for issue in ruleset_issues

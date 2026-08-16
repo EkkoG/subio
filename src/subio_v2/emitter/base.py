@@ -175,12 +175,31 @@ class BaseEmitter(ABC):
     @staticmethod
     def log_issues(issues: List[ConversionIssue]) -> None:
         for issue in issues:
-            location = f" Node '{issue.node}'" if issue.node else ""
+            if issue.code.startswith("ruleset."):
+                location = (
+                    f"Ruleset '{issue.source}'" if issue.source else "Ruleset"
+                )
+                context = []
+                if issue.field:
+                    context.append(issue.field)
+                if issue.target:
+                    context.append(f"target '{issue.target}'")
+                if context:
+                    location += f" ({', '.join(context)})"
+            elif issue.node:
+                location = f"Node '{issue.node}'"
+            elif issue.source:
+                location = f"Source '{issue.source}'"
+            else:
+                location = "Conversion"
+
             detail = issue.message
             if issue.suggestion:
                 detail += f" ({issue.suggestion})"
-            message = f"[{issue.target}]{location}: {detail}"
-            if issue.severity in {IssueSeverity.ERROR, IssueSeverity.WARNING}:
+            message = f"{location}: {detail}"
+            if issue.severity == IssueSeverity.ERROR:
+                logger.error(message)
+            elif issue.severity == IssueSeverity.WARNING:
                 logger.warning(message)
             else:
                 logger.dim(message)
