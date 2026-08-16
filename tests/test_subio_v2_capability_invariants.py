@@ -148,6 +148,26 @@ def test_capability_protocol_sections_match_declared_protocols():
         assert protocol_sections == capabilities["protocols"], platform
 
 
+def test_capability_tables_only_keep_runtime_feature_flags():
+    runtime_features = {
+        "tls",
+        "h2-connect",
+        "connect-udp",
+        "obfs",
+        "reality",
+        "smux",
+        "traffic-pattern",
+    }
+    for capabilities in PLATFORM_CAPABILITIES.values():
+        assert set(capabilities["global_features"]) == {
+            "tfo",
+            "mptcp",
+            "dialer_proxy",
+        }
+        for protocol in capabilities["protocols"]:
+            assert capabilities[protocol].get("features", set()) <= runtime_features
+
+
 def test_link_platform_protocols_have_builders_and_build_baseline_nodes():
     factories = _base_node_factories()
     declared_protocols = {
@@ -308,7 +328,10 @@ def test_undeclared_reality_is_rejected(protocol: Protocol):
 
     for platform in LINK_PLATFORMS:
         assert (
-            "reality" not in PLATFORM_CAPABILITIES[platform][protocol.value]["features"]
+            "reality"
+            not in PLATFORM_CAPABILITIES[platform][protocol.value].get(
+                "features", set()
+            )
         )
         assert not CapabilityChecker(platform).check_node(node).supported
 
@@ -323,7 +346,12 @@ def test_socks5_tls_is_rejected_by_link_platforms():
     )
 
     for platform in LINK_PLATFORMS:
-        assert "tls" not in PLATFORM_CAPABILITIES[platform]["socks5"]["features"]
+        assert (
+            "tls"
+            not in PLATFORM_CAPABILITIES[platform]["socks5"].get(
+                "features", set()
+            )
+        )
         assert not CapabilityChecker(platform).check_node(node).supported
     assert link.build_url(node) is None
 

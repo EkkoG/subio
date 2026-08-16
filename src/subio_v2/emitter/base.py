@@ -152,11 +152,11 @@ class BaseEmitter(ABC):
                     )
                 )
 
-            extra_context = node.extra_context
+            source_context = node.source_context
             if (
                 node.extra
-                and extra_context is not None
-                and extra_context.dialect != self.target_context.dialect
+                and source_context is not None
+                and source_context.dialect != self.target_context.dialect
             ):
                 issues.append(
                     self.issue_for_node(
@@ -164,7 +164,7 @@ class BaseEmitter(ABC):
                         IssueSeverity.WARNING,
                         "Source-only fields cannot be represented by this target: "
                         + ", ".join(sorted(node.extra)),
-                        field=f"extra.{extra_context.dialect}",
+                        field=f"extra.{source_context.dialect}",
                         stage="conversion",
                         code="conversion.unconsumed-source-field",
                     )
@@ -174,9 +174,8 @@ class BaseEmitter(ABC):
             if (
                 transport is not None
                 and getattr(transport, "extra", None)
-                and getattr(transport, "extra_context", None) is not None
-                and transport.extra_context.dialect
-                != self.target_context.dialect
+                and source_context is not None
+                and source_context.dialect != self.target_context.dialect
             ):
                 fields = sorted(
                     f"transport.{block}.{key}"
@@ -189,7 +188,7 @@ class BaseEmitter(ABC):
                         IssueSeverity.WARNING,
                         "Source-only fields cannot be represented by this target: "
                         + ", ".join(fields),
-                        field=f"transport.extra.{transport.extra_context.dialect}",
+                        field=f"transport.extra.{source_context.dialect}",
                         stage="conversion",
                         code="conversion.unconsumed-source-field",
                     )

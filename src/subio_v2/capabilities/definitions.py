@@ -98,24 +98,20 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "protocols": set(SURGE_NODE_PROTOCOLS),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
-            "transports": {TRANSPORT_TCP},
             "plugins": {"obfs"},
-            "features": {"udp"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
             "transports": {TRANSPORT_TCP, TRANSPORT_WS},
-            "features": {"udp", "tls"},
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS},
-            "features": {"udp", "tls"},
         },
         "http": {
             "features": {"tls", "h2-connect", "connect-udp"},
         },
         "socks5": {
-            "features": {"tls", "udp"},  # socks5-tls
+            "features": {"tls"},  # socks5-tls
         },
         "snell": {
             "versions": {1, 2, 3, 4, 5, 6},
@@ -132,41 +128,25 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "tuic": {
             "versions": {4, 5},
-            "features": {"udp"},
         },
         "hysteria2": {
-            "features": {"udp", "obfs"},
+            "features": {"obfs"},
             "obfs_modes": {"salamander", "gecko"},
         },
         "ssh": {
             "auth_methods": {"password", "private_key"},
         },
-        "anytls": {
-            "features": {"tls", "udp"},
-        },
-        "wireguard": {
-            "features": {"udp", "multiple-peers", "named-section"},
-        },
-        "tailscale": {
-            "features": {"udp", "named-section", "interactive-login"},
-        },
-        "masque": {
-            "modes": {"forward-proxy"},
-            "transports": {"h3"},
-            "features": {"udp", "tls", "basic-auth"},
-        },
-        "trusttunnel": {
-            "transports": {"h2", "h3", "ws"},
-            "features": {"tls"},
-        },
-        "direct": {"features": {"interface-binding"}},
+        "anytls": {},
+        "wireguard": {},
+        "tailscale": {},
+        "masque": {},
+        "trusttunnel": {},
+        "direct": {},
         "reject": {
             "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"},
-            "features": {"drop", "no-drop", "tinygif"},
         },
         # 全局特性
         "global_features": {
-            "udp_relay": True,
             "tfo": True,
             "mptcp": False,
             "dialer_proxy": True,
@@ -204,9 +184,8 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls", "restls"},
-            "features": {"udp", "smux"},
+            "features": {"smux"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
@@ -217,7 +196,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_H2,
                 TRANSPORT_HTTP,
             },
-            "features": {"udp", "tls", "reality", "smux"},
+            "features": {"reality", "smux"},
         },
         "vless": {
             "transports": {
@@ -228,37 +207,34 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_HTTP,
                 TRANSPORT_XHTTP,
             },
-            "features": {"udp", "tls", "reality", "xtls", "smux"},
+            "features": {"reality", "smux"},
             "flows": {"xtls-rprx-vision"},
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
-            "features": {"udp", "tls", "reality", "smux"},
+            "features": {"reality", "smux"},
         },
         "http": {
             "features": {"tls"},
         },
         "socks5": {
-            "features": {"tls", "udp"},
+            "features": {"tls"},
         },
         "hysteria": {
-            "features": {"udp", "obfs"},
+            "features": {"obfs"},
         },
         "hysteria2": {
-            "features": {"udp", "obfs"},
+            "features": {"obfs"},
         },
         "tuic": {
             "versions": {4, 5},
-            "features": {"udp"},
         },
         "snell": {
             "versions": {1, 2, 3, 4, 5},
             "reuse_versions": {4, 5},
             "obfs_modes": {"http", "tls"},
         },
-        "shadowsocksr": {
-            "features": set(),
-        },
+        "shadowsocksr": {},
         "mieru": {
             "transports": {"TCP", "UDP"},
             "multiplexing": {
@@ -273,42 +249,29 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 "HANDSHAKE_STANDARD",
                 "HANDSHAKE_NO_WAIT",
             },
-            "features": {"udp", "smux", "traffic-pattern"},
+            "features": {"smux", "traffic-pattern"},
         },
-        "gost-relay": {"features": set()},
-        "rematch": {"features": set()},
-        "shadowquic": {"features": set()},
-        "sudoku": {"features": set()},
-        "masque": {
-            "modes": {"connect-ip", "h3-l4proxy"},
-            "transports": {"h2", "h3"},
-            "features": {"udp", "tls"},
-        },
-        "trusttunnel": {
-            "transports": {"h2", "h3"},
-            "features": {"udp", "tls"},
-        },
-        "openvpn": {"features": set()},
-        "tailscale": {"features": {"udp"}},
-        "direct": {"features": set()},
+        "gost-relay": {},
+        "rematch": {},
+        "shadowquic": {},
+        "sudoku": {},
+        "masque": {},
+        "trusttunnel": {},
+        "openvpn": {},
+        "tailscale": {},
+        "direct": {},
         "reject": {"modes": {"reject"}, "features": {"smux"}},
-        "dns": {"features": set()},
-        "wireguard": {
-            "features": {"udp"},
-        },
+        "dns": {},
+        "wireguard": {},
         "ssh": {
             "auth_methods": {"password", "private_key"},
         },
-        "anytls": {
-            "features": {"tls"},
-        },
+        "anytls": {},
         # 全局特性
         "global_features": {
-            "udp_relay": True,
             "tfo": True,
             "mptcp": True,
             "dialer_proxy": True,
-            "smux": True,
         },
     },
     # ============== Clash (原版) ==============
@@ -322,27 +285,22 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED,
-            "transports": {TRANSPORT_TCP},
             "plugins": {"obfs", "v2ray-plugin"},
-            "features": {"udp"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_H2, TRANSPORT_HTTP},
-            "features": {"udp", "tls"},
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS},
-            "features": {"udp", "tls"},
         },
         "http": {
             "features": {"tls"},
         },
         "socks5": {
-            "features": {"tls", "udp"},
+            "features": {"tls"},
         },
         "global_features": {
-            "udp_relay": True,
             "tfo": False,
             "mptcp": False,
             "dialer_proxy": False,
@@ -374,13 +332,10 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_STASH,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS},
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls"},
-            "features": {"udp"},
         },
         "shadowsocksr": {
             "ciphers": SS_CIPHERS_STASH,
-            "features": {"udp"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS_STASH,
@@ -391,7 +346,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_H2,
                 TRANSPORT_HTTP,
             },
-            "features": {"udp", "tls"},
         },
         "vless": {
             "transports": {
@@ -402,7 +356,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_HTTP,
                 TRANSPORT_XHTTP,
             },
-            "features": {"udp", "tls", "reality"},
+            "features": {"reality"},
             "flows": {
                 "xtls-rprx-origin",
                 "xtls-rprx-direct",
@@ -412,65 +366,44 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC},
-            "features": {"udp", "tls"},
         },
         "http": {
             "features": {"tls"},
         },
         "socks5": {
-            "features": {"tls", "udp"},
+            "features": {"tls"},
         },
         "snell": {
             "versions": {3, 4},
             "reuse_versions": {4},
             "obfs_modes": {"http", "tls"},
         },
-        "wireguard": {
-            "features": {"udp"},
-        },
+        "wireguard": {},
         "hysteria": {
-            "features": {"udp", "obfs"},
+            "features": {"obfs"},
         },
         "hysteria2": {
-            "features": {"udp", "obfs"},
+            "features": {"obfs"},
             "obfs_modes": {"salamander", "gecko"},
         },
         "tuic": {
             "versions": {4, 5},
-            "features": {"udp", "tls"},
         },
         "ssh": {
             "auth_methods": {"password", "private_key"},
         },
-        "anytls": {
-            "features": {"udp", "tls"},
-        },
-        "direct": {
-            "features": {"interface-binding"},
-        },
+        "anytls": {},
+        "direct": {},
         "mieru": {
             "transports": {"TCP"},
             "multiplexing": set(),
             "handshake_modes": set(),
-            "features": set(),
         },
-        "juicity": {
-            "features": {"udp", "tls"},
-        },
-        "tailscale": {
-            "features": {"interactive-login", "automatic-exit-node"},
-        },
-        "masque": {
-            "modes": {"connect-ip"},
-            "transports": {"h2", "h3"},
-            "features": {"tls"},
-        },
-        "trusttunnel": {
-            "transports": {"h2", "h3"},
-            "features": {"tls"},
-        },
+        "juicity": {},
+        "tailscale": {},
+        "masque": {},
+        "trusttunnel": {},
         "global_features": {
-            "udp_relay": True,
             "tfo": True,
             "mptcp": False,
             "dialer_proxy": True,
@@ -491,43 +424,33 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
-            "transports": {TRANSPORT_TCP},
             "plugins": {"obfs", "shadow-tls"},
-            "features": {"udp"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
-            "features": {"udp", "tls"},
         },
         "vless": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
-            "features": {"udp", "tls", "reality", "xtls"},
+            "features": {"reality"},
             "flows": {"xtls-rprx-vision"},
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC},
-            "features": {"udp", "tls"},
         },
         "http": {
             "features": {"tls"},
         },
-        "socks5": {
-            "features": {"udp"},
-        },
+        "socks5": {},
         "hysteria2": {
-            "features": {"udp", "tls", "obfs"},
+            "features": {"obfs"},
         },
         "tuic": {
             "versions": {5},
-            "features": {"udp", "tls"},
         },
-        "anytls": {
-            "features": {"tls"},
-        },
+        "anytls": {},
         # 全局特性
         "global_features": {
-            "udp_relay": True,
             "tfo": False,
             "mptcp": True,
             "dialer_proxy": True,
@@ -544,9 +467,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         },
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
             "plugins": {"obfs", "v2ray-plugin"},
-            "features": {"udp"},
         },
         "vmess": {
             "ciphers": VMESS_CIPHERS,
@@ -557,7 +478,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_H2,
                 TRANSPORT_HTTP,
             },
-            "features": {"udp", "tls"},
         },
         "vless": {
             "transports": {
@@ -567,18 +487,14 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
                 TRANSPORT_H2,
                 TRANSPORT_HTTP,
             },
-            "features": {"udp", "tls", "reality", "xtls"},
+            "features": {"reality"},
             "flows": {"xtls-rprx-vision"},
         },
         "trojan": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
-            "features": {"udp", "tls"},
         },
-        "socks5": {
-            "features": {"udp"},
-        },
+        "socks5": {},
         "global_features": {
-            "udp_relay": True,
             "tfo": False,
             "mptcp": False,
             "dialer_proxy": False,

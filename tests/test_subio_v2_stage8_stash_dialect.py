@@ -40,7 +40,7 @@ def test_stash_parser_normalizes_common_and_protocol_aliases():
     assert http.tfo is True
     assert http.dialer_proxy == "upstream"
     assert http.extra == {"benchmark-url": "https://example.com/ping"}
-    assert http.extra_context.dialect == "stash"
+    assert http.source_context.dialect == "stash"
     assert isinstance(ssh, SSHNode)
     assert ssh.username == "root"
     assert "user" not in ssh.extra

@@ -90,8 +90,7 @@ Config / local snippet
 
 ### 3.2 同方言保真数据
 
-- `BaseNode.source_context` 记录节点输入方言；`extra_context` 分别记录主字典和嵌套 transport
-  未建模字段的来源；
+- `BaseNode.source_context` 是节点及其未建模字段的唯一来源方言；
 - `BaseNode.extra` 当前用于 Clash/Mihomo descriptor 未建模字段的同方言往返；
 - `TransportSettings.extra` 保存 `ws-opts`、`grpc-opts` 等嵌套块中的未建模字段；
 - `ClashPassthroughNode.raw` 保存 Mihomo-only 或未来未知的完整 proxy 字典；
@@ -200,6 +199,9 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 
 `consumed_keys` 只能包含已经写入 IR、并能从同一规格重新生成的字段。未强类型化字段应留给
 `extra`，否则会出现“解析时消费、生成时丢失”。
+
+Capability 表只记录 checker 或 serializer 实际读取的协议集合、值域和 feature flag；
+不用 `features` 罗列客户端的理论能力或文档标签。协议的组合条件与对应 descriptor 共置。
 
 未知 transport 和非 active transport option block 必须完整保留，不能降级为 TCP，也不能
 因为提取了一个子字段而删除整个嵌套配置。

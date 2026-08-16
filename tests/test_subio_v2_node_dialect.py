@@ -19,14 +19,14 @@ def _vmess(**extra):
     }
 
 
-def test_clash_parser_records_source_and_extra_dialect():
+def test_clash_parser_records_source_dialect_for_unknown_fields():
     context = DialectContext("mihomo", "yaml")
     node = ClashParser(context).parse_result(
         _vmess(**{"future-mihomo-field": False})
     ).nodes[0]
 
     assert node.source_context == context
-    assert node.extra_context == context
+    assert node.extra == {"future-mihomo-field": False}
 
 
 def test_unknown_fields_round_trip_only_within_the_same_dialect():

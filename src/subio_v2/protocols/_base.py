@@ -113,10 +113,7 @@ class StructuredProtocolDescriptor(ProtocolDescriptor):
         kwargs = self.prepare_parse_kwargs(data, kwargs)
         node = self.node_class(**kwargs)
         node.source_context = context
-        transport = getattr(node, "transport", None)
-        if transport is not None and getattr(transport, "extra", None):
-            transport.extra_context = context
-        assign_extra(node, data, set(self.consumed_keys), context)
+        assign_extra(node, data, set(self.consumed_keys))
         return self.after_parse(node, data)
 
     def emit_clash(

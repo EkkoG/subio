@@ -62,11 +62,9 @@ def assign_extra(
     node: Any,
     data: Dict[str, Any],
     handled: Set[str],
-    context: DialectContext,
 ) -> None:
     keys = handled | _BASE_FIELD_KEYS
     node.extra = {k: v for k, v in data.items() if k not in keys}
-    node.extra_context = context if node.extra else None
 
 
 def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSettings:
@@ -86,9 +84,7 @@ def parse_tls(data: Dict[str, Any], *, default_enabled: bool = False) -> TLSSett
     )
 
 
-def parse_transport(
-    data: Dict[str, Any], context: DialectContext | None = None
-) -> TransportSettings:
+def parse_transport(data: Dict[str, Any]) -> TransportSettings:
     net = data.get("network") or Network.TCP.value
     try:
         network: Network | str = Network(net)
@@ -163,7 +159,6 @@ def parse_transport(
         max_early_data=ws_opts.get("max-early-data"),
         early_data_header_name=ws_opts.get("early-data-header-name"),
         extra=extra,
-        extra_context=context if extra else None,
     )
 
 
@@ -328,11 +323,11 @@ def merge_extra(
     base: Dict[str, Any], node: Any, context: DialectContext | None = None
 ) -> Dict[str, Any]:
     if getattr(node, "extra", None):
-        extra_context = getattr(node, "extra_context", None)
+        source_context = getattr(node, "source_context", None)
         if (
             context is not None
-            and extra_context is not None
-            and extra_context.dialect != context.dialect
+            and source_context is not None
+            and source_context.dialect != context.dialect
         ):
             return base
         for key, value in node.extra.items():

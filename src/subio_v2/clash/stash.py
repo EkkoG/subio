@@ -339,7 +339,7 @@ def post_stash_emit(
                 output.pop("plugin-opts")
 
     allowed = set(_PROTOCOL_FIELDS.get(node.type, frozenset()))
-    if node.extra_context is not None and node.extra_context.dialect == "stash":
+    if node.source_context is not None and node.source_context.dialect == "stash":
         allowed.update(node.extra)
     for key in tuple(output):
         if key not in allowed:

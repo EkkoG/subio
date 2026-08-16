@@ -54,8 +54,8 @@ def post_descriptor_emit(
     if (
         transport is not None
         and getattr(transport, "extra", None)
-        and getattr(transport, "extra_context", None) is not None
-        and transport.extra_context.dialect != context.dialect
+        and node.source_context is not None
+        and node.source_context.dialect != context.dialect
     ):
         for block, fields in transport.extra.items():
             payload = output.get(block)
