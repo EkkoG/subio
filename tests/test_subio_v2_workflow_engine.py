@@ -3,6 +3,7 @@ import stat
 from pathlib import Path
 
 import pytest
+import yaml
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
 from subio_v2.emitter.base import BaseEmitter
@@ -220,6 +221,82 @@ providers = ["alias-source"]
     WorkflowEngine(str(cfg), dry_run=True)
 
     assert messages == []
+
+
+def test_mihomo_and_alias_workflows_preserve_same_dialect_extensions(
+    tmp_path, monkeypatch
+):
+    write(
+        tmp_path,
+        "nodes.yml",
+        """
+proxies:
+  - name: future-field
+    type: vmess
+    server: example.com
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000001
+    cipher: auto
+    future-mihomo-field: false
+  - name: future-transport-field
+    type: vmess
+    server: example.com
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000002
+    cipher: auto
+    network: ws
+    ws-opts:
+      path: /ws
+      future-option: false
+  - name: future-protocol
+    type: future-protocol
+    server: example.com
+    port: 443
+    future-option: false
+""".strip(),
+    )
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "alias-source"
+type = "clash-meta"
+file = "nodes.yml"
+
+[[provider]]
+name = "canonical-source"
+type = "mihomo"
+file = "nodes.yml"
+
+[[artifact]]
+name = "alias-to-canonical.yml"
+type = "mihomo"
+providers = ["alias-source"]
+
+[[artifact]]
+name = "canonical-to-alias.yml"
+type = "clash-meta"
+providers = ["canonical-source"]
+""".strip(),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(cfg), dry_run=True).run()
+
+    alias_to_canonical = yaml.safe_load(
+        (tmp_path / "dist" / "alias-to-canonical.yml").read_text()
+    )
+    canonical_to_alias = yaml.safe_load(
+        (tmp_path / "dist" / "canonical-to-alias.yml").read_text()
+    )
+    assert alias_to_canonical == canonical_to_alias
+    proxies = alias_to_canonical["proxies"]
+    assert proxies[0]["future-mihomo-field"] is False
+    assert proxies[1]["ws-opts"]["future-option"] is False
+    assert proxies[2]["type"] == "future-protocol"
+    assert proxies[2]["future-option"] is False
+    assert result.issues == []
 
 
 def test_duplicate_artifact_name_reports_both_entry_positions(tmp_path):
@@ -722,7 +799,7 @@ def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
         "ruleset.unsupported-target-rule"
     ]
     assert exc_info.value.issues[0].artifact == "out.yaml"
-    assert exc_info.value.issues[0].target == "clash-meta"
+    assert exc_info.value.issues[0].target == "mihomo"
     assert logged_issues == list(exc_info.value.issues)
     assert engine._staged_artifacts == {}
     assert not (tmp_path / "dist").exists()

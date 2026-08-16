@@ -25,6 +25,7 @@ from subio_v2.model.rules import (
     RuleExpression,
     RuleRenderResult,
 )
+from subio_v2.platforms import normalize_platform
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.errors import ConfigError
 from subio_v2.workflow.rule_parser import (
@@ -39,11 +40,11 @@ from subio_v2.workflow.ruleset_codec import (
 )
 
 
-CLASH_PLATFORMS = frozenset({"clash", "clash-meta", "stash"})
+CLASH_PLATFORMS = frozenset({"clash", "mihomo", "stash"})
 LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
 
 PLATFORM_RULES: dict[str, frozenset[str]] = {
-    "clash-meta": frozenset(
+    "mihomo": frozenset(
         {
             "DOMAIN",
             "DOMAIN-SUFFIX",
@@ -174,6 +175,9 @@ class RuleSetRenderer:
         platform: str,
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
+        platform = normalize_platform(platform)
+        if platform not in PLATFORM_RULES:
+            raise ValueError(f"Unknown ruleset target platform: {platform}")
         target_context = dialect_context_for_platform(platform)
         issues = [replace(issue, target=platform) for issue in ruleset.issues]
         lines: list[str] = []
@@ -228,7 +232,7 @@ class RuleSetRenderer:
         rule_type = self._target_rule_type(expression, platform, target_context)
         matcher = expression.matcher if isinstance(expression, Predicate) else ""
         if (
-            platform == "clash-meta"
+            platform == "mihomo"
             and isinstance(expression, Predicate)
             and expression.rule_type == "SRC-IP"
         ):
@@ -308,15 +312,14 @@ class RuleSetRenderer:
                 return "MATCH"
             if rule_type == "DEST-PORT":
                 return "DST-PORT"
-            if platform == "clash-meta" and rule_type == "PROTOCOL":
+            if platform == "mihomo" and rule_type == "PROTOCOL":
                 assert isinstance(expression, Predicate)
                 if expression.matcher.lower() in {"tcp", "udp"}:
                     return "NETWORK"
         return rule_type
 
     def _is_supported(self, rule_type: str, platform: str) -> bool:
-        supported = PLATFORM_RULES.get(platform)
-        return supported is None or rule_type in supported
+        return rule_type in PLATFORM_RULES[platform]
 
     def _unsupported_option(
         self,
@@ -325,7 +328,7 @@ class RuleSetRenderer:
         platform: str,
     ) -> ConversionIssue | None:
         for option in expression.options:
-            if option == "src" and platform != "clash-meta":
+            if option == "src" and platform != "mihomo":
                 return self._issue(
                     source,
                     expression,

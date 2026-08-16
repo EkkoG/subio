@@ -59,11 +59,11 @@ def test_template_renderer_renders_with_macros(tmp_path):
         "proxies_names": ["A", "B"],
     }
     out = renderer.render(
-        "base.j2", context, artifact_type="clash-meta", rulesets=store
+        "base.j2", context, artifact_type="mihomo", rulesets=store
     )
     assert "Name: test" in out
     assert "- name: A" in out and "- name: B" in out
-    rendered_rules = store.get_callables("clash-meta")["rs1"]("DIRECT")
+    rendered_rules = store.get_callables("mihomo")["rs1"]("DIRECT")
     assert "# comment" in rendered_rules
     assert "- DOMAIN,google.com,DIRECT" in rendered_rules
 
@@ -139,7 +139,14 @@ def test_template_render_result_collects_ruleset_issues(tmp_path):
     store = RuleSetStore()
     store.register("rs1", make_ruleset("rs1", [bound("USER-AGENT", "*Safari*")]))
 
-    result = TemplateRenderer(str(tmp_path)).render_result(
+    renderer = TemplateRenderer(str(tmp_path))
+    result = renderer.render_result(
+        "rules.j2",
+        {},
+        artifact_type="mihomo",
+        rulesets=store,
+    )
+    alias_result = renderer.render_result(
         "rules.j2",
         {},
         artifact_type="clash-meta",
@@ -150,3 +157,5 @@ def test_template_render_result_collects_ruleset_issues(tmp_path):
     assert [issue.code for issue in result.issues] == [
         "ruleset.unsupported-target-rule"
     ]
+    assert alias_result == result
+    assert alias_result.issues[0].target == "mihomo"

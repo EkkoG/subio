@@ -24,7 +24,7 @@
       "expected": "- DOMAIN,example.com,DIRECT\n- IP-CIDR,192.0.2.0/24,DIRECT,no-resolve"
     },
     {
-      "platform": "clash-meta",
+      "platform": "mihomo",
       "args": [
         "PROXY"
       ],

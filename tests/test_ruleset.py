@@ -173,7 +173,7 @@ def test_official_predicate_inventories_are_explicit():
 @pytest.mark.parametrize(
     ("dialect", "platform", "rule_type"),
     [
-        (dialect, "clash-meta" if dialect == "mihomo" else dialect, rule_type)
+        (dialect, dialect, rule_type)
         for dialect, rule_types in EXPECTED_SELF_CONTAINED_RULES.items()
         for rule_type in sorted(rule_types)
     ],
@@ -259,7 +259,7 @@ def test_untyped_remote_is_exactly_mihomo_classical_text(monkeypatch):
     assert ruleset is not None
     assert ruleset.model.source_context == DialectContext("mihomo", "text")
     assert "- IP-CIDR,192.0.2.0/24,Proxy,src,no-resolve" in ruleset.render(
-        "clash-meta", "Proxy"
+        "mihomo", "Proxy"
     )
 
 
@@ -329,7 +329,7 @@ def test_domain_semantics_are_dialect_specific():
         )
     )
 
-    assert mihomo.render("clash-meta", "Proxy") == (
+    assert mihomo.render("mihomo", "Proxy") == (
         "- AND,((DOMAIN-SUFFIX,example.com),"
         "(NOT,((DOMAIN,example.com)))),Proxy"
     )
@@ -348,7 +348,7 @@ def test_label_wildcard_lowers_to_exact_regex_or_issue():
         )
     )
 
-    assert ruleset.render("clash-meta", "Proxy") == (
+    assert ruleset.render("mihomo", "Proxy") == (
         r"- DOMAIN-REGEX,^[^.]*\.cdn\.example\.net$,Proxy"
     )
     result = ruleset.render_result("surge", "Proxy")
@@ -397,7 +397,7 @@ def test_comma_port_matcher_is_not_misread_as_policy():
     rule = parsed.ruleset.entries[0]
     assert isinstance(rule, Predicate)
     assert rule.matcher == "80,443"
-    assert parameterize(parsed).render("clash-meta", "Proxy") == (
+    assert parameterize(parsed).render("mihomo", "Proxy") == (
         "- DST-PORT,80,443,Proxy"
     )
 
@@ -412,7 +412,7 @@ def test_nested_logic_binds_policy_only_to_outer_expression():
     )
     ruleset = make_ruleset(parsed.entries, name="outer_logic")
 
-    assert ruleset.render("clash-meta", "Proxy") == (
+    assert ruleset.render("mihomo", "Proxy") == (
         "- AND,((DOMAIN-SUFFIX,example.org),"
         "(OR,((NETWORK,udp),(NOT,((DST-PORT,443)))))),Proxy"
     )
@@ -473,12 +473,41 @@ def test_surge_final_and_pre_matching_are_rejected():
 
 def test_renderer_reports_unsupported_rules_instead_of_silently_deleting():
     ruleset = make_ruleset([bind(Predicate("USER-AGENT", "*Safari*", source_line=7))])
-    result = ruleset.render_result("clash-meta", "Proxy")
+    result = ruleset.render_result("mihomo", "Proxy")
 
     assert result.content == ""
     assert len(result.issues) == 1
     assert result.issues[0].code == "ruleset.unsupported-target-rule"
     assert result.issues[0].field == "line 7"
+
+
+def test_mihomo_alias_uses_canonical_lowering_and_issue_targets():
+    ruleset = make_ruleset(
+        [
+            bind(Predicate("SRC-IP", "192.0.2.1")),
+            bind(Predicate("PROTOCOL", "tcp")),
+            bind(Predicate("IP-CIDR", "198.51.100.0/24", ("src",))),
+            bind(Predicate("USER-AGENT", "*Safari*", source_line=9)),
+        ]
+    )
+
+    canonical = ruleset.render_result("mihomo", "Proxy")
+    alias = ruleset.render_result("clash-meta", "Proxy")
+
+    assert canonical.content == (
+        "- SRC-IP-CIDR,192.0.2.1/32,Proxy\n"
+        "- NETWORK,tcp,Proxy\n"
+        "- IP-CIDR,198.51.100.0/24,Proxy,src"
+    )
+    assert alias == canonical
+    assert [issue.target for issue in alias.issues] == ["mihomo"]
+
+
+def test_renderer_rejects_unknown_target_instead_of_failing_open():
+    ruleset = make_ruleset([bind(Predicate("USER-AGENT", "*Safari*"))])
+
+    with pytest.raises(ValueError, match="Unknown ruleset target platform"):
+        ruleset.render("unknown", "Proxy")
 
 
 def test_rule_renderer_preserves_existing_target_forms():
@@ -494,7 +523,7 @@ def test_rule_renderer_preserves_existing_target_forms():
     assert ruleset.render("surge", "Proxy") == (
         "# comment\nDOMAIN,example.com,Proxy\nDEST-PORT,443,Direct\nFINAL,Proxy"
     )
-    assert ruleset.render("clash-meta", "Proxy") == (
+    assert ruleset.render("mihomo", "Proxy") == (
         "# comment\n- DOMAIN,example.com,Proxy\n"
         "- DST-PORT,443,Direct\n- MATCH,Proxy"
     )
@@ -509,7 +538,7 @@ def test_callable_binding_and_collector_are_explicit():
         parameters=("default", "api"),
     )
     collector = RuleIssueCollector()
-    callable_rule = ruleset.as_callable("clash-meta", collector)
+    callable_rule = ruleset.as_callable("mihomo", collector)
 
     assert callable_rule("Default", api="Api") == (
         "- DOMAIN,default.example,Default\n- DOMAIN,api.example,Api"

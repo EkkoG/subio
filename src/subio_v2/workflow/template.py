@@ -95,7 +95,7 @@ class TemplateRenderer:
             with open(template_path, "r", encoding="utf-8") as f:
                 template_source = f.read()
 
-            platform = artifact_type or "clash-meta"
+            platform = artifact_type or "mihomo"
             render_context = dict(context)
             collector = RuleIssueCollector()
             if rulesets:
