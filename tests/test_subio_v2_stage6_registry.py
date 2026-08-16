@@ -9,6 +9,7 @@ from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import (
     ClashPassthroughNode,
     DNSNode,
+    GostRelayNode,
     MieruNode,
     Protocol,
     RematchNode,
@@ -54,7 +55,6 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
 @pytest.mark.parametrize(
     ("protocol", "clash_type"),
     [
-        (Protocol.GOST_RELAY, "gost-relay"),
         (Protocol.SHADOWQUIC, "shadowquic"),
     ],
 )
@@ -71,16 +71,6 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
     source = {
         "proxies": [
             {
-                "name": "gost",
-                "type": "gost-relay",
-                "server": "gost.example.com",
-                "port": 443,
-                "forward": True,
-                "tls": True,
-                "username": "user",
-                "password": "secret",
-            },
-            {
                 "name": "shadowquic",
                 "type": "shadowquic",
                 "server": "quic.example.com",
@@ -95,7 +85,6 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
     nodes = ClashParser().parse_result(source).nodes
 
     assert [node.type for node in nodes] == [
-        Protocol.GOST_RELAY,
         Protocol.SHADOWQUIC,
     ]
     assert all(isinstance(node, ClashPassthroughNode) for node in nodes)
@@ -157,6 +146,42 @@ def test_mihomo_rematch_uses_strong_ir_and_requires_a_target():
     invalid_emission = ClashEmitter(platform="mihomo").emit_result([invalid])
     assert invalid_emission.content["proxies"] == []
     assert invalid_emission.errors[0].field == "target_rematch_name"
+
+
+def test_mihomo_gost_relay_uses_strong_ir_for_tls_and_mux():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "gost",
+                    "type": "gost-relay",
+                    "server": "gost.example.com",
+                    "port": 443,
+                    "forward": True,
+                    "mux": True,
+                    "username": "user",
+                    "password": "secret",
+                    "tls": True,
+                    "sni": "relay.example.com",
+                    "fingerprint": "AA:BB",
+                    "client-fingerprint": "chrome",
+                    "smux": {"enabled": True},
+                }
+            ]
+        }
+    ).nodes[0]
+
+    assert isinstance(node, GostRelayNode)
+    assert node.forward is True
+    assert node.mux is True
+    assert node.tls.server_name == "relay.example.com"
+    assert node.tls.certificate_sha256 == "AA:BB"
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+    assert emission.errors == []
+    proxy = emission.content["proxies"][0]
+    assert proxy["forward"] is True
+    assert proxy["mux"] is True
+    assert proxy["fingerprint"] == "AA:BB"
 
 
 @pytest.mark.parametrize(

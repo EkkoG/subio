@@ -418,6 +418,20 @@ class RematchNode(BaseNode):
 
 
 @dataclass
+class GostRelayNode(BaseNode):
+    forward: bool = False
+    mux: bool = False
+    username: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    tls: TLSSettings = field(default_factory=TLSSettings)
+    smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+    def __post_init__(self):
+        if self.type != Protocol.GOST_RELAY:
+            self.type = Protocol.GOST_RELAY
+
+
+@dataclass
 class RejectNode(BaseNode):
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
@@ -605,6 +619,7 @@ Node = Union[
     DirectNode,
     DNSNode,
     RematchNode,
+    GostRelayNode,
     RejectNode,
     AnyTLSNode,
     HysteriaNode,

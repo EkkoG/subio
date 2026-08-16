@@ -32,6 +32,7 @@ def _bootstrap() -> None:
         anytls,
         direct,
         dns,
+        gost_relay,
         http,
         hysteria,
         hysteria2,
