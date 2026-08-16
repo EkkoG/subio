@@ -5,6 +5,8 @@
 - `README.md`：面向使用者的项目边界、安装和基本用法；
 - `docs/DEV.md`：当前开发约束、架构边界和扩展方法；
 - `docs/support_matrix.md`：当前节点、规则集输入和目标输出能力；
+- `docs/subio_native_node_format_plan.md`：将 SubIO provider 收敛为版本化原生 Node IR 输入格式的
+  待实施计划；
 - `docs/architecture_simplification_plan.md`：2026-08-16 架构收敛、规则语义审计和实施记录；
 - `tests/README.md`：测试目录和推荐验证顺序。
 
