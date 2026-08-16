@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Mapping, Union, get_args, get_origin, get_type_hints
 
 from subio_v2.model.nodes import (
+    BaseNode,
+    Network,
     Protocol,
     ShadowTLSSettings,
     ShadowsocksNode,
@@ -18,6 +20,7 @@ from subio_v2.model.nodes import (
     SurgePolicyOptions,
     TLSSettings,
     TransportSettings,
+    TUICNode,
     WireguardNode,
     WireguardPeer,
 )
@@ -197,6 +200,30 @@ PUBLIC_MAPPING_FIELDS: dict[tuple[type, str], str] = {
     (ShadowsocksNode, "plugin_opts"): "ShadowsocksPluginOptions",
     (WireguardNode, "amnezia_wg_option"): "AmneziaWGOptions",
     (SnellNode, "obfs_opts"): "SnellObfsOptions",
+}
+
+PUBLIC_FIELD_ENUMS: dict[tuple[type, str], tuple[Any, ...]] = {
+    (BaseNode, "ip_version"): (
+        "dual",
+        "ipv4",
+        "ipv6",
+        "ipv4-prefer",
+        "ipv6-prefer",
+    ),
+    (TransportSettings, "network"): tuple(item.value for item in Network),
+    (SmuxSettings, "protocol"): ("smux", "yamux", "h2mux"),
+    (ShadowTLSSettings, "version"): (1, 2, 3),
+    (ShadowsocksNode, "plugin"): (
+        "obfs",
+        "v2ray-plugin",
+        "shadow-tls",
+        "restls",
+        "jls",
+        "gost-plugin",
+        "kcptun",
+    ),
+    (SnellNode, "version"): (1, 2, 3, 4, 5, 6),
+    (TUICNode, "version"): (4, 5),
 }
 
 NON_PUBLIC_NODE_FIELDS = frozenset(
@@ -609,6 +636,14 @@ def public_mapping_spec(owner: type, field_name: str) -> PublicMappingSpec | Non
     return PUBLIC_MAPPING_SPECS.get(spec_name) if spec_name is not None else None
 
 
+def public_field_enum(owner: type, field_name: str) -> tuple[Any, ...] | None:
+    for candidate in owner.__mro__:
+        values = PUBLIC_FIELD_ENUMS.get((candidate, field_name))
+        if values is not None:
+            return values
+    return None
+
+
 def build_json_schema() -> dict[str, Any]:
     import subio_v2.protocols as protocol_registry
 
@@ -684,6 +719,10 @@ def _json_schema_for_field(owner: type, name: str, expected: Any) -> dict[str, A
     spec_name = PUBLIC_MAPPING_FIELDS.get((owner, name))
     if spec_name is not None:
         return {"$ref": f"#/$defs/{spec_name}"}
+    enum_values = public_field_enum(owner, name)
+    if enum_values is not None:
+        value_type = "string" if isinstance(enum_values[0], str) else "integer"
+        return {"type": value_type, "enum": list(enum_values)}
     return _json_schema_for_type(expected)
 
 

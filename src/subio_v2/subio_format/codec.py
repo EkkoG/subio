@@ -20,6 +20,7 @@ from subio_v2.subio_format.schema import (
     PUBLIC_PROTOCOLS,
     SUBIO_FORMAT_VERSION,
     PublicMappingSpec,
+    public_field_enum,
     public_mapping_spec,
     public_node_fields,
     public_user_override_fields,
@@ -289,7 +290,12 @@ class SubioNodeCodec:
         mapping_spec = public_mapping_spec(owner, field_name)
         if mapping_spec is not None:
             return self._decode_mapping(value, mapping_spec, path)
-        return self._decode_value(value, expected, path)
+        decoded = self._decode_value(value, expected, path)
+        enum_values = public_field_enum(owner, field_name)
+        if enum_values is not None and decoded not in enum_values:
+            allowed = ", ".join(map(str, enum_values))
+            raise _FieldError(path, f"Field '{path}' must be one of: {allowed}")
+        return decoded
 
     def _decode_mapping(
         self, value: Any, spec: PublicMappingSpec, path: str

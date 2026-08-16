@@ -57,6 +57,28 @@ class TUICDescriptor(StructuredProtocolDescriptor):
         errors = super().validate(node)
         if not isinstance(node, TUICNode):
             return errors
+        if node.version == 4:
+            if not node.token:
+                errors.append(NodeValidationError("token", "TUIC v4 requires a token"))
+            if node.uuid or node.password:
+                errors.append(
+                    NodeValidationError(
+                        "uuid", "TUIC v4 cannot use v5 UUID/password credentials"
+                    )
+                )
+            return errors
+        if node.version == 5:
+            if not node.uuid:
+                errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
+            if not node.password:
+                errors.append(
+                    NodeValidationError("password", "TUIC v5 requires a password")
+                )
+            if node.token:
+                errors.append(
+                    NodeValidationError("token", "TUIC v5 cannot use a v4 token")
+                )
+            return errors
         if node.uuid or node.password:
             if not node.uuid:
                 errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))

@@ -491,6 +491,59 @@ nodes:
     assert result.issues[0].field == "nodes[0].tls.ech_opts.query-server-name"
 
 
+def test_subio_native_format_rejects_invalid_public_enums():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: bad-network
+    type: vmess
+    server: example.com
+    port: 443
+    uuid: u
+    transport:
+      network: future-transport
+  - name: bad-tuic
+    type: tuic
+    server: example.com
+    port: 443
+    token: token
+    version: 3
+"""
+    )
+
+    assert result.nodes == []
+    assert [issue.code for issue in result.issues] == [
+        "parse.subio.invalid-field",
+        "parse.subio.invalid-field",
+    ]
+    assert [issue.field for issue in result.issues] == [
+        "nodes[0].transport.network",
+        "nodes[1].version",
+    ]
+
+
+def test_subio_native_format_validates_explicit_tuic_version():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: mismatched-tuic
+    type: tuic
+    server: example.com
+    port: 443
+    version: 4
+    uuid: u
+    password: p
+"""
+    )
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.subio.invalid-combination"
+    assert result.issues[0].field == "nodes[0].token"
+    assert result.issues[1].field == "nodes[0].uuid"
+
+
 def test_subio_native_format_rejects_source_bound_resource_references():
     result = SubioParser().parse_result(
         """
