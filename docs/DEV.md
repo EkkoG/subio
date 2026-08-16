@@ -158,7 +158,10 @@ JSON Schema 只描述结构、允许字段、基础类型和 enum，不为组合
 required、范围和协议组合以 `validate_node()` 及 descriptor validation 为准；用户文档必须明确这
 两层职责，不能把 schema 单独描述为完整语义验证器。
 
-公开格式只包含 concrete Node 和已强类型化的嵌套设置。`source_context`、`source_provider`、
+公开格式只包含 concrete Node、公开 dataclass 嵌套设置和受限 mapping。Reality、ECH、Brutal、
+AmneziaWG、Shadowsocks plugin、Snell obfs 与 header mapping 的 native key/type 契约集中在
+`subio_format/schema.py`；codec 负责把 snake_case native key 归一化为现有 Node IR 的内部键。
+`source_context`、`source_provider`、
 `original_name`、`extra`、`source_extensions`、`transport.extra`、`SourcePassthroughNode` 和 Surge
 External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Tailscale
 `interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
@@ -166,8 +169,9 @@ descriptor；codec 从现有协议注册表取得 Node class，但不能借用 C
 
 目标无关语义由 `src/subio_v2/validation.py` 校验，CapabilityChecker 复用同一结果后再检查目标
 平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
-override 字段必须同时属于 `USER_OVERRIDE_FIELDS` 和具体 Node 类型。新协议或字段进入 Node IR 时，
-必须明确选择加入 v1 或排除，并更新 schema、用户文档和注册表不变量测试。
+native override 字段由逐协议 `PUBLIC_USER_OVERRIDE_FIELDS` 明确列出，并且必须仍是 Node 模型与
+通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，必须明确
+选择加入 v1 或排除，并更新 schema、用户文档和注册表不变量测试。
 
 原生格式目前只有输入 codec，不增加 `artifact.type = "subio"`。版本兼容规则和公开字段说明见
 `docs/subio_node_format.md`。
