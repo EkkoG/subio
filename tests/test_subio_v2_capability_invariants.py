@@ -15,8 +15,10 @@ from subio_v2.model.nodes import (
     Network,
     Node,
     Protocol,
+    ShadowTLSSettings,
     ShadowsocksNode,
     Socks5Node,
+    SurgePolicyOptions,
     TLSSettings,
     TransportSettings,
     TrojanNode,
@@ -205,6 +207,69 @@ def test_strong_nodes_must_have_valid_endpoint_and_required_credentials():
         "port",
         "password",
     }
+
+
+def test_platform_specific_typed_fields_are_not_silently_dropped():
+    node = ShadowsocksNode(
+        name="ss",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="aes-256-gcm",
+        password="p",
+        surge_options=SurgePolicyOptions(test_timeout=5),
+        shadow_tls=ShadowTLSSettings(password="shadow"),
+    )
+
+    result = CapabilityChecker("mihomo").check_node(node)
+
+    issue = next(
+        warning
+        for warning in result.warnings
+        if warning.code == "conversion.unsupported-platform-field"
+    )
+    assert issue.severity.value == "warning"
+    assert issue.field == "shadow_tls, surge_options"
+
+
+def test_source_independent_base_fields_are_checked_for_link_targets():
+    node = ShadowsocksNode(
+        name="ss",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="aes-256-gcm",
+        password="p",
+        interface_name="en0",
+        routing_mark=123,
+        users={"alice": {"password": "p2"}},
+    )
+
+    result = CapabilityChecker("dae").check_node(node)
+
+    issue = next(
+        warning
+        for warning in result.warnings
+        if warning.code == "conversion.unsupported-platform-field"
+    )
+    assert issue.field == "interface_name, routing_mark, users"
+
+
+def test_vmess_aead_is_only_serialized_by_surge():
+    node = VmessNode(
+        name="vmess",
+        type=Protocol.VMESS,
+        server="example.com",
+        port=443,
+        uuid="u",
+        vmess_aead=True,
+    )
+
+    mihomo = CapabilityChecker("mihomo").check_node(node)
+    surge = CapabilityChecker("surge").check_node(node)
+
+    assert any(warning.field == "vmess_aead" for warning in mihomo.warnings)
+    assert not any(warning.field == "vmess_aead" for warning in surge.warnings)
 
 
 @pytest.mark.parametrize(

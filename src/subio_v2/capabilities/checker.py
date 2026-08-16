@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.conversion import IssueDraft, IssueSeverity
-from subio_v2.model.nodes import Node
+from subio_v2.model.nodes import Node, SurgePolicyOptions, VmessNode
 from subio_v2.platforms import normalize_platform
 from subio_v2.validation import validate_node
 from .definitions import get_platform_capabilities, normalize_protocol_name
@@ -105,6 +105,32 @@ class CapabilityChecker:
     def _check_global_features(self, node: Node, result: CheckResult):
         """检查全局特性"""
         global_features = self.capabilities.get("global_features", {})
+
+        unsupported_fields: list[str] = []
+        if self.platform != "surge":
+            if node.surge_options != SurgePolicyOptions():
+                unsupported_fields.append("surge_options")
+            if node.shadow_tls.enabled:
+                unsupported_fields.append("shadow_tls")
+            if isinstance(node, VmessNode) and node.vmess_aead:
+                unsupported_fields.append("vmess_aead")
+        if self.platform not in {"mihomo", "clash", "stash", "surge"}:
+            if node.interface_name:
+                unsupported_fields.append("interface_name")
+            if node.users:
+                unsupported_fields.append("users")
+        if self.platform not in {"mihomo", "clash", "stash"} and (
+            node.routing_mark is not None
+        ):
+            unsupported_fields.append("routing_mark")
+        if unsupported_fields:
+            field_names = ", ".join(sorted(unsupported_fields))
+            result.add_issue(
+                IssueSeverity.WARNING,
+                f"Node fields cannot be represented by {self.platform}: {field_names}",
+                field=field_names,
+                code="conversion.unsupported-platform-field",
+            )
 
         if hasattr(node, "tfo") and node.tfo and not global_features.get("tfo", False):
             result.add_issue(
