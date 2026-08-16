@@ -287,20 +287,29 @@ class HttpNode(BaseNode):
 
 
 @dataclass
+class WireguardPeer:
+    server: str
+    port: int
+    public_key: str
+    allowed_ips: List[str]
+    preshared_key: Optional[str] = field(default=None, repr=False)
+    reserved: Optional[List[int]] = None
+
+
+@dataclass
 class WireguardNode(BaseNode):
     private_key: str = field(default="", repr=False)
     public_key: str = ""
     preshared_key: Optional[str] = None
-    pre_shared_key: Optional[str] = None  # clash: pre-shared-key on peer
-    interface_ip: Optional[Any] = None  # clash: ip
-    interface_ipv6: Optional[Any] = None  # clash: ipv6
+    interface_ip: Optional[Union[str, List[str]]] = None
+    interface_ipv6: Optional[Union[str, List[str]]] = None
     allowed_ips: Optional[List[str]] = None
     reserved: Optional[List[int]] = None
     mtu: Optional[int] = None
     workers: Optional[int] = None
     persistent_keepalive: Optional[int] = None
     amnezia_wg_option: Optional[Dict[str, Any]] = None
-    peers: Optional[List[Dict[str, Any]]] = None
+    peers: Optional[List[WireguardPeer]] = None
     remote_dns_resolve: Optional[bool] = None
     dns_servers: Optional[List[str]] = None
     refresh_server_ip_interval: Optional[int] = None
@@ -740,7 +749,6 @@ _USER_OVERRIDE_FIELDS = frozenset(
         "private_key_passphrase",
         "public_key",
         "preshared_key",
-        "pre_shared_key",
         "obfs_password",
     }
 )

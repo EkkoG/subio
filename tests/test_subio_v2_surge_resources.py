@@ -187,7 +187,7 @@ future-section-field = keep-me
     assert node.interface_ipv6 == "fd00::2"
     assert node.dns_servers == ["10.20.0.1", "fd00::1"]
     assert node.peers and len(node.peers) == 2
-    assert node.peers[1]["reserved"] == [83, 12, 235]
+    assert node.peers[1].reserved == [83, 12, 235]
     assert node.dialer_proxy == "upstream"
     assert ("wireguard", "office") in get_surge_node_attachments(node).named_sections
 

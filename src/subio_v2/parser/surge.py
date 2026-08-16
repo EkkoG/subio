@@ -27,6 +27,7 @@ from subio_v2.model.nodes import (
     ShadowTLSSettings,
     SurgePolicyOptions,
     WireguardNode,
+    WireguardPeer,
     TailscaleNode,
     MasqueMode,
     MasqueNode,
@@ -526,7 +527,7 @@ class SurgeParser(BaseParser):
             raise ValueError("self-ip or self-ip-v6 is required")
 
         surge_peers: list[dict[str, str]] = []
-        clash_peers: list[dict[str, Any]] = []
+        wireguard_peers: list[WireguardPeer] = []
         for peer_line in values.get("peer", []):
             for raw_peer in split_comma_separated(peer_line):
                 peer = raw_peer.strip()
@@ -542,28 +543,30 @@ class SurgeParser(BaseParser):
                     raise ValueError("WireGuard peer is missing " + ", ".join(missing))
                 server, port = self._parse_endpoint(peer_values["endpoint"])
                 allowed_ips = list(split_comma_separated(peer_values["allowed-ips"]))
-                clash_peer: dict[str, Any] = {
-                    "server": server,
-                    "port": port,
-                    "public-key": peer_values["public-key"],
-                    "allowed-ips": allowed_ips,
-                }
-                if peer_values.get("preshared-key"):
-                    clash_peer["pre-shared-key"] = peer_values["preshared-key"]
+                reserved = None
                 client_id = peer_values.get("client-id")
                 if client_id:
                     parts = client_id.split("/")
                     if len(parts) == 3 and all(part.isdigit() for part in parts):
-                        reserved = [int(part) for part in parts]
-                        if all(0 <= value <= 255 for value in reserved):
-                            clash_peer["reserved"] = reserved
+                        candidate = [int(part) for part in parts]
+                        if all(0 <= value <= 255 for value in candidate):
+                            reserved = candidate
                 surge_peers.append(peer_values)
-                clash_peers.append(clash_peer)
+                wireguard_peers.append(
+                    WireguardPeer(
+                        server=server,
+                        port=port,
+                        public_key=peer_values["public-key"],
+                        preshared_key=peer_values.get("preshared-key"),
+                        allowed_ips=allowed_ips,
+                        reserved=reserved,
+                    )
+                )
 
-        if not clash_peers:
+        if not wireguard_peers:
             raise ValueError("at least one peer is required")
 
-        first = clash_peers[0]
+        first = wireguard_peers[0]
         dns_servers = [
             server
             for dns_line in values.get("dns-server", [])
@@ -573,20 +576,20 @@ class SurgeParser(BaseParser):
         node = WireguardNode(
             name=record.name,
             type=Protocol.WIREGUARD,
-            server=first["server"],
-            port=first["port"],
+            server=first.server,
+            port=first.port,
             private_key=private_key,
-            public_key=(first["public-key"] if len(clash_peers) == 1 else ""),
-            pre_shared_key=(
-                first.get("pre-shared-key") if len(clash_peers) == 1 else None
+            public_key=(first.public_key if len(wireguard_peers) == 1 else ""),
+            preshared_key=(
+                first.preshared_key if len(wireguard_peers) == 1 else None
             ),
             interface_ip=self_ip,
             interface_ipv6=self_ipv6,
-            allowed_ips=(first["allowed-ips"] if len(clash_peers) == 1 else None),
-            reserved=(first.get("reserved") if len(clash_peers) == 1 else None),
+            allowed_ips=(first.allowed_ips if len(wireguard_peers) == 1 else None),
+            reserved=(first.reserved if len(wireguard_peers) == 1 else None),
             mtu=(int(values["mtu"][-1]) if values.get("mtu") else None),
             persistent_keepalive=(int(keepalive) if keepalive else None),
-            peers=(clash_peers if len(clash_peers) > 1 else None),
+            peers=(wireguard_peers if len(wireguard_peers) > 1 else None),
             remote_dns_resolve=bool(dns_servers),
             dns_servers=dns_servers or None,
             udp=True,

@@ -8,8 +8,9 @@ from dataclasses import dataclass, field
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.conversion import IssueDraft, IssueSeverity
-from subio_v2.model.nodes import Node, RejectMode, RejectNode
+from subio_v2.model.nodes import Node
 from subio_v2.platforms import normalize_platform
+from subio_v2.validation import validate_node
 from .definitions import get_platform_capabilities, normalize_protocol_name
 
 
@@ -73,28 +74,8 @@ class CapabilityChecker:
         protocol = normalize_protocol_name(node.type.value)
         desc = protocol_registry.get(node.type)
 
-        if not node.name:
-            result.add_error("Node name is required", field="name")
-        if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
-            result.add_error(
-                "Reject mode is invalid",
-                field="mode",
-            )
-        if desc:
-            if desc.requires_endpoint:
-                if not node.server:
-                    result.add_error("Server is required", field="server")
-                if (
-                    not isinstance(node.port, int)
-                    or isinstance(node.port, bool)
-                    or not 1 <= node.port <= 65535
-                ):
-                    result.add_error(
-                        f"Port must be between 1 and 65535, got {node.port!r}",
-                        field="port",
-                    )
-            for error in desc.validate(node):
-                result.add_error(error.message, field=error.field)
+        for error in validate_node(node):
+            result.add_error(error.message, field=error.field)
 
         if result.has_errors():
             return result

@@ -658,14 +658,24 @@ class SurgeEmitter(BaseEmitter):
         )
 
         if node.peers:
-            peer_models: list[dict[str, Any]] = list(node.peers)
+            peer_models: list[dict[str, Any]] = [
+                {
+                    "server": peer.server,
+                    "port": peer.port,
+                    "public_key": peer.public_key,
+                    "preshared_key": peer.preshared_key,
+                    "allowed_ips": peer.allowed_ips,
+                    "reserved": peer.reserved,
+                }
+                for peer in node.peers
+            ]
         else:
             peer_models = [
                 {
                     "server": SurgeEmitter._server_str(node),
                     "port": node.port,
                     "public-key": node.public_key,
-                    "pre-shared-key": node.pre_shared_key or node.preshared_key,
+                    "pre-shared-key": node.preshared_key,
                     "allowed-ips": node.allowed_ips,
                     "reserved": node.reserved,
                     "keepalive": node.persistent_keepalive,
@@ -697,7 +707,7 @@ class SurgeEmitter(BaseEmitter):
             if ":" in endpoint_server and not endpoint_server.startswith("["):
                 endpoint_server = f"[{endpoint_server}]"
             values["endpoint"] = f"{endpoint_server}:{port}"
-            preshared_key = model.get("pre-shared-key") or model.get("preshared-key")
+            preshared_key = model.get("preshared_key") or model.get("preshared-key")
             if preshared_key:
                 values["preshared-key"] = str(preshared_key)
             else:

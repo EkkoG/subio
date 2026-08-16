@@ -2,11 +2,56 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from subio_v2.model.nodes import Node, Protocol, WireguardNode
+from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._base import NodeValidationError
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+
+
+def _decode_peers(value: Any) -> list[WireguardPeer] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise ValueError("WireGuard peers must be a list")
+    peers: list[WireguardPeer] = []
+    for index, peer in enumerate(value):
+        if not isinstance(peer, dict):
+            raise ValueError(f"WireGuard peer {index} must be an object")
+        allowed_ips = peer.get("allowed-ips")
+        if not isinstance(allowed_ips, list):
+            allowed_ips = []
+        peers.append(
+            WireguardPeer(
+                server=peer.get("server", ""),
+                port=peer.get("port", 0),
+                public_key=peer.get("public-key", ""),
+                preshared_key=peer.get("pre-shared-key")
+                or peer.get("preshared-key"),
+                reserved=peer.get("reserved"),
+                allowed_ips=allowed_ips,
+            )
+        )
+    return peers
+
+
+def _encode_peers(value: list[WireguardPeer] | None) -> list[dict[str, Any]] | None:
+    if value is None:
+        return None
+    peers: list[dict[str, Any]] = []
+    for peer in value:
+        encoded: dict[str, Any] = {
+            "server": peer.server,
+            "port": peer.port,
+            "public-key": peer.public_key,
+            "allowed-ips": peer.allowed_ips,
+        }
+        if peer.preshared_key:
+            encoded["pre-shared-key"] = peer.preshared_key
+        if peer.reserved:
+            encoded["reserved"] = peer.reserved
+        peers.append(encoded)
+    return peers
 
 
 class WireguardDescriptor(StructuredProtocolDescriptor):
@@ -55,7 +100,12 @@ class WireguardDescriptor(StructuredProtocolDescriptor):
             "amnezia_wg_option",
             emit_policy=EmitPolicy.TRUTHY,
         ),
-        scalar_field("peers", emit_policy=EmitPolicy.TRUTHY),
+        scalar_field(
+            "peers",
+            decode=_decode_peers,
+            encode=_encode_peers,
+            emit_policy=EmitPolicy.TRUTHY,
+        ),
         scalar_field(
             "remote-dns-resolve",
             "remote_dns_resolve",
@@ -85,12 +135,17 @@ class WireguardDescriptor(StructuredProtocolDescriptor):
             )
         if node.peers:
             for index, peer in enumerate(node.peers):
-                for key in ("server", "port", "public-key", "allowed-ips"):
-                    if not peer.get(key):
+                for field, value in (
+                    ("server", peer.server),
+                    ("port", peer.port),
+                    ("public_key", peer.public_key),
+                    ("allowed_ips", peer.allowed_ips),
+                ):
+                    if not value:
                         errors.append(
                             NodeValidationError(
-                                field=f"peers[{index}].{key}",
-                                message=f"WireGuard peer requires '{key}'",
+                                field=f"peers[{index}].{field}",
+                                message=f"WireGuard peer requires '{field}'",
                             )
                         )
         elif not node.public_key:
