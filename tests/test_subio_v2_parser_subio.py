@@ -8,13 +8,19 @@ import pytest
 import yaml
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Protocol, ShadowsocksNode, VlessNode
+from subio_v2.model.nodes import (
+    USER_OVERRIDE_FIELDS,
+    Protocol,
+    ShadowsocksNode,
+    VlessNode,
+)
 from subio_v2.parser.subio import SubioParser
 from subio_v2.subio_format.schema import (
     NON_PUBLIC_NODE_FIELDS,
     NON_PUBLIC_PROTOCOL_FIELDS,
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
+    PUBLIC_USER_OVERRIDE_FIELDS,
     build_json_schema,
     public_mapping_spec,
     public_node_fields,
@@ -281,6 +287,39 @@ username = "alice"
     assert "alice" in result.issues[0].message
 
 
+def test_subio_native_format_rejects_meaningless_user_overrides():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: direct
+    type: direct
+    users:
+      alice:
+        server: ignored.example.com
+  - name: openvpn
+    type: openvpn
+    server: example.com
+    port: 1194
+    ca: ca
+    username: alice
+    users:
+      alice:
+        cipher: AES-256-GCM
+"""
+    )
+
+    assert result.nodes == []
+    assert [issue.code for issue in result.issues] == [
+        "parse.subio.unknown-field",
+        "parse.subio.unknown-field",
+    ]
+    assert [issue.field for issue in result.issues] == [
+        "nodes[0].users.alice.server",
+        "nodes[1].users.alice.cipher",
+    ]
+
+
 def test_subio_native_format_reports_structured_document_errors():
     missing = SubioParser().parse_result("{}")
     unsupported = SubioParser().parse_result("version = 2\nnodes = []")
@@ -528,6 +567,15 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
             model_fields - NON_PUBLIC_NODE_FIELDS
             - NON_PUBLIC_PROTOCOL_FIELDS.get(descriptor.protocol, frozenset())
         ), descriptor.protocol.value
+
+
+def test_subio_user_override_contract_is_explicit_and_valid():
+    assert set(PUBLIC_USER_OVERRIDE_FIELDS) == PUBLIC_PROTOCOLS
+    for descriptor in protocol_registry.all():
+        protocol = descriptor.protocol
+        model_fields = get_type_hints(descriptor.node_class).keys()
+        assert PUBLIC_USER_OVERRIDE_FIELDS[protocol] <= USER_OVERRIDE_FIELDS
+        assert PUBLIC_USER_OVERRIDE_FIELDS[protocol] <= model_fields
 
 
 def test_subio_public_mapping_contract_covers_unconstrained_objects():

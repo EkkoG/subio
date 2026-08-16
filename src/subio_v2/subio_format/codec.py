@@ -12,7 +12,6 @@ from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import (
     Node,
     Protocol,
-    USER_OVERRIDE_FIELDS,
     clone_node_for_user,
 )
 from subio_v2.subio_format.schema import (
@@ -23,6 +22,7 @@ from subio_v2.subio_format.schema import (
     PublicMappingSpec,
     public_mapping_spec,
     public_node_fields,
+    public_user_override_fields,
 )
 from subio_v2.validation import validate_node
 
@@ -164,7 +164,9 @@ class SubioNodeCodec:
             field_path = f"{path}.{field_name}"
             try:
                 if field_name == "users":
-                    decoded = self._decode_users(value, desc.node_class, field_path)
+                    decoded = self._decode_users(
+                        value, protocol, desc.node_class, field_path
+                    )
                 else:
                     decoded = self._decode_field(
                         value,
@@ -244,10 +246,13 @@ class SubioNodeCodec:
                 )
         return issues
 
-    def _decode_users(self, value: Any, node_class: type, path: str) -> Any:
+    def _decode_users(
+        self, value: Any, protocol: Protocol, node_class: type, path: str
+    ) -> Any:
         if not isinstance(value, dict):
             raise _FieldError(path, "SubIO node users must be an object")
         hints = _type_hints(node_class)
+        allowed_fields = public_user_override_fields(protocol)
         users: dict[str, dict[str, Any]] = {}
         for username, overrides in value.items():
             if not isinstance(username, str) or not username:
@@ -259,7 +264,7 @@ class SubioNodeCodec:
             for field_name, override in overrides.items():
                 if (
                     not isinstance(field_name, str)
-                    or field_name not in USER_OVERRIDE_FIELDS
+                    or field_name not in allowed_fields
                     or field_name not in hints
                 ):
                     raise _FieldError(

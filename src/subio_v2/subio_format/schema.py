@@ -18,7 +18,6 @@ from subio_v2.model.nodes import (
     SurgePolicyOptions,
     TLSSettings,
     TransportSettings,
-    USER_OVERRIDE_FIELDS,
     WireguardNode,
     WireguardPeer,
 )
@@ -540,18 +539,69 @@ PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
 
 PUBLIC_PROTOCOLS = frozenset(PUBLIC_PROTOCOL_FIELDS)
 
+PUBLIC_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
+    Protocol.ANYTLS: frozenset({"server", "port", "password"}),
+    Protocol.DIRECT: frozenset(),
+    Protocol.DNS: frozenset(),
+    Protocol.GOST_RELAY: frozenset({"server", "port", "username", "password"}),
+    Protocol.HTTP: frozenset({"server", "port", "username", "password"}),
+    Protocol.HYSTERIA: frozenset({"server", "port", "auth", "auth_str"}),
+    Protocol.HYSTERIA2: frozenset(
+        {"server", "port", "password", "obfs_password"}
+    ),
+    Protocol.JUICITY: frozenset({"server", "port", "uuid", "password"}),
+    Protocol.MASQUE: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "public_key",
+        }
+    ),
+    Protocol.MIERU: frozenset({"server", "port", "username", "password"}),
+    Protocol.OPENVPN: frozenset({"server", "port", "username", "password"}),
+    Protocol.REJECT: frozenset(),
+    Protocol.REMATCH: frozenset(),
+    Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
+    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SNELL: frozenset({"server", "port", "psk"}),
+    Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
+    Protocol.SSH: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+        }
+    ),
+    Protocol.SUDOKU: frozenset({"server", "port"}),
+    Protocol.TAILSCALE: frozenset({"auth_key"}),
+    Protocol.TROJAN: frozenset({"server", "port", "password"}),
+    Protocol.TRUSTTUNNEL: frozenset(
+        {"server", "port", "username", "password"}
+    ),
+    Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
+    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
+    Protocol.VMESS: frozenset(
+        {"server", "port", "uuid", "alter_id", "cipher"}
+    ),
+    Protocol.WIREGUARD: frozenset(
+        {"server", "port", "private_key", "public_key", "preshared_key"}
+    ),
+}
+
 
 def public_node_fields(protocol: Protocol) -> frozenset[str]:
     return PUBLIC_COMMON_FIELDS | PUBLIC_PROTOCOL_FIELDS[protocol]
 
 
 def public_user_override_fields(protocol: Protocol) -> frozenset[str]:
-    import subio_v2.protocols as protocol_registry
-
-    descriptor = protocol_registry.get(protocol)
-    if descriptor is None:
-        raise ValueError(f"Protocol has no registered node model: {protocol.value}")
-    return frozenset(USER_OVERRIDE_FIELDS & get_type_hints(descriptor.node_class).keys())
+    return PUBLIC_USER_OVERRIDE_FIELDS[protocol]
 
 
 def public_mapping_spec(owner: type, field_name: str) -> PublicMappingSpec | None:
@@ -599,7 +649,7 @@ def build_json_schema() -> dict[str, Any]:
         properties = {}
         for name in sorted(public_node_fields(protocol) - {"type"}):
             if name == "users":
-                properties[name] = _json_schema_for_users(hints)
+                properties[name] = _json_schema_for_users(protocol, hints)
             else:
                 properties[name] = _json_schema_for_field(
                     descriptor.node_class, name, hints[name]
@@ -696,10 +746,12 @@ def _json_schema_for_type(expected: Any) -> dict[str, Any]:
     raise ValueError(f"Unsupported SubIO schema type: {expected}")
 
 
-def _json_schema_for_users(node_hints: dict[str, Any]) -> dict[str, Any]:
+def _json_schema_for_users(
+    protocol: Protocol, node_hints: dict[str, Any]
+) -> dict[str, Any]:
     override_properties = {
         name: _json_schema_for_type(node_hints[name])
-        for name in sorted(USER_OVERRIDE_FIELDS & node_hints.keys())
+        for name in sorted(public_user_override_fields(protocol))
     }
     return {
         "type": "object",

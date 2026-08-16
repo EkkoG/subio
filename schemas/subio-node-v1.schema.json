@@ -765,24 +765,7 @@
               "users": {
                 "additionalProperties": {
                   "additionalProperties": false,
-                  "properties": {
-                    "port": {
-                      "type": "integer"
-                    },
-                    "server": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        }
-                      ]
-                    }
-                  },
+                  "properties": {},
                   "type": "object"
                 },
                 "propertyNames": {
@@ -856,24 +839,7 @@
               "users": {
                 "additionalProperties": {
                   "additionalProperties": false,
-                  "properties": {
-                    "port": {
-                      "type": "integer"
-                    },
-                    "server": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        }
-                      ]
-                    }
-                  },
+                  "properties": {},
                   "type": "object"
                 },
                 "propertyNames": {
@@ -1918,20 +1884,11 @@
                 "additionalProperties": {
                   "additionalProperties": false,
                   "properties": {
-                    "auth": {
-                      "type": "string"
-                    },
-                    "cipher": {
-                      "type": "string"
-                    },
                     "password": {
                       "type": "string"
                     },
                     "port": {
                       "type": "integer"
-                    },
-                    "private_key": {
-                      "type": "string"
                     },
                     "server": {
                       "anyOf": [
@@ -2032,24 +1989,7 @@
               "users": {
                 "additionalProperties": {
                   "additionalProperties": false,
-                  "properties": {
-                    "port": {
-                      "type": "integer"
-                    },
-                    "server": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        }
-                      ]
-                    }
-                  },
+                  "properties": {},
                   "type": "object"
                 },
                 "propertyNames": {
@@ -2129,24 +2069,7 @@
               "users": {
                 "additionalProperties": {
                   "additionalProperties": false,
-                  "properties": {
-                    "port": {
-                      "type": "integer"
-                    },
-                    "server": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        }
-                      ]
-                    }
-                  },
+                  "properties": {},
                   "type": "object"
                 },
                 "propertyNames": {
@@ -3151,22 +3074,6 @@
                   "properties": {
                     "auth_key": {
                       "type": "string"
-                    },
-                    "port": {
-                      "type": "integer"
-                    },
-                    "server": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        }
-                      ]
                     }
                   },
                   "type": "object"
