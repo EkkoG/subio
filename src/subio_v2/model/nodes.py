@@ -549,7 +549,7 @@ class RejectNode(BaseNode):
 @dataclass
 class AnyTLSNode(BaseNode):
     password: str = field(default="", repr=False)
-    tls: TLSSettings = field(default_factory=TLSSettings)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     reuse: bool = True
     idle_session_check_interval: Optional[int] = None
     idle_session_timeout: Optional[int] = None
@@ -573,7 +573,7 @@ class HysteriaNode(BaseNode):
     auth: Optional[str] = None
     obfs: Optional[str] = None
     hop_interval: Optional[int] = None
-    tls: TLSSettings = field(default_factory=TLSSettings)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
@@ -590,7 +590,7 @@ class Hysteria2Node(BaseNode):
     down: Optional[str] = None
     obfs: Optional[str] = None
     obfs_password: Optional[str] = field(default=None, repr=False)
-    tls: TLSSettings = field(default_factory=TLSSettings)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
@@ -682,7 +682,7 @@ class TUICNode(BaseNode):
     version: Optional[int] = None  # 4 or 5
     ports: Optional[str] = None
     hop_interval: Optional[int] = None
-    tls: TLSSettings = field(default_factory=TLSSettings)
+    tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):

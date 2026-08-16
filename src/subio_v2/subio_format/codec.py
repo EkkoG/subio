@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import types
 from dataclasses import MISSING, fields, is_dataclass
 from enum import StrEnum
@@ -291,6 +292,18 @@ class SubioNodeCodec:
         if mapping_spec is not None:
             return self._decode_mapping(value, mapping_spec, path)
         decoded = self._decode_value(value, expected, path)
+        if isinstance(value, dict) and is_dataclass(decoded):
+            model_field = next(item for item in fields(owner) if item.name == field_name)
+            if model_field.default_factory is not MISSING:
+                owner_default = model_field.default_factory()
+                if is_dataclass(owner_default):
+                    for item in fields(owner_default):
+                        if item.name not in value:
+                            setattr(
+                                decoded,
+                                item.name,
+                                copy.deepcopy(getattr(owner_default, item.name)),
+                            )
         enum_values = public_field_enum(owner, field_name)
         if enum_values is not None and decoded not in enum_values:
             allowed = ", ".join(map(str, enum_values))

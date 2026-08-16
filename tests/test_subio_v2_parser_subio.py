@@ -234,6 +234,28 @@ server = "alice.example.com"
     }
 
 
+def test_subio_native_format_preserves_protocol_nested_defaults():
+    result = SubioParser().parse_result(
+        """
+version = 1
+
+[[nodes]]
+name = "anytls"
+type = "anytls"
+server = "example.com"
+port = 443
+password = "secret"
+
+[nodes.tls]
+server_name = "example.com"
+"""
+    )
+
+    assert result.issues == []
+    assert result.nodes[0].tls.enabled is True
+    assert result.nodes[0].tls.server_name == "example.com"
+
+
 def test_subio_native_format_validates_user_specific_node_credentials():
     result = SubioParser().parse_result(
         """
@@ -689,6 +711,14 @@ def test_subio_native_format_constructs_every_public_protocol():
 
     assert result.issues == []
     assert {node.type for node in result.nodes} == PUBLIC_PROTOCOLS
+    by_type = {node.type: node for node in result.nodes}
+    for protocol in (
+        Protocol.ANYTLS,
+        Protocol.HYSTERIA,
+        Protocol.HYSTERIA2,
+        Protocol.TUIC,
+    ):
+        assert by_type[protocol].tls.enabled is True
 
 
 def test_subio_parser_rejects_non_string_content():
