@@ -10,6 +10,7 @@ from subio_v2.model.nodes import Protocol, ShadowsocksNode, VlessNode
 from subio_v2.parser.subio import SubioParser
 from subio_v2.subio_format.schema import (
     NON_PUBLIC_NODE_FIELDS,
+    NON_PUBLIC_PROTOCOL_FIELDS,
     PUBLIC_PROTOCOLS,
     build_json_schema,
     public_node_fields,
@@ -346,6 +347,43 @@ nodes:
     assert "null-password" not in " ".join(issue.message for issue in result.issues)
 
 
+def test_subio_native_format_rejects_source_bound_resource_references():
+    result = SubioParser().parse_result(
+        """
+version: 1
+nodes:
+  - name: ssh-state
+    type: ssh
+    server: example.com
+    port: 22
+    username: root
+    keystore_id: local-key
+  - name: tls-state
+    type: http
+    server: example.com
+    port: 443
+    tls:
+      enabled: true
+      client_cert_ref: local-cert
+  - name: tailscale-state
+    type: tailscale
+    interactive_login: true
+"""
+    )
+
+    assert result.nodes == []
+    assert [issue.code for issue in result.issues] == [
+        "parse.subio.unknown-field",
+        "parse.subio.unknown-field",
+        "parse.subio.unknown-field",
+    ]
+    assert [issue.field for issue in result.issues] == [
+        "nodes[0].keystore_id",
+        "nodes[1].tls.client_cert_ref",
+        "nodes[2].interactive_login",
+    ]
+
+
 def test_subio_legacy_proxies_remain_mihomo_compatible_with_warning():
     result = SubioParser().parse_result(
         """
@@ -383,6 +421,7 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
         model_fields = {field.name for field in fields(descriptor.node_class)}
         assert public_node_fields(descriptor.protocol) == (
             model_fields - NON_PUBLIC_NODE_FIELDS
+            - NON_PUBLIC_PROTOCOL_FIELDS.get(descriptor.protocol, frozenset())
         ), descriptor.protocol.value
 
 

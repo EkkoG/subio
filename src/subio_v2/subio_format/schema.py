@@ -32,6 +32,15 @@ NON_PUBLIC_NODE_FIELDS = frozenset(
     }
 )
 
+NON_PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
+    Protocol.SSH: frozenset({"keystore_id"}),
+    Protocol.TAILSCALE: frozenset({"interactive_login"}),
+}
+
+NON_PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
+    TLSSettings: frozenset({"client_cert_ref"}),
+}
+
 PUBLIC_COMMON_FIELDS = frozenset(
     {
         "name",
@@ -111,7 +120,6 @@ PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
         {
             "hostname",
             "auth_key",
-            "interactive_login",
             "control_url",
             "state_dir",
             "ephemeral",
@@ -297,7 +305,6 @@ PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
             "password",
             "private_key",
             "private_key_passphrase",
-            "keystore_id",
             "host_key",
             "host_key_algorithms",
             "idle_timeout",
@@ -337,7 +344,8 @@ PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
 }
 
 PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
-    TLSSettings: frozenset(field.name for field in fields(TLSSettings)),
+    TLSSettings: frozenset(field.name for field in fields(TLSSettings))
+    - NON_PUBLIC_NESTED_FIELDS[TLSSettings],
     ShadowTLSSettings: frozenset(field.name for field in fields(ShadowTLSSettings)),
     SurgePolicyOptions: frozenset(field.name for field in fields(SurgePolicyOptions)),
     SmuxSettings: frozenset(

@@ -120,9 +120,6 @@
         "certificate_sha256": {
           "type": "string"
         },
-        "client_cert_ref": {
-          "type": "string"
-        },
         "client_fingerprint": {
           "type": "string"
         },
@@ -2495,9 +2492,6 @@
               "ip_version": {
                 "type": "string"
               },
-              "keystore_id": {
-                "type": "string"
-              },
               "mptcp": {
                 "type": "boolean"
               },
@@ -2793,9 +2787,6 @@
               },
               "idle_keepalive": {
                 "type": "integer"
-              },
-              "interactive_login": {
-                "type": "boolean"
               },
               "interface_name": {
                 "type": "string"
