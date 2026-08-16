@@ -140,7 +140,7 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
 
         supported_modes = {
             "surge": {MasqueMode.FORWARD_PROXY},
-            "clash-meta": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
+            "mihomo": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
             "stash": {MasqueMode.CONNECT_IP},
         }.get(platform)
         warnings: list[Any] = []

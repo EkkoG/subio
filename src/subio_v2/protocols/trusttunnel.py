@@ -121,7 +121,7 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
                             code="conversion.unconsumed-source-field",
                         )
                     )
-        elif platform == "clash-meta":
+        elif platform == "mihomo":
             for field, value in (
                 ("headers", node.headers),
                 ("websocket", node.websocket),

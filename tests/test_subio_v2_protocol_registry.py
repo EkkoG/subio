@@ -45,13 +45,13 @@ def test_registry_is_bidirectionally_unique():
             assert registry.by_clash_type(descriptor.clash_type) is descriptor
 
 
-def test_clash_meta_capabilities_match_registered_protocols():
+def test_mihomo_capabilities_match_registered_protocols():
     registered = {
         descriptor.protocol.value
         for descriptor in registry.all()
         if descriptor.supports_dialect("mihomo")
     }
-    assert registered == PLATFORM_CAPABILITIES["clash-meta"]["protocols"]
+    assert registered == PLATFORM_CAPABILITIES["mihomo"]["protocols"]
 
 
 def test_registry_rejects_conflicting_protocol():

@@ -12,7 +12,7 @@ from subio_v2.platforms import normalize_platform
 class EmitterFactory:
     _factories: Dict[str, Callable[[], BaseEmitter]] = {
         "clash": lambda: ClashEmitter(platform="clash"),
-        "mihomo": lambda: ClashEmitter(platform="clash-meta"),
+        "mihomo": lambda: ClashEmitter(platform="mihomo"),
         "stash": StashEmitter,
         "surge": SurgeEmitter,
         "v2rayn": V2RayNEmitter,

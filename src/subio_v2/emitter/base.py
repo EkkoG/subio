@@ -12,6 +12,7 @@ from subio_v2.dialect import (
     extension_semantic_fields,
 )
 from subio_v2.model.nodes import Node
+from subio_v2.platforms import normalize_platform
 from subio_v2.utils.logger import logger
 
 
@@ -28,6 +29,7 @@ class BaseEmitter(ABC):
     platform: str = ""
 
     def __init__(self):
+        self.platform = normalize_platform(self.platform)
         self.target_context = dialect_context_for_platform(self.platform)
         self._checker: Optional[CapabilityChecker] = None
         if self.platform:

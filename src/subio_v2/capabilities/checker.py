@@ -10,6 +10,7 @@ from typing import List, Optional
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.model.nodes import NativeNode, Node, Protocol, RejectMode, RejectNode
+from subio_v2.platforms import normalize_platform
 from subio_v2.surge.security import is_authorized_local_external
 from .definitions import get_platform_capabilities, normalize_protocol_name
 
@@ -74,8 +75,8 @@ class CapabilityChecker:
     """平台能力检查器"""
 
     def __init__(self, platform: str):
-        self.platform = platform
-        self.capabilities = get_platform_capabilities(platform)
+        self.platform = normalize_platform(platform)
+        self.capabilities = get_platform_capabilities(self.platform)
         if not self.capabilities:
             raise ValueError(f"Unknown platform: {platform}")
 

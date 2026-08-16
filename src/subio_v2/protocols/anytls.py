@@ -72,7 +72,7 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
         if (
             not isinstance(node, AnyTLSNode)
             or node.reuse
-            or platform in {"clash-meta", "surge"}
+            or platform in {"mihomo", "surge"}
         ):
             return []
         from subio_v2.capabilities.checker import CapabilityWarning, WarningLevel

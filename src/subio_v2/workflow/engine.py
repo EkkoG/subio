@@ -75,6 +75,7 @@ class WorkflowEngine:
                 raise ConfigError(f"Invalid global age_public_key: {err}")
 
         self._validate_config()
+        self._warn_deprecated_platform_types()
 
         # Parsers and Emitters are now managed by Factory
 
@@ -178,17 +179,6 @@ class WorkflowEngine:
                 name = entry.get("name")
                 if not isinstance(name, str) or not name:
                     raise ConfigError(f"Every '{section}' entry must have a name")
-                if section in {"provider", "artifact"}:
-                    platform = entry.get("type")
-                    resolution = (
-                        resolve_platform(platform) if isinstance(platform, str) else None
-                    )
-                    if resolution is not None and resolution.deprecated:
-                        logger.warning(
-                            f"{section.title()} {name!r} uses deprecated platform "
-                            f"type {platform!r}; use {resolution.replacement!r} for "
-                            "modern Mihomo configurations"
-                        )
                 if section != "artifact":
                     first_position = name_positions.get(name)
                     if first_position is not None:
@@ -312,6 +302,21 @@ class WorkflowEngine:
                 raise ConfigError(
                     f"Artifact '{artifact['name']}' references missing uploader(s): "
                     f"{', '.join(missing_uploaders)}"
+                )
+
+    def _warn_deprecated_platform_types(self) -> None:
+        for section in ("provider", "artifact"):
+            for entry in self.config.get(section, []):
+                platform = entry.get("type")
+                resolution = (
+                    resolve_platform(platform) if isinstance(platform, str) else None
+                )
+                if resolution is None or not resolution.deprecated:
+                    continue
+                logger.warning(
+                    f"{section.title()} {entry['name']!r} uses deprecated platform "
+                    f"type {platform!r}; use {resolution.replacement!r} for modern "
+                    "Mihomo configurations"
                 )
 
     @staticmethod

@@ -133,7 +133,7 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
                             code="conversion.unconsumed-source-field",
                         )
                     )
-        elif platform == "clash-meta":
+        elif platform == "mihomo":
             if node.exit_node_auto_fallback:
                 warnings.append(
                     CapabilityWarning(

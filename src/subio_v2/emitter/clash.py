@@ -3,17 +3,15 @@ from typing import Any, Dict, List
 import subio_v2.protocols as protocol_registry
 from subio_v2.clash.dialect import post_descriptor_emit
 from subio_v2.conversion import EmissionResult, IssueSeverity
-from subio_v2.dialect import dialect_context_for_platform
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import Node
 
 
 class ClashEmitter(BaseEmitter):
-    platform = "clash-meta"
+    platform = "mihomo"
 
-    def __init__(self, platform: str = "clash-meta"):
+    def __init__(self, platform: str = "mihomo"):
         self.platform = platform
-        self.target_context = dialect_context_for_platform(platform)
         super().__init__()
 
     def emit(self, nodes: List[Node]) -> Dict[str, Any]:

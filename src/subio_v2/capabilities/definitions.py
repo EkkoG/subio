@@ -10,6 +10,7 @@ Platform Capabilities Definitions
 
 from typing import Dict, Any, Optional
 
+from subio_v2.platforms import normalize_platform
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
 
 # ============== 通用常量 ==============
@@ -172,8 +173,8 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "dialer_proxy": True,
         },
     },
-    # ============== Clash Meta ==============
-    "clash-meta": {
+    # ============== Mihomo ==============
+    "mihomo": {
         "protocols": {
             "shadowsocks",
             "shadowsocksr",
@@ -630,7 +631,7 @@ PROTOCOL_NAME_MAP = {
 
 def get_platform_capabilities(platform: str) -> Optional[Dict[str, Any]]:
     """获取指定平台的能力定义"""
-    return PLATFORM_CAPABILITIES.get(platform)
+    return PLATFORM_CAPABILITIES.get(normalize_platform(platform))
 
 
 def normalize_protocol_name(protocol: str) -> str:

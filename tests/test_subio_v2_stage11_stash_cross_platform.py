@@ -211,7 +211,7 @@ def test_tailscale_omitted_exit_node_semantics_are_not_guessed():
     assert issue.protocol == "tailscale"
     assert issue.field == "exit_node_auto_fallback"
     assert issue.source == "stash-provider"
-    assert issue.target == "clash-meta"
+    assert issue.target == "mihomo"
 
     mihomo_node = ClashParser().parse_result(
         {

@@ -43,7 +43,7 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
         for descriptor in descriptors
         if descriptor.supports_dialect("mihomo")
     }
-    assert PLATFORM_CAPABILITIES["clash-meta"]["protocols"] == registered_protocols
+    assert PLATFORM_CAPABILITIES["mihomo"]["protocols"] == registered_protocols
 
 
 @pytest.mark.parametrize(
@@ -101,7 +101,7 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
         Protocol.SHADOWQUIC,
     ]
     assert all(isinstance(node, ClashPassthroughNode) for node in nodes)
-    emission = ClashEmitter(platform="clash-meta").emit_result(nodes)
+    emission = ClashEmitter(platform="mihomo").emit_result(nodes)
     assert emission.errors == []
     assert emission.content == source
 
@@ -113,7 +113,7 @@ def test_new_mihomo_only_passthrough_types_round_trip_without_dynamic_fallback()
 def test_surge_only_reject_modes_are_rejected_by_mihomo(mode):
     node = SurgeParser().parse_result(f"deny = {mode.value}").nodes[0]
 
-    emission = ClashEmitter(platform="clash-meta").emit_result([node])
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
 
     assert emission.content["proxies"] == []
     assert len(emission.errors) == 1
@@ -137,7 +137,7 @@ def test_mihomo_reject_smux_uses_existing_strong_setting():
     assert isinstance(node, RejectNode)
     assert node.smux.enabled is True
     assert node.smux.max_connections == 6
-    proxy = ClashEmitter(platform="clash-meta").emit_result([node]).content[
+    proxy = ClashEmitter(platform="mihomo").emit_result([node]).content[
         "proxies"
     ][0]
     assert proxy == {

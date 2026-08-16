@@ -49,7 +49,7 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
         if (
             supported_transports
             and network not in supported_transports
-            and not (platform == "clash-meta" and unknown_network)
+            and not (platform == "mihomo" and unknown_network)
         ):
             warnings.append(
                 CapabilityWarning(

@@ -152,4 +152,4 @@ def test_juicity_is_stash_only_and_never_becomes_mihomo_strong_semantics():
 
 def test_stage10_capability_is_complete_for_mieru_and_juicity():
     assert {"mieru", "juicity"} <= PLATFORM_CAPABILITIES["stash"]["protocols"]
-    assert "juicity" not in PLATFORM_CAPABILITIES["clash-meta"]["protocols"]
+    assert "juicity" not in PLATFORM_CAPABILITIES["mihomo"]["protocols"]

@@ -196,10 +196,20 @@ name = "modern-source"
 type = "mihomo"
 file = "nodes.yml"
 
+[[provider]]
+name = "alias-source"
+type = "clash-meta"
+file = "nodes.yml"
+
 [[artifact]]
 name = "modern.yml"
-type = "clash-meta"
+type = "mihomo"
 providers = ["modern-source"]
+
+[[artifact]]
+name = "alias.yml"
+type = "clash-meta"
+providers = ["alias-source"]
 """.strip(),
     )
     messages = []
