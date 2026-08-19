@@ -1,6 +1,6 @@
-from enum import StrEnum
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Union
+from enum import StrEnum
+from typing import Any, Dict, List, Optional, Union
 
 from subio_v2.dialect import DialectContext
 
@@ -729,85 +729,3 @@ Node = Union[
     TUICNode,
     SourcePassthroughNode,
 ]
-
-
-USER_OVERRIDE_FIELDS = frozenset(
-    {
-        "server",
-        "port",
-        "username",
-        "password",
-        "uuid",
-        "cipher",
-        "alter_id",
-        "token",
-        "auth",
-        "auth_str",
-        "auth_key",
-        "psk",
-        "private_key",
-        "private_key_passphrase",
-        "public_key",
-        "preshared_key",
-        "obfs_password",
-    }
-)
-
-
-def clone_node_for_user(node: Node, username: str) -> Node | None:
-    """
-    Clone a node and apply user-specific credential overrides.
-    Returns None if the node doesn't have the specified user.
-    """
-    if not node.users or username not in node.users:
-        return None
-
-    import copy
-
-    new_node = copy.deepcopy(node)
-    user_overrides = node.users[username]
-    if not isinstance(user_overrides, dict):
-        raise ValueError(f"Overrides for user '{username}' must be an object")
-
-    # User entries are credential/endpoint overrides, not arbitrary node patches.
-    for key, value in user_overrides.items():
-        normalized_key = key.replace("-", "_")
-        if normalized_key not in USER_OVERRIDE_FIELDS or not hasattr(
-            new_node, normalized_key
-        ):
-            raise ValueError(f"User '{username}' cannot override node field '{key}'")
-        if normalized_key == "port" and (
-            not isinstance(value, int)
-            or isinstance(value, bool)
-            or not 1 <= value <= 65535
-        ):
-            raise ValueError(f"Invalid port override for user '{username}'")
-        setattr(new_node, normalized_key, value)
-
-    # Clear users field in the cloned node (no longer needed)
-    new_node.users = None
-
-    return new_node
-
-
-def get_nodes_for_user(nodes: List[Node], username: str) -> List[Node]:
-    """
-    Process a list of nodes for a specific user.
-    - Nodes with users config: clone with user-specific credentials
-    - Nodes without users config: include as-is (shared nodes)
-    """
-    result = []
-    for node in nodes:
-        if node.users:
-            # Multi-user node: clone for specific user
-            if username in node.users:
-                user_node = clone_node_for_user(node, username)
-                if user_node:
-                    result.append(user_node)
-            # If user not in this node's users, skip it
-        else:
-            # Regular node: include as-is
-            import copy
-
-            result.append(copy.deepcopy(node))
-    return result

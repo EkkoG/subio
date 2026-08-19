@@ -40,36 +40,116 @@ class ProtocolDefinition:
     protocol: Protocol
     node_class: type[BaseNode]
     requires_endpoint: bool = True
+    user_override_fields: frozenset[str] = frozenset()
+
+
+_RUNTIME_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
+    Protocol.ANYTLS: frozenset({"server", "port", "password"}),
+    Protocol.DIRECT: frozenset({"server", "port"}),
+    Protocol.DNS: frozenset({"server", "port"}),
+    Protocol.GOST_RELAY: frozenset({"server", "port", "username", "password"}),
+    Protocol.HTTP: frozenset({"server", "port", "username", "password"}),
+    Protocol.HYSTERIA: frozenset({"server", "port", "auth", "auth_str"}),
+    Protocol.HYSTERIA2: frozenset(
+        {"server", "port", "password", "obfs_password"}
+    ),
+    Protocol.JUICITY: frozenset({"server", "port", "uuid", "password"}),
+    Protocol.MASQUE: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "public_key",
+        }
+    ),
+    Protocol.MIERU: frozenset({"server", "port", "username", "password"}),
+    Protocol.OPENVPN: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "auth",
+            "cipher",
+            "private_key",
+        }
+    ),
+    Protocol.REJECT: frozenset({"server", "port"}),
+    Protocol.REMATCH: frozenset({"server", "port"}),
+    Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
+    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SNELL: frozenset({"server", "port", "psk"}),
+    Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
+    Protocol.SSH: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+        }
+    ),
+    Protocol.SUDOKU: frozenset({"server", "port"}),
+    Protocol.TAILSCALE: frozenset({"server", "port", "auth_key"}),
+    Protocol.TROJAN: frozenset({"server", "port", "password"}),
+    Protocol.TRUSTTUNNEL: frozenset(
+        {"server", "port", "username", "password"}
+    ),
+    Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
+    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
+    Protocol.VMESS: frozenset({"server", "port", "uuid", "alter_id", "cipher"}),
+    Protocol.WIREGUARD: frozenset(
+        {"server", "port", "private_key", "public_key", "preshared_key"}
+    ),
+}
+
+
+def _definition(
+    protocol: Protocol,
+    node_class: type[BaseNode],
+    *,
+    requires_endpoint: bool = True,
+) -> ProtocolDefinition:
+    return ProtocolDefinition(
+        protocol=protocol,
+        node_class=node_class,
+        requires_endpoint=requires_endpoint,
+        user_override_fields=_RUNTIME_USER_OVERRIDE_FIELDS[protocol],
+    )
 
 
 _DEFINITIONS = (
-    ProtocolDefinition(Protocol.SHADOWSOCKS, ShadowsocksNode),
-    ProtocolDefinition(Protocol.SHADOWSOCKSR, ShadowsocksRNode),
-    ProtocolDefinition(Protocol.VMESS, VmessNode),
-    ProtocolDefinition(Protocol.VLESS, VlessNode),
-    ProtocolDefinition(Protocol.TROJAN, TrojanNode),
-    ProtocolDefinition(Protocol.SOCKS5, Socks5Node),
-    ProtocolDefinition(Protocol.HTTP, HttpNode),
-    ProtocolDefinition(Protocol.WIREGUARD, WireguardNode),
-    ProtocolDefinition(Protocol.TAILSCALE, TailscaleNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.MASQUE, MasqueNode),
-    ProtocolDefinition(Protocol.TRUSTTUNNEL, TrustTunnelNode),
-    ProtocolDefinition(Protocol.DIRECT, DirectNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.DNS, DNSNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.REMATCH, RematchNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.GOST_RELAY, GostRelayNode),
-    ProtocolDefinition(Protocol.SHADOWQUIC, ShadowQUICNode),
-    ProtocolDefinition(Protocol.OPENVPN, OpenVPNNode),
-    ProtocolDefinition(Protocol.SUDOKU, SudokuNode),
-    ProtocolDefinition(Protocol.REJECT, RejectNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.ANYTLS, AnyTLSNode),
-    ProtocolDefinition(Protocol.HYSTERIA, HysteriaNode),
-    ProtocolDefinition(Protocol.HYSTERIA2, Hysteria2Node),
-    ProtocolDefinition(Protocol.SSH, SSHNode),
-    ProtocolDefinition(Protocol.SNELL, SnellNode),
-    ProtocolDefinition(Protocol.MIERU, MieruNode, requires_endpoint=False),
-    ProtocolDefinition(Protocol.JUICITY, JuicityNode),
-    ProtocolDefinition(Protocol.TUIC, TUICNode),
+    _definition(Protocol.SHADOWSOCKS, ShadowsocksNode),
+    _definition(Protocol.SHADOWSOCKSR, ShadowsocksRNode),
+    _definition(Protocol.VMESS, VmessNode),
+    _definition(Protocol.VLESS, VlessNode),
+    _definition(Protocol.TROJAN, TrojanNode),
+    _definition(Protocol.SOCKS5, Socks5Node),
+    _definition(Protocol.HTTP, HttpNode),
+    _definition(Protocol.WIREGUARD, WireguardNode),
+    _definition(Protocol.TAILSCALE, TailscaleNode, requires_endpoint=False),
+    _definition(Protocol.MASQUE, MasqueNode),
+    _definition(Protocol.TRUSTTUNNEL, TrustTunnelNode),
+    _definition(Protocol.DIRECT, DirectNode, requires_endpoint=False),
+    _definition(Protocol.DNS, DNSNode, requires_endpoint=False),
+    _definition(Protocol.REMATCH, RematchNode, requires_endpoint=False),
+    _definition(Protocol.GOST_RELAY, GostRelayNode),
+    _definition(Protocol.SHADOWQUIC, ShadowQUICNode),
+    _definition(Protocol.OPENVPN, OpenVPNNode),
+    _definition(Protocol.SUDOKU, SudokuNode),
+    _definition(Protocol.REJECT, RejectNode, requires_endpoint=False),
+    _definition(Protocol.ANYTLS, AnyTLSNode),
+    _definition(Protocol.HYSTERIA, HysteriaNode),
+    _definition(Protocol.HYSTERIA2, Hysteria2Node),
+    _definition(Protocol.SSH, SSHNode),
+    _definition(Protocol.SNELL, SnellNode),
+    _definition(Protocol.MIERU, MieruNode, requires_endpoint=False),
+    _definition(Protocol.JUICITY, JuicityNode),
+    _definition(Protocol.TUIC, TUICNode),
 )
 
 _BY_PROTOCOL = {definition.protocol: definition for definition in _DEFINITIONS}

@@ -1,3 +1,5 @@
+from typing import get_type_hints
+
 import pytest
 
 import subio_v2.protocols as registry
@@ -71,6 +73,34 @@ def test_protocol_definitions_are_complete_and_authoritative():
         assert descriptor.definition is definition
         assert descriptor.node_class is definition.node_class
         assert descriptor.requires_endpoint is definition.requires_endpoint
+
+
+def test_user_override_policy_preserves_previous_runtime_behavior():
+    previous_fields = frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "uuid",
+            "cipher",
+            "alter_id",
+            "token",
+            "auth",
+            "auth_str",
+            "auth_key",
+            "psk",
+            "private_key",
+            "private_key_passphrase",
+            "public_key",
+            "preshared_key",
+            "obfs_password",
+        }
+    )
+
+    for definition in registry.all_definitions():
+        model_fields = frozenset(get_type_hints(definition.node_class))
+        assert definition.user_override_fields == previous_fields & model_fields
 
 
 def test_mihomo_capabilities_match_registered_protocols():

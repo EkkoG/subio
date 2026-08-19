@@ -3,7 +3,10 @@ import pytest
 from subio_v2.model.nodes import (
     Protocol,
     ShadowsocksNode,
+    SourcePassthroughNode,
     SSHNode,
+)
+from subio_v2.protocols.user_overrides import (
     clone_node_for_user,
     get_nodes_for_user,
 )
@@ -63,3 +66,20 @@ def test_clone_node_for_user_normalizes_hyphenated_credentials():
     assert cloned is not None
     assert cloned.private_key == "secret"
     assert cloned.username == "alice"
+
+
+def test_source_passthrough_user_override_keeps_common_endpoint_behavior():
+    node = SourcePassthroughNode(
+        name="opaque",
+        original_type="future",
+        raw={},
+        server="old.example",
+        port=443,
+        users={"alice": {"server": "new.example", "port": 8443}},
+    )
+
+    cloned = clone_node_for_user(node, "alice")
+
+    assert cloned is not None
+    assert cloned.server == "new.example"
+    assert cloned.port == 8443

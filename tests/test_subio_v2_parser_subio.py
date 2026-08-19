@@ -9,7 +9,6 @@ import yaml
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.model.nodes import (
-    USER_OVERRIDE_FIELDS,
     Protocol,
     ShadowsocksNode,
     VlessNode,
@@ -20,12 +19,11 @@ from subio_v2.subio_format.schema import (
     NON_PUBLIC_PROTOCOL_FIELDS,
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
-    PUBLIC_USER_OVERRIDE_FIELDS,
     build_json_schema,
     public_mapping_spec,
     public_node_fields,
+    public_user_override_fields,
 )
-
 
 SCHEMA_PATH = Path(__file__).parents[1] / "schemas" / "subio-node-v1.schema.json"
 
@@ -645,12 +643,11 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
 
 
 def test_subio_user_override_contract_is_explicit_and_valid():
-    assert set(PUBLIC_USER_OVERRIDE_FIELDS) == PUBLIC_PROTOCOLS
     for descriptor in protocol_registry.all():
         protocol = descriptor.protocol
         model_fields = get_type_hints(descriptor.node_class).keys()
-        assert PUBLIC_USER_OVERRIDE_FIELDS[protocol] <= USER_OVERRIDE_FIELDS
-        assert PUBLIC_USER_OVERRIDE_FIELDS[protocol] <= model_fields
+        override_fields = public_user_override_fields(protocol)
+        assert override_fields <= model_fields
 
 
 def test_subio_public_mapping_contract_covers_unconstrained_objects():
