@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from subio_v2.model.nodes import Node, OpenVPNNode, Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -179,4 +178,4 @@ class OpenVPNDescriptor(StructuredProtocolDescriptor):
             )
 
 
-register(OpenVPNDescriptor())
+DESCRIPTOR = OpenVPNDescriptor()

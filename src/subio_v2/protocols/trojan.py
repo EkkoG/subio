@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -82,4 +81,4 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(TrojanDescriptor())
+DESCRIPTOR = TrojanDescriptor()

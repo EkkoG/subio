@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from subio_v2.model.nodes import Protocol
 from subio_v2.protocols._base import ProtocolDescriptor
@@ -43,9 +43,8 @@ def _bootstrap() -> None:
     global _bootstrapped
     if _bootstrapped:
         return
-    # Imported for side-effect registration.
-    # Keep this list explicit so grep/rg can quickly discover all descriptors.
-    from subio_v2.protocols import (  # noqa: F401
+    # Keep this list explicit so grep/rg can discover every descriptor authority.
+    from subio_v2.protocols import (
         anytls,
         direct,
         dns,
@@ -74,6 +73,37 @@ def _bootstrap() -> None:
         vmess,
         wireguard,
     )
+
+    for module in (
+        anytls,
+        direct,
+        dns,
+        gost_relay,
+        http,
+        hysteria,
+        hysteria2,
+        juicity,
+        masque,
+        mieru,
+        openvpn,
+        reject,
+        rematch,
+        shadowquic,
+        shadowsocks,
+        shadowsocksr,
+        snell,
+        socks5,
+        ssh,
+        sudoku,
+        tailscale,
+        trojan,
+        trusttunnel,
+        tuic,
+        vless,
+        vmess,
+        wireguard,
+    ):
+        register(module.DESCRIPTOR)
 
     _bootstrapped = True
 

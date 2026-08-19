@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SSHNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
@@ -66,4 +65,4 @@ class SSHDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(SSHDescriptor())
+DESCRIPTOR = SSHDescriptor()

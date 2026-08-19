@@ -13,7 +13,6 @@ from subio_v2.model.nodes import (
     Node,
     Protocol,
 )
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -177,4 +176,4 @@ class MieruDescriptor(StructuredProtocolDescriptor):
         return 1 <= start <= end <= 65535
 
 
-register(MieruDescriptor())
+DESCRIPTOR = MieruDescriptor()

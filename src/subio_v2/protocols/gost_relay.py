@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from subio_v2.model.nodes import Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -35,4 +34,4 @@ class GostRelayDescriptor(StructuredProtocolDescriptor):
     )
 
 
-register(GostRelayDescriptor())
+DESCRIPTOR = GostRelayDescriptor()

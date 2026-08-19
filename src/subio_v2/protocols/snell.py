@@ -5,7 +5,6 @@ from typing import Any
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SnellNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -134,4 +133,4 @@ class SnellDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(SnellDescriptor())
+DESCRIPTOR = SnellDescriptor()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, Socks5Node
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
@@ -45,4 +44,4 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
         ]
 
 
-register(Socks5Descriptor())
+DESCRIPTOR = Socks5Descriptor()

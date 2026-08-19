@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import smux_group
 
@@ -25,4 +24,4 @@ class DNSDescriptor(StructuredProtocolDescriptor):
         out.pop("port", None)
 
 
-register(DNSDescriptor())
+DESCRIPTOR = DNSDescriptor()

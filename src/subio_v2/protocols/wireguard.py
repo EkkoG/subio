@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -155,4 +154,4 @@ class WireguardDescriptor(StructuredProtocolDescriptor):
         return errors
 
 
-register(WireguardDescriptor())
+DESCRIPTOR = WireguardDescriptor()

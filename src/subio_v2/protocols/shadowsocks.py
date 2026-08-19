@@ -5,7 +5,6 @@ import binascii
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -102,4 +101,4 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(ShadowsocksDescriptor())
+DESCRIPTOR = ShadowsocksDescriptor()

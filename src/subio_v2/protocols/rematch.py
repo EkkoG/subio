@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol, RematchNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -50,4 +49,4 @@ class RematchDescriptor(StructuredProtocolDescriptor):
         return errors
 
 
-register(RematchDescriptor())
+DESCRIPTOR = RematchDescriptor()

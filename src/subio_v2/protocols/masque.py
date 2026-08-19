@@ -5,7 +5,6 @@ from typing import Any, Dict
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import MasqueMode, MasqueNode, Node, Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -196,4 +195,4 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(MasqueDescriptor())
+DESCRIPTOR = MasqueDescriptor()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Hysteria2Node, Node, Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -84,4 +83,4 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(Hysteria2Descriptor())
+DESCRIPTOR = Hysteria2Descriptor()

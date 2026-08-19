@@ -5,7 +5,6 @@ from typing import Any
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import AnyTLSNode, Node, Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -84,4 +83,4 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
         ]
 
 
-register(AnyTLSDescriptor())
+DESCRIPTOR = AnyTLSDescriptor()

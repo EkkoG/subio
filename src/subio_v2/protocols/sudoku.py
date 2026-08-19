@@ -9,7 +9,6 @@ from subio_v2.model.nodes import (
     SudokuHTTPMaskSettings,
     SudokuNode,
 )
-from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -291,4 +290,4 @@ class SudokuDescriptor(StructuredProtocolDescriptor):
         )
 
 
-register(SudokuDescriptor())
+DESCRIPTOR = SudokuDescriptor()

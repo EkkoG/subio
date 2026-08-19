@@ -1,5 +1,4 @@
 from subio_v2.model.nodes import Protocol
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
@@ -25,4 +24,4 @@ class JuicityDescriptor(StructuredProtocolDescriptor):
     )
 
 
-register(JuicityDescriptor())
+DESCRIPTOR = JuicityDescriptor()

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from dataclasses import fields
 from typing import get_type_hints
 
@@ -157,3 +159,22 @@ def test_registry_rejects_protocol_without_definition():
     list(registry.all())
     with pytest.raises(ValueError, match="Protocol has no definition"):
         registry.register(UndefinedProtocolDescriptor())
+
+
+def test_importing_protocol_module_has_no_registration_side_effect():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import subio_v2.protocols as r; "
+                "import subio_v2.protocols.vmess; "
+                "assert not r._registry"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr

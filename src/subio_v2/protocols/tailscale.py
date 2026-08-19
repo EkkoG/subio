@@ -4,7 +4,6 @@ from typing import Any, Dict
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TailscaleNode
-from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
@@ -257,4 +256,4 @@ class TailscaleDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-register(TailscaleDescriptor())
+DESCRIPTOR = TailscaleDescriptor()
