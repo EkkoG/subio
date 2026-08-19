@@ -52,6 +52,15 @@ uv run python -m pytest tests/test_example_e2e.py -v
 本地 HTTP provider/ruleset、Gist dry-run 和 Age 加解密闭环。详细约束见
 `docs/e2e_testing.md`。
 
+重构期间的端到端与 adapter 契约层：
+
+```bash
+uv run python -m pytest -m contract tests/
+```
+
+契约测试的范围、support matrix 映射和可随内部 API 改写的结构测试边界见
+`docs/contract_test_coverage.md`。`tests/conftest.py` 维护机器可读的 contract module 清单。
+
 覆盖率（包名 `subio_v2`）：
 
 ```bash
