@@ -731,8 +731,22 @@ class SourcePassthroughNode(BaseNode):
     """Opaque source record that may only be emitted back to its source dialect."""
 
     type: Protocol = field(default=Protocol.SOURCE_PASSTHROUGH, init=False)
-    original_type: str = ""
-    raw: Any = field(default=None, repr=False)
+
+    @property
+    def original_type(self) -> str:
+        return self.record.opaque_type or ""
+
+    @original_type.setter
+    def original_type(self, value: str) -> None:
+        self.record.opaque_type = value
+
+    @property
+    def raw(self) -> Any:
+        return self.record.opaque_raw
+
+    @raw.setter
+    def raw(self, value: Any) -> None:
+        self.record.opaque_raw = value
 
 
 Node = Union[

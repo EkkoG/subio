@@ -6,42 +6,38 @@ from typing import Any
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
-from subio_v2.parser.base import BaseParser
 from subio_v2.model.nodes import (
-    Node,
-    ShadowsocksNode,
-    VmessNode,
-    TrojanNode,
-    Socks5Node,
-    HttpNode,
     AnyTLSNode,
-    SSHNode,
-    SnellNode,
-    TUICNode,
-    Hysteria2Node,
-    Protocol,
-    TLSSettings,
-    TransportSettings,
-    Network,
+    DirectNode,
+    HttpNode,
     HttpVariant,
-    ShadowTLSSettings,
-    SurgePolicyOptions,
-    WireguardNode,
-    WireguardPeer,
-    TailscaleNode,
+    Hysteria2Node,
     MasqueMode,
     MasqueNode,
-    TrustTunnelNode,
-    DirectNode,
-    SourcePassthroughNode,
+    Network,
+    Node,
+    Protocol,
     RejectMode,
     RejectNode,
+    ShadowsocksNode,
+    ShadowTLSSettings,
+    SnellNode,
+    Socks5Node,
+    SourcePassthroughNode,
+    SSHNode,
+    SurgePolicyOptions,
+    TailscaleNode,
+    TLSSettings,
+    TransportSettings,
+    TrojanNode,
+    TrustTunnelNode,
+    TUICNode,
+    VmessNode,
+    WireguardNode,
+    WireguardPeer,
 )
-from subio_v2.surge.resources import (
-    SurgeKeystoreEntry,
-    SurgeNamedSection,
-    get_surge_node_attachments,
-)
+from subio_v2.model.records import NodeRecord
+from subio_v2.parser.base import BaseParser
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_BUILTIN_ALIAS_TYPES,
@@ -51,6 +47,11 @@ from subio_v2.surge.codecs import (
     SurgeUdpBehavior,
     get_surge_codec,
 )
+from subio_v2.surge.resources import (
+    SurgeKeystoreEntry,
+    SurgeNamedSection,
+    get_surge_node_attachments,
+)
 from subio_v2.surge.syntax import (
     SurgeProxyRecord,
     parse_parameter_list,
@@ -58,7 +59,6 @@ from subio_v2.surge.syntax import (
     split_comma_separated,
 )
 from subio_v2.utils.logger import logger
-
 
 _PREDEFINED_BUILTIN_NAMES = {
     "DIRECT",
@@ -831,7 +831,9 @@ class SurgeParser(BaseParser):
 
         node = SourcePassthroughNode(
             name=record.name,
-            original_type="external",
+            record=NodeRecord(
+                opaque_type="external", opaque_raw=copy.deepcopy(record)
+            ),
             server=None,
             port=None,
             udp=values.get("udp-relay") == "true",
@@ -851,7 +853,6 @@ class SurgeParser(BaseParser):
                 test_timeout=optional_int("test-timeout"),
                 test_udp=values.get("test-udp"),
             ),
-            raw=copy.deepcopy(record),
         )
         return node
 

@@ -8,6 +8,7 @@ from subio_v2.clash.dialect import pre_descriptor_normalize
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import SourcePassthroughNode
+from subio_v2.model.records import NodeRecord
 from subio_v2.parser.base import BaseParser
 from subio_v2.platforms import normalize_platform
 
@@ -90,8 +91,9 @@ class ClashParser(BaseParser):
         if not desc:
             node = SourcePassthroughNode(
                 name=data.get("name", "Unknown"),
-                original_type=str(node_type),
-                raw=copy.deepcopy(data),
+                record=NodeRecord(
+                    opaque_type=str(node_type), opaque_raw=copy.deepcopy(data)
+                ),
                 server=data.get("server"),
                 port=data.get("port"),
                 udp=data.get("udp", True),

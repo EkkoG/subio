@@ -75,8 +75,7 @@ def test_clone_node_for_user_normalizes_hyphenated_credentials():
 def test_source_passthrough_user_override_keeps_common_endpoint_behavior():
     node = SourcePassthroughNode(
         name="opaque",
-        original_type="future",
-        raw={},
+        record=NodeRecord(opaque_type="future", opaque_raw={}),
         server="old.example",
         port=443,
         users={"alice": {"server": "new.example", "port": 8443}},
@@ -109,4 +108,21 @@ def test_lifecycle_metadata_is_owned_by_node_record_and_hidden_from_repr():
 
     assert node.original_name == "before"
     assert node.source_provider == "provider"
+    assert "secret" not in repr(node)
+
+
+def test_opaque_payload_is_owned_by_node_record_and_hidden_from_repr():
+    semantic_fields = {item.name for item in fields(SourcePassthroughNode)}
+    assert {"original_type", "raw"}.isdisjoint(semantic_fields)
+
+    node = SourcePassthroughNode(
+        name="opaque",
+        record=NodeRecord(
+            opaque_type="future",
+            opaque_raw={"private-key": "secret"},
+        ),
+    )
+
+    assert node.original_type == "future"
+    assert node.raw == {"private-key": "secret"}
     assert "secret" not in repr(node)
