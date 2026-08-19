@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 
 import subio_v2.protocols as registry
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import (
     DNSNode,
@@ -12,9 +14,9 @@ from subio_v2.model.nodes import (
     MieruNode,
     OpenVPNNode,
     Protocol,
-    RematchNode,
     RejectMode,
     RejectNode,
+    RematchNode,
     ShadowQUICNode,
     SourcePassthroughNode,
     SudokuHTTPMaskSettings,
@@ -23,7 +25,6 @@ from subio_v2.model.nodes import (
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.protocols._base import StructuredProtocolDescriptor
-
 
 SCHEMA_SNAPSHOT = (
     Path(__file__).parent / "fixtures/mihomo/schema/proxies-88d5239.json"

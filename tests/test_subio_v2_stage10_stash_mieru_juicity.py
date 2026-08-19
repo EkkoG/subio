@@ -1,4 +1,6 @@
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.model.nodes import (

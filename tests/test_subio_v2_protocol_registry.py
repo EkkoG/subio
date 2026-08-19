@@ -4,13 +4,15 @@ from typing import get_type_hints
 import pytest
 
 import subio_v2.protocols as registry
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.model.nodes import BaseNode, Protocol
 from subio_v2.protocols._base import ProtocolDescriptor
 from subio_v2.protocols.definitions import (
     TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS,
     TERMINAL_NATIVE_COMMON_FIELDS,
 )
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 
 class ConflictingDescriptor(ProtocolDescriptor):

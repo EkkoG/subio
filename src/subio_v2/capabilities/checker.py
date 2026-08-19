@@ -11,6 +11,7 @@ from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, SurgePolicyOptions, VmessNode
 from subio_v2.platforms import normalize_platform
 from subio_v2.validation import validate_node
+
 from .definitions import get_platform_capabilities, normalize_protocol_name
 
 

@@ -8,7 +8,7 @@ Platform Capabilities Definitions
 - 其他特性支持
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from subio_v2.platforms import normalize_platform
 from subio_v2.target_registry import protocols_for_target
@@ -92,10 +92,9 @@ TRANSPORT_XHTTP = "xhttp"
 
 # ============== 平台能力定义 ==============
 
-PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
+_TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
     # ============== Surge ==============
     "surge": {
-        "protocols": protocols_for_target("surge"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
             "plugins": {"obfs"},
@@ -154,7 +153,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Mihomo ==============
     "mihomo": {
-        "protocols": protocols_for_target("mihomo"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls", "restls"},
@@ -249,7 +247,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Clash (原版) ==============
     "clash": {
-        "protocols": protocols_for_target("clash"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED,
             "plugins": {"obfs", "v2ray-plugin"},
@@ -275,7 +272,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Stash ==============
     "stash": {
-        "protocols": protocols_for_target("stash"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_STASH,
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls"},
@@ -357,7 +353,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== dae ==============
     "dae": {
-        "protocols": protocols_for_target("dae"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "shadow-tls"},
@@ -394,7 +389,6 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== v2rayN ==============
     "v2rayn": {
-        "protocols": protocols_for_target("v2rayn"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "v2ray-plugin"},
@@ -473,7 +467,18 @@ PROTOCOL_NAME_MAP = {
 
 def get_platform_capabilities(platform: str) -> Optional[Dict[str, Any]]:
     """获取指定平台的能力定义"""
-    return PLATFORM_CAPABILITIES.get(normalize_platform(platform))
+    platform = normalize_platform(platform)
+    constraints = _TARGET_CONSTRAINTS.get(platform)
+    if constraints is None:
+        return None
+    return {"protocols": protocols_for_target(platform), **constraints}
+
+
+def all_platform_capabilities() -> Dict[str, Dict[str, Any]]:
+    return {
+        platform: get_platform_capabilities(platform)
+        for platform in _TARGET_CONSTRAINTS
+    }
 
 
 def normalize_protocol_name(protocol: str) -> str:

@@ -1,5 +1,7 @@
 from subio_v2.capabilities.checker import CapabilityChecker
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.model.nodes import (
     Hysteria2Node,
     Protocol,
@@ -7,7 +9,6 @@ from subio_v2.model.nodes import (
     SnellNode,
     TUICNode,
 )
-
 
 SURGE_SHADOWSOCKS_CIPHERS = {
     "2022-blake3-aes-128-gcm",

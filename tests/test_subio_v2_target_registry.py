@@ -1,7 +1,9 @@
 import subio_v2.protocols as protocol_registry
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
 from subio_v2.target_registry import protocols_for_target, target_platforms
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 
 def test_target_registry_is_the_capability_protocol_authority():

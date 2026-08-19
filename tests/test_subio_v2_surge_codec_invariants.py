@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import Protocol
 from subio_v2.parser.surge import SurgeParser
@@ -10,15 +12,14 @@ from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_CODEC_BY_KEYWORD,
     SURGE_CODEC_SPECS,
-    SURGE_COMMON_PARAMETERS,
     SURGE_COMMON_PARAMETER_PATHS,
+    SURGE_COMMON_PARAMETERS,
     SURGE_EMITTER_HANDLERS,
     SURGE_NODE_PROTOCOLS,
     SurgePolicyKind,
     SurgeUdpBehavior,
 )
 from subio_v2.surge.syntax import parse_proxy_line
-
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "surge" / "official"
 

@@ -6,7 +6,7 @@ from collections.abc import Callable
 import pytest
 
 from subio_v2.capabilities.checker import CapabilityChecker
-from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
+from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.emitter import link
 from subio_v2.model.nodes import (
     AnyTLSNode,
@@ -15,8 +15,8 @@ from subio_v2.model.nodes import (
     Network,
     Node,
     Protocol,
-    ShadowTLSSettings,
     ShadowsocksNode,
+    ShadowTLSSettings,
     Socks5Node,
     SurgePolicyOptions,
     TLSSettings,
@@ -26,6 +26,8 @@ from subio_v2.model.nodes import (
     VlessNode,
     VmessNode,
 )
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 
 LINK_PLATFORMS = ("dae", "v2rayn")
