@@ -131,3 +131,13 @@ def test_obsolete_internal_authorities_are_absent():
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production
+
+    engine_source = (
+        REPO_ROOT / "src" / "subio_v2" / "workflow" / "engine.py"
+    ).read_text(encoding="utf-8")
+    for symbol in (
+        "def _load_providers",
+        "def _fetch_content",
+        "def _decode_provider_content",
+    ):
+        assert symbol not in engine_source

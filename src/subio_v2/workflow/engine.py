@@ -1,4 +1,3 @@
-import hashlib
 import os
 from dataclasses import replace
 from typing import Any, Dict, List
@@ -13,20 +12,11 @@ from subio_v2.conversion import (
 from subio_v2.crypto import age
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.registry import EmitterRegistry
-from subio_v2.errors import (
-    ArtifactGenerationError,
-    ConfigError,
-    ProviderLoadError,
-)
+from subio_v2.errors import ArtifactGenerationError, ConfigError
 from subio_v2.model.nodes import Node
-from subio_v2.parser.registry import ParserRegistry
-from subio_v2.processor.common import (
-    DialerProxyProcessor,
-    FilterProcessor,
-    RenameProcessor,
-)
+from subio_v2.processor.common import FilterProcessor
 from subio_v2.protocols.user_overrides import get_nodes_for_user
-from subio_v2.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.remote import RunRemoteLoader
 from subio_v2.rules.runtime import (
     RuleSetStore,
     load_rulesets,
@@ -36,6 +26,7 @@ from subio_v2.rules.runtime import (
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
+from subio_v2.workflow.providers import ProviderLoaderService
 from subio_v2.workflow.publication import ArtifactPublisher
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.uploader import GistBatchUploader, upload
@@ -110,7 +101,11 @@ class WorkflowEngine:
                 else RuleSetStore()
             )
             self.rulesets = merge_stores(self._local_rulesets, remote_rulesets)
-            self._load_providers(remote_loader)
+            provider_result = ProviderLoaderService(
+                self.config_path, self.global_age_secret_key
+            ).load(self.config, remote_loader)
+            self.providers = provider_result.providers
+            self.provider_issues = provider_result.issues
             self._generate_artifacts()
             generated = list(self._staged_artifacts)
             queued_uploads = self.batch_uploader.pending_uploads()
@@ -126,168 +121,6 @@ class WorkflowEngine:
             uploaded=[] if self.dry_run else queued_uploads,
             issues=list(self.issues),
         )
-
-    def _load_providers(
-        self, remote_loader: RunRemoteLoader | None = None
-    ) -> None:
-        remote_loader = remote_loader or RunRemoteLoader()
-        with logger.status("[bold green]Loading providers...") as status:
-            for prov_conf in self.config.get("provider", []):
-                name = prov_conf.get("name")
-                p_type = prov_conf.get("type")
-                status.update(f"[bold green]Loading provider: {name} ({p_type})")
-
-                logger.info(
-                    f"Processing provider: [bold cyan]{name}[/bold cyan] ({p_type})"
-                )
-                if prov_conf.get("allow_unsafe_external", False):
-                    logger.warning(
-                        f"Provider '{name}' enables remote Surge External passthrough; "
-                        "the generated Surge configuration may contain program entries "
-                        "supplied by that remote provider"
-                    )
-                content_bytes = self._fetch_content(prov_conf, remote_loader)
-                if not content_bytes:
-                    raise ProviderLoadError(f"Provider '{name}' returned empty content")
-                content = self._decode_provider_content(content_bytes, prov_conf)
-
-                parser = ParserRegistry.get_parser(
-                    p_type,
-                    source_kind="remote" if "url" in prov_conf else "local",
-                    allow_unsafe_external=prov_conf.get(
-                        "allow_unsafe_external", False
-                    ),
-                )
-                if parser is None:
-                    raise ProviderLoadError(
-                        f"Unsupported provider type '{p_type}' for provider '{name}'"
-                    )
-                try:
-                    parse_result = parser.parse_result(content)
-                    nodes = parse_result.nodes
-                except Exception as exc:
-                    raise ProviderLoadError(
-                        f"Failed to parse provider '{name}': {exc}"
-                    ) from exc
-                for node in nodes:
-                    node.source_provider = name
-                self.provider_issues[name] = [
-                    replace(issue, source=name) for issue in parse_result.issues
-                ]
-                # Apply Rename
-                rename_conf = prov_conf.get("rename")
-                if rename_conf:
-                    processor = RenameProcessor(
-                        prefix=rename_conf.get("add_prefix", ""),
-                        replace=rename_conf.get("replace", []),
-                    )
-                    nodes = processor.process(nodes)
-
-                # Apply DialerProxy (dialer-proxy for Clash-like, underlying-proxy for Surge)
-                dialer_proxy = prov_conf.get("dialer_proxy")
-                if dialer_proxy:
-                    processor = DialerProxyProcessor(dialer_proxy=dialer_proxy)
-                    nodes = processor.process(nodes)
-
-                # Apply provider-level filter (include/exclude, same structure as global [filters])
-                prov_filter_conf = prov_conf.get("filters")
-                if prov_filter_conf:
-                    prov_filter = FilterProcessor(
-                        include=prov_filter_conf.get("include"),
-                        exclude=prov_filter_conf.get("exclude"),
-                    )
-                    nodes = prov_filter.process(nodes)
-
-                logger.info(
-                    f"Provider [bold cyan]{name}[/bold cyan] loaded: [bold]{len(nodes)}[/bold] nodes"
-                )
-                self.providers[name] = nodes
-
-    def _fetch_content(
-        self,
-        conf: Dict[str, Any],
-        remote_loader: RunRemoteLoader | None = None,
-    ) -> bytes:
-        content: bytes | None = None
-        provider_name = conf.get("name", "unknown")
-
-        if "url" in conf:
-            headers = {}
-            if conf.get("user_agent"):
-                headers["User-Agent"] = conf["user_agent"]
-            try:
-                content = (remote_loader or RunRemoteLoader()).fetch(
-                    conf["url"], headers=headers
-                )
-            except RemoteLoadError as exc:
-                raise ProviderLoadError(
-                    f"Failed to fetch provider '{provider_name}': "
-                    f"{type(exc.__cause__).__name__ if exc.__cause__ else type(exc).__name__}"
-                ) from exc
-            digest = hashlib.sha256(content).hexdigest()[:12]
-            logger.dim(
-                f"Fetched provider {provider_name}: {len(content)} bytes "
-                f"(sha256:{digest})"
-            )
-        elif "file" in conf:
-            path = conf["file"]
-            config_dir = os.path.dirname(self.config_path)
-            abs_path = os.path.join(config_dir, path)
-            if os.path.exists(abs_path):
-                with open(abs_path, "rb") as f:
-                    content = f.read()
-            else:
-                abs_path = os.path.join(config_dir, "provider", path)
-                if os.path.exists(abs_path):
-                    with open(abs_path, "rb") as f:
-                        content = f.read()
-                else:
-                    raise ProviderLoadError(
-                        f"File for provider '{provider_name}' not found: {path}"
-                    )
-
-            digest = hashlib.sha256(content).hexdigest()[:12]
-            logger.dim(
-                f"Read provider {provider_name} from {path}: "
-                f"{len(content)} bytes (sha256:{digest})"
-            )
-
-        if content is None:
-            raise ProviderLoadError(
-                f"Provider '{provider_name}' must define either 'url' or 'file'"
-            )
-
-        return content
-
-    def _decode_provider_content(
-        self, content: bytes, conf: Dict[str, Any]
-    ) -> str:
-        provider_name = conf.get("name", "unknown")
-        provider_secret_key = conf.get("age_secret_key", "")
-        secret_keys = []
-        if provider_secret_key:
-            secret_keys.append(provider_secret_key)
-        if self.global_age_secret_key:
-            secret_keys.append(self.global_age_secret_key)
-
-        if secret_keys:
-            try:
-                if age.is_age_encrypted(content):
-                    content = age.decrypt_bytes(content, *secret_keys)
-                    logger.dim(
-                        f"Decrypted age-encrypted content for {conf.get('name', conf.get('url', conf.get('file', 'unknown')))}"
-                    )
-            except Exception as e:
-                raise ProviderLoadError(
-                    f"Failed to decrypt provider '{provider_name}': {e}"
-                ) from e
-
-        try:
-            return content.decode("utf-8-sig")
-        except UnicodeDecodeError as exc:
-            raise ProviderLoadError(
-                f"Provider '{provider_name}' is not valid UTF-8"
-            ) from exc
 
     def _generate_artifacts(self):
         global_filter = None

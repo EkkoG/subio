@@ -12,6 +12,7 @@ from subio_v2.parser.registry import ParserRegistry
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.providers import ProviderLoadResult
 
 FIXTURES = Path(__file__).parent / "fixtures/rulesets"
 CERT_SHA256 = ":".join(["AA"] * 32)
@@ -281,7 +282,10 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
     engine = WorkflowEngine(str(config), dry_run=False)
     attempts = 0
 
-    monkeypatch.setattr(engine, "_load_providers", lambda loader: None)
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.ProviderLoaderService.load",
+        lambda self, config, loader: ProviderLoadResult({}, {}),
+    )
     monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
     monkeypatch.setattr(engine.batch_uploader, "flush", lambda: None)
 

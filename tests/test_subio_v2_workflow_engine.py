@@ -9,8 +9,10 @@ from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError, UploadError
+from subio_v2.remote import RunRemoteLoader
 from subio_v2.workflow.config import RunConfig
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
 from subio_v2.workflow.template import TemplateRenderResult
 
 
@@ -449,7 +451,10 @@ def test_config_shape_errors_are_reported_as_config_errors(
 def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
     engine = WorkflowEngine(str(cfg), dry_run=False)
-    monkeypatch.setattr(engine, "_load_providers", lambda loader: None)
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.ProviderLoaderService.load",
+        lambda self, config, loader: ProviderLoadResult({}, {}),
+    )
 
     def generate():
         engine._staged_artifacts["out.txt"] = "content"
@@ -520,10 +525,10 @@ include = "香港"
     monkeypatch.chdir(tmp_path)
 
     eng = WorkflowEngine(str(cfg), dry_run=True)
-    eng._load_providers()
+    result = ProviderLoaderService(str(cfg)).load(eng.config, RunRemoteLoader())
 
-    assert "test_prov" in eng.providers
-    nodes = eng.providers["test_prov"]
+    assert "test_prov" in result.providers
+    nodes = result.providers["test_prov"]
     assert len(nodes) == 1
     assert nodes[0].name == "香港-01"
 
@@ -565,9 +570,9 @@ exclude = "剩余流量"
     monkeypatch.chdir(tmp_path)
 
     eng = WorkflowEngine(str(cfg), dry_run=True)
-    eng._load_providers()
+    result = ProviderLoaderService(str(cfg)).load(eng.config, RunRemoteLoader())
 
-    nodes = eng.providers["test_prov"]
+    nodes = result.providers["test_prov"]
     assert len(nodes) == 1
     assert nodes[0].name == "香港-优质"
 
@@ -605,9 +610,9 @@ file = "nodes.toml"
     monkeypatch.chdir(tmp_path)
 
     eng = WorkflowEngine(str(cfg), dry_run=True)
-    eng._load_providers()
+    result = ProviderLoaderService(str(cfg)).load(eng.config, RunRemoteLoader())
 
-    nodes = eng.providers["test_prov"]
+    nodes = result.providers["test_prov"]
     assert len(nodes) == 2
     assert {n.name for n in nodes} == {"node-A", "node-B"}
 

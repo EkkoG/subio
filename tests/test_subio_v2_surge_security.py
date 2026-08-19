@@ -215,8 +215,7 @@ def test_remote_external_opt_in_warns_once_and_allows_passthrough(
     cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=True)
     warnings: list[str] = []
     monkeypatch.setattr(
-        WorkflowEngine,
-        "_fetch_content",
+        "subio_v2.workflow.providers.ProviderLoaderService._fetch_content",
         lambda self, conf, loader: b"remote = external, local-port=invalid",
     )
     monkeypatch.setattr("subio_v2.workflow.engine.logger.warning", warnings.append)
@@ -236,8 +235,7 @@ def test_remote_external_only_failure_carries_the_ignore_warning(
 ):
     cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=False)
     monkeypatch.setattr(
-        WorkflowEngine,
-        "_fetch_content",
+        "subio_v2.workflow.providers.ProviderLoaderService._fetch_content",
         lambda self, conf, loader: (
             b"remote = external, exec=/secret, local-port=1080"
         ),
@@ -257,8 +255,7 @@ def test_remote_external_only_failure_carries_the_ignore_warning(
 def test_ignored_remote_external_does_not_block_other_nodes(tmp_path, monkeypatch):
     cfg = _write_remote_external_workflow(tmp_path, allow_unsafe_external=False)
     monkeypatch.setattr(
-        WorkflowEngine,
-        "_fetch_content",
+        "subio_v2.workflow.providers.ProviderLoaderService._fetch_content",
         lambda self, conf, loader: (
             b"remote = external, exec=/secret, local-port=1080\n"
             b"usable = direct"

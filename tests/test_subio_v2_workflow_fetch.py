@@ -5,6 +5,7 @@ import pytest
 from subio_v2.errors import ProviderLoadError
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.providers import ProviderLoaderService
 
 
 def write(tmp_path: Path, name: str, content: str):
@@ -25,23 +26,23 @@ def test_fetch_content_file_relative_to_config_and_provider_dir(tmp_path, monkey
     # And in provider subdir
     write(prov_dir, "nodes.json5", "{b:2}")
 
-    eng = WorkflowEngine(str(cfg))
+    service = ProviderLoaderService(str(cfg))
 
     # Case 1: file exists in config dir
     conf = {"file": "nodes.json5"}
-    c1 = eng._fetch_content(conf)
+    c1 = service._fetch_content(conf, RunRemoteLoader())
     assert b"a:1" in c1 or b"a: 1" in c1 or b'"a": 1' in c1
 
     # Case 2: when not in config dir, should find in provider subdir
     # Remove config-dir copy to force provider lookup
     f1.unlink()
-    c2 = eng._fetch_content(conf)
+    c2 = service._fetch_content(conf, RunRemoteLoader())
     assert b"b:2" in c2 or b"b: 2" in c2 or b'"b": 2' in c2
 
 
 def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
-    eng = WorkflowEngine(str(cfg))
+    service = ProviderLoaderService(str(cfg))
 
     captured = {"headers": None}
 
@@ -64,7 +65,7 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
         def get(self, url, headers=None, timeout=None):
             captured["headers"] = headers
             if "fail" in url:
-                raise Exception("network fail")
+                raise RuntimeError("network fail")
             return Resp()
 
     monkeypatch.setattr(
@@ -72,13 +73,15 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
     )
 
     # Success path and user_agent header
-    c = eng._fetch_content({"url": "http://ok", "user_agent": "UA"})
+    c = service._fetch_content(
+        {"url": "http://ok", "user_agent": "UA"}, RunRemoteLoader()
+    )
     assert c == b"hello"
     assert captured["headers"] == {"User-Agent": "UA"}
 
     # Failure path aborts instead of publishing a partial workflow.
     with pytest.raises(ProviderLoadError, match="Failed to fetch provider"):
-        eng._fetch_content({"url": "http://fail"})
+        service._fetch_content({"url": "http://fail"}, RunRemoteLoader())
 
 
 def test_run_remote_loader_caches_by_url_and_headers_only_within_one_instance(
@@ -202,10 +205,10 @@ template = "rules.j2"
 
 def test_provider_decode_accepts_utf8_bom_and_rejects_invalid_utf8(tmp_path):
     cfg = write(tmp_path, "config.toml", "a = 1")
-    engine = WorkflowEngine(str(cfg))
+    service = ProviderLoaderService(str(cfg))
 
-    assert engine._decode_provider_content(
+    assert service._decode_content(
         b"\xef\xbb\xbfproxies: []", {"name": "bom"}
     ) == "proxies: []"
     with pytest.raises(ProviderLoadError, match="not valid UTF-8"):
-        engine._decode_provider_content(b"\xff", {"name": "invalid"})
+        service._decode_content(b"\xff", {"name": "invalid"})
