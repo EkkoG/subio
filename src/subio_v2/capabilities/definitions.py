@@ -11,7 +11,7 @@ Platform Capabilities Definitions
 from typing import Dict, Any, Optional
 
 from subio_v2.platforms import normalize_platform
-from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
+from subio_v2.target_registry import protocols_for_target
 
 # ============== 通用常量 ==============
 
@@ -95,7 +95,7 @@ TRANSPORT_XHTTP = "xhttp"
 PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     # ============== Surge ==============
     "surge": {
-        "protocols": set(SURGE_NODE_PROTOCOLS),
+        "protocols": protocols_for_target("surge"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_SURGE,
             "plugins": {"obfs"},
@@ -154,34 +154,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Mihomo ==============
     "mihomo": {
-        "protocols": {
-            "shadowsocks",
-            "shadowsocksr",
-            "vmess",
-            "vless",
-            "trojan",
-            "http",
-            "socks5",
-            "hysteria",
-            "hysteria2",
-            "tuic",
-            "gost-relay",
-            "snell",
-            "wireguard",
-            "ssh",
-            "anytls",
-            "mieru",
-            "rematch",
-            "sudoku",
-            "masque",
-            "trusttunnel",
-            "openvpn",
-            "tailscale",
-            "shadowquic",
-            "direct",
-            "reject",
-            "dns",
-        },
+        "protocols": protocols_for_target("mihomo"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls", "restls"},
@@ -276,13 +249,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Clash (原版) ==============
     "clash": {
-        "protocols": {
-            "shadowsocks",
-            "vmess",
-            "trojan",
-            "http",
-            "socks5",
-        },
+        "protocols": protocols_for_target("clash"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED,
             "plugins": {"obfs", "v2ray-plugin"},
@@ -308,28 +275,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== Stash ==============
     "stash": {
-        "protocols": {
-            "shadowsocks",
-            "shadowsocksr",
-            "vmess",
-            "vless",
-            "trojan",
-            "http",
-            "socks5",
-            "snell",
-            "wireguard",
-            "hysteria",
-            "hysteria2",
-            "tuic",
-            "ssh",
-            "anytls",
-            "direct",
-            "mieru",
-            "juicity",
-            "tailscale",
-            "masque",
-            "trusttunnel",
-        },
+        "protocols": protocols_for_target("stash"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_STASH,
             "plugins": {"obfs", "v2ray-plugin", "shadow-tls"},
@@ -411,17 +357,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== dae ==============
     "dae": {
-        "protocols": {
-            "shadowsocks",
-            "vmess",
-            "vless",
-            "trojan",
-            "http",
-            "socks5",
-            "hysteria2",
-            "tuic",
-            "anytls",
-        },
+        "protocols": protocols_for_target("dae"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "shadow-tls"},
@@ -458,13 +394,7 @@ PLATFORM_CAPABILITIES: Dict[str, Dict[str, Any]] = {
     },
     # ============== v2rayN ==============
     "v2rayn": {
-        "protocols": {
-            "shadowsocks",
-            "vmess",
-            "vless",
-            "trojan",
-            "socks5",
-        },
+        "protocols": protocols_for_target("v2rayn"),
         "shadowsocks": {
             "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
             "plugins": {"obfs", "v2ray-plugin"},
