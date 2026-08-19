@@ -118,6 +118,7 @@ def test_obsolete_internal_authorities_are_absent():
         "SURGE_EMITTER_HANDLERS",
         "_HANDLERS",
         "def _parts_",
+        "elif p_type",
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production

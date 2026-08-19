@@ -7,32 +7,20 @@ from typing import Any
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import (
-    AnyTLSNode,
     DirectNode,
-    HttpNode,
-    HttpVariant,
-    Hysteria2Node,
     MasqueMode,
     MasqueNode,
-    Network,
     Node,
     Protocol,
     RejectMode,
     RejectNode,
-    ShadowsocksNode,
     ShadowTLSSettings,
-    SnellNode,
-    Socks5Node,
     SourcePassthroughNode,
     SSHNode,
     SurgePolicyOptions,
     TailscaleNode,
     TLSSettings,
-    TransportSettings,
-    TrojanNode,
     TrustTunnelNode,
-    TUICNode,
-    VmessNode,
     WireguardNode,
     WireguardPeer,
 )
@@ -46,6 +34,10 @@ from subio_v2.surge.codecs import (
     SURGE_PROTOCOL_PARAMETERS,
     SurgeUdpBehavior,
     get_surge_codec,
+)
+from subio_v2.surge.parsers import (
+    SurgeProtocolParseContext,
+    get_surge_protocol_parser,
 )
 from subio_v2.surge.resources import (
     SurgeKeystoreEntry,
@@ -856,6 +848,35 @@ class SurgeParser(BaseParser):
         )
         return node
 
+    def _parse_line(self, line: str) -> Node | None:
+        try:
+            record = parse_proxy_line(line)
+        except (TypeError, ValueError):
+            return None
+
+        keyword = record.type.lower()
+        parser = get_surge_protocol_parser(keyword)
+        if parser is None or len(record.positional) < 2:
+            return None
+
+        try:
+            context = SurgeProtocolParseContext(
+                record=record,
+                server=record.positional[0],
+                port=int(record.positional[1]),
+            )
+            node = parser(context)
+            return (
+                self._apply_common_options(node, record, keyword)
+                if node is not None
+                else None
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Error parsing Surge policy '{record.name}' ({keyword}): {exc}"
+            )
+            return None
+
     def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
         if record.positional:
             raise ValueError(
@@ -981,377 +1002,3 @@ class SurgeParser(BaseParser):
                 }
             )
         return node
-
-    def _parse_line(self, line: str) -> Node | None:
-        try:
-            record = parse_proxy_line(line)
-        except (TypeError, ValueError):
-            return None
-
-        name = record.name
-        p_type = record.type.lower()
-
-        # Skip wireguard nodes
-        if p_type == "wireguard":
-            return None
-
-        if len(record.positional) < 2:
-            return None
-        server = record.positional[0]
-        try:
-            port = int(record.positional[1])
-        except ValueError:
-            return None
-
-        kv_args = record.parameters.last_values
-        pos_args = list(record.positional[2:])
-
-        # Helper to get bool
-        def get_bool(k, default=False):
-            v = kv_args.get(k)
-            if v is None:
-                return default
-            return v.lower() == "true"
-
-        def get_int(k):
-            value = kv_args.get(k)
-            if value is None:
-                return None
-            return int(value)
-
-        # Remove print(f"Parsing Surge content...") if it exists (already removed?)
-
-        # Helper to parse alpn (can be single string or comma-separated)
-        def get_alpn(k):
-            v = kv_args.get(k)
-            if not v:
-                return None
-            if "," in v:
-                return [x.strip() for x in v.split(",")]
-            return [v]
-
-        def build_tls(enabled=False):
-            sni = kv_args.get("sni")
-            return TLSSettings(
-                enabled=enabled or kv_args.get("tls") == "true",
-                server_name=None if sni == "off" else sni,
-                skip_cert_verify=kv_args.get("skip-cert-verify") == "true",
-                alpn=get_alpn("alpn"),
-                sni_disabled=sni == "off",
-                verify_name=kv_args.get("server-cert-verify-name"),
-                certificate_sha256=kv_args.get("server-cert-fingerprint-sha256"),
-                client_cert_ref=kv_args.get("client-cert"),
-            )
-
-        tls = build_tls()
-
-        transport = TransportSettings()
-        if kv_args.get("ws") == "true":
-            transport.network = Network.WS
-            transport.path = kv_args.get("ws-path")
-            if kv_args.get("ws-headers"):
-                # header1:value1|header2:value2
-                headers = {}
-                for h in kv_args["ws-headers"].split("|"):
-                    if ":" in h:
-                        hk, hv = h.split(":", 1)
-                        headers[hk.strip()] = hv.strip()
-                transport.headers = headers
-
-        def apply_common_options(node: Node) -> Node:
-            return self._apply_common_options(node, record, p_type)
-
-        try:
-            if p_type == "ss":
-                # ss, server, port, encrypt-method=..., password=...
-                # or ss, server, port, encrypt-method, password
-                cipher = kv_args.get("encrypt-method")
-                password = kv_args.get("password")
-
-                # Handle positional args for legacy SS format if needed?
-                # Surge typically uses kv args for SS now.
-
-                plugin = None
-                plugin_opts = None
-                if kv_args.get("obfs"):
-                    plugin = "obfs"
-                    plugin_opts = {
-                        "mode": kv_args["obfs"],
-                        "host": kv_args.get("obfs-host", ""),
-                    }
-
-                node = ShadowsocksNode(
-                    name=name,
-                    type=Protocol.SHADOWSOCKS,
-                    server=server,
-                    port=port,
-                    cipher=cipher or "chacha20-ietf-poly1305",
-                    password=password or "",
-                    udp_port=get_int("udp-port"),
-                    plugin=plugin,
-                    plugin_opts=plugin_opts,
-                    udp=get_bool("udp-relay", False),
-                )
-                return apply_common_options(node)
-
-            elif p_type == "vmess":
-                # vmess, server, port, username=..., encrypt-method=..., vmess-aead=...
-
-                # Check for TLS implicit
-                if kv_args.get("tls") == "true":
-                    tls.enabled = True
-
-                node = VmessNode(
-                    name=name,
-                    type=Protocol.VMESS,
-                    server=server,
-                    port=port,
-                    uuid=kv_args.get("username", ""),
-                    cipher=kv_args.get("encrypt-method", "aes-128-gcm"),
-                    vmess_aead=get_bool("vmess-aead", False),
-                    tls=tls,
-                    transport=transport,
-                    udp=True,
-                )
-                return apply_common_options(node)
-
-            elif p_type == "trojan":
-                # trojan, server, port, password=...
-                tls.enabled = True  # Always TLS
-
-                # Parse ws-headers if ws is enabled
-                if kv_args.get("ws") == "true" and kv_args.get("ws-headers"):
-                    headers = {}
-                    for h in kv_args["ws-headers"].split("|"):
-                        if ":" in h:
-                            hk, hv = h.split(":", 1)
-                            headers[hk.strip()] = hv.strip()
-                    transport.headers = headers
-
-                node = TrojanNode(
-                    name=name,
-                    type=Protocol.TROJAN,
-                    server=server,
-                    port=port,
-                    password=kv_args.get("password", ""),
-                    tls=tls,
-                    transport=transport,
-                    udp=True,
-                )
-                return apply_common_options(node)
-
-            elif p_type in ["socks5", "socks5-tls"]:
-                if p_type == "socks5-tls":
-                    tls.enabled = True
-
-                # socks5, server, port, username, password (optional positional)
-                username = kv_args.get("username")
-                password = kv_args.get("password")
-
-                if not username and len(pos_args) > 0:
-                    username = pos_args[0]
-                if not password and len(pos_args) > 1:
-                    password = pos_args[1]
-
-                node = Socks5Node(
-                    name=name,
-                    type=Protocol.SOCKS5,
-                    server=server,
-                    port=port,
-                    username=username,
-                    password=password,
-                    tls=tls,
-                    udp=get_bool("udp-relay", False),
-                )
-                return apply_common_options(node)
-
-            elif p_type in ["http", "https", "h2-connect"]:
-                if p_type in {"https", "h2-connect"}:
-                    tls.enabled = True
-
-                username = kv_args.get("username")
-                password = kv_args.get("password")
-
-                if not username and len(pos_args) > 0:
-                    username = pos_args[0]
-                if not password and len(pos_args) > 1:
-                    password = pos_args[1]
-
-                headers = None
-                if kv_args.get("headers"):
-                    headers = {}
-                    for header in kv_args["headers"].split("|"):
-                        if ":" in header:
-                            key, value = header.split(":", 1)
-                            headers[key.strip()] = value.strip()
-
-                node = HttpNode(
-                    name=name,
-                    type=Protocol.HTTP,
-                    server=server,
-                    port=port,
-                    username=username,
-                    password=password,
-                    headers=headers,
-                    variant=HttpVariant(p_type),
-                    max_streams=get_int("max-streams"),
-                    tls=tls,
-                    udp=(
-                        get_bool("udp-relay", False)
-                        if p_type == "h2-connect"
-                        else False
-                    ),
-                )
-                return apply_common_options(node)
-
-            elif p_type == "anytls":
-                node = AnyTLSNode(
-                    name=name,
-                    type=Protocol.ANYTLS,
-                    server=server,
-                    port=port,
-                    password=kv_args.get("password", ""),
-                    reuse=get_bool("reuse", True),
-                    tls=build_tls(enabled=True),
-                    udp=True,
-                )
-                return apply_common_options(node)
-
-            elif p_type == "ssh":
-                # ssh, server, port, username=..., password=... or private-key=...
-                username = kv_args.get("username", "")
-                password = kv_args.get("password")
-                private_key = kv_args.get("private-key")
-                keystore_id = private_key or None
-                if keystore_id:
-                    private_key = None
-
-                node = SSHNode(
-                    name=name,
-                    type=Protocol.SSH,
-                    server=server,
-                    port=port,
-                    username=username,
-                    password=password,
-                    private_key=private_key,
-                    keystore_id=keystore_id,
-                    idle_timeout=get_int("idle-timeout"),
-                    server_fingerprints=[
-                        fingerprint
-                        for value in record.parameters.get_all("server-fingerprint")
-                        for fingerprint in value.split(",")
-                        if fingerprint
-                    ]
-                    or None,
-                    udp=False,
-                )
-                return apply_common_options(node)
-
-            elif p_type == "snell":
-                # snell, server, port, psk=..., version=..., obfs=..., obfs-host=...
-                psk = kv_args.get("psk", "")
-                version = None
-                if kv_args.get("version"):
-                    try:
-                        version = int(kv_args["version"])
-                    except (TypeError, ValueError):
-                        pass
-
-                obfs = kv_args.get("obfs")
-                obfs_host = kv_args.get("obfs-host")
-
-                node = SnellNode(
-                    name=name,
-                    type=Protocol.SNELL,
-                    server=server,
-                    port=port,
-                    psk=psk,
-                    version=version,
-                    reuse=(
-                        get_bool("reuse") if kv_args.get("reuse") is not None else None
-                    ),
-                    udp_port=get_int("udp-port"),
-                    mode=kv_args.get("mode"),
-                    obfs=obfs,
-                    obfs_host=obfs_host,
-                    tls=TLSSettings(enabled=False),
-                    udp=bool(version and version >= 3),
-                )
-                return apply_common_options(node)
-
-            elif p_type in ["tuic", "tuic-v5"]:
-                # tuic, server, port, token=..., alpn=..., skip-cert-verify=...
-                # tuic-v5, server, port, password=..., uuid=..., alpn=...
-                version = 5 if p_type == "tuic-v5" else None
-                if not version and kv_args.get("version"):
-                    try:
-                        version = int(kv_args["version"])
-                    except (TypeError, ValueError):
-                        pass
-
-                token = kv_args.get("token")  # v4
-                password = kv_args.get("password")  # v5
-                uuid = kv_args.get("uuid")  # v5
-
-                tuic_tls = build_tls(enabled=True)
-
-                node = TUICNode(
-                    name=name,
-                    type=Protocol.TUIC,
-                    server=server,
-                    port=port,
-                    token=token,
-                    password=password,
-                    uuid=uuid,
-                    version=version,
-                    ports=kv_args.get("port-hopping"),
-                    hop_interval=get_int("port-hopping-interval"),
-                    tls=tuic_tls,
-                    udp=True,
-                )
-                return apply_common_options(node)
-
-            elif p_type == "hysteria2":
-                # hysteria2, server, port, password=..., download-bandwidth=..., upload-bandwidth=...
-                password = kv_args.get("password", "")
-                up = kv_args.get("upload-bandwidth") or kv_args.get("up")
-                down = kv_args.get("download-bandwidth") or kv_args.get("down")
-                salamander_password = kv_args.get("salamander-password")
-                gecko_password = kv_args.get("gecko-password")
-                if salamander_password and gecko_password:
-                    return None
-                if salamander_password:
-                    obfs = "salamander"
-                    obfs_password = salamander_password
-                elif gecko_password:
-                    obfs = "gecko"
-                    obfs_password = gecko_password
-                else:
-                    # Accept the older generic spelling and normalize on emit.
-                    obfs = kv_args.get("obfs")
-                    obfs_password = kv_args.get("obfs-password")
-
-                hy_tls = build_tls(enabled=True)
-
-                node = Hysteria2Node(
-                    name=name,
-                    type=Protocol.HYSTERIA2,
-                    server=server,
-                    port=port,
-                    password=password,
-                    up=up,
-                    down=down,
-                    ports=kv_args.get("port-hopping"),
-                    hop_interval=get_int("port-hopping-interval"),
-                    obfs=obfs,
-                    obfs_password=obfs_password,
-                    tls=hy_tls,
-                    udp=True,  # Hysteria2 always supports UDP
-                )
-                return apply_common_options(node)
-
-        except Exception as e:
-            logger.warning(f"Error parsing Surge policy '{name}' ({p_type}): {e}")
-            return None
-
-        return None

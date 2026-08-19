@@ -17,6 +17,7 @@ from subio_v2.surge.codecs import (
     SurgeUdpBehavior,
 )
 from subio_v2.surge.emitters import SURGE_PROTOCOL_EMITTERS
+from subio_v2.surge.parsers import SURGE_PROTOCOL_PARSERS
 from subio_v2.surge.syntax import parse_proxy_line
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
@@ -168,6 +169,16 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         and codec.keyword not in {"wireguard", "tailscale"}
     }
     assert sampled == registered
+    assert set(SURGE_PROTOCOL_PARSERS) == registered - {
+        "direct",
+        "reject",
+        "reject-drop",
+        "reject-no-drop",
+        "reject-tinygif",
+        "masque",
+        "trust-tunnel",
+    }
+    assert all(callable(parser) for parser in SURGE_PROTOCOL_PARSERS.values())
 
 
 @pytest.mark.parametrize(
