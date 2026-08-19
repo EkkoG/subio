@@ -106,6 +106,10 @@ def test_obsolete_internal_authorities_are_absent():
         "EmitterFactory",
         "CapabilityChecker",
         "check_node_for_platform",
+        "PROTOCOL_NAME_MAP",
+        "normalize_protocol_name",
+        "is_protocol_supported",
+        "get_protocol_capabilities",
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production

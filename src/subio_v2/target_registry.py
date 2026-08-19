@@ -1,6 +1,21 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from subio_v2.platforms import normalize_platform
+
+
+@dataclass(frozen=True)
+class TargetCommonPolicy:
+    tfo: bool
+    mptcp: bool
+    dialer_proxy: bool
+
+    def as_feature_map(self) -> dict[str, bool]:
+        return {
+            "tfo": self.tfo,
+            "mptcp": self.mptcp,
+            "dialer_proxy": self.dialer_proxy,
+        }
 
 
 def _clash_family_protocols(dialect: str) -> frozenset[str]:
@@ -34,6 +49,15 @@ _TARGET_PROTOCOL_PROVIDERS: dict[str, Callable[[], frozenset[str]]] = {
     "v2rayn": lambda: _link_protocols("v2rayn"),
 }
 
+_TARGET_COMMON_POLICIES = {
+    "mihomo": TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
+    "clash": TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
+    "stash": TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
+    "surge": TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
+    "dae": TargetCommonPolicy(tfo=False, mptcp=True, dialer_proxy=True),
+    "v2rayn": TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
+}
+
 
 def protocols_for_target(platform: str) -> frozenset[str]:
     provider = _TARGET_PROTOCOL_PROVIDERS.get(normalize_platform(platform))
@@ -42,3 +66,7 @@ def protocols_for_target(platform: str) -> frozenset[str]:
 
 def target_platforms() -> frozenset[str]:
     return frozenset(_TARGET_PROTOCOL_PROVIDERS)
+
+
+def common_policy_for_target(platform: str) -> TargetCommonPolicy | None:
+    return _TARGET_COMMON_POLICIES.get(normalize_platform(platform))

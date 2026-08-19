@@ -3,7 +3,6 @@ from collections.abc import Callable
 import subio_v2.protocols as protocol_registry
 from subio_v2.capabilities.definitions import (
     get_platform_capabilities,
-    normalize_protocol_name,
 )
 from subio_v2.conversion import (
     ConversionIssue,
@@ -31,7 +30,7 @@ class NodeConversionService:
 
     def check_node(self, node: Node) -> TargetCheckResult:
         result = TargetCheckResult(supported=True)
-        protocol = normalize_protocol_name(node.type.value)
+        protocol = node.type.value
 
         for error in validate_node(node):
             result.add_error(error.message, field=error.field)

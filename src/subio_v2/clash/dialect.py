@@ -6,6 +6,7 @@ from typing import Any
 from subio_v2.capabilities.definitions import get_platform_capabilities
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import Node
+from subio_v2.target_registry import common_policy_for_target
 
 
 def pre_descriptor_normalize(
@@ -29,7 +30,8 @@ def post_descriptor_emit(
     output = data
     dropped: set[str] = set()
     capabilities = get_platform_capabilities(platform) or {}
-    global_features = capabilities.get("global_features", {})
+    common_policy = common_policy_for_target(platform)
+    global_features = common_policy.as_feature_map() if common_policy else {}
 
     for semantic_field, output_key, capability in (
         ("tfo", "tfo", "tfo"),

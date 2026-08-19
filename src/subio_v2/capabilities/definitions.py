@@ -11,7 +11,11 @@ Platform Capabilities Definitions
 from typing import Any, Dict, Optional
 
 from subio_v2.platforms import normalize_platform
-from subio_v2.target_registry import protocols_for_target
+from subio_v2.target_registry import (
+    common_policy_for_target,
+    protocols_for_target,
+    target_platforms,
+)
 
 # ============== 通用常量 ==============
 
@@ -144,12 +148,6 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
         "reject": {
             "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"},
         },
-        # 全局特性
-        "global_features": {
-            "tfo": True,
-            "mptcp": False,
-            "dialer_proxy": True,
-        },
     },
     # ============== Mihomo ==============
     "mihomo": {
@@ -238,12 +236,6 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
             "auth_methods": {"password", "private_key"},
         },
         "anytls": {},
-        # 全局特性
-        "global_features": {
-            "tfo": True,
-            "mptcp": True,
-            "dialer_proxy": True,
-        },
     },
     # ============== Clash (原版) ==============
     "clash": {
@@ -263,11 +255,6 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
         },
         "socks5": {
             "features": {"tls"},
-        },
-        "global_features": {
-            "tfo": False,
-            "mptcp": False,
-            "dialer_proxy": False,
         },
     },
     # ============== Stash ==============
@@ -345,11 +332,6 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
         "tailscale": {},
         "masque": {},
         "trusttunnel": {},
-        "global_features": {
-            "tfo": True,
-            "mptcp": False,
-            "dialer_proxy": True,
-        },
     },
     # ============== dae ==============
     "dae": {
@@ -380,12 +362,6 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
             "versions": {5},
         },
         "anytls": {},
-        # 全局特性
-        "global_features": {
-            "tfo": False,
-            "mptcp": True,
-            "dialer_proxy": True,
-        },
     },
     # ============== v2rayN ==============
     "v2rayn": {
@@ -418,87 +394,25 @@ _TARGET_CONSTRAINTS: Dict[str, Dict[str, Any]] = {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC, TRANSPORT_H2},
         },
         "socks5": {},
-        "global_features": {
-            "tfo": False,
-            "mptcp": False,
-            "dialer_proxy": False,
-        },
     },
 }
-
-# 协议类型到内部名称的映射
-PROTOCOL_NAME_MAP = {
-    "ss": "shadowsocks",
-    "shadowsocks": "shadowsocks",
-    "ssr": "shadowsocksr",
-    "shadowsocksr": "shadowsocksr",
-    "vmess": "vmess",
-    "vless": "vless",
-    "trojan": "trojan",
-    "http": "http",
-    "https": "http",
-    "socks5": "socks5",
-    "socks5-tls": "socks5",
-    "snell": "snell",
-    "tuic": "tuic",
-    "tuic-v5": "tuic",
-    "hysteria": "hysteria",
-    "hysteria2": "hysteria2",
-    "hy2": "hysteria2",
-    "mieru": "mieru",
-    "juicity": "juicity",
-    "gost-relay": "gost-relay",
-    "rematch": "rematch",
-    "shadowquic": "shadowquic",
-    "sudoku": "sudoku",
-    "masque": "masque",
-    "trusttunnel": "trusttunnel",
-    "openvpn": "openvpn",
-    "tailscale": "tailscale",
-    "direct": "direct",
-    "reject": "reject",
-    "dns": "dns",
-    "wireguard": "wireguard",
-    "wg": "wireguard",
-    "ssh": "ssh",
-    "anytls": "anytls",
-}
-
 
 def get_platform_capabilities(platform: str) -> Optional[Dict[str, Any]]:
     """获取指定平台的能力定义"""
     platform = normalize_platform(platform)
     constraints = _TARGET_CONSTRAINTS.get(platform)
-    if constraints is None:
+    common_policy = common_policy_for_target(platform)
+    if constraints is None or common_policy is None:
         return None
-    return {"protocols": protocols_for_target(platform), **constraints}
+    return {
+        "protocols": protocols_for_target(platform),
+        "global_features": common_policy.as_feature_map(),
+        **constraints,
+    }
 
 
 def all_platform_capabilities() -> Dict[str, Dict[str, Any]]:
     return {
         platform: get_platform_capabilities(platform)
-        for platform in _TARGET_CONSTRAINTS
+        for platform in target_platforms()
     }
-
-
-def normalize_protocol_name(protocol: str) -> str:
-    """标准化协议名称"""
-    return PROTOCOL_NAME_MAP.get(protocol.lower(), protocol.lower())
-
-
-def is_protocol_supported(platform: str, protocol: str) -> bool:
-    """检查平台是否支持指定协议"""
-    caps = get_platform_capabilities(platform)
-    if not caps:
-        return False
-    normalized = normalize_protocol_name(protocol)
-    return normalized in caps.get("protocols", set())
-
-
-def get_protocol_capabilities(platform: str, protocol: str) -> Optional[Dict[str, Any]]:
-    """获取平台对指定协议的能力定义"""
-    caps = get_platform_capabilities(platform)
-    if not caps:
-        return None
-    normalized = normalize_protocol_name(protocol)
-    return caps.get(normalized)
