@@ -29,6 +29,29 @@ class MieruDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.MIERU
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"
+    target_constraints = {
+        "mihomo": {
+            "transports": {"TCP", "UDP"},
+            "multiplexing": {
+                "MULTIPLEXING_DEFAULT",
+                "MULTIPLEXING_OFF",
+                "MULTIPLEXING_LOW",
+                "MULTIPLEXING_MIDDLE",
+                "MULTIPLEXING_HIGH",
+            },
+            "handshake_modes": {
+                "HANDSHAKE_DEFAULT",
+                "HANDSHAKE_STANDARD",
+                "HANDSHAKE_NO_WAIT",
+            },
+            "features": {"smux", "traffic-pattern"},
+        },
+        "stash": {
+            "transports": {"TCP"},
+            "multiplexing": set(),
+            "handshake_modes": set(),
+        },
+    }
     fields = (
         scalar_field("port-range", "port_range", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field(

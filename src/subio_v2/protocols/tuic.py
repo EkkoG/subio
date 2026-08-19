@@ -17,6 +17,12 @@ class TUICDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TUIC
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tuic"
+    target_constraints = {
+        "dae": {"versions": {5}},
+        "mihomo": {"versions": {4, 5}},
+        "stash": {"versions": {4, 5}},
+        "surge": {"versions": {4, 5}},
+    }
     fields = (
         scalar_field("token", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("uuid", emit_policy=EmitPolicy.TRUTHY),

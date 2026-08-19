@@ -13,6 +13,7 @@ from subio_v2.protocols._fields import (
 class GostRelayDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.GOST_RELAY
     clash_type = "gost-relay"
+    target_constraints = {"mihomo": {"features": {"smux"}}}
     fields = (
         scalar_field("forward", default=False, emit_policy=EmitPolicy.ALWAYS),
         scalar_field("mux", default=False, emit_policy=EmitPolicy.ALWAYS),

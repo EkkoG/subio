@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+from subio_v2.capabilities.definitions import (
+    TRANSPORT_GRPC,
+    TRANSPORT_H2,
+    TRANSPORT_HTTP,
+    TRANSPORT_TCP,
+    TRANSPORT_WS,
+    TRANSPORT_XHTTP,
+)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VlessNode
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -16,6 +24,58 @@ class VlessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VLESS
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "vless"
+    target_constraints = {
+        "dae": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+            },
+            "features": {"reality"},
+            "flows": {"xtls-rprx-vision"},
+        },
+        "mihomo": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+                TRANSPORT_XHTTP,
+            },
+            "features": {"reality", "smux"},
+            "flows": {"xtls-rprx-vision"},
+        },
+        "stash": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+                TRANSPORT_XHTTP,
+            },
+            "features": {"reality"},
+            "flows": {
+                "xtls-rprx-origin",
+                "xtls-rprx-direct",
+                "xtls-rprx-splice",
+                "xtls-rprx-vision",
+            },
+        },
+        "v2rayn": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
+            "features": {"reality"},
+            "flows": {"xtls-rprx-vision"},
+        },
+    }
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field("flow", emit_policy=EmitPolicy.TRUTHY),

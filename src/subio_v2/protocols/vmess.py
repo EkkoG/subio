@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+from subio_v2.capabilities.definitions import (
+    TRANSPORT_GRPC,
+    TRANSPORT_H2,
+    TRANSPORT_HTTP,
+    TRANSPORT_TCP,
+    TRANSPORT_WS,
+    VMESS_CIPHERS,
+    VMESS_CIPHERS_STASH,
+)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -16,6 +25,61 @@ class VmessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VMESS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "vmess"
+    target_constraints = {
+        "clash": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
+        },
+        "dae": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+            },
+        },
+        "mihomo": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
+            "features": {"reality", "smux"},
+        },
+        "stash": {
+            "ciphers": VMESS_CIPHERS_STASH,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
+        },
+        "surge": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS},
+        },
+        "v2rayn": {
+            "ciphers": VMESS_CIPHERS,
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+                TRANSPORT_HTTP,
+            },
+        },
+    }
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field(

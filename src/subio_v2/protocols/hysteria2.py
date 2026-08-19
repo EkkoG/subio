@@ -15,6 +15,18 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HYSTERIA2
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria2"
+    target_constraints = {
+        "dae": {"features": {"obfs"}},
+        "mihomo": {"features": {"obfs"}},
+        "stash": {
+            "features": {"obfs"},
+            "obfs_modes": {"salamander", "gecko"},
+        },
+        "surge": {
+            "features": {"obfs"},
+            "obfs_modes": {"salamander", "gecko"},
+        },
+    }
     fields = (
         scalar_field(
             "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True

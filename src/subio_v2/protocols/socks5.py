@@ -10,6 +10,12 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SOCKS5
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "socks5"
+    target_constraints = {
+        "clash": {"features": {"tls"}},
+        "mihomo": {"features": {"tls"}},
+        "stash": {"features": {"tls"}},
+        "surge": {"features": {"tls"}},
+    }
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),

@@ -11,6 +11,12 @@ from subio_v2.protocols._fields import smux_group
 class RejectDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.REJECT
     clash_type = "reject"
+    target_constraints = {
+        "mihomo": {"modes": {"reject"}, "features": {"smux"}},
+        "surge": {
+            "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
+        },
+    }
     fields = (smux_group(),)
 
     def prepare_parse_kwargs(

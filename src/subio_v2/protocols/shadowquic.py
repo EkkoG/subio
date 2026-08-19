@@ -37,6 +37,7 @@ def _emit_tls(out: MutableMapping[str, object], node: Node) -> None:
 class ShadowQUICDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWQUIC
     clash_type = "shadowquic"
+    target_constraints = {"mihomo": {"features": {"smux"}}}
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("password", emit_policy=EmitPolicy.NOT_NONE),

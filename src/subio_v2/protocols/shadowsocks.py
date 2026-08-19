@@ -3,6 +3,12 @@ from __future__ import annotations
 import base64
 import binascii
 
+from subio_v2.capabilities.definitions import (
+    SS_CIPHERS_2022,
+    SS_CIPHERS_EXTENDED,
+    SS_CIPHERS_STASH,
+    SS_CIPHERS_SURGE,
+)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -13,6 +19,30 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWSOCKS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "ss"
+    target_constraints = {
+        "clash": {
+            "ciphers": SS_CIPHERS_EXTENDED,
+            "plugins": {"obfs", "v2ray-plugin"},
+        },
+        "dae": {
+            "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
+            "plugins": {"obfs", "shadow-tls"},
+        },
+        "mihomo": {
+            "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
+            "plugins": {"obfs", "v2ray-plugin", "shadow-tls", "restls"},
+            "features": {"smux"},
+        },
+        "stash": {
+            "ciphers": SS_CIPHERS_STASH,
+            "plugins": {"obfs", "v2ray-plugin", "shadow-tls"},
+        },
+        "surge": {"ciphers": SS_CIPHERS_SURGE, "plugins": {"obfs"}},
+        "v2rayn": {
+            "ciphers": SS_CIPHERS_EXTENDED | SS_CIPHERS_2022,
+            "plugins": {"obfs", "v2ray-plugin"},
+        },
+    }
     fields = (
         scalar_field(
             "cipher",

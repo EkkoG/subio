@@ -10,6 +10,13 @@ class HttpDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HTTP
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "http"
+    target_constraints = {
+        "clash": {"features": {"tls"}},
+        "dae": {"features": {"tls"}},
+        "mihomo": {"features": {"tls"}},
+        "stash": {"features": {"tls"}},
+        "surge": {"features": {"tls", "h2-connect", "connect-udp"}},
+    }
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),

@@ -40,6 +40,31 @@ class SnellDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SNELL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"
+    target_constraints = {
+        "mihomo": {
+            "versions": {1, 2, 3, 4, 5},
+            "reuse_versions": {4, 5},
+            "obfs_modes": {"http", "tls"},
+        },
+        "stash": {
+            "versions": {3, 4},
+            "reuse_versions": {4},
+            "obfs_modes": {"http", "tls"},
+        },
+        "surge": {
+            "versions": {1, 2, 3, 4, 5, 6},
+            "reuse_versions": {4, 5, 6},
+            "obfs_modes": {"http", "tls"},
+            "obfs_modes_by_version": {
+                1: {"http", "tls"},
+                2: {"http", "tls"},
+                3: {"http", "tls"},
+                4: {"http"},
+                5: {"http"},
+                6: set(),
+            },
+        },
+    }
     fields = (
         scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field("version", emit_policy=EmitPolicy.NOT_NONE),

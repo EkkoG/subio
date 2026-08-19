@@ -10,6 +10,10 @@ class SSHDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"
+    target_constraints = {
+        target: {"auth_methods": {"password", "private_key"}}
+        for target in ("mihomo", "stash", "surge")
+    }
     fields = (
         scalar_field(
             "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True

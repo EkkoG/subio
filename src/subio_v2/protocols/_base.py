@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Dict
 
 from subio_v2.clash.helpers import (
@@ -32,6 +34,7 @@ class ProtocolDescriptor(ABC):
     clash_type: str
     dynamic_clash_type: bool = False
     clash_dialects: frozenset[str] = frozenset({"mihomo"})
+    target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
 
     @property
     def definition(self) -> ProtocolDefinition:
@@ -50,6 +53,9 @@ class ProtocolDescriptor(ABC):
 
     def supports_dialect(self, dialect: str) -> bool:
         return dialect in self.clash_dialects
+
+    def constraints_for_target(self, target: str) -> Mapping[str, Any]:
+        return self.target_constraints.get(target, MappingProxyType({}))
 
     @abstractmethod
     def parse_clash(

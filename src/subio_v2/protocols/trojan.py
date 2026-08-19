@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from subio_v2.capabilities.definitions import (
+    TRANSPORT_GRPC,
+    TRANSPORT_H2,
+    TRANSPORT_TCP,
+    TRANSPORT_WS,
+)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
 from subio_v2.protocols._base import StructuredProtocolDescriptor
@@ -16,6 +22,33 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TROJAN
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"
+    target_constraints = {
+        "clash": {"transports": {TRANSPORT_TCP, TRANSPORT_WS}},
+        "dae": {
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC}
+        },
+        "mihomo": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+            },
+            "features": {"reality", "smux"},
+        },
+        "stash": {
+            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC}
+        },
+        "surge": {"transports": {TRANSPORT_TCP, TRANSPORT_WS}},
+        "v2rayn": {
+            "transports": {
+                TRANSPORT_TCP,
+                TRANSPORT_WS,
+                TRANSPORT_GRPC,
+                TRANSPORT_H2,
+            }
+        },
+    }
     fields = (
         scalar_field(
             "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True

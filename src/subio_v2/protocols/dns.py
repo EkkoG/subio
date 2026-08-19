@@ -10,6 +10,7 @@ from subio_v2.protocols._fields import smux_group
 class DNSDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.DNS
     clash_type = "dns"
+    target_constraints = {"mihomo": {"features": {"smux"}}}
     fields = (smux_group(),)
 
     def prepare_parse_kwargs(

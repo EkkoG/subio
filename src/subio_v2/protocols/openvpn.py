@@ -30,6 +30,7 @@ def _optional_string(value: Any) -> str | None:
 class OpenVPNDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.OPENVPN
     clash_type = "openvpn"
+    target_constraints = {"mihomo": {"features": {"smux"}}}
     fields = (
         scalar_field("proto", default="udp", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("dev", default="tun", emit_policy=EmitPolicy.ALWAYS),

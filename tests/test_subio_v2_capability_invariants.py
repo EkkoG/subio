@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import pytest
 
-from subio_v2.capabilities import definitions as capability_definitions
+import subio_v2.protocols as protocol_registry
 from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter import link
@@ -154,10 +154,6 @@ def test_capability_protocol_sections_match_declared_protocols():
 
 
 def test_capability_tables_only_keep_runtime_feature_flags():
-    assert all(
-        "global_features" not in constraints
-        for constraints in capability_definitions._TARGET_CONSTRAINTS.values()
-    )
     runtime_features = {
         "tls",
         "h2-connect",
@@ -175,6 +171,14 @@ def test_capability_tables_only_keep_runtime_feature_flags():
         }
         for protocol in capabilities["protocols"]:
             assert capabilities[protocol].get("features", set()) <= runtime_features
+
+
+def test_protocol_target_constraints_only_cover_registered_targets():
+    for descriptor in protocol_registry.all():
+        for target in descriptor.target_constraints:
+            assert descriptor.protocol.value in PLATFORM_CAPABILITIES[target][
+                "protocols"
+            ]
 
 
 def test_link_platform_protocols_have_builders_and_build_baseline_nodes():

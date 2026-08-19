@@ -15,6 +15,10 @@ class HysteriaDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HYSTERIA
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria"
+    target_constraints = {
+        "mihomo": {"features": {"obfs"}},
+        "stash": {"features": {"obfs"}},
+    }
     fields = (
         scalar_field("ports", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("protocol", "hysteria_protocol", emit_policy=EmitPolicy.TRUTHY),

@@ -110,6 +110,7 @@ def test_obsolete_internal_authorities_are_absent():
         "normalize_protocol_name",
         "is_protocol_supported",
         "get_protocol_capabilities",
+        "_TARGET_CONSTRAINTS",
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production
