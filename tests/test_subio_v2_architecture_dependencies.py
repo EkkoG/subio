@@ -122,6 +122,8 @@ def test_obsolete_internal_authorities_are_absent():
         "def _parse_ss",
         "def _parse_trojan",
         "def _parse_vless",
+        "def _validate_config",
+        "def _warn_platform_type_replacements",
         "SURGE_EMITTER_HANDLERS",
         "_HANDLERS",
         "def _parts_",
