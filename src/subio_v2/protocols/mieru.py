@@ -3,8 +3,8 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict
 
-from subio_v2.dialect import DialectContext
 from subio_v2.conversion import IssueDraft, IssueSeverity
+from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
@@ -29,8 +29,6 @@ def _encode_enum(value: Any) -> str:
 class MieruDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.MIERU
     clash_type = "mieru"
-    node_class = MieruNode
-    requires_endpoint = False
     fields = (
         scalar_field("port-range", "port_range", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field(

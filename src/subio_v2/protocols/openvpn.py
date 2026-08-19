@@ -7,7 +7,6 @@ from subio_v2.protocols import register
 from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
-
 _PROTOS = {"udp", "udp4", "tcp", "tcp-client", "tcp4", "tcp4-client"}
 _DEVICES = {"tun"}
 _DATA_CIPHERS = {
@@ -32,7 +31,6 @@ def _optional_string(value: Any) -> str | None:
 class OpenVPNDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.OPENVPN
     clash_type = "openvpn"
-    node_class = OpenVPNNode
     fields = (
         scalar_field("proto", default="udp", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("dev", default="tun", emit_policy=EmitPolicy.ALWAYS),

@@ -12,8 +12,8 @@ from subio_v2.model.nodes import (
     BaseNode,
     Network,
     Protocol,
-    ShadowTLSSettings,
     ShadowsocksNode,
+    ShadowTLSSettings,
     SmuxSettings,
     SnellNode,
     SudokuHTTPMaskSettings,
@@ -677,17 +677,17 @@ def build_json_schema() -> dict[str, Any]:
 
     node_schemas = []
     for protocol in sorted(PUBLIC_PROTOCOLS, key=lambda item: item.value):
-        descriptor = protocol_registry.get(protocol)
-        if descriptor is None:
+        definition = protocol_registry.get_definition(protocol)
+        if definition is None:
             raise ValueError(f"Protocol has no registered node model: {protocol.value}")
-        hints = get_type_hints(descriptor.node_class)
+        hints = get_type_hints(definition.node_class)
         properties = {}
         for name in sorted(public_node_fields(protocol) - {"type"}):
             if name == "users":
                 properties[name] = _json_schema_for_users(protocol, hints)
             else:
                 properties[name] = _json_schema_for_field(
-                    descriptor.node_class, name, hints[name]
+                    definition.node_class, name, hints[name]
                 )
         properties["type"] = {"const": protocol.value}
         node_schemas.append(

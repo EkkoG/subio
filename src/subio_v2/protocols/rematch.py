@@ -11,8 +11,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 class RematchDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.REMATCH
     clash_type = "rematch"
-    node_class = RematchNode
-    requires_endpoint = False
     fields = (
         scalar_field(
             "target-rematch-name",

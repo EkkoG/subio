@@ -4,8 +4,7 @@ from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
 from subio_v2.protocols import register
-from subio_v2.protocols._base import StructuredProtocolDescriptor
-from subio_v2.protocols._base import NodeValidationError
+from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -57,7 +56,6 @@ def _encode_peers(value: list[WireguardPeer] | None) -> list[dict[str, Any]] | N
 class WireguardDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.WIREGUARD
     clash_type = "wireguard"
-    node_class = WireguardNode
     fields = (
         scalar_field(
             "private-key",

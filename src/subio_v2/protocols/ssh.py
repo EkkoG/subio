@@ -10,7 +10,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field
 class SSHDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SSH
     clash_type = "ssh"
-    node_class = SSHNode
     fields = (
         scalar_field(
             "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True

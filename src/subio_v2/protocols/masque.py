@@ -42,7 +42,6 @@ def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
 class MasqueDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.MASQUE
     clash_type = "masque"
-    node_class = MasqueNode
     fields = (
         scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("private-key", "private_key", emit_policy=EmitPolicy.NOT_NONE),

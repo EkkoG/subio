@@ -12,8 +12,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 class TailscaleDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TAILSCALE
     clash_type = "tailscale"
-    node_class = TailscaleNode
-    requires_endpoint = False
     fields = (
         scalar_field("hostname", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("auth-key", "auth_key", emit_policy=EmitPolicy.NOT_NONE),

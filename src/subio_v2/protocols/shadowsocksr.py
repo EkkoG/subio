@@ -10,7 +10,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 class ShadowsocksRDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWSOCKSR
     clash_type = "ssr"
-    node_class = ShadowsocksRNode
     fields = (
         scalar_field(
             "cipher", default="", emit_policy=EmitPolicy.ALWAYS, required=True

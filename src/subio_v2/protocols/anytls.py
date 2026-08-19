@@ -28,7 +28,6 @@ def _emit_reuse(out: MutableMapping[str, Any], node: Node) -> None:
 class AnyTLSDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.ANYTLS
     clash_type = "anytls"
-    node_class = AnyTLSNode
     fields = (
         scalar_field(
             "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True

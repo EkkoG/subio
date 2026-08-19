@@ -16,8 +16,8 @@ from subio_v2.model.nodes import (
     clone_node_for_user,
 )
 from subio_v2.subio_format.schema import (
-    PUBLIC_NESTED_FIELDS,
     PUBLIC_MAPPING_SPECS,
+    PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
     SUBIO_FORMAT_VERSION,
     PublicMappingSpec,
@@ -145,8 +145,8 @@ class SubioNodeCodec:
                 for field in unknown_fields
             ]
 
-        desc = protocol_registry.get(protocol)
-        if desc is None:
+        definition = protocol_registry.get_definition(protocol)
+        if definition is None:
             return None, [
                 self._issue(
                     "parse.subio.unknown-type",
@@ -157,7 +157,7 @@ class SubioNodeCodec:
                 )
             ]
 
-        hints = _type_hints(desc.node_class)
+        hints = _type_hints(definition.node_class)
         kwargs: dict[str, Any] = {"type": protocol}
         decode_issues: list[ConversionIssue] = []
         for field_name, value in raw_node.items():
@@ -167,12 +167,12 @@ class SubioNodeCodec:
             try:
                 if field_name == "users":
                     decoded = self._decode_users(
-                        value, protocol, desc.node_class, field_path
+                        value, protocol, definition.node_class, field_path
                     )
                 else:
                     decoded = self._decode_field(
                         value,
-                        desc.node_class,
+                        definition.node_class,
                         field_name,
                         hints[field_name],
                         field_path,
@@ -201,7 +201,7 @@ class SubioNodeCodec:
                 )
             ]
         try:
-            node = desc.node_class(**kwargs)
+            node = definition.node_class(**kwargs)
         except (TypeError, ValueError):
             return None, [
                 self._issue(

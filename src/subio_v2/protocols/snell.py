@@ -40,7 +40,6 @@ def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
 class SnellDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SNELL
     clash_type = "snell"
-    node_class = SnellNode
     fields = (
         scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field("version", emit_policy=EmitPolicy.NOT_NONE),

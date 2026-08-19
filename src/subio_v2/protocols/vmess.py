@@ -16,7 +16,6 @@ from subio_v2.protocols._fields import (
 class VmessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VMESS
     clash_type = "vmess"
-    node_class = VmessNode
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field(

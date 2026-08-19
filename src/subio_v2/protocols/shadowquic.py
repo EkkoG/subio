@@ -13,7 +13,6 @@ from subio_v2.protocols._fields import (
     smux_group,
 )
 
-
 _CONGESTION_CONTROLLERS = {"cubic", "new_reno", "bbr_meta_v1", "bbr_meta_v2", "bbr"}
 _BBR_PROFILES = {"standard", "conservative", "aggressive"}
 
@@ -39,7 +38,6 @@ def _emit_tls(out: MutableMapping[str, object], node: Node) -> None:
 class ShadowQUICDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWQUIC
     clash_type = "shadowquic"
-    node_class = ShadowQUICNode
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("password", emit_policy=EmitPolicy.NOT_NONE),

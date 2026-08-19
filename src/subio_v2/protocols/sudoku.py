@@ -18,7 +18,6 @@ from subio_v2.protocols._fields import (
     smux_group,
 )
 
-
 _AEAD_METHODS = {"chacha20-poly1305", "aes-128-gcm", "none"}
 _TABLE_TYPES = {
     "entropy",
@@ -77,7 +76,6 @@ def _emit_httpmask(out: MutableMapping[str, Any], node: Node) -> None:
 class SudokuDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SUDOKU
     clash_type = "sudoku"
-    node_class = SudokuNode
     fields = (
         scalar_field("key", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field(

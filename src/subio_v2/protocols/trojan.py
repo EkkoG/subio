@@ -16,7 +16,6 @@ from subio_v2.protocols._fields import (
 class TrojanDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TROJAN
     clash_type = "trojan"
-    node_class = TrojanNode
     fields = (
         scalar_field(
             "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True

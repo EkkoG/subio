@@ -16,7 +16,6 @@ from subio_v2.protocols._fields import (
 class VlessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VLESS
     clash_type = "vless"
-    node_class = VlessNode
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
         scalar_field("flow", emit_policy=EmitPolicy.TRUTHY),

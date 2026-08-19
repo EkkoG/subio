@@ -15,7 +15,6 @@ from subio_v2.protocols._fields import (
 class Hysteria2Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HYSTERIA2
     clash_type = "hysteria2"
-    node_class = Hysteria2Node
     fields = (
         scalar_field(
             "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True

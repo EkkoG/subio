@@ -17,7 +17,6 @@ from subio_v2.protocols._fields import (
 class TUICDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TUIC
     clash_type = "tuic"
-    node_class = TUICNode
     fields = (
         scalar_field("token", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("uuid", emit_policy=EmitPolicy.TRUTHY),

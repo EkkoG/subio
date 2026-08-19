@@ -12,8 +12,6 @@ from subio_v2.protocols._fields import smux_group
 class RejectDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.REJECT
     clash_type = "reject"
-    node_class = RejectNode
-    requires_endpoint = False
     fields = (smux_group(),)
 
     def prepare_parse_kwargs(

@@ -13,7 +13,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 class ShadowsocksDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWSOCKS
     clash_type = "ss"
-    node_class = ShadowsocksNode
     fields = (
         scalar_field(
             "cipher",

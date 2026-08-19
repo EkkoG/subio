@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from subio_v2.model.nodes import DNSNode, Node, Protocol
+from subio_v2.model.nodes import Node, Protocol
 from subio_v2.protocols import register
 from subio_v2.protocols._base import StructuredProtocolDescriptor
 from subio_v2.protocols._fields import smux_group
@@ -11,8 +11,6 @@ from subio_v2.protocols._fields import smux_group
 class DNSDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.DNS
     clash_type = "dns"
-    node_class = DNSNode
-    requires_endpoint = False
     fields = (smux_group(),)
 
     def prepare_parse_kwargs(

@@ -14,11 +14,8 @@ def validate_node(node: Node) -> list[NodeValidationError]:
     if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
         errors.append(NodeValidationError("mode", "Reject mode is invalid"))
 
-    desc = protocol_registry.get(node.type)
-    if desc is None:
-        return errors
-
-    if desc.requires_endpoint:
+    definition = protocol_registry.get_definition(node.type)
+    if definition is not None and definition.requires_endpoint:
         if not node.server:
             errors.append(NodeValidationError("server", "Server is required"))
         if (
@@ -31,6 +28,10 @@ def validate_node(node: Node) -> list[NodeValidationError]:
                     "port", f"Port must be between 1 and 65535, got {node.port!r}"
                 )
             )
+
+    desc = protocol_registry.get(node.type)
+    if desc is None:
+        return errors
 
     errors.extend(desc.validate(node))
     return errors

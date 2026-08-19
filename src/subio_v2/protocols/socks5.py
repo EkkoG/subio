@@ -10,7 +10,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 class Socks5Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SOCKS5
     clash_type = "socks5"
-    node_class = Socks5Node
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),

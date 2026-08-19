@@ -15,7 +15,6 @@ from subio_v2.protocols._fields import (
 class HysteriaDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HYSTERIA
     clash_type = "hysteria"
-    node_class = HysteriaNode
     fields = (
         scalar_field("ports", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("protocol", "hysteria_protocol", emit_policy=EmitPolicy.TRUTHY),

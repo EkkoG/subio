@@ -10,7 +10,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 class HttpDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HTTP
     clash_type = "http"
-    node_class = HttpNode
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),

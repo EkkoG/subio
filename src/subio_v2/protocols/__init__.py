@@ -4,6 +4,21 @@ from typing import Iterable
 
 from subio_v2.model.nodes import Protocol
 from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols.definitions import (
+    ProtocolDefinition,
+    all_definitions,
+    get_definition,
+)
+
+__all__ = [
+    "ProtocolDefinition",
+    "all",
+    "all_definitions",
+    "by_clash_type",
+    "get",
+    "get_definition",
+    "register",
+]
 
 _registry: dict[Protocol, ProtocolDescriptor] = {}
 _clash_type_index: dict[str, ProtocolDescriptor] = {}
@@ -17,6 +32,8 @@ def register(desc: ProtocolDescriptor) -> None:
     existing_type = _clash_type_index.get(desc.clash_type)
     if existing_type is not None and existing_type is not desc:
         raise ValueError(f"Clash type already registered: {desc.clash_type}")
+    if get_definition(desc.protocol) is None:
+        raise ValueError(f"Protocol has no definition: {desc.protocol!r}")
     _registry[desc.protocol] = desc
     if not desc.dynamic_clash_type:
         _clash_type_index[desc.clash_type] = desc
@@ -42,17 +59,17 @@ def _bootstrap() -> None:
         openvpn,
         reject,
         rematch,
+        shadowquic,
         shadowsocks,
         shadowsocksr,
-        shadowquic,
         snell,
         socks5,
         ssh,
         sudoku,
+        tailscale,
         trojan,
         trusttunnel,
         tuic,
-        tailscale,
         vless,
         vmess,
         wireguard,

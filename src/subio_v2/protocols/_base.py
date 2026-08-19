@@ -11,9 +11,10 @@ from subio_v2.clash.helpers import (
     parse_base_fields,
 )
 from subio_v2.conversion import IssueDraft
-from subio_v2.model.nodes import Node, Protocol
 from subio_v2.dialect import DialectContext
+from subio_v2.model.nodes import BaseNode, Node, Protocol
 from subio_v2.protocols._fields import ClashFieldSpec
+from subio_v2.protocols.definitions import ProtocolDefinition, get_definition
 
 
 @dataclass(frozen=True)
@@ -29,10 +30,23 @@ class ProtocolDescriptor(ABC):
 
     protocol: Protocol
     clash_type: str
-    node_class: type[Node]
     dynamic_clash_type: bool = False
-    requires_endpoint: bool = True
     clash_dialects: frozenset[str] = frozenset({"mihomo", "clash", "stash"})
+
+    @property
+    def definition(self) -> ProtocolDefinition:
+        definition = get_definition(self.protocol)
+        if definition is None:
+            raise ValueError(f"Protocol has no definition: {self.protocol!r}")
+        return definition
+
+    @property
+    def node_class(self) -> type[BaseNode]:
+        return self.definition.node_class
+
+    @property
+    def requires_endpoint(self) -> bool:
+        return self.definition.requires_endpoint
 
     def supports_dialect(self, dialect: str) -> bool:
         return dialect in self.clash_dialects

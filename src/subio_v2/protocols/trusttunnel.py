@@ -10,7 +10,6 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group, tls
 class TrustTunnelDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TRUSTTUNNEL
     clash_type = "trusttunnel"
-    node_class = TrustTunnelNode
     fields = (
         scalar_field(
             "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True

@@ -2,14 +2,13 @@ import pytest
 
 import subio_v2.protocols as registry
 from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
-from subio_v2.model.nodes import Protocol
+from subio_v2.model.nodes import BaseNode, Protocol
 from subio_v2.protocols._base import ProtocolDescriptor
 
 
 class ConflictingDescriptor(ProtocolDescriptor):
     protocol = Protocol.SHADOWSOCKS
     clash_type = "conflict"
-    node_class = object
 
     def parse_clash(self, data):
         raise NotImplementedError
@@ -21,7 +20,17 @@ class ConflictingDescriptor(ProtocolDescriptor):
 class ClashTypeConflictingDescriptor(ProtocolDescriptor):
     protocol = object()
     clash_type = "ss"
-    node_class = object
+
+    def parse_clash(self, data):
+        raise NotImplementedError
+
+    def emit_clash(self, node):
+        raise NotImplementedError
+
+
+class UndefinedProtocolDescriptor(ProtocolDescriptor):
+    protocol = object()
+    clash_type = "undefined"
 
     def parse_clash(self, data):
         raise NotImplementedError
@@ -45,6 +54,25 @@ def test_registry_is_bidirectionally_unique():
             assert registry.by_clash_type(descriptor.clash_type) is descriptor
 
 
+def test_protocol_definitions_are_complete_and_authoritative():
+    definitions = list(registry.all_definitions())
+    expected = set(Protocol) - {Protocol.SOURCE_PASSTHROUGH}
+
+    assert {definition.protocol for definition in definitions} == expected
+    assert len({definition.node_class for definition in definitions}) == len(
+        definitions
+    )
+    assert all(issubclass(definition.node_class, BaseNode) for definition in definitions)
+    assert registry.get_definition(Protocol.SOURCE_PASSTHROUGH) is None
+
+    for descriptor in registry.all():
+        definition = registry.get_definition(descriptor.protocol)
+        assert definition is not None
+        assert descriptor.definition is definition
+        assert descriptor.node_class is definition.node_class
+        assert descriptor.requires_endpoint is definition.requires_endpoint
+
+
 def test_mihomo_capabilities_match_registered_protocols():
     registered = {
         descriptor.protocol.value
@@ -64,3 +92,9 @@ def test_registry_rejects_conflicting_clash_type():
     list(registry.all())
     with pytest.raises(ValueError, match="Clash type already registered"):
         registry.register(ClashTypeConflictingDescriptor())
+
+
+def test_registry_rejects_protocol_without_definition():
+    list(registry.all())
+    with pytest.raises(ValueError, match="Protocol has no definition"):
+        registry.register(UndefinedProtocolDescriptor())
