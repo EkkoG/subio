@@ -1,6 +1,6 @@
 {
   // JSON5 supports comments, trailing commas, and single-quoted strings.
-  version: 1,
+  version: 2,
   nodes: [
     {
       type: 'shadowsocks',

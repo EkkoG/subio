@@ -1,4 +1,4 @@
-# SubIO 原生节点文件格式 v1
+# SubIO 原生节点文件格式 v2
 
 这份文档是 `provider.type = "subio"` 的完整用户格式说明。目标是让你只看这一份文档，就能写出
 可被 SubIO 直接解析为 Node IR 的节点文件。
@@ -6,7 +6,7 @@
 它只描述代理节点，不包含代理组、DNS section、脚本、规则、模板、artifact 或上传配置。SubIO 原生
 节点格式也不是 Mihomo YAML 的别名：字段统一使用 snake_case，协议类型使用 SubIO 规范名称。
 
-机器可读结构位于 `schemas/subio-node-v1.schema.json`。Schema 检查字段、基础类型、公开 enum 和严格
+机器可读结构位于 `schemas/subio-node-v2.schema.json`。Schema 检查字段、基础类型、公开 enum 和严格
 嵌套对象；协议必填组合、数值关系及目标平台能力仍由 SubIO runtime 检查。
 
 ## 1. 接入 provider
@@ -48,7 +48,7 @@ age_secret_key = "AGE-SECRET-KEY-1..."
 最小 TOML 文件：
 
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "HK-01"
@@ -63,7 +63,7 @@ password = "secret"
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `version` | integer | 是 | 固定为 `1` |
+| `version` | integer | 是 | 固定为 `2` |
 | `nodes` | object[] | 是 | 节点数组，可为空 |
 
 固定规则：
@@ -71,7 +71,7 @@ password = "secret"
 - 支持 TOML、YAML、JSON、JSON5；它们只是同一对象模型的不同序列化；
 - `type` 使用规范名称，例如 `shadowsocks`，不接受 Mihomo 的 `ss`；
 - 所有结构字段使用 snake_case，例如 `skip_cert_verify`；HTTP header 名称等用户数据不改名；
-- 可选字段通过省略表达；显式 `null` 不属于 v1；
+- 可选字段通过省略表达；显式 `null` 不属于 v2；
 - 未知字段、未知类型、错误类型和错误 enum 都产生结构化解析错误；
 - 单个节点错误不会丢弃同一文件中的其他合法节点；
 - 文档示例以 TOML 为主；YAML/JSON/JSON5 使用相同字段名和值。
@@ -79,7 +79,7 @@ password = "secret"
 TOML 嵌套对象写成 `[nodes.tls]`，嵌套对象数组写成 `[[nodes.peers]]`。YAML 中的同一最小节点是：
 
 ```yaml
-version: 1
+version: 2
 nodes:
   - name: HK-01
     type: shadowsocks
@@ -145,7 +145,7 @@ client_fingerprint = "chrome"
 | `certificate_sha256` | string | `null` | 服务端证书 SHA-256 指纹 |
 <!-- /nested-fields -->
 
-`client_cert_ref` 是 Surge 本地状态引用，不属于可分享的 v1 字段。
+`client_cert_ref` 是 Surge 本地状态引用，不属于可分享的 v2 字段。
 
 ### 4.2 `transport`
 
@@ -308,7 +308,7 @@ Snell `obfs_opts` 允许：`mode`、`host`、`password`、`fingerprint`、`certi
 可见；写了 `users` 的节点只进入名单中对应用户的产物。
 
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "ssh-personal"
@@ -333,13 +333,13 @@ password = "bob-password"
 ## 6. 协议参考
 
 每个协议小节只列协议专属字段；公共字段仍按第 3 节生效。表中“省略时”描述模型默认；标为必填或
-条件必填的空值会在 runtime 校验失败。所有示例都是完整 v1 文档，并由测试通过真实 codec 解析。
+条件必填的空值会在 runtime 校验失败。所有示例都是完整 v2 文档，并由测试通过真实 codec 解析。
 
 ### 6.1 `anytls`
 
 <!-- subio-example:anytls -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "anytls"
@@ -372,7 +372,7 @@ TLS 默认启用；写 `[nodes.tls]` 时不需要重复写 `enabled = true`。
 
 <!-- subio-example:direct -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "DIRECT-v4"
@@ -395,7 +395,7 @@ ip_version = "ipv4"
 
 <!-- subio-example:dns -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "DNS-Out"
@@ -417,7 +417,7 @@ type = "dns"
 
 <!-- subio-example:gost-relay -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "GOST"
@@ -451,7 +451,7 @@ server_name = "gost.example.com"
 
 <!-- subio-example:ssh -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "SSH"
@@ -467,7 +467,7 @@ server_fingerprints = ["SHA256:example"]
 <!-- /subio-example -->
 
 `username` 必填；`password` 与 `private_key` 至少提供一个。`private_key_passphrase` 只在私钥加密时
-需要。`keystore_id` 是 Surge 本地引用，不属于原生 v1。
+需要。`keystore_id` 是 Surge 本地引用，不属于原生 v2。
 
 <!-- protocol-fields:ssh -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -488,7 +488,7 @@ server_fingerprints = ["SHA256:example"]
 
 <!-- subio-example:sudoku -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Sudoku"
@@ -543,7 +543,7 @@ multiplex = "on"
 
 <!-- subio-example:tailscale -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Tailscale"
@@ -589,7 +589,7 @@ exit_node_allow_lan_access = true
 
 <!-- subio-example:trojan -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Trojan-WS"
@@ -624,7 +624,7 @@ headers = { Host = "cdn.example.com" }
 
 <!-- subio-example:trusttunnel -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "TrustTunnel-QUIC"
@@ -672,7 +672,7 @@ TLS 默认启用。`quic` 与 `websocket` 不能同时为 true。`max_streams` �
 
 <!-- subio-example:tuic -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "TUIC-v4"
@@ -721,7 +721,7 @@ TLS 默认启用。v4 必须只使用 `token`；v5 必须使用 `uuid` + `passwo
 
 <!-- subio-example:vless -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "VLESS-Reality"
@@ -760,7 +760,7 @@ short_id = "0123456789abcdef"
 
 <!-- subio-example:vmess -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "VMess-WS"
@@ -804,7 +804,7 @@ headers = { Host = "cdn.example.com" }
 
 <!-- subio-example:wireguard -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "WireGuard-Single"
@@ -891,7 +891,7 @@ server、port、public_key、allowed_ips。当前 Node IR 仍保留顶层 bootst
 
 | code | 含义 |
 |---|---|
-| `parse.subio.unsupported-version` | `version` 不是 `1` |
+| `parse.subio.unsupported-version` | `version` 不是 `2`；旧 v1 不再兼容 |
 | `parse.subio.invalid-document` | 顶层类型或字段组合错误 |
 | `parse.subio.missing-nodes` | 缺少 `nodes` |
 | `parse.subio.invalid-node` | `nodes` 中的条目不是对象 |
@@ -899,14 +899,14 @@ server、port、public_key、allowed_ips。当前 Node IR 仍保留顶层 bootst
 | `parse.subio.unknown-field` | 顶层、节点、严格对象或 user override 出现未知字段 |
 | `parse.subio.invalid-field` | 字段类型、enum、null 或嵌套值错误 |
 | `parse.subio.invalid-combination` | 必填项、范围关系或字段组合不合法 |
-| `parse.subio.legacy-proxies` | 使用旧 `proxies` Mihomo-compatible 语法的迁移 WARNING |
+| `parse.subio.legacy-format-removed` | 使用已经删除的顶层 `proxies` 格式 |
 
 issue 的 `field` 使用 `nodes[2].tls.server_name` 形式。错误消息不会回显密码、私钥、UUID、auth key、
 证书或整个节点对象。
 
-## 9. Legacy `proxies` 迁移
+## 9. 已移除的旧格式
 
-旧 SubIO 文件可能只是 Mihomo proxy 字典的另一种序列化：
+当前 decoder 不再接受 v1 或 Mihomo-compatible 顶层 `proxies`：
 
 ```yaml
 proxies:
@@ -918,29 +918,20 @@ proxies:
     password: secret
 ```
 
-这条路径继续按 Mihomo 字段语义解析，并产生一次 `parse.subio.legacy-proxies` WARNING。迁移步骤：
-
-1. 增加 `version: 1`；
-2. 将 `proxies` 改为 `nodes`；
-3. 将 `ss`、`ssr` 等平台别名改为规范 type；
-4. 将连字符字段和平台嵌套块改为本文件的 snake_case 字段；
-5. Reality、ECH、plugin、obfs 等严格对象使用 4.6 的规范键；
-6. 用 `uv run subio convert example/config.toml --dry-run` 检查解析和 capability issue。
-
-`nodes` 与 `proxies` 不能同时出现。原生节点中也不能逐字段混入 Mihomo alias；兼容只发生在整个旧
-文档入口。
+该输入固定返回 `parse.subio.legacy-format-removed` ERROR。SubIO 不提供 v1 migration decoder、字段
+alias、自动转换或 fallback；需要使用本文件定义的 `version = 2` + `nodes` 重新生成原生节点文件。
 
 ## 10. 版本规则
 
-格式 version 与 SubIO 软件版本分离。v1 可以新增向后兼容的可选协议或字段；改变已发布字段类型、
-enum、默认语义，或删除/重命名字段，需要新格式 version。内部 Node IR 可以重构，但 v1 codec 必须
-保持已发布的输入语义。
+格式 version 与 SubIO 软件版本分离。当前唯一支持的原生输入版本是 v2；runtime、schema 和本文档
+必须使用同一个 terminal native field policy。未来若再次进行不兼容变更，应选择新的 version，并在
+同一切换边界删除旧 decoder，避免双轨 authority。
 
 ### 6.5 `http`
 
 <!-- subio-example:http -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "HTTPS-Proxy"
@@ -978,7 +969,7 @@ server_name = "proxy.example.com"
 
 <!-- subio-example:hysteria -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Hysteria"
@@ -1021,7 +1012,7 @@ TLS 默认启用。`up`/`down` 保存带单位的速率文本；`up_speed`/`down
 
 <!-- subio-example:hysteria2 -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Hysteria2"
@@ -1059,7 +1050,7 @@ TLS 默认启用。配置 `obfs` 时应同时配置 `obfs_password`；目标 cap
 
 <!-- subio-example:juicity -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Juicity"
@@ -1090,7 +1081,7 @@ TLS 默认启用。当前协议 descriptor 来自 Stash 节点格式；输出到
 
 <!-- subio-example:masque -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "MASQUE-Forward"
@@ -1165,7 +1156,7 @@ udp = false
 
 <!-- subio-example:mieru -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Mieru"
@@ -1202,7 +1193,7 @@ handshake_mode = "HANDSHAKE_STANDARD"
 
 <!-- subio-example:openvpn -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "OpenVPN-Password"
@@ -1263,7 +1254,7 @@ tls_crypt = "-----BEGIN OpenVPN Static key V1-----..."
 
 <!-- subio-example:reject -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Reject-Drop"
@@ -1287,7 +1278,7 @@ mode = "reject-drop"
 
 <!-- subio-example:rematch -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Streaming-Rematch"
@@ -1312,7 +1303,7 @@ target_rematch_name = "streaming"
 
 <!-- subio-example:shadowquic -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "ShadowQUIC"
@@ -1364,7 +1355,7 @@ TLS 默认启用。拥塞控制器允许 `cubic`、`new_reno`、`bbr_meta_v1`、
 
 <!-- subio-example:shadowsocks -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "SS-v2ray-plugin"
@@ -1405,7 +1396,7 @@ headers = { User-Agent = "SubIO" }
 
 <!-- subio-example:shadowsocksr -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "SSR"
@@ -1439,7 +1430,7 @@ protocol_param = "1000:user"
 
 <!-- subio-example:snell -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "Snell"
@@ -1482,7 +1473,7 @@ Snell version 接受 `1..6`；平台支持范围不同。`udp_port` 仅适用于
 
 <!-- subio-example:socks5 -->
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "SOCKS5"

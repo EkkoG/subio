@@ -37,20 +37,20 @@ class _FieldError(ValueError):
 class SubioNodeCodec:
     def decode_document(self, data: Any, source_format: str) -> ParseResult:
         if not isinstance(data, dict):
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.invalid-document",
                 "SubIO node document must be an object",
                 field=None,
             )
         if "nodes" in data and "proxies" in data:
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.invalid-document",
                 "SubIO node document cannot contain both 'nodes' and legacy 'proxies'",
                 field=None,
             )
 
         if "nodes" not in data:
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.missing-nodes",
                 "SubIO node document requires a 'nodes' array",
                 field="nodes",
@@ -59,21 +59,21 @@ class SubioNodeCodec:
         unknown_top_level = sorted(set(data) - {"version", "nodes"})
         if unknown_top_level:
             field = unknown_top_level[0]
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.unknown-field",
                 f"Unknown SubIO v1 top-level field '{field}'",
                 field=field,
             )
         version = data.get("version")
         if type(version) is not int or version != SUBIO_FORMAT_VERSION:
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.unsupported-version",
                 f"Unsupported SubIO node format version; expected {SUBIO_FORMAT_VERSION}",
                 field="version",
             )
         nodes_data = data.get("nodes")
         if not isinstance(nodes_data, list):
-            return self._fatal(
+            return self.fatal_result(
                 "parse.subio.invalid-document",
                 "SubIO node document field 'nodes' must be an array",
                 field="nodes",
@@ -471,7 +471,7 @@ class SubioNodeCodec:
         raise _FieldError(path, f"Field '{path}' must contain JSON-compatible values")
 
     @staticmethod
-    def _fatal(code: str, message: str, field: str | None) -> ParseResult:
+    def fatal_result(code: str, message: str, field: str | None) -> ParseResult:
         return ParseResult(
             nodes=[],
             issues=[SubioNodeCodec._issue(code, message, field=field)],

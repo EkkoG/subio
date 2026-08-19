@@ -16,7 +16,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 | `stash` | 支持 | Stash YAML 节点 |
 | `surge` | 支持 | Surge Proxy 内容，以及节点实际引用的 Keystore/WireGuard/Tailscale 附件 |
 | `v2rayn` | 支持 | v2rayN 分享链接/订阅 |
-| `subio` | 推荐用于自建节点 | SubIO 节点文件 v1：`version` + `nodes`，支持 TOML、JSON、JSON5、YAML；旧 `proxies` 仅作 Mihomo-compatible 迁移入口并产生 WARNING |
+| `subio` | 推荐用于自建节点 | SubIO 节点文件 v2：`version = 2` + `nodes`，支持 TOML、JSON、JSON5、YAML；v1 与旧 `proxies` 明确拒绝，不提供迁移或 fallback |
 
 ### 1.2 输出协议
 
@@ -32,7 +32,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 
 补充约束：
 
-- SubIO v1 可直接构造当前 27 种公开具体 Node IR，不调用 Mihomo parser；`source-passthrough`、
+- SubIO v2 可直接构造当前 27 种公开具体 Node IR，不调用 Mihomo parser；`source-passthrough`、
   Surge External 和运行期来源/保真字段不属于该格式，完整契约见 `docs/subio_node_format.md`；
 - Stash capability 当前为 20 种协议；Stash-only 的 Juicity 不会伪装成 Mihomo 强类型协议；
 - 固定 schema 基线中的 26 种 Mihomo type 均使用强类型 IR 和结构化 descriptor；`dns` 只表示
@@ -112,8 +112,8 @@ conversion issue，并在未显式放行时阻止发布。
   Mihomo，也不会获得 Mihomo-only 能力；
 - 模板名、artifact 文件名和上传文件名中的 `clash` 是用户自定义文本，不自动重命名；
 - Stash 节点输入新增 `provider.type = "stash"`，现有配置无需修改；
-- 旧 `provider.type = "subio"` + 顶层 `proxies` 继续按 Mihomo 字段语义解析并产生迁移 WARNING；
-  新文件应使用 `version = 1` + `nodes` 和 snake_case 原生字段；
+- `provider.type = "subio"` 只接受 `version = 2` + `nodes` 和 snake_case 原生字段；v1 与顶层
+  `proxies` 返回结构化 ERROR，不回退到 Mihomo parser；
 - Parser/Emitter 结构化结果不提供通用文档资源 API；Surge Keystore 和命名 section
   仅作为节点附件随成功节点流转；
 - `EmissionResult.emitted_policy_names` 已移除；Python API 消费者应从 `supported_nodes` 读取成功

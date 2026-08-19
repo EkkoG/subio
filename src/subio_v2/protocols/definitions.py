@@ -41,6 +41,7 @@ class ProtocolDefinition:
     node_class: type[BaseNode]
     requires_endpoint: bool = True
     user_override_fields: frozenset[str] = frozenset()
+    terminal_native_user_override_fields: frozenset[str] = frozenset()
     terminal_native_fields: frozenset[str] = frozenset()
     terminal_native_excluded_fields: frozenset[str] = frozenset()
 
@@ -116,6 +117,56 @@ _RUNTIME_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
     ),
     Protocol.SUDOKU: frozenset({"server", "port"}),
     Protocol.TAILSCALE: frozenset({"server", "port", "auth_key"}),
+    Protocol.TROJAN: frozenset({"server", "port", "password"}),
+    Protocol.TRUSTTUNNEL: frozenset({"server", "port", "username", "password"}),
+    Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
+    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
+    Protocol.VMESS: frozenset({"server", "port", "uuid", "alter_id", "cipher"}),
+    Protocol.WIREGUARD: frozenset(
+        {"server", "port", "private_key", "public_key", "preshared_key"}
+    ),
+}
+
+_TERMINAL_NATIVE_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
+    Protocol.ANYTLS: frozenset({"server", "port", "password"}),
+    Protocol.DIRECT: frozenset(),
+    Protocol.DNS: frozenset(),
+    Protocol.GOST_RELAY: frozenset({"server", "port", "username", "password"}),
+    Protocol.HTTP: frozenset({"server", "port", "username", "password"}),
+    Protocol.HYSTERIA: frozenset({"server", "port", "auth", "auth_str"}),
+    Protocol.HYSTERIA2: frozenset({"server", "port", "password", "obfs_password"}),
+    Protocol.JUICITY: frozenset({"server", "port", "uuid", "password"}),
+    Protocol.MASQUE: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "public_key",
+        }
+    ),
+    Protocol.MIERU: frozenset({"server", "port", "username", "password"}),
+    Protocol.OPENVPN: frozenset({"server", "port", "username", "password"}),
+    Protocol.REJECT: frozenset(),
+    Protocol.REMATCH: frozenset(),
+    Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
+    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
+    Protocol.SNELL: frozenset({"server", "port", "psk"}),
+    Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
+    Protocol.SSH: frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+        }
+    ),
+    Protocol.SUDOKU: frozenset({"server", "port"}),
+    Protocol.TAILSCALE: frozenset({"auth_key"}),
     Protocol.TROJAN: frozenset({"server", "port", "password"}),
     Protocol.TRUSTTUNNEL: frozenset({"server", "port", "username", "password"}),
     Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
@@ -424,6 +475,9 @@ def _definition(
         node_class=node_class,
         requires_endpoint=requires_endpoint,
         user_override_fields=_RUNTIME_USER_OVERRIDE_FIELDS[protocol],
+        terminal_native_user_override_fields=_TERMINAL_NATIVE_USER_OVERRIDE_FIELDS[
+            protocol
+        ],
         terminal_native_fields=_TERMINAL_NATIVE_FIELDS[protocol],
         terminal_native_excluded_fields=_TERMINAL_NATIVE_EXCLUDED_FIELDS.get(
             protocol, frozenset()

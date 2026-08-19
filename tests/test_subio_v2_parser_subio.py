@@ -1,6 +1,5 @@
 import json
 import types
-from dataclasses import fields
 from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
@@ -14,9 +13,8 @@ from subio_v2.model.nodes import (
     VlessNode,
 )
 from subio_v2.parser.subio import SubioParser
+from subio_v2.protocols.definitions import TERMINAL_NATIVE_COMMON_FIELDS
 from subio_v2.subio_format.schema import (
-    NON_PUBLIC_NODE_FIELDS,
-    NON_PUBLIC_PROTOCOL_FIELDS,
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
     build_json_schema,
@@ -25,12 +23,12 @@ from subio_v2.subio_format.schema import (
     public_user_override_fields,
 )
 
-SCHEMA_PATH = Path(__file__).parents[1] / "schemas" / "subio-node-v1.schema.json"
+SCHEMA_PATH = Path(__file__).parents[1] / "schemas" / "subio-node-v2.schema.json"
 
 
 def _native_ss_document() -> dict:
     return {
-        "version": 1,
+        "version": 2,
         "nodes": [
             {
                 "name": "n1",
@@ -162,13 +160,13 @@ def _all_native_protocol_nodes() -> list[dict]:
     ("content", "source_format"),
     [
         (
-            'version = 1\nnodes = [{name = "n1", type = "shadowsocks", '
+            'version = 2\nnodes = [{name = "n1", type = "shadowsocks", '
             'server = "s", port = 8388, cipher = "aes-256-gcm", password = "p"}]',
             "toml",
         ),
         (json.dumps(_native_ss_document()), "json"),
         (
-            "{version: 1, nodes: [{name: 'n1', type: 'shadowsocks', "
+            "{version: 2, nodes: [{name: 'n1', type: 'shadowsocks', "
             "server: 's', port: 8388, cipher: 'aes-256-gcm', password: 'p',},]}",
             "json5",
         ),
@@ -192,7 +190,7 @@ def test_subio_native_format_decodes_directly_to_node_ir(content, source_format)
 def test_subio_native_format_decodes_nested_settings_and_user_overrides():
     result = SubioParser().parse_result(
         """
-version = 1
+version = 2
 
 [[nodes]]
 name = "vless"
@@ -235,7 +233,7 @@ server = "alice.example.com"
 def test_subio_native_format_preserves_protocol_nested_defaults():
     result = SubioParser().parse_result(
         """
-version = 1
+version = 2
 
 [[nodes]]
 name = "anytls"
@@ -257,7 +255,7 @@ server_name = "example.com"
 def test_subio_native_format_validates_user_specific_node_credentials():
     result = SubioParser().parse_result(
         """
-version = 1
+version = 2
 
 [[nodes]]
 name = "ssh"
@@ -287,7 +285,7 @@ password = "bob-password"
 def test_subio_native_format_reports_invalid_user_specific_node():
     result = SubioParser().parse_result(
         """
-version = 1
+version = 2
 
 [[nodes]]
 name = "ssh"
@@ -310,7 +308,7 @@ username = "alice"
 def test_subio_native_format_rejects_meaningless_user_overrides():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: direct
     type: direct
@@ -342,10 +340,8 @@ nodes:
 
 def test_subio_native_format_reports_structured_document_errors():
     missing = SubioParser().parse_result("{}")
-    unsupported = SubioParser().parse_result("version = 2\nnodes = []")
-    conflict = SubioParser().parse_result(
-        "version = 1\nnodes = []\nproxies = []"
-    )
+    unsupported = SubioParser().parse_result("version = 1\nnodes = []")
+    conflict = SubioParser().parse_result("version = 2\nnodes = []\nproxies = []")
 
     assert missing.issues[0].code == "parse.subio.missing-nodes"
     assert unsupported.issues[0].code == "parse.subio.unsupported-version"
@@ -356,7 +352,7 @@ def test_subio_native_format_reports_structured_document_errors():
 def test_subio_native_format_rejects_platform_aliases_and_internal_fields():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: bad-alias
     type: ss
@@ -389,7 +385,7 @@ nodes:
 def test_subio_native_format_rejects_null_and_source_passthrough():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: null-password
     type: shadowsocks
@@ -413,7 +409,7 @@ nodes:
 def test_subio_native_format_decodes_canonical_mapping_objects():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: ss-plugin
     type: shadowsocks
@@ -493,7 +489,7 @@ nodes:
 def test_subio_native_format_rejects_unknown_mapping_fields():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: bad-ech
     type: vless
@@ -514,7 +510,7 @@ nodes:
 def test_subio_native_format_rejects_invalid_public_enums():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: bad-network
     type: vmess
@@ -546,7 +542,7 @@ nodes:
 def test_subio_native_format_validates_explicit_tuic_version():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: mismatched-tuic
     type: tuic
@@ -567,7 +563,7 @@ nodes:
 def test_subio_native_format_rejects_source_bound_resource_references():
     result = SubioParser().parse_result(
         """
-version: 1
+version: 2
 nodes:
   - name: ssh-state
     type: ssh
@@ -601,7 +597,7 @@ nodes:
     ]
 
 
-def test_subio_legacy_proxies_remain_mihomo_compatible_with_warning():
+def test_subio_legacy_proxies_are_explicitly_rejected_without_fallback():
     result = SubioParser().parse_result(
         """
 proxies:
@@ -620,13 +616,11 @@ proxies:
 """
     )
 
-    assert [node.name for node in result.nodes] == ["good"]
-    assert result.nodes[0].source_context.dialect == "mihomo"
+    assert result.nodes == []
     assert [issue.code for issue in result.issues] == [
-        "parse.node",
-        "parse.subio.legacy-proxies",
+        "parse.subio.legacy-format-removed"
     ]
-    assert result.issues[-1].severity.value == "warning"
+    assert result.issues[0].severity.value == "error"
 
 
 def test_subio_public_field_contract_covers_every_concrete_protocol():
@@ -635,10 +629,8 @@ def test_subio_public_field_contract_covers_every_concrete_protocol():
     assert Protocol.SOURCE_PASSTHROUGH not in PUBLIC_PROTOCOLS
 
     for descriptor in protocol_registry.all():
-        model_fields = {field.name for field in fields(descriptor.node_class)}
         assert public_node_fields(descriptor.protocol) == (
-            model_fields - NON_PUBLIC_NODE_FIELDS
-            - NON_PUBLIC_PROTOCOL_FIELDS.get(descriptor.protocol, frozenset())
+            TERMINAL_NATIVE_COMMON_FIELDS | descriptor.definition.terminal_native_fields
         ), descriptor.protocol.value
 
 
@@ -654,7 +646,9 @@ def test_subio_public_mapping_contract_covers_unconstrained_objects():
     def contains_unconstrained_mapping(expected):
         origin = get_origin(expected)
         if origin in {Union, types.UnionType}:
-            return any(contains_unconstrained_mapping(arg) for arg in get_args(expected))
+            return any(
+                contains_unconstrained_mapping(arg) for arg in get_args(expected)
+            )
         if origin is not dict:
             return False
         _, value_type = get_args(expected)
@@ -703,7 +697,7 @@ def test_subio_json_schema_snapshot_matches_runtime_contract():
 
 def test_subio_native_format_constructs_every_public_protocol():
     result = SubioParser().node_codec.decode_document(
-        {"version": 1, "nodes": _all_native_protocol_nodes()}, "json"
+        {"version": 2, "nodes": _all_native_protocol_nodes()}, "json"
     )
 
     assert result.issues == []

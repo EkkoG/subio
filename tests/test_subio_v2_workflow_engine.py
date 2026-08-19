@@ -475,25 +475,27 @@ def test_load_providers_applies_provider_level_filters(tmp_path, monkeypatch):
     """Provider 级别 filters 在 _load_providers 时应用，仅保留匹配 include/exclude 的节点"""
     # 准备 subio 格式的节点文件（包含香港、日本、美国节点）
     nodes_toml = """
-[[proxies]]
+version = 2
+
+[[nodes]]
 name = "香港-01"
-type = "ss"
+type = "shadowsocks"
 server = "s1"
 port = 8388
 cipher = "aes-256-gcm"
 password = "p"
 
-[[proxies]]
+[[nodes]]
 name = "日本-01"
-type = "ss"
+type = "shadowsocks"
 server = "s2"
 port = 8388
 cipher = "aes-256-gcm"
 password = "p"
 
-[[proxies]]
+[[nodes]]
 name = "美国-01"
-type = "ss"
+type = "shadowsocks"
 server = "s3"
 port = 8388
 cipher = "aes-256-gcm"
@@ -526,17 +528,19 @@ include = "香港"
 def test_load_providers_provider_filters_exclude(tmp_path, monkeypatch):
     """Provider filters 支持 exclude"""
     nodes_toml = """
-[[proxies]]
+version = 2
+
+[[nodes]]
 name = "香港-优质"
-type = "ss"
+type = "shadowsocks"
 server = "s1"
 port = 8388
 cipher = "aes-256-gcm"
 password = "p"
 
-[[proxies]]
+[[nodes]]
 name = "香港-剩余流量:10GB"
-type = "ss"
+type = "shadowsocks"
 server = "s2"
 port = 8388
 cipher = "aes-256-gcm"
@@ -568,17 +572,19 @@ exclude = "剩余流量"
 def test_load_providers_without_filters_keeps_all(tmp_path, monkeypatch):
     """没有 provider.filters 时保留所有节点"""
     nodes_toml = """
-[[proxies]]
+version = 2
+
+[[nodes]]
 name = "node-A"
-type = "ss"
+type = "shadowsocks"
 server = "s"
 port = 8388
 cipher = "aes-256-gcm"
 password = "p"
 
-[[proxies]]
+[[nodes]]
 name = "node-B"
-type = "ss"
+type = "shadowsocks"
 server = "s"
 port = 8388
 cipher = "aes-256-gcm"

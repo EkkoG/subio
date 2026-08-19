@@ -5,9 +5,8 @@ import json5
 import toml
 import yaml
 
-from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.conversion import ParseResult
 from subio_v2.parser.base import BaseParser
-from subio_v2.parser.clash import ClashParser
 from subio_v2.subio_format.codec import SubioNodeCodec
 
 
@@ -23,7 +22,6 @@ class SubioParser(BaseParser):
     """
 
     def __init__(self):
-        self.clash_parser = ClashParser()
         self.node_codec = SubioNodeCodec()
 
     def parse_result(self, content: Any) -> ParseResult:
@@ -70,26 +68,16 @@ class SubioParser(BaseParser):
                 "(tried toml, json, json5, yaml)"
             )
 
-        if isinstance(data, dict) and ("version" in data or "nodes" in data):
+        if (
+            isinstance(data, dict)
+            and "proxies" in data
+            and ("version" in data or "nodes" in data)
+        ):
             return self.node_codec.decode_document(data, source_format or "unknown")
         if isinstance(data, dict) and "proxies" in data:
-            result = self.clash_parser.parse_result({"proxies": data["proxies"]})
-            result.issues.append(
-                ConversionIssue(
-                    severity=IssueSeverity.WARNING,
-                    node=None,
-                    protocol=None,
-                    source=None,
-                    target=None,
-                    field="proxies",
-                    message=(
-                        "Legacy SubIO 'proxies' syntax uses Mihomo field semantics; "
-                        "migrate to SubIO node format v1 using 'version' and 'nodes'"
-                    ),
-                    suggestion="Use version = 1 and a top-level nodes array",
-                    stage="parse",
-                    code="parse.subio.legacy-proxies",
-                )
+            return self.node_codec.fatal_result(
+                "parse.subio.legacy-format-removed",
+                "Legacy SubIO 'proxies' syntax is no longer supported",
+                field="proxies",
             )
-            return result
         return self.node_codec.decode_document(data, source_format or "unknown")

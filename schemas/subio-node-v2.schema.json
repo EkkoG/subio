@@ -594,7 +594,7 @@
       ]
     }
   },
-  "$id": "https://github.com/ekkog/subio/schemas/subio-node-v1.schema.json",
+  "$id": "https://github.com/ekkog/subio/schemas/subio-node-v2.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -4079,13 +4079,13 @@
       "type": "array"
     },
     "version": {
-      "const": 1
+      "const": 2
     }
   },
   "required": [
     "version",
     "nodes"
   ],
-  "title": "SubIO node document v1",
+  "title": "SubIO node document v2",
   "type": "object"
 }

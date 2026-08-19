@@ -110,6 +110,7 @@ def test_user_override_policy_preserves_previous_runtime_behavior():
     for definition in registry.all_definitions():
         model_fields = frozenset(get_type_hints(definition.node_class))
         assert definition.user_override_fields == previous_fields & model_fields
+        assert definition.terminal_native_user_override_fields <= model_fields
 
 
 def test_terminal_native_field_policy_classifies_every_model_field():

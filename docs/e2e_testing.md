@@ -28,7 +28,7 @@ Use the two-stage flow:
 ```bash
 uv run python scripts/extract_legacy_usage.py extract \
   /path/to/legacy-project /tmp/subio-usage.json \
-  --schema schemas/subio-node-v1.schema.json
+  --schema schemas/subio-node-v2.schema.json
 uv run python scripts/extract_legacy_usage.py gate /tmp/subio-usage.json
 uv run python scripts/extract_legacy_usage.py gate /tmp/subio-usage.json --show
 ```

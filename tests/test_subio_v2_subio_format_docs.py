@@ -10,12 +10,10 @@ from subio_v2.model.nodes import Protocol
 from subio_v2.parser.subio import SubioParser
 from subio_v2.subio_format.schema import (
     PUBLIC_NESTED_FIELDS,
-    PUBLIC_PROTOCOL_FIELDS,
     PUBLIC_PROTOCOLS,
     public_mapping_spec,
     public_user_override_fields,
 )
-
 
 REPOSITORY_ROOT = Path(__file__).parents[1]
 FORMAT_DOC_PATH = REPOSITORY_ROOT / "docs" / "subio_node_format.md"
@@ -62,13 +60,13 @@ def _type_label(expected: Any) -> str:
 
 
 def _table_rows(body: str) -> dict[str, tuple[str, str]]:
-    rows = re.findall(
-        r"^\| `([^`]+)` \| ([^|]+?) \| ([^|]+?) \|", body, re.MULTILINE
-    )
-    return {name: (type_name.strip(), default.strip()) for name, type_name, default in rows}
+    rows = re.findall(r"^\| `([^`]+)` \| ([^|]+?) \| ([^|]+?) \|", body, re.MULTILINE)
+    return {
+        name: (type_name.strip(), default.strip()) for name, type_name, default in rows
+    }
 
 
-def test_subio_native_examples_follow_v1_contract():
+def test_subio_native_examples_follow_v2_contract():
     expected_counts = {
         "self.toml": 4,
         "nodes.json5": 2,
@@ -120,7 +118,7 @@ def test_subio_format_document_protocol_fields_match_runtime_contract():
         assert descriptor is not None
         hints = get_type_hints(descriptor.node_class)
         rows = _table_rows(body)
-        assert set(rows) == PUBLIC_PROTOCOL_FIELDS[protocol], name
+        assert set(rows) == descriptor.definition.terminal_native_fields, name
         for field_name, (documented_type, documented_default) in rows.items():
             expected_type = _type_label(hints[field_name])
             allowed_types = {expected_type}
@@ -164,15 +162,15 @@ def test_subio_format_document_nested_fields_match_runtime_contract():
 
 def test_subio_format_document_lists_exact_user_override_fields():
     document = _document()
-    headings = list(
-        re.finditer(r"^### 6\.\d+ `([^`]+)`$", document, re.MULTILINE)
-    )
+    headings = list(re.finditer(r"^### 6\.\d+ `([^`]+)`$", document, re.MULTILINE))
     assert {match.group(1) for match in headings} == {
         protocol.value for protocol in PUBLIC_PROTOCOLS
     }
 
     for index, heading in enumerate(headings):
-        end = headings[index + 1].start() if index + 1 < len(headings) else len(document)
+        end = (
+            headings[index + 1].start() if index + 1 < len(headings) else len(document)
+        )
         body = document[heading.end() : end]
         match = re.search(r"可按用户覆盖：([^。]+)。", body)
         assert match is not None, heading.group(1)

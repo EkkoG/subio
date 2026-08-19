@@ -136,22 +136,18 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 ### 3.5 原生 SubIO 节点格式
 
-`provider.type = "subio"` 有两条明确隔离的输入路径：
+`provider.type = "subio"` 只有一条原生输入路径：
 
 ```text
-version = 1 + nodes
+version = 2 + nodes
   -> serialization decoder
   -> SubioNodeCodec
   -> concrete Node IR
-
-legacy proxies
-  -> Mihomo-compatible ClashParser
-  -> concrete Node IR + migration WARNING
 ```
 
 原生路径使用 `Protocol.value` 和 snake_case IR 字段，不调用 `parse_clash()`，也不接受单字段
 Mihomo alias。`src/subio_v2/subio_format/schema.py` 是公开字段 allowlist 与确定性 JSON Schema 的
-来源；`schemas/subio-node-v1.schema.json` 是提交仓库的机器可读快照。修改其中任一侧时必须运行
+来源；`schemas/subio-node-v2.schema.json` 是提交仓库的机器可读快照。修改其中任一侧时必须运行
 schema 生成命令，并由测试证明快照、协议注册表和 runtime 字段一致。
 
 JSON Schema 只描述结构、允许字段、基础类型和 enum，不为组合校验建立复杂 conditional 生成器。
@@ -169,9 +165,9 @@ descriptor；codec 从现有协议注册表取得 Node class，但不能借用 C
 
 目标无关语义由 `src/subio_v2/validation.py` 校验，CapabilityChecker 复用同一结果后再检查目标
 平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
-native override 字段由逐协议 `PUBLIC_USER_OVERRIDE_FIELDS` 明确列出，并且必须仍是 Node 模型与
-通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，必须明确
-选择加入 v1 或排除，并更新 schema、用户文档和注册表不变量测试。
+native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明确列出，并且必须仍是 Node
+模型与通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，
+必须明确选择加入 terminal native policy 或排除，并更新 schema、用户文档和注册表不变量测试。
 
 原生格式目前只有输入 codec，不增加 `artifact.type = "subio"`。版本兼容规则和公开字段说明见
 `docs/subio_node_format.md`。
@@ -388,7 +384,7 @@ SubIO 原生节点格式：
 
 ```bash
 uv run python -m pytest tests/test_subio_v2_parser_subio.py -v
-uv run python -m subio_v2.subio_format.schema schemas/subio-node-v1.schema.json
+uv run python -m subio_v2.subio_format.schema schemas/subio-node-v2.schema.json
 ```
 
 Surge：

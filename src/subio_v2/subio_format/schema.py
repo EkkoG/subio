@@ -24,8 +24,13 @@ from subio_v2.model.nodes import (
     WireguardNode,
     WireguardPeer,
 )
+from subio_v2.protocols.definitions import (
+    TERMINAL_NATIVE_COMMON_FIELDS,
+    all_definitions,
+    get_definition,
+)
 
-SUBIO_FORMAT_VERSION = 1
+SUBIO_FORMAT_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -106,12 +111,12 @@ _KCPTUN_INTEGER_FIELDS = {
 }
 
 PUBLIC_MAPPING_SPECS: dict[str, PublicMappingSpec] = {
-    "HttpHeaders": PublicMappingSpec(fields={}, additional_value_type=_HTTP_HEADER_VALUE),
+    "HttpHeaders": PublicMappingSpec(
+        fields={}, additional_value_type=_HTTP_HEADER_VALUE
+    ),
     "RealityOptions": PublicMappingSpec(
         fields={
-            "public_key": _mapping_field(
-                str, target_key="public-key", required=True
-            ),
+            "public_key": _mapping_field(str, target_key="public-key", required=True),
             "short_id": _mapping_field(str, target_key="short-id"),
         }
     ),
@@ -119,9 +124,7 @@ PUBLIC_MAPPING_SPECS: dict[str, PublicMappingSpec] = {
         fields={
             "enable": _mapping_field(bool),
             "config": _mapping_field(str),
-            "query_server_name": _mapping_field(
-                str, target_key="query-server-name"
-            ),
+            "query_server_name": _mapping_field(str, target_key="query-server-name"),
         }
     ),
     "BrutalOptions": PublicMappingSpec(
@@ -140,21 +143,15 @@ PUBLIC_MAPPING_SPECS: dict[str, PublicMappingSpec] = {
             "host": _mapping_field(str),
             "path": _mapping_field(str),
             "tls": _mapping_field(bool),
-            "ech_opts": _mapping_field(
-                target_key="ech-opts", object_spec="ECHOptions"
-            ),
+            "ech_opts": _mapping_field(target_key="ech-opts", object_spec="ECHOptions"),
             "fingerprint": _mapping_field(str),
             "certificate": _mapping_field(str),
             "private_key": _mapping_field(str, target_key="private-key"),
             "headers": _mapping_field(object_spec="HttpHeaders"),
-            "skip_cert_verify": _mapping_field(
-                bool, target_key="skip-cert-verify"
-            ),
+            "skip_cert_verify": _mapping_field(bool, target_key="skip-cert-verify"),
             "verify_name": _mapping_field(str, target_key="name-cert-verify"),
             "mux": _mapping_field(bool),
-            "v2ray_http_upgrade": _mapping_field(
-                bool, target_key="v2ray-http-upgrade"
-            ),
+            "v2ray_http_upgrade": _mapping_field(bool, target_key="v2ray-http-upgrade"),
             "v2ray_http_upgrade_fast_open": _mapping_field(
                 bool, target_key="v2ray-http-upgrade-fast-open"
             ),
@@ -179,9 +176,7 @@ PUBLIC_MAPPING_SPECS: dict[str, PublicMappingSpec] = {
             "fingerprint": _mapping_field(str),
             "certificate": _mapping_field(str),
             "private_key": _mapping_field(str, target_key="private-key"),
-            "skip_cert_verify": _mapping_field(
-                bool, target_key="skip-cert-verify"
-            ),
+            "skip_cert_verify": _mapping_field(bool, target_key="skip-cert-verify"),
             "verify_name": _mapping_field(str, target_key="name-cert-verify"),
             "version": _mapping_field(int),
             "version_hint": _mapping_field(str, target_key="version-hint"),
@@ -226,321 +221,8 @@ PUBLIC_FIELD_ENUMS: dict[tuple[type, str], tuple[Any, ...]] = {
     (TUICNode, "version"): (4, 5),
 }
 
-NON_PUBLIC_NODE_FIELDS = frozenset(
-    {
-        "record",
-    }
-)
-
-NON_PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
-    Protocol.SSH: frozenset({"keystore_id"}),
-    Protocol.TAILSCALE: frozenset({"interactive_login"}),
-}
-
 NON_PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
     TLSSettings: frozenset({"client_cert_ref"}),
-}
-
-PUBLIC_COMMON_FIELDS = frozenset(
-    {
-        "name",
-        "type",
-        "server",
-        "port",
-        "udp",
-        "ip_version",
-        "tfo",
-        "mptcp",
-        "dialer_proxy",
-        "users",
-        "interface_name",
-        "routing_mark",
-        "surge_options",
-        "shadow_tls",
-    }
-)
-
-PUBLIC_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
-    Protocol.SHADOWSOCKS: frozenset(
-        {"cipher", "password", "udp_port", "plugin", "plugin_opts", "smux"}
-    ),
-    Protocol.SHADOWSOCKSR: frozenset(
-        {
-            "cipher",
-            "password",
-            "obfs",
-            "ssr_protocol",
-            "obfs_param",
-            "protocol_param",
-            "smux",
-        }
-    ),
-    Protocol.VMESS: frozenset(
-        {
-            "uuid",
-            "alter_id",
-            "cipher",
-            "global_padding",
-            "vmess_aead",
-            "tls",
-            "transport",
-            "smux",
-            "packet_encoding",
-        }
-    ),
-    Protocol.VLESS: frozenset(
-        {"uuid", "flow", "tls", "transport", "smux", "packet_encoding"}
-    ),
-    Protocol.TROJAN: frozenset({"password", "tls", "transport", "smux"}),
-    Protocol.SOCKS5: frozenset({"username", "password", "tls"}),
-    Protocol.HTTP: frozenset(
-        {"username", "password", "headers", "variant", "max_streams", "tls"}
-    ),
-    Protocol.WIREGUARD: frozenset(
-        {
-            "private_key",
-            "public_key",
-            "preshared_key",
-            "interface_ip",
-            "interface_ipv6",
-            "allowed_ips",
-            "reserved",
-            "mtu",
-            "workers",
-            "persistent_keepalive",
-            "amnezia_wg_option",
-            "peers",
-            "remote_dns_resolve",
-            "dns_servers",
-            "refresh_server_ip_interval",
-            "smux",
-        }
-    ),
-    Protocol.TAILSCALE: frozenset(
-        {
-            "hostname",
-            "auth_key",
-            "control_url",
-            "state_dir",
-            "ephemeral",
-            "accept_routes",
-            "exit_node",
-            "exit_node_auto_fallback",
-            "exit_node_allow_lan_access",
-            "derp_only",
-            "auto_add_magic_dns_rule",
-            "idle_keepalive",
-            "prefer_ipv6",
-            "dns_servers",
-            "mtu",
-            "smux",
-        }
-    ),
-    Protocol.MASQUE: frozenset(
-        {
-            "mode",
-            "transport",
-            "connect_uri",
-            "username",
-            "password",
-            "private_key",
-            "public_key",
-            "interface_ip",
-            "interface_ipv6",
-            "mtu",
-            "ports",
-            "hop_interval",
-            "remote_dns_resolve",
-            "dns_servers",
-            "congestion_controller",
-            "cwnd",
-            "bbr_profile",
-            "handshake_timeout",
-            "tls",
-            "smux",
-        }
-    ),
-    Protocol.TRUSTTUNNEL: frozenset(
-        {
-            "username",
-            "password",
-            "headers",
-            "max_streams",
-            "quic",
-            "websocket",
-            "health_check",
-            "congestion_controller",
-            "cwnd",
-            "bbr_profile",
-            "max_connections",
-            "min_streams",
-            "tls",
-            "smux",
-        }
-    ),
-    Protocol.DIRECT: frozenset({"smux"}),
-    Protocol.DNS: frozenset({"smux"}),
-    Protocol.REMATCH: frozenset(
-        {"target_rematch_name", "target_sub_rule", "smux"}
-    ),
-    Protocol.GOST_RELAY: frozenset(
-        {"forward", "mux", "username", "password", "tls", "smux"}
-    ),
-    Protocol.SHADOWQUIC: frozenset(
-        {
-            "username",
-            "password",
-            "tls",
-            "quic_versions",
-            "udp_over_stream",
-            "zero_rtt",
-            "keep_alive_interval",
-            "congestion_controller",
-            "up",
-            "down",
-            "cwnd",
-            "bbr_profile",
-            "recv_window_conn",
-            "recv_window",
-            "disable_mtu_discovery",
-            "max_datagram_frame_size",
-            "max_open_streams",
-            "smux",
-        }
-    ),
-    Protocol.OPENVPN: frozenset(
-        {
-            "proto",
-            "dev",
-            "cipher",
-            "data_ciphers",
-            "data_ciphers_fallback",
-            "auth",
-            "comp_lzo",
-            "ca",
-            "certificate",
-            "private_key",
-            "tls_auth",
-            "key_direction",
-            "tls_crypt",
-            "tls_crypt_v2",
-            "username",
-            "password",
-            "peer_info",
-            "ping",
-            "ping_restart",
-            "handshake_timeout",
-            "mtu",
-            "remote_dns_resolve",
-            "dns_servers",
-            "smux",
-        }
-    ),
-    Protocol.SUDOKU: frozenset(
-        {
-            "key",
-            "aead_method",
-            "padding_min",
-            "padding_max",
-            "table_type",
-            "enable_pure_downlink",
-            "multiplex",
-            "httpmask",
-            "custom_table",
-            "custom_tables",
-            "legacy_http_mask",
-            "legacy_http_mask_mode",
-            "legacy_http_mask_tls",
-            "legacy_http_mask_host",
-            "legacy_path_root",
-            "legacy_http_mask_strategy",
-            "legacy_http_mask_multiplex",
-            "smux",
-        }
-    ),
-    Protocol.REJECT: frozenset({"mode", "smux"}),
-    Protocol.ANYTLS: frozenset(
-        {
-            "password",
-            "tls",
-            "reuse",
-            "idle_session_check_interval",
-            "idle_session_timeout",
-            "min_idle_session",
-        }
-    ),
-    Protocol.HYSTERIA: frozenset(
-        {
-            "ports",
-            "hysteria_protocol",
-            "obfs_protocol",
-            "up",
-            "down",
-            "up_speed",
-            "down_speed",
-            "auth_str",
-            "auth",
-            "obfs",
-            "hop_interval",
-            "tls",
-            "smux",
-        }
-    ),
-    Protocol.HYSTERIA2: frozenset(
-        {
-            "password",
-            "ports",
-            "hop_interval",
-            "up",
-            "down",
-            "obfs",
-            "obfs_password",
-            "tls",
-            "smux",
-        }
-    ),
-    Protocol.SSH: frozenset(
-        {
-            "username",
-            "password",
-            "private_key",
-            "private_key_passphrase",
-            "host_key",
-            "host_key_algorithms",
-            "idle_timeout",
-            "server_fingerprints",
-        }
-    ),
-    Protocol.SNELL: frozenset(
-        {
-            "psk",
-            "version",
-            "reuse",
-            "udp_port",
-            "mode",
-            "obfs",
-            "obfs_host",
-            "obfs_opts",
-            "tls",
-            "smux",
-        }
-    ),
-    Protocol.MIERU: frozenset(
-        {
-            "port_range",
-            "transport",
-            "username",
-            "password",
-            "multiplexing",
-            "handshake_mode",
-            "traffic_pattern",
-            "smux",
-        }
-    ),
-    Protocol.JUICITY: frozenset({"uuid", "password", "tls"}),
-    Protocol.TUIC: frozenset(
-        {"token", "password", "uuid", "version", "ports", "hop_interval", "tls", "smux"}
-    ),
 }
 
 PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
@@ -560,71 +242,21 @@ PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
     WireguardPeer: frozenset(field.name for field in fields(WireguardPeer)),
 }
 
-PUBLIC_PROTOCOLS = frozenset(PUBLIC_PROTOCOL_FIELDS)
-
-PUBLIC_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
-    Protocol.ANYTLS: frozenset({"server", "port", "password"}),
-    Protocol.DIRECT: frozenset(),
-    Protocol.DNS: frozenset(),
-    Protocol.GOST_RELAY: frozenset({"server", "port", "username", "password"}),
-    Protocol.HTTP: frozenset({"server", "port", "username", "password"}),
-    Protocol.HYSTERIA: frozenset({"server", "port", "auth", "auth_str"}),
-    Protocol.HYSTERIA2: frozenset(
-        {"server", "port", "password", "obfs_password"}
-    ),
-    Protocol.JUICITY: frozenset({"server", "port", "uuid", "password"}),
-    Protocol.MASQUE: frozenset(
-        {
-            "server",
-            "port",
-            "username",
-            "password",
-            "private_key",
-            "public_key",
-        }
-    ),
-    Protocol.MIERU: frozenset({"server", "port", "username", "password"}),
-    Protocol.OPENVPN: frozenset({"server", "port", "username", "password"}),
-    Protocol.REJECT: frozenset(),
-    Protocol.REMATCH: frozenset(),
-    Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
-    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
-    Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
-    Protocol.SNELL: frozenset({"server", "port", "psk"}),
-    Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
-    Protocol.SSH: frozenset(
-        {
-            "server",
-            "port",
-            "username",
-            "password",
-            "private_key",
-            "private_key_passphrase",
-        }
-    ),
-    Protocol.SUDOKU: frozenset({"server", "port"}),
-    Protocol.TAILSCALE: frozenset({"auth_key"}),
-    Protocol.TROJAN: frozenset({"server", "port", "password"}),
-    Protocol.TRUSTTUNNEL: frozenset(
-        {"server", "port", "username", "password"}
-    ),
-    Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
-    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
-    Protocol.VMESS: frozenset(
-        {"server", "port", "uuid", "alter_id", "cipher"}
-    ),
-    Protocol.WIREGUARD: frozenset(
-        {"server", "port", "private_key", "public_key", "preshared_key"}
-    ),
-}
+PUBLIC_PROTOCOLS = frozenset(definition.protocol for definition in all_definitions())
 
 
 def public_node_fields(protocol: Protocol) -> frozenset[str]:
-    return PUBLIC_COMMON_FIELDS | PUBLIC_PROTOCOL_FIELDS[protocol]
+    definition = get_definition(protocol)
+    if definition is None:
+        raise KeyError(protocol)
+    return TERMINAL_NATIVE_COMMON_FIELDS | definition.terminal_native_fields
 
 
 def public_user_override_fields(protocol: Protocol) -> frozenset[str]:
-    return PUBLIC_USER_OVERRIDE_FIELDS[protocol]
+    definition = get_definition(protocol)
+    if definition is None:
+        raise KeyError(protocol)
+    return definition.terminal_native_user_override_fields
 
 
 def public_mapping_spec(owner: type, field_name: str) -> PublicMappingSpec | None:
@@ -698,8 +330,8 @@ def build_json_schema() -> dict[str, Any]:
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://github.com/ekkog/subio/schemas/subio-node-v1.schema.json",
-        "title": "SubIO node document v1",
+        "$id": "https://github.com/ekkog/subio/schemas/subio-node-v2.schema.json",
+        "title": "SubIO node document v2",
         "type": "object",
         "additionalProperties": False,
         "required": ["version", "nodes"],
@@ -763,7 +395,9 @@ def _json_schema_for_type(expected: Any) -> dict[str, Any]:
     if origin is dict:
         key_type, value_type = args or (str, Any)
         if key_type not in {str, Any}:
-            raise ValueError(f"SubIO schema only supports string object keys: {expected}")
+            raise ValueError(
+                f"SubIO schema only supports string object keys: {expected}"
+            )
         return {
             "type": "object",
             "additionalProperties": _json_schema_for_type(value_type),

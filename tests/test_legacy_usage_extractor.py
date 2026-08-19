@@ -7,7 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "extract_legacy_usage.py"
-SCHEMA = REPO_ROOT / "schemas" / "subio-node-v1.schema.json"
+SCHEMA = REPO_ROOT / "schemas" / "subio-node-v2.schema.json"
 
 
 def test_extractor_report_never_contains_source_values_or_custom_identifiers(tmp_path):

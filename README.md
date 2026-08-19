@@ -81,7 +81,7 @@ file = "nodes.toml"
 `nodes.toml` 使用版本化的原生节点语义，不是 Mihomo 字段的另一种序列化：
 
 ```toml
-version = 1
+version = 2
 
 [[nodes]]
 name = "HK-01"
@@ -93,7 +93,7 @@ password = "secret"
 ```
 
 原生格式同时支持 TOML、JSON、JSON5、YAML，四种序列化共享同一严格对象模型。完整字段、协议索引、
-多用户覆盖和旧 `proxies` 迁移见 [SubIO 节点文件格式 v1](./docs/subio_node_format.md)。
+多用户覆盖和旧格式拒绝行为见 [SubIO 节点文件格式 v2](./docs/subio_node_format.md)。
 
 `artifact.type` 使用同一命名契约：新配置用 `mihomo`，旧 `clash-meta` 配置保持兼容并产生替代
 提示，原版 `clash` 继续使用较小的独立能力范围并产生废弃提示。模板名、artifact 文件名和上传
@@ -101,7 +101,7 @@ password = "secret"
 
 具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
 
-原生 SubIO v1 可直接构造当前 27 种公开具体 Node IR；固定 schema 基线中的 26 种 Mihomo 节点
+原生 SubIO v2 可直接构造当前 27 种公开具体 Node IR；固定 schema 基线中的 26 种 Mihomo 节点
 类型和 Stash-only Juicity 均有明确模型。真正未知的 YAML type 只允许回到其来源平台，不能进入
 原生 SubIO 文件。Surge External 的本地 file provider 默认可输出回 Surge，远程 URL 默认忽略；
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
@@ -181,7 +181,7 @@ subio convert example/config.toml --clean-gist
 ### 开发文档
 
 - [开发约束与架构](./docs/DEV.md)
-- [SubIO 节点文件格式 v1](./docs/subio_node_format.md)
+- [SubIO 节点文件格式 v2](./docs/subio_node_format.md)
 - [支持矩阵](./docs/support_matrix.md)
 - [端到端测试](./docs/e2e_testing.md)
 - [文档索引](./docs/README.md)

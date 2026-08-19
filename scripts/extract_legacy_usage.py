@@ -1284,7 +1284,7 @@ def gate_command(args: argparse.Namespace) -> int:
         schema = (
             Path(__file__).resolve().parents[1]
             / "schemas"
-            / "subio-node-v1.schema.json"
+            / "subio-node-v2.schema.json"
         )
         _validate_report(report, _load_node_keys(schema))
         if any(_contains_sensitive_string(value) for value in _walk_strings(report)):
