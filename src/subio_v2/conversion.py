@@ -22,6 +22,43 @@ class IssueDraft:
     code: str = "conversion"
 
 
+@dataclass
+class TargetCheckResult:
+    supported: bool
+    warnings: list[IssueDraft] = field(default_factory=list)
+
+    def add_issue(
+        self,
+        severity: IssueSeverity,
+        message: str,
+        field: str | None = None,
+        suggestion: str | None = None,
+        code: str = "conversion",
+    ) -> None:
+        self.warnings.append(
+            IssueDraft(severity, message, field, suggestion, code)
+        )
+
+    def add_error(
+        self,
+        message: str,
+        field: str | None = None,
+        suggestion: str | None = None,
+        code: str = "conversion",
+    ) -> None:
+        self.add_issue(IssueSeverity.ERROR, message, field, suggestion, code)
+        self.supported = False
+
+    def has_errors(self) -> bool:
+        return any(issue.severity == IssueSeverity.ERROR for issue in self.warnings)
+
+    def has_warnings(self) -> bool:
+        return any(
+            issue.severity in {IssueSeverity.WARNING, IssueSeverity.INFO}
+            for issue in self.warnings
+        )
+
+
 @dataclass(frozen=True)
 class ConversionIssue:
     severity: IssueSeverity

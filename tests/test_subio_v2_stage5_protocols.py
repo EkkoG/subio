@@ -1,6 +1,6 @@
 import pytest
 
-from subio_v2.capabilities.checker import CapabilityChecker
+from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import (
     MieruHandshakeMode,
@@ -121,7 +121,7 @@ def test_mieru_capability_rejects_invalid_required_fields(changes, expected_fiel
     kwargs.update(changes)
     node = MieruNode(**kwargs)
 
-    result = CapabilityChecker("clash-meta").check_node(node)
+    result = NodeConversionService("clash-meta").check_node(node)
 
     assert result.supported is False
     assert expected_field in {warning.field for warning in result.warnings}
@@ -201,7 +201,7 @@ def test_mihomo_snell_reuse_follows_schema_version_domain():
         }
     ).nodes[0]
 
-    result = CapabilityChecker("clash-meta").check_node(node)
+    result = NodeConversionService("clash-meta").check_node(node)
 
     assert result.supported is False
     assert "reuse" in {warning.field for warning in result.warnings}

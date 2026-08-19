@@ -5,8 +5,8 @@ from collections.abc import Callable
 
 import pytest
 
-from subio_v2.capabilities.checker import CapabilityChecker
 from subio_v2.capabilities.definitions import all_platform_capabilities
+from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter import link
 from subio_v2.model.nodes import (
     AnyTLSNode,
@@ -184,7 +184,7 @@ def test_link_platform_protocols_have_builders_and_build_baseline_nodes():
     assert declared_protocols <= set(factories)
 
     for platform in LINK_PLATFORMS:
-        checker = CapabilityChecker(platform)
+        checker = NodeConversionService(platform)
         for protocol_name in PLATFORM_CAPABILITIES[platform]["protocols"]:
             protocol = Protocol(protocol_name)
             node = factories[protocol]()
@@ -202,7 +202,7 @@ def test_strong_nodes_must_have_valid_endpoint_and_required_credentials():
         password="",
     )
 
-    result = CapabilityChecker("clash-meta").check_node(node)
+    result = NodeConversionService("clash-meta").check_node(node)
     assert result.supported is False
     assert {warning.field for warning in result.warnings} == {
         "server",
@@ -223,7 +223,7 @@ def test_platform_specific_typed_fields_are_not_silently_dropped():
         shadow_tls=ShadowTLSSettings(password="shadow"),
     )
 
-    result = CapabilityChecker("mihomo").check_node(node)
+    result = NodeConversionService("mihomo").check_node(node)
 
     issue = next(
         warning
@@ -247,7 +247,7 @@ def test_source_independent_base_fields_are_checked_for_link_targets():
         users={"alice": {"password": "p2"}},
     )
 
-    result = CapabilityChecker("dae").check_node(node)
+    result = NodeConversionService("dae").check_node(node)
 
     issue = next(
         warning
@@ -267,8 +267,8 @@ def test_vmess_aead_is_only_serialized_by_surge():
         vmess_aead=True,
     )
 
-    mihomo = CapabilityChecker("mihomo").check_node(node)
-    surge = CapabilityChecker("surge").check_node(node)
+    mihomo = NodeConversionService("mihomo").check_node(node)
+    surge = NodeConversionService("surge").check_node(node)
 
     assert any(warning.field == "vmess_aead" for warning in mihomo.warnings)
     assert not any(warning.field == "vmess_aead" for warning in surge.warnings)
@@ -299,7 +299,7 @@ def test_vmess_aead_is_only_serialized_by_surge():
     ],
 )
 def test_tuic_requires_a_complete_credential_form(node: TUICNode, missing_field: str):
-    result = CapabilityChecker("clash-meta").check_node(node)
+    result = NodeConversionService("clash-meta").check_node(node)
     assert result.supported is False
     assert missing_field in {warning.field for warning in result.warnings}
 
@@ -311,7 +311,7 @@ def test_declared_link_transports_are_serialized(
     platform: str, protocol: Protocol, network: str
 ):
     node = _transport_node(protocol, network)
-    assert CapabilityChecker(platform).check_node(node).supported
+    assert NodeConversionService(platform).check_node(node).supported
     url = link.build_url(node)
     assert url is not None
 
@@ -357,7 +357,7 @@ def test_vless_reality_contract_uses_client_fingerprint():
 
     for platform in LINK_PLATFORMS:
         assert "reality" in PLATFORM_CAPABILITIES[platform]["vless"]["features"]
-        assert CapabilityChecker(platform).check_node(node).supported
+        assert NodeConversionService(platform).check_node(node).supported
 
     url = link.build_vless_url(node)
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
@@ -400,7 +400,7 @@ def test_undeclared_reality_is_rejected(protocol: Protocol):
                 "features", set()
             )
         )
-        assert not CapabilityChecker(platform).check_node(node).supported
+        assert not NodeConversionService(platform).check_node(node).supported
 
 
 def test_socks5_tls_is_rejected_by_link_platforms():
@@ -419,7 +419,7 @@ def test_socks5_tls_is_rejected_by_link_platforms():
                 "features", set()
             )
         )
-        assert not CapabilityChecker(platform).check_node(node).supported
+        assert not NodeConversionService(platform).check_node(node).supported
     assert link.build_url(node) is None
 
 
@@ -436,7 +436,7 @@ def test_hysteria2_obfs_declared_by_dae_is_serialized():
     )
 
     assert "obfs" in PLATFORM_CAPABILITIES["dae"]["hysteria2"]["features"]
-    assert CapabilityChecker("dae").check_node(node).supported
+    assert NodeConversionService("dae").check_node(node).supported
     url = link.build_url(node)
     assert url is not None
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
@@ -474,7 +474,7 @@ def test_tuic_versions_follow_credentials_and_capabilities():
     )
 
     assert PLATFORM_CAPABILITIES["dae"]["tuic"]["versions"] == {5}
-    checker = CapabilityChecker("dae")
+    checker = NodeConversionService("dae")
     assert checker.check_node(v5).supported
     assert not checker.check_node(v4).supported
     assert not checker.check_node(inferred_v4).supported

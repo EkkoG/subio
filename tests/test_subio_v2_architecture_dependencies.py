@@ -92,6 +92,7 @@ def test_obsolete_internal_authorities_are_absent():
         "src/subio_v2/workflow/rule_parser.py",
         "src/subio_v2/workflow/ruleset_codec.py",
         "src/subio_v2/workflow/mrs.py",
+        "src/subio_v2/capabilities/checker.py",
     )
     assert all(not (REPO_ROOT / path).exists() for path in obsolete_paths)
 
@@ -103,6 +104,8 @@ def test_obsolete_internal_authorities_are_absent():
         "PLATFORM_CAPABILITIES",
         "ParserFactory",
         "EmitterFactory",
+        "CapabilityChecker",
+        "check_node_for_platform",
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production

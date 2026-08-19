@@ -1,4 +1,4 @@
-from subio_v2.capabilities.checker import CapabilityChecker
+from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import HttpVariant
 from subio_v2.parser.surge import SurgeParser
@@ -17,7 +17,7 @@ any = anytls, example.com, 443, password=secret, reuse=false, sni=any.example.co
     assert node.reuse is False
     assert node.tls.enabled is True
     assert node.tls.server_name == "any.example.com"
-    assert CapabilityChecker("surge").check_node(node).supported
+    assert NodeConversionService("surge").check_node(node).supported
 
     output = SurgeEmitter().emit_content(result.nodes)
     assert "any = anytls" in output
@@ -39,8 +39,8 @@ h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:S
     assert node.headers == {"User-Agent": "SubIO", "X-Test": "a=b"}
     assert node.max_streams == 8
     assert node.udp is True
-    assert CapabilityChecker("surge").check_node(node).supported
-    assert not CapabilityChecker("clash-meta").check_node(node).supported
+    assert NodeConversionService("surge").check_node(node).supported
+    assert not NodeConversionService("clash-meta").check_node(node).supported
 
     output = SurgeEmitter().emit_content([node])
     assert "h2 = h2-connect" in output
@@ -64,7 +64,7 @@ ssh = ssh, example.com, 22, username=root, password=p, idle-timeout=60, server-f
         "SHA256:second",
         "SHA256:third",
     ]
-    assert CapabilityChecker("surge").check_node(node).supported
+    assert NodeConversionService("surge").check_node(node).supported
 
     output = SurgeEmitter().emit_content([node])
     assert "idle-timeout=60" in output
@@ -74,7 +74,7 @@ ssh = ssh, example.com, 22, username=root, password=p, idle-timeout=60, server-f
 def test_surge_ssh_requires_authentication_material():
     node = SurgeParser().parse_nodes("[Proxy]\nssh = ssh, example.com, 22, username=root")[0]
 
-    result = CapabilityChecker("surge").check_node(node)
+    result = NodeConversionService("surge").check_node(node)
 
     assert not result.supported
     assert "password" in {warning.field for warning in result.warnings}

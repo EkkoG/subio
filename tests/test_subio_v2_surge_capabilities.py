@@ -1,5 +1,5 @@
-from subio_v2.capabilities.checker import CapabilityChecker
 from subio_v2.capabilities.definitions import all_platform_capabilities
+from subio_v2.conversion_service import NodeConversionService
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.model.nodes import (
@@ -41,7 +41,7 @@ def test_surge_shadowsocks_ciphers_match_official_baseline():
 
 
 def test_surge_checker_accepts_official_ciphers_and_rejects_2022_chacha():
-    checker = CapabilityChecker("surge")
+    checker = NodeConversionService("surge")
 
     for cipher in SURGE_SHADOWSOCKS_CIPHERS:
         if cipher == "2022-blake3-aes-128-gcm":
@@ -74,7 +74,7 @@ def test_surge_checker_accepts_official_ciphers_and_rejects_2022_chacha():
 def test_surge_snell_versions_match_official_baseline():
     assert PLATFORM_CAPABILITIES["surge"]["snell"]["versions"] == set(range(1, 7))
 
-    checker = CapabilityChecker("surge")
+    checker = NodeConversionService("surge")
     for version in range(1, 7):
         node = SnellNode(
             name=f"snell-v{version}",
@@ -88,7 +88,7 @@ def test_surge_snell_versions_match_official_baseline():
 
 
 def test_surge_snell_obfs_is_checked_by_protocol_version():
-    checker = CapabilityChecker("surge")
+    checker = NodeConversionService("surge")
 
     def supported(version, obfs):
         node = SnellNode(
@@ -126,13 +126,13 @@ def test_surge_declares_underlying_proxy_and_hysteria2_obfs():
         obfs_password="secret",
         dialer_proxy="base",
     )
-    result = CapabilityChecker("surge").check_node(node)
+    result = NodeConversionService("surge").check_node(node)
     assert result.supported
     assert not {"obfs", "dialer_proxy"} & {warning.field for warning in result.warnings}
 
 
 def test_surge_shadowsocks_conditional_password_rules():
-    checker = CapabilityChecker("surge")
+    checker = NodeConversionService("surge")
     none_cipher = ShadowsocksNode(
         name="none",
         type=Protocol.SHADOWSOCKS,
@@ -164,7 +164,7 @@ def test_surge_shadowsocks_conditional_password_rules():
 
 
 def test_surge_port_hopping_rejects_underlying_proxy():
-    checker = CapabilityChecker("surge")
+    checker = NodeConversionService("surge")
     for node in (
         TUICNode(
             name="tuic",

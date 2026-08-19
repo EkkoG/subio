@@ -1,6 +1,6 @@
 import pytest
 
-from subio_v2.capabilities.checker import CapabilityChecker
+from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.registry import EmitterRegistry
@@ -77,7 +77,7 @@ def test_mihomo_alias_emits_identical_results_with_canonical_issue_targets():
     assert alias_result == canonical_result
     assert all(issue.target == "mihomo" for issue in alias_result.issues)
 
-    canonical_check = CapabilityChecker("mihomo")
-    alias_check = CapabilityChecker("clash-meta")
+    canonical_check = NodeConversionService("mihomo")
+    alias_check = NodeConversionService("clash-meta")
     assert alias_check.platform == "mihomo"
     assert alias_check.check_node(node) == canonical_check.check_node(node)
