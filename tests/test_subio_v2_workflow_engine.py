@@ -10,6 +10,10 @@ from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.remote import RunRemoteLoader
+from subio_v2.workflow.artifacts import (
+    ArtifactGenerationResult,
+    ArtifactGenerationService,
+)
 from subio_v2.workflow.config import RunConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
@@ -20,6 +24,18 @@ def write(tmp_path: Path, name: str, content: str):
     p = tmp_path / name
     p.write_text(content)
     return p
+
+
+def artifact_service(engine: WorkflowEngine) -> ArtifactGenerationService:
+    return ArtifactGenerationService(
+        engine.config,
+        engine.providers,
+        engine.provider_issues,
+        engine.renderer,
+        engine.rulesets,
+        engine.batch_uploader,
+        engine.global_age_public_key,
+    )
 
 
 def test_load_config_formats(tmp_path, monkeypatch):
@@ -55,25 +71,27 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
             return TemplateRenderResult("rendered")
 
     eng.renderer = DummyRenderer()
+    service = artifact_service(eng)
 
     # YAML data: should dump dict when no template
     content_yaml = {"proxies": [{"name": "n1"}, {"name": "n2"}]}
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
-    eng._write_artifact(
-        "out.yaml", content_yaml, template_path=None, artifact_type="clash"
+    service._stage(
+        "out.yaml", content_yaml, None, "clash", {}, {}, None, {}
     )
-    eng._commit_artifacts()
+    eng.publisher.commit(service.staged_artifacts)
     out1 = (tmp_path / "dist" / "out.yaml").read_text()
     # Should be YAML text containing proxies
     assert "proxies:" in out1 and "- name: n1" in out1
     assert stat.S_IMODE((tmp_path / "dist" / "out.yaml").stat().st_mode) == 0o600
 
     # Text content with template: should use renderer result
-    eng._write_artifact(
-        "out.txt", "rawtext", template_path="tpl", artifact_type="surge"
+    service = artifact_service(eng)
+    service._stage(
+        "out.txt", "rawtext", "tpl", "surge", {}, {}, None, {}
     )
-    eng._commit_artifacts()
+    eng.publisher.commit(service.staged_artifacts)
     out2 = (tmp_path / "dist" / "out.txt").read_text()
     assert out2 == "rendered"
 
@@ -88,11 +106,14 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
             return "x"
 
     eng.renderer = DummyRenderer()
+    service = artifact_service(eng)
 
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
-    eng._write_artifact("file-{user}.txt", "c", template_path=None, username="alice")
-    eng._commit_artifacts()
+    service._stage(
+        "file-{user}.txt", "c", None, "surge", {}, {}, "alice", {}
+    )
+    eng.publisher.commit(service.staged_artifacts)
     assert (tmp_path / "dist" / "file-alice.txt").exists()
 
 
@@ -134,9 +155,10 @@ def test_write_artifact_rejects_path_traversal(tmp_path, monkeypatch):
     cfg = write(tmp_path, "config.toml", "a = 1")
     monkeypatch.chdir(tmp_path)
     eng = WorkflowEngine(str(cfg), dry_run=True)
+    service = artifact_service(eng)
 
     with pytest.raises(ArtifactGenerationError, match="Invalid artifact filename"):
-        eng._write_artifact("../escape.txt", "secret", template_path=None)
+        service._stage("../escape.txt", "secret", None, "surge", {}, {}, None, {})
 
     assert not (tmp_path / "escape.txt").exists()
 
@@ -456,16 +478,18 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
         lambda self, config, loader: ProviderLoadResult({}, {}),
     )
 
-    def generate():
-        engine._staged_artifacts["out.txt"] = "content"
+    def generate(self):
         engine.batch_uploader.add(
             "content",
             {"name": "out.txt"},
             {},
             {"name": "gist", "id": "abc123", "token": "token"},
         )
+        return ArtifactGenerationResult({"out.txt": "content"}, [])
 
-    monkeypatch.setattr(engine, "_generate_artifacts", generate)
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.ArtifactGenerationService.generate", generate
+    )
     monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
 
     def fail_flush():
@@ -1187,7 +1211,7 @@ proxies:
 
     monkeypatch.setattr(emitter, "check_node", counted_check)
     monkeypatch.setattr(
-        "subio_v2.workflow.engine.EmitterRegistry.get_emitter", lambda _: emitter
+        "subio_v2.workflow.artifacts.EmitterRegistry.get_emitter", lambda _: emitter
     )
 
     result = WorkflowEngine(str(cfg), dry_run=True).run()

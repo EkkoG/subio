@@ -139,5 +139,8 @@ def test_obsolete_internal_authorities_are_absent():
         "def _load_providers",
         "def _fetch_content",
         "def _decode_provider_content",
+        "def _generate_artifacts",
+        "def _generate_single_artifact",
+        "def _write_artifact",
     ):
         assert symbol not in engine_source

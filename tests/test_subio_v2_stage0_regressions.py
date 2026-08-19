@@ -11,6 +11,7 @@ from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.registry import ParserRegistry
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
+from subio_v2.workflow.artifacts import ArtifactGenerationResult
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoadResult
 
@@ -289,7 +290,7 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
     monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
     monkeypatch.setattr(engine.batch_uploader, "flush", lambda: None)
 
-    def generate():
+    def generate(self):
         nonlocal attempts
         attempts += 1
         if attempts == 1:
@@ -307,9 +308,11 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
             {"file_name": "new.txt"},
             {"name": "gist", "id": "abc123", "token": "token"},
         )
-        engine._staged_artifacts["new.txt"] = "new"
+        return ArtifactGenerationResult({"new.txt": "new"}, [])
 
-    monkeypatch.setattr(engine, "_generate_artifacts", generate)
+    monkeypatch.setattr(
+        "subio_v2.workflow.engine.ArtifactGenerationService.generate", generate
+    )
 
     with pytest.raises(ArtifactGenerationError):
         engine.run()

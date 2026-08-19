@@ -8,6 +8,7 @@ from subio_v2.emitter.registry import EmitterRegistry
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.model.nodes import DirectNode, Node, Protocol, ShadowsocksNode
+from subio_v2.workflow.artifacts import ArtifactGenerationService
 from subio_v2.workflow.engine import WorkflowEngine
 
 
@@ -97,7 +98,15 @@ template = "custom.j2"
         DirectNode(name="direct", type=Protocol.DIRECT, udp=False)
     ]
 
-    engine._generate_artifacts()
-    engine._commit_artifacts()
+    result = ArtifactGenerationService(
+        engine.config,
+        engine.providers,
+        engine.provider_issues,
+        engine.renderer,
+        engine.rulesets,
+        engine.batch_uploader,
+        engine.global_age_public_key,
+    ).generate()
+    engine.publisher.commit(result.staged_artifacts)
 
     assert (tmp_path / "dist/out.txt").read_text() == "CUSTOM|context|True"
