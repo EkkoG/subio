@@ -14,6 +14,7 @@ from subio_v2.model.nodes import (
     Protocol,
 )
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -29,6 +30,13 @@ class MieruCodec(StructuredClashProtocolCodec):
     protocol = Protocol.MIERU
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name", "type", "server", "port", "port-range", "transport",
+            "username", "password", "dialer-proxy", "interface-name",
+            endpoint=False,
+        )
+    }
     target_constraints = {
         "mihomo": {
             "transports": {"TCP", "UDP"},

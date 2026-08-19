@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -56,6 +57,19 @@ class WireguardCodec(StructuredClashProtocolCodec):
     protocol = Protocol.WIREGUARD
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "wireguard"
+    dialect_fields = {
+        "stash": stash_fields(
+            "ip",
+            "ipv6",
+            "private-key",
+            "public-key",
+            "preshared-key",
+            "dns",
+            "mtu",
+            "reserved",
+            "keepalive",
+        )
+    }
     fields = (
         scalar_field(
             "private-key",

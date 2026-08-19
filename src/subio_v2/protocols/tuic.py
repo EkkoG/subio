@@ -5,6 +5,7 @@ from typing import Any, Dict
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TUICNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -17,6 +18,17 @@ class TUICCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TUIC
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tuic"
+    dialect_fields = {
+        "stash": stash_fields(
+            "version",
+            "uuid",
+            "password",
+            "token",
+            "ports",
+            "hop-interval",
+            tls=True,
+        )
+    }
     target_constraints = {
         "dae": {"versions": {5}},
         "mihomo": {"versions": {4, 5}},

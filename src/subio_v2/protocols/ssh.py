@@ -3,6 +3,7 @@ from __future__ import annotations
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SSHNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
@@ -10,6 +11,13 @@ class SSHCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name", "type", "server", "port", "user", "password",
+            "private-key", "private-key-passphrase", "dialer-proxy",
+            "interface-name", endpoint=False,
+        )
+    }
     target_constraints = {
         target: {"auth_methods": {"password", "private_key"}}
         for target in ("mihomo", "stash", "surge")

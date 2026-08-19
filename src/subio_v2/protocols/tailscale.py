@@ -5,6 +5,7 @@ from typing import Any, Dict
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TailscaleNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -12,6 +13,12 @@ class TailscaleCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TAILSCALE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tailscale"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name", "type", "auth-key", "hostname", "control-url",
+            "ephemeral", "exit-node", endpoint=False,
+        )
+    }
     fields = (
         scalar_field("hostname", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("auth-key", "auth_key", emit_policy=EmitPolicy.NOT_NONE),

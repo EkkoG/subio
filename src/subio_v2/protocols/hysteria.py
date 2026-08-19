@@ -3,6 +3,7 @@ from __future__ import annotations
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import HysteriaNode, Node, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -15,6 +16,19 @@ class HysteriaCodec(StructuredClashProtocolCodec):
     protocol = Protocol.HYSTERIA
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria"
+    dialect_fields = {
+        "stash": stash_fields(
+            "ports",
+            "hop-interval",
+            "up-speed",
+            "down-speed",
+            "auth-str",
+            "auth",
+            "protocol",
+            "obfs",
+            tls=True,
+        )
+    }
     target_constraints = {
         "mihomo": {"features": {"obfs"}},
         "stash": {"features": {"obfs"}},

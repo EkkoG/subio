@@ -6,6 +6,7 @@ from typing import Any, Dict
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import MasqueMode, MasqueNode, Node, Protocol
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -42,6 +43,13 @@ class MasqueCodec(StructuredClashProtocolCodec):
     protocol = Protocol.MASQUE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name", "type", "server", "port", "private-key", "public-key",
+            "ip", "ipv6", "dns", "network", "sni", "connect-uri", "mtu",
+            "keepalive", endpoint=False,
+        )
+    }
     fields = (
         scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("private-key", "private_key", emit_policy=EmitPolicy.NOT_NONE),

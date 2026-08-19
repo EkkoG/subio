@@ -114,6 +114,20 @@ def test_structured_descriptor_specs_reference_real_unique_node_fields():
         assert descriptor.consumed_keys == frozenset(consumed)
 
 
+def test_stash_codecs_own_their_output_field_contracts():
+    stash_codecs = [
+        codec for codec in registry.all() if codec.supports_dialect("stash")
+    ]
+
+    assert len(stash_codecs) == 20
+    assert all(codec.fields_for_dialect("stash") for codec in stash_codecs)
+    assert all(
+        not codec.fields_for_dialect("stash")
+        for codec in registry.all()
+        if not codec.supports_dialect("stash")
+    )
+
+
 def test_structured_descriptor_rejects_wrong_node_type():
     node = ShadowsocksNode(
         name="ss",

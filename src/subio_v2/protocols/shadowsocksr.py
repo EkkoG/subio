@@ -4,6 +4,7 @@ from subio_v2.capabilities.definitions import SS_CIPHERS_STASH
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksRNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -11,6 +12,16 @@ class ShadowsocksRCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWSOCKSR
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssr"
+    dialect_fields = {
+        "stash": stash_fields(
+            "cipher",
+            "password",
+            "obfs",
+            "protocol",
+            "obfs-param",
+            "protocol-param",
+        )
+    }
     target_constraints = {"stash": {"ciphers": SS_CIPHERS_STASH}}
     fields = (
         scalar_field(

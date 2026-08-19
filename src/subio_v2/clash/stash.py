@@ -6,7 +6,6 @@ from typing import Any
 
 from subio_v2.model.nodes import Node, Protocol
 
-
 _INPUT_ALIASES: dict[str, dict[str, str]] = {
     "*": {"server-cert-fingerprint": "fingerprint"},
     Protocol.SSH.value: {"user": "username"},
@@ -33,186 +32,6 @@ _UNSUPPORTED_COMMON_FIELDS = frozenset(
         "users",
     }
 )
-
-_ENDPOINT_FIELDS = frozenset(
-    {
-        "name",
-        "type",
-        "server",
-        "port",
-        "udp",
-        "tfo",
-        "dialer-proxy",
-        "interface-name",
-    }
-)
-_TLS_FIELDS = frozenset(
-    {"tls", "skip-cert-verify", "server-cert-fingerprint", "sni", "alpn"}
-)
-_TRANSPORT_FIELDS = frozenset(
-    {"network", "ws-opts", "h2-opts", "http-opts", "grpc-opts", "xhttp-opts"}
-)
-
-_PROTOCOL_FIELDS: dict[Protocol, frozenset[str]] = {
-    Protocol.SHADOWSOCKS: _ENDPOINT_FIELDS
-    | {"cipher", "password", "plugin", "plugin-opts"},
-    Protocol.SHADOWSOCKSR: _ENDPOINT_FIELDS
-    | {
-        "cipher",
-        "password",
-        "obfs",
-        "protocol",
-        "obfs-param",
-        "protocol-param",
-    },
-    Protocol.SOCKS5: _ENDPOINT_FIELDS | _TLS_FIELDS | {"username", "password"},
-    Protocol.HTTP: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | {"username", "password", "headers"},
-    Protocol.VMESS: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | _TRANSPORT_FIELDS
-    | {"uuid", "cipher", "alterId"},
-    Protocol.SNELL: _ENDPOINT_FIELDS
-    | {"psk", "version", "reuse", "obfs-opts"},
-    Protocol.TROJAN: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | _TRANSPORT_FIELDS
-    | {"password"},
-    Protocol.ANYTLS: _ENDPOINT_FIELDS | _TLS_FIELDS | {"password"},
-    Protocol.HYSTERIA: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | {
-        "ports",
-        "hop-interval",
-        "up-speed",
-        "down-speed",
-        "auth-str",
-        "auth",
-        "protocol",
-        "obfs",
-    },
-    Protocol.HYSTERIA2: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | {
-        "ports",
-        "hop-interval",
-        "auth",
-        "fast-open",
-        "obfs",
-        "obfs-password",
-        "up-speed",
-        "down-speed",
-    },
-    Protocol.VLESS: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | _TRANSPORT_FIELDS
-    | {"uuid", "flow", "client-fingerprint", "reality-opts"},
-    Protocol.TUIC: _ENDPOINT_FIELDS
-    | _TLS_FIELDS
-    | {"version", "uuid", "password", "token", "ports", "hop-interval"},
-    Protocol.WIREGUARD: _ENDPOINT_FIELDS
-    | {
-        "ip",
-        "ipv6",
-        "private-key",
-        "public-key",
-        "preshared-key",
-        "dns",
-        "mtu",
-        "reserved",
-        "keepalive",
-    },
-    Protocol.SSH: frozenset(
-        {
-            "name",
-            "type",
-            "server",
-            "port",
-            "user",
-            "password",
-            "private-key",
-            "private-key-passphrase",
-            "dialer-proxy",
-            "interface-name",
-        }
-    ),
-    Protocol.DIRECT: frozenset({"name", "type", "interface-name"}),
-    Protocol.MIERU: frozenset(
-        {
-            "name",
-            "type",
-            "server",
-            "port",
-            "port-range",
-            "transport",
-            "username",
-            "password",
-            "dialer-proxy",
-            "interface-name",
-        }
-    ),
-    Protocol.JUICITY: frozenset(
-        {
-            "name",
-            "type",
-            "server",
-            "port",
-            "uuid",
-            "password",
-            "skip-cert-verify",
-            "server-cert-fingerprint",
-            "sni",
-            "alpn",
-            "dialer-proxy",
-            "interface-name",
-        }
-    ),
-    Protocol.TAILSCALE: frozenset(
-        {
-            "name",
-            "type",
-            "auth-key",
-            "hostname",
-            "control-url",
-            "ephemeral",
-            "exit-node",
-        }
-    ),
-    Protocol.MASQUE: frozenset(
-        {
-            "name",
-            "type",
-            "server",
-            "port",
-            "private-key",
-            "public-key",
-            "ip",
-            "ipv6",
-            "dns",
-            "network",
-            "sni",
-            "connect-uri",
-            "mtu",
-            "keepalive",
-        }
-    ),
-    Protocol.TRUSTTUNNEL: frozenset(
-        {
-            "name",
-            "type",
-            "server",
-            "port",
-            "username",
-            "password",
-            "quic",
-            "sni",
-            "alpn",
-            "skip-cert-verify",
-            "server-cert-fingerprint",
-        }
-    ),
-}
 
 _PLUGIN_FIELDS = {
     "obfs": frozenset({"mode", "host"}),
@@ -248,7 +67,7 @@ def _mbps_value(value: Any) -> int | None:
 
 
 def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
-    """Translate documented Stash aliases into the shared descriptor dialect."""
+    """Translate documented Stash aliases into the shared codec dialect."""
     normalized = copy.deepcopy(data)
     _move_aliases(normalized, _INPUT_ALIASES["*"], dialect="Stash")
     protocol = str(normalized.get("type", ""))
@@ -306,9 +125,7 @@ def post_stash_emit(
             if source not in output:
                 continue
             value = _mbps_value(output.pop(source))
-            if target in output:
-                dropped.add(source)
-            elif value is None:
+            if target in output or value is None:
                 dropped.add(source)
             else:
                 output[target] = value
@@ -338,7 +155,10 @@ def post_stash_emit(
             if not options:
                 output.pop("plugin-opts")
 
-    allowed = set(_PROTOCOL_FIELDS.get(node.type, frozenset()))
+    import subio_v2.protocols as protocol_registry
+
+    codec = protocol_registry.get(node.type)
+    allowed = set(codec.fields_for_dialect("stash") if codec else frozenset())
     if node.source_context is not None and node.source_context.dialect == "stash":
         allowed.update(node.extra)
     for key in tuple(output):

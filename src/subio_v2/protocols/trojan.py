@@ -9,6 +9,7 @@ from subio_v2.capabilities.definitions import (
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -22,6 +23,9 @@ class TrojanCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TROJAN
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"
+    dialect_fields = {
+        "stash": stash_fields("password", tls=True, transport=True)
+    }
     target_constraints = {
         "clash": {"transports": {TRANSPORT_TCP, TRANSPORT_WS}},
         "dae": {

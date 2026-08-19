@@ -3,6 +3,7 @@ from __future__ import annotations
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, Socks5Node
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
@@ -10,6 +11,9 @@ class Socks5Codec(StructuredClashProtocolCodec):
     protocol = Protocol.SOCKS5
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "socks5"
+    dialect_fields = {
+        "stash": stash_fields("username", "password", tls=True)
+    }
     target_constraints = {
         "clash": {"features": {"tls"}},
         "mihomo": {"features": {"tls"}},

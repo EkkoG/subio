@@ -3,6 +3,7 @@ from __future__ import annotations
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import HttpNode, HttpVariant, Node, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
@@ -10,6 +11,9 @@ class HttpCodec(StructuredClashProtocolCodec):
     protocol = Protocol.HTTP
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "http"
+    dialect_fields = {
+        "stash": stash_fields("username", "password", "headers", tls=True)
+    }
     target_constraints = {
         "clash": {"features": {"tls"}},
         "dae": {"features": {"tls"}},

@@ -6,6 +6,7 @@ from typing import Any
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SnellNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -40,6 +41,9 @@ class SnellCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SNELL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"
+    dialect_fields = {
+        "stash": stash_fields("psk", "version", "reuse", "obfs-opts")
+    }
     target_constraints = {
         "mihomo": {
             "versions": {1, 2, 3, 4, 5},

@@ -12,6 +12,7 @@ from subio_v2.capabilities.definitions import (
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -19,6 +20,9 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWSOCKS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "ss"
+    dialect_fields = {
+        "stash": stash_fields("cipher", "password", "plugin", "plugin-opts")
+    }
     target_constraints = {
         "clash": {
             "ciphers": SS_CIPHERS_EXTENDED,

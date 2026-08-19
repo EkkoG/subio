@@ -3,6 +3,7 @@ from __future__ import annotations
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TrustTunnelNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group, tls_group
 
 
@@ -10,6 +11,13 @@ class TrustTunnelCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name", "type", "server", "port", "username", "password",
+            "quic", "sni", "alpn", "skip-cert-verify",
+            "server-cert-fingerprint", endpoint=False,
+        )
+    }
     fields = (
         scalar_field(
             "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True

@@ -12,6 +12,7 @@ from subio_v2.capabilities.definitions import (
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -25,6 +26,11 @@ class VmessCodec(StructuredClashProtocolCodec):
     protocol = Protocol.VMESS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "vmess"
+    dialect_fields = {
+        "stash": stash_fields(
+            "uuid", "cipher", "alterId", tls=True, transport=True
+        )
+    }
     target_constraints = {
         "clash": {
             "ciphers": VMESS_CIPHERS,

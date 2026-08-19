@@ -33,6 +33,7 @@ class ClashProtocolCodec(ABC):
     dynamic_clash_type: bool = False
     clash_dialects: frozenset[str] = frozenset({"mihomo"})
     target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
+    dialect_fields: Mapping[str, frozenset[str]] = MappingProxyType({})
 
     @property
     def definition(self) -> ProtocolDefinition:
@@ -54,6 +55,9 @@ class ClashProtocolCodec(ABC):
 
     def constraints_for_target(self, target: str) -> Mapping[str, Any]:
         return self.target_constraints.get(target, MappingProxyType({}))
+
+    def fields_for_dialect(self, dialect: str) -> frozenset[str]:
+        return self.dialect_fields.get(dialect, frozenset())
 
     @abstractmethod
     def parse_clash(
