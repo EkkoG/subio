@@ -1,3 +1,4 @@
+from dataclasses import fields
 from typing import get_type_hints
 
 import pytest
@@ -6,6 +7,10 @@ import subio_v2.protocols as registry
 from subio_v2.capabilities.definitions import PLATFORM_CAPABILITIES
 from subio_v2.model.nodes import BaseNode, Protocol
 from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols.definitions import (
+    TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS,
+    TERMINAL_NATIVE_COMMON_FIELDS,
+)
 
 
 class ConflictingDescriptor(ProtocolDescriptor):
@@ -101,6 +106,28 @@ def test_user_override_policy_preserves_previous_runtime_behavior():
     for definition in registry.all_definitions():
         model_fields = frozenset(get_type_hints(definition.node_class))
         assert definition.user_override_fields == previous_fields & model_fields
+
+
+def test_terminal_native_field_policy_classifies_every_model_field():
+    base_fields = {field.name for field in fields(BaseNode)}
+    assert TERMINAL_NATIVE_COMMON_FIELDS.isdisjoint(
+        TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS
+    )
+    assert (
+        TERMINAL_NATIVE_COMMON_FIELDS | TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS
+    ) == base_fields
+
+    for definition in registry.all_definitions():
+        protocol_fields = {
+            field.name for field in fields(definition.node_class)
+        } - base_fields
+        assert definition.terminal_native_fields.isdisjoint(
+            definition.terminal_native_excluded_fields
+        )
+        assert (
+            definition.terminal_native_fields
+            | definition.terminal_native_excluded_fields
+        ) == protocol_fields, definition.protocol.value
 
 
 def test_mihomo_capabilities_match_registered_protocols():
