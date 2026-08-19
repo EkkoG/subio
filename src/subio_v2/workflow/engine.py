@@ -21,7 +21,6 @@ from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.model.nodes import Node
 from subio_v2.parser.factory import ParserFactory
-from subio_v2.parser.surge import SurgeParser
 from subio_v2.platforms import resolve_platform
 from subio_v2.processor.common import (
     DialerProxyProcessor,
@@ -440,15 +439,13 @@ class WorkflowEngine:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
                 content = self._decode_provider_content(content_bytes, prov_conf)
 
-                if p_type == "surge":
-                    parser = SurgeParser(
-                        source_kind="remote" if "url" in prov_conf else "local",
-                        allow_unsafe_external=prov_conf.get(
-                            "allow_unsafe_external", False
-                        ),
-                    )
-                else:
-                    parser = ParserFactory.get_parser(p_type)
+                parser = ParserFactory.get_parser(
+                    p_type,
+                    source_kind="remote" if "url" in prov_conf else "local",
+                    allow_unsafe_external=prov_conf.get(
+                        "allow_unsafe_external", False
+                    ),
+                )
                 if parser is None:
                     raise ProviderLoadError(
                         f"Unsupported provider type '{p_type}' for provider '{name}'"

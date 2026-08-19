@@ -1,8 +1,8 @@
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.factory import ParserFactory
+from subio_v2.parser.stash import StashParser
 from subio_v2.parser.subio import SubioParser
 from subio_v2.parser.surge import SurgeParser
-from subio_v2.parser.stash import StashParser
 from subio_v2.parser.v2rayn import V2RayNParser
 from subio_v2.surge.resources import get_surge_node_attachments
 
@@ -57,3 +57,13 @@ shared = type = openssh-private-key, base64 = S0VZLUI=
     assert entry_a.values["base64"] == "S0VZLUE="
     assert entry_b.values["base64"] == "S0VZLUI="
     assert entry_a is not entry_b
+
+
+def test_surge_factory_owns_source_trust_options():
+    parser = ParserFactory.get_parser(
+        "surge", source_kind="remote", allow_unsafe_external=True
+    )
+
+    assert isinstance(parser, SurgeParser)
+    assert parser.source_kind == "remote"
+    assert parser.allow_unsafe_external is True
