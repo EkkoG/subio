@@ -8,6 +8,7 @@ import yaml
 from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
+from subio_v2.workflow.config import RunConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.workflow.template import TemplateRenderResult
@@ -24,6 +25,8 @@ def test_load_config_formats(tmp_path, monkeypatch):
     toml_p = write(tmp_path, "cfg.toml", "a = 1")
     eng = WorkflowEngine(str(toml_p))
     assert eng.config["a"] == 1
+    assert isinstance(eng.config, RunConfig)
+    assert eng.config.providers == ()
     # JSON
     json_p = write(tmp_path, "cfg.json", '{"a":2}')
     eng = WorkflowEngine(str(json_p))

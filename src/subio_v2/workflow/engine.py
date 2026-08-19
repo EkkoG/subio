@@ -1,14 +1,12 @@
 import hashlib
-import json
 import os
 import re
 import tempfile
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict, List
 
-import json5
-import toml
 import yaml
 
 from subio_v2.conversion import (
@@ -29,6 +27,7 @@ from subio_v2.processor.common import (
 )
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.errors import (
     ArtifactGenerationError,
     ConfigError,
@@ -50,7 +49,7 @@ class WorkflowEngine:
         self, config_path: str, dry_run: bool = False, clean_gist: bool = False
     ):
         self.config_path = config_path
-        self.config = self._load_config()
+        self.config: RunConfig = ConfigLoader.load(self.config_path)
         self.providers: Dict[str, List[Node]] = {}
         self.provider_issues: Dict[str, List[ConversionIssue]] = {}
         self.dry_run = dry_run
@@ -95,63 +94,8 @@ class WorkflowEngine:
             self._local_rulesets = RuleSetStore()
         self.rulesets = merge_stores(self._local_rulesets)
 
-    def _load_config(self) -> Dict[str, Any]:
-        try:
-            with open(self.config_path, "r") as f:
-                content = f.read()
-        except FileNotFoundError:
-            raise ConfigError(f"Config file not found: {self.config_path}")
-        except Exception as e:
-            raise ConfigError(f"Error reading config file: {e}") from e
-
-        # Determine format by file extension
-        ext = os.path.splitext(self.config_path)[1].lower()
-
-        try:
-            if ext == ".toml":
-                return toml.loads(content)
-            elif ext in (".yaml", ".yml"):
-                return yaml.safe_load(content)
-            elif ext == ".json":
-                return json.loads(content)
-            elif ext == ".json5":
-                return json5.loads(content)
-            else:
-                # Try to auto-detect format
-                return self._parse_config_auto(content)
-        except Exception as e:
-            raise ConfigError(f"Error parsing config ({ext}): {e}") from e
-
-    def _parse_config_auto(self, content: str) -> Dict[str, Any]:
-        """Try to parse config content by attempting multiple formats."""
-        # Try TOML first
-        try:
-            return toml.loads(content)
-        except Exception:
-            pass
-
-        # Try JSON
-        try:
-            return json.loads(content)
-        except Exception:
-            pass
-
-        # Try JSON5
-        try:
-            return json5.loads(content)
-        except Exception:
-            pass
-
-        # Try YAML last (most permissive)
-        try:
-            return yaml.safe_load(content)
-        except Exception:
-            pass
-
-        raise ConfigError("Unknown config format (tried toml, json, json5, yaml)")
-
     def _validate_config(self) -> None:
-        if not isinstance(self.config, dict):
+        if not isinstance(self.config, Mapping):
             raise ConfigError("Config root must be an object")
 
         global_allow_errors = self.config.get("allow_conversion_errors", False)
