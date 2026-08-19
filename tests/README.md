@@ -61,6 +61,14 @@ uv run python -m pytest -m contract tests/
 契约测试的范围、support matrix 映射和可随内部 API 改写的结构测试边界见
 `docs/contract_test_coverage.md`。`tests/conftest.py` 维护机器可读的 contract module 清单。
 
+当前 SubIO v1 schema 不再是长期兼容承诺，其测试作为迁移基线单独运行：
+
+```bash
+uv run python -m pytest -m native_v1_baseline tests/
+```
+
+终态 native schema 落地后，这组测试可以由新格式正向测试和旧 v1 拒绝测试替代。
+
 覆盖率（包名 `subio_v2`）：
 
 ```bash

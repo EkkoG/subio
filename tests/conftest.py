@@ -22,7 +22,6 @@ CONTRACT_TEST_MODULES = {
     "test_subio_v2_parser_clash_combos.py": "clash-family",
     "test_subio_v2_parser_clash_comprehensive.py": "clash-family",
     "test_subio_v2_parser_clash_full_coverage.py": "clash-family",
-    "test_subio_v2_parser_subio.py": "subio-v1",
     "test_subio_v2_parser_surge.py": "surge",
     "test_subio_v2_parser_v2rayn.py": "v2rayn",
     "test_subio_v2_platforms.py": "platform-naming",
@@ -36,7 +35,6 @@ CONTRACT_TEST_MODULES = {
     "test_subio_v2_stage9_stash_protocols.py": "stash",
     "test_subio_v2_stage10_stash_mieru_juicity.py": "stash",
     "test_subio_v2_stage11_stash_cross_platform.py": "stash",
-    "test_subio_v2_subio_format_docs.py": "subio-v1",
     "test_subio_v2_surge_capabilities.py": "surge",
     "test_subio_v2_surge_codec_invariants.py": "surge",
     "test_subio_v2_surge_cross_platform_protocols.py": "surge",
@@ -52,24 +50,42 @@ CONTRACT_TEST_MODULES = {
     "test_subio_v2_workflow_upload.py": "publication",
 }
 
+NATIVE_V1_BASELINE_TEST_MODULES = {
+    "test_subio_v2_parser_subio.py",
+    "test_subio_v2_subio_format_docs.py",
+}
+
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "contract: externally observable or adapter-level compatibility contract",
     )
+    config.addinivalue_line(
+        "markers",
+        "native_v1_baseline: migration evidence for the replaceable SubIO v1 format",
+    )
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     test_dir = Path(__file__).parent
     available = {path.name for path in test_dir.glob("test_*.py")}
-    missing = sorted(set(CONTRACT_TEST_MODULES) - available)
+    declared = set(CONTRACT_TEST_MODULES) | NATIVE_V1_BASELINE_TEST_MODULES
+    missing = sorted(declared - available)
     if missing:
         raise pytest.UsageError(
-            "Contract manifest references missing test modules: " + ", ".join(missing)
+            "Test evidence manifest references missing modules: " + ", ".join(missing)
+        )
+    overlap = sorted(set(CONTRACT_TEST_MODULES) & NATIVE_V1_BASELINE_TEST_MODULES)
+    if overlap:
+        raise pytest.UsageError(
+            "Test modules cannot be both contract and native v1 baseline: "
+            + ", ".join(overlap)
         )
 
     for item in items:
         area = CONTRACT_TEST_MODULES.get(item.path.name)
         if area is not None:
             item.add_marker(pytest.mark.contract(area=area))
+        if item.path.name in NATIVE_V1_BASELINE_TEST_MODULES:
+            item.add_marker(pytest.mark.native_v1_baseline)
