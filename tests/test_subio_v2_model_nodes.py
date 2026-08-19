@@ -4,6 +4,7 @@ import pytest
 
 from subio_v2.model.nodes import (
     BaseNode,
+    Node,
     Protocol,
     ShadowsocksNode,
     SourcePassthroughNode,
@@ -25,6 +26,10 @@ def make_node(name, users=None):
         password="p",
         users=users,
     )
+
+
+def test_general_node_annotation_has_no_concrete_protocol_list():
+    assert Node is BaseNode
 
 
 def test_clone_node_for_user_applies_overrides_and_clears_users():

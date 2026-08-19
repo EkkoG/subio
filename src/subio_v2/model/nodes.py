@@ -749,33 +749,6 @@ class SourcePassthroughNode(BaseNode):
         self.record.opaque_raw = value
 
 
-Node = Union[
-    ShadowsocksNode,
-    ShadowsocksRNode,
-    VmessNode,
-    VlessNode,
-    TrojanNode,
-    Socks5Node,
-    HttpNode,
-    WireguardNode,
-    TailscaleNode,
-    MasqueNode,
-    TrustTunnelNode,
-    DirectNode,
-    DNSNode,
-    RematchNode,
-    GostRelayNode,
-    ShadowQUICNode,
-    OpenVPNNode,
-    SudokuNode,
-    RejectNode,
-    AnyTLSNode,
-    HysteriaNode,
-    Hysteria2Node,
-    SSHNode,
-    SnellNode,
-    MieruNode,
-    JuicityNode,
-    TUICNode,
-    SourcePassthroughNode,
-]
+# ProtocolDefinition is the concrete model authority; general pipelines only
+# require the shared semantic node contract.
+Node = BaseNode
