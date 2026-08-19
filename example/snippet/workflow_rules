@@ -1,0 +1,8 @@
+primary, fallback
+DOMAIN-SUFFIX,example.test,{{ primary }}
+IP-CIDR,192.0.2.0/24,{{ primary }},no-resolve
+PROCESS-NAME,ExampleApp,{{ primary }}
+PROCESS-PATH,/usr/bin/example,{{ primary }}
+DST-PORT,443,{{ primary }}
+AND,((DOMAIN-SUFFIX,example.net),(OR,((NETWORK,udp),(NOT,((DST-PORT,8443)))))),{{ primary }}
+MATCH,{{ fallback }}

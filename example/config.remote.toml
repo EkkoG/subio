@@ -1,0 +1,65 @@
+# This advanced example is exercised by tests with a local HTTP server. Replace
+# the loopback port and Age placeholders before running it manually.
+
+[[uploader]]
+name = "example-gist"
+type = "gist"
+token = "ENV_SUBIO_EXAMPLE_GIST_TOKEN"
+id = "example-gist"
+clean = true
+
+[[provider]]
+name = "remote-mihomo"
+type = "mihomo"
+url = "http://127.0.0.1:8080/provider.age"
+user_agent = "SubIO-Example/1.0"
+age_secret_key = "REPLACE_WITH_AGE_SECRET_KEY"
+[provider.rename]
+add_prefix = "remote-"
+
+[[provider]]
+name = "remote-surge"
+type = "surge"
+url = "http://127.0.0.1:8080/surge.conf"
+user_agent = "SubIO-Example/1.0"
+[provider.rename]
+add_prefix = "remote-"
+replace = [{ old = "surge", new = "edge" }]
+
+[[ruleset]]
+name = "rules"
+url = "http://127.0.0.1:8080/rules.list"
+type = "mihomo"
+behavior = "classical"
+format = "text"
+
+# Omitting type/behavior/format keeps the compatibility default:
+# mihomo + classical + text.
+[[ruleset]]
+name = "legacy_defaults"
+url = "http://127.0.0.1:8080/rules.list"
+
+[[ruleset]]
+name = "surge_rules"
+url = "http://127.0.0.1:8080/surge-rules.list"
+type = "surge"
+behavior = "classical"
+format = "text"
+
+[[artifact]]
+name = "remote-mihomo.age"
+type = "mihomo"
+template = "remote-mihomo.yaml"
+providers = ["remote-mihomo"]
+age_public_key = "REPLACE_WITH_AGE_PUBLIC_KEY"
+[[artifact.upload]]
+to = "example-gist"
+[[artifact.upload]]
+to = "example-gist"
+file_name = "remote-mihomo-mirror.age"
+
+[[artifact]]
+name = "remote-surge.conf"
+type = "surge"
+template = "remote-surge.conf"
+providers = ["remote-surge"]

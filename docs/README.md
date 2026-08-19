@@ -6,6 +6,7 @@
 - `docs/subio_node_format.md`：SubIO 原生节点文件 v1 的用户格式、协议字段和迁移说明；
 - `docs/DEV.md`：当前开发约束、架构边界和扩展方法；
 - `docs/support_matrix.md`：当前节点、规则集输入和目标输出能力；
+- `docs/e2e_testing.md`：离线示例、CLI 端到端覆盖与敏感旧项目用法审计；
 - `docs/architecture_simplification_plan.md`：2026-08-16 架构收敛、规则语义审计和实施记录；
 - `tests/README.md`：测试目录和推荐验证顺序。
 

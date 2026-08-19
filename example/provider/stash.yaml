@@ -1,0 +1,39 @@
+proxies:
+  - name: stash-ss
+    type: ss
+    server: stash-ss.example.test
+    port: 8388
+    cipher: 2022-blake3-aes-128-gcm
+    password: MDEyMzQ1Njc4OWFiY2RlZg==
+    udp: true
+    plugin: shadow-tls
+    plugin-opts:
+      password: example-shadow-password
+      host: stash-shadow.example.test
+      version: 3
+
+  - name: stash-vless
+    type: vless
+    server: stash-vless.example.test
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000031
+    tls: true
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: example-public-key
+      short-id: abcd
+    network: xhttp
+    xhttp-opts:
+      mode: stream-up
+      path: /example
+      host: stash-vless.example.test
+
+  - name: stash-anytls
+    type: anytls
+    server: stash-anytls.example.test
+    port: 443
+    password: example-password
+    sni: stash-anytls.example.test
+
+  - name: stash-direct
+    type: direct

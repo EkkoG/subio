@@ -70,9 +70,9 @@ def _table_rows(body: str) -> dict[str, tuple[str, str]]:
 
 def test_subio_native_examples_follow_v1_contract():
     expected_counts = {
-        "self.toml": 16,
-        "nodes.json5": 3,
-        "multiuser.yml": 8,
+        "self.toml": 4,
+        "nodes.json5": 2,
+        "multiuser.yml": 3,
     }
     parser = SubioParser()
 

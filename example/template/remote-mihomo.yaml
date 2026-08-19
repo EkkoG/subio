@@ -1,0 +1,7 @@
+proxies:
+{{ proxies }}
+
+rules:
+{{ remote_rules("DIRECT") }}
+{{ remote_legacy_defaults("DIRECT") }}
+{{ remote_surge_rules("DIRECT") }}

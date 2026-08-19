@@ -40,7 +40,7 @@ uv run subio convert example/config.toml --dry-run
 ### 使用
 
 - 在当前目录下创建配置文件 `config.toml`，内容参考 [config.toml](./example/config.toml)。SubIO 也支持 YAML、JSON 和 JSON5 配置。
-- 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/clash.yaml)。
+- 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/mihomo.yaml)。
 - 可以在当前目录下创建 `snippet` 目录，用于存放参数化规则片段，参考 [pt](./example/snippet/pt)。第一行声明逗号分隔的 policy 参数，后续每行是规则；`{{ rule }}` 只表示已声明的 policy 参数引用，不是通用 Jinja 模板源码。
 - 可以在模板中引用远程规则集；远程规则集需要通过 `[[ruleset]]` 在配置文件中定义。
 
@@ -183,5 +183,6 @@ subio convert example/config.toml --clean-gist
 - [开发约束与架构](./docs/DEV.md)
 - [SubIO 节点文件格式 v1](./docs/subio_node_format.md)
 - [支持矩阵](./docs/support_matrix.md)
+- [端到端测试](./docs/e2e_testing.md)
 - [文档索引](./docs/README.md)
 - [已完成的项目级计划](./docs/development_plan.md)

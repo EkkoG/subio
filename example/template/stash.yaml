@@ -1,0 +1,11 @@
+proxies:
+{{ proxies }}
+
+proxy-groups:
+  - name: Example
+    type: select
+    proxies: {{ proxies_names }}
+    url: {{ options.proxy_test_url }}
+
+rules:
+{{ workflow_rules("DIRECT", "Example") }}

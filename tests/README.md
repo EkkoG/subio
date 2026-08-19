@@ -42,6 +42,16 @@ uv run python -m pytest tests/test_subio_v2_parser_clash*.py -v
 uv run python -m pytest tests/test_ruleset.py tests/test_subio_v2_template_ruleset*.py -v
 ```
 
+CLI 与示例端到端测试：
+
+```bash
+uv run python -m pytest tests/test_example_e2e.py -v
+```
+
+该测试通过已安装的 `subio` console script 运行离线示例，并额外覆盖失败事务、
+本地 HTTP provider/ruleset、Gist dry-run 和 Age 加解密闭环。详细约束见
+`docs/e2e_testing.md`。
+
 覆盖率（包名 `subio_v2`）：
 
 ```bash

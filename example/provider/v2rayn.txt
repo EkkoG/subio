@@ -1,4 +1,2 @@
-ss://YWVzLTEyOC1nY206dGVzdA@192.168.100.1:8888#Example1
-ss://YWVzLTEyOC1nY206dGVzdA@192.11.1.1:152/?plugin=obfs-local%3Bobfs%3Dtls%3Bobfs-host%3D9d4054e.wns.windows.com&group=RGxlc#%E9%A6%99%E6%B8%AF%20IEPL%20%5B01%5D%20%5BAir%5D
-http://name:diddd@example.com:37853
-trojan://ahh@example.com:1111?allowInsecure=1&tfo=0#ahh
+ss://YWVzLTI1Ni1nY206ZXhhbXBsZS1wYXNzd29yZA==@ss-link.example.test:8388#link-ss
+trojan://example-password@trojan-link.example.test:443?sni=trojan-link.example.test#link-trojan

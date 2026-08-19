@@ -1,267 +1,133 @@
-log_level = "DEBUG"
-allow_conversion_errors = true
+log_level = "INFO"
 
 [options]
-work_filter = '.*(香港|Hong Kong|HK|Japan|美国|United States|US).*(?<!\.)(1|2|3|4)|work|home-trojan-v6|ekko.*|dler.*'
+work = true
+proxy_test_url = "https://connectivity-check.example.test/generate_204"
+
 [filters]
-# 过滤使用原始名称匹配（重命名前的名称）
-# 例如：原始名称 "剩余流量: 100GB" 被重命名为 "备用机场-剩余流量: 100GB"
-#       exclude 仍然匹配原始名称 "剩余流量: 100GB"
-exclude = '.*剩余流量|距离下次|套餐到期.*'
-# include = '.*'
-
-# ========== Age 加密配置 ==========
-# 全局 age 私钥：用于解密所有 provider 的 age 加密订阅
-# age_secret_key = "AGE-SECRET-KEY-1..."
-# 全局 age 公钥：所有 artifact 输出都会用此公钥加密后上传
-# age_public_key = "age1..."
-
-[[uploader]]
-name = 'gist'
-type = 'gist'
-# https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
-token = "ENV_GITHUB_TOKEN"
-id = "a188d6b32ddf7cf3bbc9554055e5e2a4"
+exclude = "^disabled-"
 
 [[provider]]
-name = "主力机场"
+name = "portable"
 type = "mihomo"
-file = "meta.yaml"
-# 兼容旧配置：type = "clash-meta" 仍可使用，但会提示替换为 mihomo。
-# 原版 Clash 仍可使用 type = "clash"，但会产生废弃提示。
-# url = 'https://github.com/MetaCubeX/mihomo/raw/refs/heads/Alpha/docs/config.yaml'
-# 可选：provider 级别 filters（与全局 [filters] 同结构，加载时应用，先于全局 filter）
-# [provider.filters]
-# include = '.*'
-# exclude = '.*剩余流量.*'
-
-# Stash YAML 节点可直接作为输入；取消注释并提供对应文件即可。
-# [[provider]]
-# name = "Stash 节点"
-# type = "stash"
-# file = "stash.yaml"
-
-[[provider]]
-name = "Surge 测试本地"
-type = "surge"
-file = 'surge.conf'
-[provider.rename]
-add_prefix = "Surge-"
-
-[[provider]]
-name = "v2rayn"
-type = "v2rayn"
-file = 'v2rayn.txt'
-
-[[provider]]
-name = "Surge 测试"
-type = "surge"
-url = "https://gist.github.com/EkkoG/623bfd3be62a68b831c29007305ebbc2/raw/surge.conf"
-[provider.rename]
-add_prefix = "备用机场-"
-replace = [
-  {old = "节点", new = "机场"}
-]
-
-[[provider]]
-name = "自建节点"
-type = "subio"
-file = 'self.toml'
-
-# ============ Provider 级别 filters 示例 ============
-# 与全局 [filters] 结构相同（include/exclude），在 provider 加载时应用，先于全局 filter
-# 仅保留该 provider 中名称匹配的节点
-[[provider]]
-name = "自建节点-仅香港"
-type = "subio"
-file = 'self.toml'
+file = "mihomo.yaml"
 [provider.filters]
-include = '香港|HK'
-[provider.rename]
-add_prefix = "HK-"
+include = "^portable-"
 
 [[provider]]
-name = "JSON5节点"
-type = "subio"
-file = 'nodes.json5'
+name = "portable-links"
+type = "mihomo"
+file = "mihomo.yaml"
+[provider.filters]
+include = "^portable-(ss|vmess|trojan|socks5)$"
 
-# ============ Dialer Proxy 示例 ============
-# Dialer Proxy 示例: 将某个 provider 中的所有节点都通过另一个代理连接
-# 适用于需要代理链的场景，例如：节点 -> 代理A -> 代理B -> 目标服务器
-#
-# 在 Mihomo/Clash/Stash 中输出为 dialer-proxy 参数
-# 在 Surge 中输出为 underlying-proxy 参数
-#
-# 注意：dialer_proxy 的值应该是另一个已定义的代理名称（需要在同一个 artifact 的 providers 中定义）
-
-# ============ Age 加密 Provider 示例 ============
-# 如果订阅源的内容是 age 加密的，配置 age_secret_key 即可自动解密
-# [[provider]]
-# name = "加密订阅"
-# type = "mihomo"
-# url = "https://example.com/encrypted-sub.txt"
-# age_secret_key = "AGE-SECRET-KEY-1..."
-
-# 示例1: Mihomo 中使用 dialer-proxy
-# 将"主力机场"的所有节点通过"自建节点"中的某个节点连接
-# dialer_proxy 的值必须是同一个 artifact 中已存在的节点名称
 [[provider]]
-name = "主力机场-代理链"
+name = "chain"
 type = "mihomo"
-file = "meta.yaml"
-dialer_proxy = "香港-IPLC-01"  # 该 provider 中的所有节点都会添加 dialer-proxy=香港-IPLC-01（Mihomo/Clash-family）或 underlying-proxy=香港-IPLC-01（Surge）
+file = "mihomo.yaml"
+dialer_proxy = "portable-ss"
+[provider.filters]
+include = "^chain-"
 [provider.rename]
-add_prefix = "代理链-"
+add_prefix = "via-"
+replace = [{ old = "chain", new = "hop" }]
 
-# 示例2: Surge 中使用 dialer-proxy（会自动转换为 underlying-proxy）
-# dialer_proxy 的值必须是同一个 artifact 中已存在的节点名称
 [[provider]]
-name = "Surge 测试-代理链"
-type = "surge"
-file = 'surge.conf'
-dialer_proxy = "Surge-ss1"  # 该 provider 中的所有节点都会添加 underlying-proxy=Surge-ss1
-[provider.rename]
-add_prefix = "代理链-"
-
-[[artifact]]
-name = "ekko-meta.yaml"
+name = "modern-mihomo"
 type = "mihomo"
-template = "clash.yaml"
-providers = ["自建节点", "主力机场", "Surge 测试"]
-[artifact.options]
-work = true
+file = "mihomo.yaml"
+[provider.filters]
+include = "^modern-"
 
-[[artifact]]
-name = "ekko2.yaml"
-type = "mihomo"
-template = "clash.yaml"
-providers = ["自建节点", "主力机场"]
-[artifact.options]
-work = true
-
-[[artifact]]
-name = "ekko-stash.yaml"
+[[provider]]
+name = "stash-native"
 type = "stash"
-template = "clash.yaml"
-providers = ["自建节点", "主力机场"]
+file = "stash.yaml"
+
+[[provider]]
+name = "surge-native"
+type = "surge"
+file = "surge.conf"
+
+[[provider]]
+name = "subio-native"
+type = "subio"
+file = "self.toml"
+[provider.rename]
+add_prefix = "native-"
+
+[[provider]]
+name = "subio-json5"
+type = "subio"
+file = "nodes.json5"
+
+[[provider]]
+name = "subio-users"
+type = "subio"
+file = "multiuser.yml"
+
+[[provider]]
+name = "v2rayn-links"
+type = "v2rayn"
+file = "v2rayn.txt"
+
+[[artifact]]
+name = "mihomo.yaml"
+type = "mihomo"
+template = "mihomo.yaml"
+providers = ["portable", "chain", "subio-native", "subio-json5"]
 [artifact.options]
 work = true
 
 [[artifact]]
-name = "ekko-surge.conf"
+name = "raw-mihomo.yaml"
+type = "mihomo"
+providers = ["modern-mihomo"]
+
+[[artifact]]
+name = "stash.yaml"
+type = "stash"
+template = "stash.yaml"
+providers = ["portable", "stash-native"]
+
+[[artifact]]
+name = "surge.conf"
 type = "surge"
 template = "surge.conf"
-providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-[artifact.options]
-work = true
-[[artifact.upload]]
-to = "gist"
-[[artifact.upload]]
-to = "gist"
-file_name = 'clash-for-xx.yml'
+providers = ["portable", "surge-native"]
 
 [[artifact]]
 name = "dae.conf"
 type = "dae"
 template = "dae.conf"
-providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-[artifact.options]
-work = true
+providers = ["portable", "chain"]
 
 [[artifact]]
-name = "dae_subscription.txt"
+name = "dae-subscription.txt"
 type = "dae"
 template = "dae_subscription.txt"
-providers = ["自建节点", "主力机场", "Surge 测试", 'Surge 测试本地']
-[artifact.options]
-work = true
-# [[artifact.upload]]
-# to = "gist"
+providers = ["portable", "chain"]
 
 [[artifact]]
-name = "v2rayn.conf"
+name = "v2rayn.txt"
 type = "v2rayn"
 template = "v2rayn.conf"
-providers = ["v2rayn"]
+providers = ["portable-links", "v2rayn-links"]
 
-# ============ Dialer Proxy 测试示例 ============
-# 测试 dialer-proxy 功能：生成带代理链的配置
 [[artifact]]
-name = "test-dialer-proxy.yaml"
+name = "user-{user}.yaml"
 type = "mihomo"
-template = "clash.yaml"
-providers = ["自建节点", "主力机场-代理链"]
+template = "mihomo.yaml"
+providers = ["subio-users"]
+users = ["alice", "bob"]
 [artifact.options]
 work = false
 
-# 测试 Surge underlying-proxy 功能
 [[artifact]]
-name = "test-underlying-proxy.conf"
-type = "surge"
-template = "surge.conf"
-providers = ["Surge 测试本地", "Surge 测试-代理链"]
-[artifact.options]
-work = false
-
-# 测试 Provider 级别 filters：仅香港节点（3 个）
-[[artifact]]
-name = "test-provider-filters.yaml"
+name = "single-user.yaml"
 type = "mihomo"
-template = "clash.yaml"
-providers = ["自建节点-仅香港"]
-[artifact.options]
-work = false
-
-# ============ 多用户示例 ============
-# ============ Age 加密输出示例 ============
-# 用 age 公钥加密 artifact 输出，上传到 Gist 的是加密内容。
-# Mihomo 客户端可用 --age-secret-key 自动解密使用。
-# [[artifact]]
-# name = "ekko-meta-encrypted.yaml"
-# type = "mihomo"
-# template = "clash.yaml"
-# providers = ["自建节点", "主力机场"]
-# age_public_key = "age1..."
-# [[artifact.upload]]
-# to = "gist"
-
-# ============ 多用户示例 ============
-# Multi-user example: 一个配置为多个用户批量生成
-
-[[provider]]
-name = "多用户节点"
-type = "subio"
-file = 'multiuser.yml'
-
-# 方式1: 批量生成多用户配置
-# 会生成: clash-for-alice.yml, clash-for-bob.yml, clash-for-charlie.yml
-[[artifact]]
-name = "clash-for-{user}.yml"
-type = "mihomo"
-template = "clash.yaml"
-providers = ["多用户节点", "自建节点"]
-users = ["alice", "bob", "charlie"]
-[artifact.options]
-work = false
-[[artifact.upload]]
-to = "gist"
-file_name = "clash-for-{user}.yml"
-
-# 方式2: 单用户配置 (混合多用户节点 + 自建节点 + 机场节点)
-[[artifact]]
-name = "clash-alice-full.yml"
-type = "mihomo"
-template = "clash.yaml"
-providers = ["多用户节点", "自建节点", "JSON5节点", "主力机场"]
+template = "mihomo.yaml"
+providers = ["subio-users"]
 user = "alice"
 [artifact.options]
-work = true
-
-[[ruleset]]
-name = 'netflix'
-url = 'https://github.com/blackmatrix7/ios_rule_script/raw/master/rule/Surge/Netflix/Netflix.list'
-type = 'surge'
-[[ruleset]]
-name = 'apple_direct'
-url = 'https://cdn.jsdelivr.net/gh/Loyalsoldier/surge-rules@release/ruleset/apple.txt'
-type = 'surge'
+work = false

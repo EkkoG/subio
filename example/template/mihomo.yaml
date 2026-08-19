@@ -1,0 +1,22 @@
+proxies:
+{{ proxies }}
+
+proxy-groups:
+  - name: Example
+    type: select
+    proxies: {{ proxies_names }}
+    url: {{ options.proxy_test_url }}
+{% if options.get('work', false) %}
+  - name: Work
+    type: select
+    proxies: {{ filter.regex_filter(proxies_names, 'portable.*') }}
+  - name: WithoutHTTP
+    type: select
+    proxies: {{ filter.exclude(proxies_names, 'http') }}
+  - name: Composed
+    type: select
+    proxies: {{ ['DIRECT'] + filter.chain(filter.keyword('portable'), filter.excluding('http'))(proxies_names) }}
+{% endif %}
+
+rules:
+{{ workflow_rules("DIRECT", "Example") }}
