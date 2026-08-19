@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.errors import ArtifactGenerationError, ConfigError
 from subio_v2.model.nodes import (
     DirectNode,
     MasqueNode,
@@ -13,7 +14,6 @@ from subio_v2.model.nodes import (
 )
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.workflow.engine import WorkflowEngine
-from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
 
 
 def write(tmp_path: Path, name: str, content: str) -> Path:

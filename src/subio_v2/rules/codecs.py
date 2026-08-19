@@ -8,24 +8,23 @@ from typing import Protocol
 import yaml
 
 from subio_v2.dialect import DialectContext
+from subio_v2.errors import ConfigError
 from subio_v2.model.rules import (
     HeadlessRuleSet,
     LogicalExpression,
     Predicate,
     RuleComment,
+    RuleExpression,
     RuleSetEntry,
     RuleSetParseResult,
-    RuleExpression,
 )
-from subio_v2.workflow.errors import ConfigError
-from subio_v2.workflow.mrs import decode_mrs
-from subio_v2.workflow.rule_parser import (
-    ClassicalRuleParser,
+from subio_v2.rules.mrs import decode_mrs
+from subio_v2.rules.parser import (
     MIHOMO_CLASSICAL_PARSER,
     STASH_CLASSICAL_PARSER,
     SURGE_CLASSICAL_PARSER,
+    ClassicalRuleParser,
 )
-
 
 SUPPORTED_RULESET_DIALECTS = frozenset({"mihomo", "stash", "surge"})
 

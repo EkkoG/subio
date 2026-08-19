@@ -2,7 +2,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from subio_v2.workflow.errors import ArtifactGenerationError
+from subio_v2.errors import ArtifactGenerationError
 
 
 class ArtifactPublisher:

@@ -9,34 +9,33 @@ from typing import Any, Callable, Mapping
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.dialect import DialectContext, dialect_context_for_platform
+from subio_v2.errors import ConfigError
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
     HeadlessRuleSet,
     LiteralPolicy,
     LogicalExpression,
-    ParameterReference,
     ParameterizedRuleSet,
+    ParameterReference,
     Predicate,
     RuleComment,
     RuleExpression,
     RuleRenderResult,
 )
 from subio_v2.platforms import normalize_platform
-from subio_v2.utils.logger import logger
-from subio_v2.workflow.errors import ConfigError
-from subio_v2.workflow.rule_parser import (
-    MIHOMO_CLASSICAL_PARSER,
-    parse_argument_names,
-    validate_identifier,
-)
-from subio_v2.workflow.remote import RemoteLoadError, RunRemoteLoader
-from subio_v2.workflow.ruleset_codec import (
+from subio_v2.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
     RuleSetInputCodecRegistry,
     RuleSetInputSelection,
 )
-
+from subio_v2.rules.parser import (
+    MIHOMO_CLASSICAL_PARSER,
+    parse_argument_names,
+    validate_identifier,
+)
+from subio_v2.utils.logger import logger
 
 CLASH_PLATFORMS = frozenset({"clash", "mihomo", "stash"})
 LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})

@@ -7,6 +7,9 @@ DOMAIN_FILES = (
     REPO_ROOT / "src" / "subio_v2" / "protocols" / "definitions.py",
     REPO_ROOT / "src" / "subio_v2" / "protocols" / "user_overrides.py",
 )
+RULES_FILES = tuple(
+    sorted((REPO_ROOT / "src" / "subio_v2" / "rules").glob("*.py"))
+)
 
 FORBIDDEN_IMPORTS = (
     "os",
@@ -63,3 +66,19 @@ def test_node_and_rules_models_do_not_import_each_other():
 
     assert "subio_v2.model.rules" not in nodes_imports
     assert "subio_v2.model.nodes" not in rules_imports
+
+
+def test_rules_package_does_not_depend_on_workflow_or_node_models():
+    violations = {
+        str(path.relative_to(REPO_ROOT)): sorted(
+            module
+            for module in _imports(path)
+            if module == "subio_v2.workflow"
+            or module.startswith("subio_v2.workflow.")
+            or module == "subio_v2.model.nodes"
+        )
+        for path in RULES_FILES
+    }
+    violations = {path: modules for path, modules in violations.items() if modules}
+
+    assert violations == {}

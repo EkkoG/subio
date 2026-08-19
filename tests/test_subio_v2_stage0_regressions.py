@@ -5,14 +5,13 @@ import pytest
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.factory import EmitterFactory
 from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.errors import ArtifactGenerationError, ConfigError
 from subio_v2.model.nodes import RejectMode, RejectNode
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.factory import ParserFactory
 from subio_v2.parser.surge import SurgeParser
+from subio_v2.rules.runtime import load_rulesets, load_snippets
 from subio_v2.workflow.engine import WorkflowEngine
-from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError
-from subio_v2.workflow.ruleset import load_rulesets, load_snippets
-
 
 FIXTURES = Path(__file__).parent / "fixtures/rulesets"
 CERT_SHA256 = ":".join(["AA"] * 32)
@@ -21,7 +20,7 @@ CERT_SHA256 = ":".join(["AA"] * 32)
 def test_untyped_remote_rejects_mihomo_yaml_instead_of_sniffing(monkeypatch):
     content = (FIXTURES / "mihomo/classical-yaml.yaml").read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 
@@ -31,7 +30,7 @@ def test_untyped_remote_rejects_mihomo_yaml_instead_of_sniffing(monkeypatch):
 
 def test_mihomo_classical_src_is_an_option_not_policy(monkeypatch):
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: b"IP-CIDR,10.0.0.0/8,src,no-resolve",
     )
     ruleset = load_rulesets(
@@ -77,7 +76,7 @@ def test_mihomo_mrs_decodes_to_normal_rules(
 ):
     content = (FIXTURES / "mrs" / fixture_name).read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 
@@ -101,7 +100,7 @@ def test_mihomo_mrs_decodes_to_normal_rules(
 def test_mihomo_classical_mrs_is_rejected(monkeypatch):
     content = (FIXTURES / "mrs/domain.mrs").read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 
@@ -122,7 +121,7 @@ def test_mihomo_classical_mrs_is_rejected(monkeypatch):
 def test_stash_domain_mrs_reuses_normal_rule_ir(monkeypatch):
     content = (FIXTURES / "mrs/domain.mrs").read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 

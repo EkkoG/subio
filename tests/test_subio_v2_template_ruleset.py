@@ -4,6 +4,7 @@ import os
 import pytest
 
 from subio_v2.dialect import DialectContext
+from subio_v2.errors import TemplateRenderError
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
@@ -11,9 +12,8 @@ from subio_v2.model.rules import (
     Predicate,
     RuleComment,
 )
+from subio_v2.rules.runtime import RuleSet, RuleSetStore
 from subio_v2.workflow.template import TemplateRenderer
-from subio_v2.workflow.errors import TemplateRenderError
-from subio_v2.workflow.ruleset import RuleSet, RuleSetStore
 
 
 def make_ruleset(name, entries):

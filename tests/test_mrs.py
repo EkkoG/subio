@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import zstandard
 
-from subio_v2.workflow import mrs
-from subio_v2.workflow.errors import ConfigError
+from subio_v2.errors import ConfigError
+from subio_v2.rules import mrs
 
 
 def _compress(payload: bytes) -> bytes:

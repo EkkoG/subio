@@ -68,7 +68,8 @@ Config / local snippet
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
 | `src/subio_v2/capabilities/` | 当前 serializer 能表达的平台能力 |
-| `src/subio_v2/workflow/` | provider、规则集、模板、artifact 和上传事务 |
+| `src/subio_v2/rules/` | 可分享规则集 grammar、codec、IR runtime 和 renderer |
+| `src/subio_v2/workflow/` | typed config、provider/artifact 编排、模板和发布事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
 `ParserFactory` 和 `EmitterFactory` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得

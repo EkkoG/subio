@@ -5,9 +5,8 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List
 
+from subio_v2.errors import UploadError
 from subio_v2.utils.logger import logger
-from subio_v2.workflow.errors import UploadError
-
 
 _GIST_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 

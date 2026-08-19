@@ -6,7 +6,7 @@ from subio_v2.model.rules import (
     ParameterizedRuleSet,
     Predicate,
 )
-from subio_v2.workflow.ruleset import RuleSet
+from subio_v2.rules.runtime import RuleSet
 
 
 def make_ruleset(entries):

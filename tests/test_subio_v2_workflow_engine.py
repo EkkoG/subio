@@ -8,9 +8,9 @@ import yaml
 from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
+from subio_v2.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.workflow.config import RunConfig
 from subio_v2.workflow.engine import WorkflowEngine
-from subio_v2.workflow.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.workflow.template import TemplateRenderResult
 
 
@@ -801,7 +801,7 @@ def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
         staticmethod(lambda issues: logged_issues.extend(issues)),
     )
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: b"USER-AGENT,*Safari*\n",
     )
     engine = WorkflowEngine(str(cfg), dry_run=True)
@@ -862,7 +862,7 @@ def test_allowed_ruleset_errors_are_returned_by_workflow(tmp_path, monkeypatch):
     cfg = _write_ruleset_issue_workflow(tmp_path, allow_errors=True)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: b"USER-AGENT,*Safari*\n",
     )
 

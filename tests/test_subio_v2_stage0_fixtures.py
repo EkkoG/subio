@@ -12,8 +12,7 @@ from subio_v2.model.rules import (
     ParameterizedRuleSet,
     Predicate,
 )
-from subio_v2.workflow.ruleset import RuleSet
-
+from subio_v2.rules.runtime import RuleSet
 
 FIXTURES = Path(__file__).parent / "fixtures"
 RULESET_FIXTURES = FIXTURES / "rulesets"

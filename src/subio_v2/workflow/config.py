@@ -11,7 +11,7 @@ import json5
 import toml
 import yaml
 
-from subio_v2.workflow.errors import ConfigError
+from subio_v2.errors import ConfigError
 
 
 @dataclass(frozen=True)

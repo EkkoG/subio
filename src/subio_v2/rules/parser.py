@@ -5,22 +5,21 @@ from dataclasses import dataclass, field
 
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.dialect import DialectContext
+from subio_v2.errors import ConfigError
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
     HeadlessRuleSet,
     LiteralPolicy,
     LogicalExpression,
-    ParameterReference,
     ParameterizedEntry,
+    ParameterReference,
     Predicate,
     RuleComment,
     RuleExpression,
     RuleSetEntry,
     RuleSetParseResult,
 )
-from subio_v2.workflow.errors import ConfigError
-
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 POLICY_PLACEHOLDER_RE = re.compile(r"^\{\{\s*([A-Za-z][A-Za-z0-9_]*)\s*\}\}$")

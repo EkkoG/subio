@@ -3,24 +3,28 @@ from pathlib import Path
 import pytest
 
 from subio_v2.dialect import DialectContext
+from subio_v2.errors import ConfigError
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
     LiteralPolicy,
-    ParameterReference,
     ParameterizedRuleSet,
+    ParameterReference,
     Predicate,
     RuleComment,
 )
-from subio_v2.workflow.errors import ConfigError
-from subio_v2.workflow.rule_parser import (
+from subio_v2.rules.codecs import (
+    DEFAULT_RULESET_CODEC_REGISTRY,
+    RuleSetInputSelection,
+)
+from subio_v2.rules.parser import (
     MIHOMO_CLASSICAL_PARSER,
     MIHOMO_CLASSICAL_SPEC,
     STASH_CLASSICAL_SPEC,
     SURGE_CLASSICAL_SPEC,
     split_rule_tokens,
 )
-from subio_v2.workflow.ruleset import (
+from subio_v2.rules.runtime import (
     RuleIssueCollector,
     RuleSet,
     RuleSetStore,
@@ -28,11 +32,6 @@ from subio_v2.workflow.ruleset import (
     load_snippets,
     merge_stores,
 )
-from subio_v2.workflow.ruleset_codec import (
-    DEFAULT_RULESET_CODEC_REGISTRY,
-    RuleSetInputSelection,
-)
-
 
 FIXTURES = Path(__file__).parent / "fixtures/rulesets"
 
@@ -251,7 +250,7 @@ def test_registry_rejects_illegal_combinations(selection):
 def test_untyped_remote_is_exactly_mihomo_classical_text(monkeypatch):
     content = (FIXTURES / "mihomo/classical-text.list").read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 
@@ -268,7 +267,7 @@ def test_untyped_remote_is_exactly_mihomo_classical_text(monkeypatch):
 def test_untyped_remote_does_not_sniff_mihomo_yaml(monkeypatch):
     content = (FIXTURES / "mihomo/classical-yaml.yaml").read_bytes()
     monkeypatch.setattr(
-        "subio_v2.workflow.ruleset.load_remote_resource",
+        "subio_v2.rules.runtime.load_remote_resource",
         lambda *args, **kwargs: content,
     )
 

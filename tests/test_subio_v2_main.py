@@ -1,10 +1,9 @@
 import sys
 
-from subio_v2.conversion import ConversionIssue, IssueSeverity
-from subio_v2.workflow.errors import ArtifactGenerationError
-
 # Import the module under test
 from subio_v2 import main as main_mod
+from subio_v2.conversion import ConversionIssue, IssueSeverity
+from subio_v2.errors import ArtifactGenerationError
 
 
 def test_find_default_config_priority(tmp_path, monkeypatch):

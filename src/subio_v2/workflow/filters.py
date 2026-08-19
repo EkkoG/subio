@@ -7,7 +7,7 @@
 """
 
 import re
-from typing import List, Any, Callable
+from typing import Any, Callable, List
 
 # 过滤器类型
 FilterFunc = Callable[[List[Any]], List[Any]]
