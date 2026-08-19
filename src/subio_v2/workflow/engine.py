@@ -14,14 +14,14 @@ from subio_v2.conversion import (
 )
 from subio_v2.crypto import age
 from subio_v2.emitter.base import BaseEmitter
-from subio_v2.emitter.factory import EmitterFactory
+from subio_v2.emitter.registry import EmitterRegistry
 from subio_v2.errors import (
     ArtifactGenerationError,
     ConfigError,
     ProviderLoadError,
 )
 from subio_v2.model.nodes import Node
-from subio_v2.parser.factory import ParserFactory
+from subio_v2.parser.registry import ParserRegistry
 from subio_v2.platforms import resolve_platform
 from subio_v2.processor.common import (
     DialerProxyProcessor,
@@ -75,7 +75,7 @@ class WorkflowEngine:
         self._validate_config()
         self._warn_platform_type_replacements()
 
-        # Parsers and Emitters are now managed by Factory
+        # Parsers and emitters are constructed by their registries.
 
         # Template Renderer
         config_dir = os.path.dirname(self.config_path)
@@ -383,7 +383,7 @@ class WorkflowEngine:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
                 content = self._decode_provider_content(content_bytes, prov_conf)
 
-                parser = ParserFactory.get_parser(
+                parser = ParserRegistry.get_parser(
                     p_type,
                     source_kind="remote" if "url" in prov_conf else "local",
                     allow_unsafe_external=prov_conf.get(
@@ -577,7 +577,7 @@ class WorkflowEngine:
             nodes = global_filter.process(nodes)
 
         # Emit
-        emitter = EmitterFactory.get_emitter(a_type)
+        emitter = EmitterRegistry.get_emitter(a_type)
 
         if emitter:
             # Determine display name and actual filename

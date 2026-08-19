@@ -3,13 +3,13 @@ from typing import Callable, Dict
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.stash import StashEmitter
+from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.platforms import normalize_platform
 
 
-class EmitterFactory:
+class EmitterRegistry:
     _factories: Dict[str, Callable[[], BaseEmitter]] = {
         "clash": lambda: ClashEmitter(platform="clash"),
         "mihomo": lambda: ClashEmitter(platform="mihomo"),

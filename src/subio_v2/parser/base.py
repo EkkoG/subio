@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Any
+
 from subio_v2.conversion import ParseResult
 from subio_v2.model.nodes import Node
 
 
 class BaseParser(ABC):
-    def parse(self, content: Any) -> list[Node]:
-        """Compatibility API returning only successfully parsed nodes."""
+    def parse_nodes(self, content: Any) -> list[Node]:
+        """Return only successfully parsed nodes."""
         return self.parse_result(content).nodes
 
     @abstractmethod

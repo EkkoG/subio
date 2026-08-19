@@ -36,7 +36,7 @@ proxies:
     tls: true
     sni: v4
 """
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     names = [n.name for n in nodes]
     assert names == ["ss1", "vm2", "tro3", "vless4"]
     assert nodes[0].type == Protocol.SHADOWSOCKS and nodes[0].cipher == "aes-256-gcm"
@@ -47,12 +47,12 @@ proxies:
 
 def test_clash_parser_invalid_yaml_raises_value_error():
     with pytest.raises(ValueError, match="YAML parse error"):
-        ClashParser().parse("not: yaml: : :")
+        ClashParser().parse_nodes("not: yaml: : :")
 
 
 def test_clash_parser_missing_proxies_raises_value_error():
     with pytest.raises(ValueError, match="missing 'proxies'"):
-        ClashParser().parse({"hello": "world"})
+        ClashParser().parse_nodes({"hello": "world"})
 
 
 def test_clash_parser_ignores_bad_nodes_and_continues():
@@ -61,7 +61,7 @@ proxies:
   - {name: ok, type: ss, server: s, port: 1, cipher: aes-256-gcm, password: p}
   - {name: bad, type: ss, server: s, port: notint}
 """
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     assert [n.name for n in nodes] == ["ok"]
 
 

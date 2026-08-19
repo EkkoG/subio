@@ -10,7 +10,7 @@ from subio_v2.parser.v2rayn import V2RayNParser
 from subio_v2.platforms import normalize_platform
 
 
-class ParserFactory:
+class ParserRegistry:
     _factories: Dict[str, Callable[[], BaseParser]] = {
         "clash": lambda: ClashParser(DialectContext("clash", "yaml")),
         "mihomo": lambda: ClashParser(DialectContext("mihomo", "yaml")),

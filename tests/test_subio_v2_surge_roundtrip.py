@@ -19,7 +19,7 @@ any = anytls, example.com, 443, password=secret, reuse=false, sni=any.example.co
     assert node.tls.server_name == "any.example.com"
     assert CapabilityChecker("surge").check_node(node).supported
 
-    output = SurgeEmitter().emit(result.nodes)
+    output = SurgeEmitter().emit_content(result.nodes)
     assert "any = anytls" in output
     assert "reuse=false" in output
     assert 'alpn="h2,http/1.1"' in output
@@ -27,7 +27,7 @@ any = anytls, example.com, 443, password=secret, reuse=false, sni=any.example.co
 
 
 def test_surge_h2_connect_round_trip_and_capability_boundary():
-    node = SurgeParser().parse(
+    node = SurgeParser().parse_nodes(
         """
 [Proxy]
 h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:SubIO|X-Test:a=b", max-streams=8, udp-relay=true
@@ -42,7 +42,7 @@ h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:S
     assert CapabilityChecker("surge").check_node(node).supported
     assert not CapabilityChecker("clash-meta").check_node(node).supported
 
-    output = SurgeEmitter().emit([node])
+    output = SurgeEmitter().emit_content([node])
     assert "h2 = h2-connect" in output
     assert "headers=User-Agent:SubIO|X-Test:a=b" in output
     assert "max-streams=8" in output
@@ -66,13 +66,13 @@ ssh = ssh, example.com, 22, username=root, password=p, idle-timeout=60, server-f
     ]
     assert CapabilityChecker("surge").check_node(node).supported
 
-    output = SurgeEmitter().emit([node])
+    output = SurgeEmitter().emit_content([node])
     assert "idle-timeout=60" in output
     assert output.count("server-fingerprint=") == 3
 
 
 def test_surge_ssh_requires_authentication_material():
-    node = SurgeParser().parse("[Proxy]\nssh = ssh, example.com, 22, username=root")[0]
+    node = SurgeParser().parse_nodes("[Proxy]\nssh = ssh, example.com, 22, username=root")[0]
 
     result = CapabilityChecker("surge").check_node(node)
 

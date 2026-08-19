@@ -25,13 +25,13 @@ def test_official_basic_proxy_fixture_is_parseable():
         "hysteria2",
         "ssh",
     ]
-    output = SurgeEmitter().emit(result.nodes)
+    output = SurgeEmitter().emit_content(result.nodes)
     assert "test-udp=probe.example@198.51.100.1" in output
-    assert len(SurgeParser().parse(output)) == 10
+    assert len(SurgeParser().parse_nodes(output)) == 10
 
 
 def test_official_quoted_alpn_regression_baseline():
-    node = SurgeParser().parse(
+    node = SurgeParser().parse_nodes(
         '[Proxy]\ntuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2"'
     )[0]
 
@@ -44,8 +44,8 @@ def test_official_udp_and_hysteria2_regression_baseline():
 http = http, example.com, 80
 hysteria2 = hysteria2, example.com, 443, password=p, gecko-password=secret
 """
-    nodes = SurgeParser().parse(content)
-    output = SurgeEmitter().emit(nodes)
+    nodes = SurgeParser().parse_nodes(content)
+    output = SurgeEmitter().emit_content(nodes)
 
     http_line = next(line for line in output.splitlines() if line.startswith("http ="))
     assert "udp-relay" not in http_line

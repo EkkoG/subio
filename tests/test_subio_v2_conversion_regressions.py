@@ -15,8 +15,8 @@ from subio_v2.parser.clash import ClashParser
 
 
 def _roundtrip(yaml_text: str) -> dict[str, dict]:
-    nodes = ClashParser().parse(yaml_text)
-    proxies = ClashEmitter().emit(nodes)["proxies"]
+    nodes = ClashParser().parse_nodes(yaml_text)
+    proxies = ClashEmitter().emit_content(nodes)["proxies"]
     return {proxy["name"]: proxy for proxy in proxies}
 
 
@@ -80,7 +80,7 @@ proxies:
       ping-interval: 0
       max-connections: 7
 """
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     assert nodes[0].transport.extra["ws-opts"] == {
         "v2ray-http-upgrade": False,
         "v2ray-http-upgrade-fast-open": True,
@@ -92,7 +92,7 @@ proxies:
     }
     assert nodes[1].tls.enabled is False
 
-    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit(nodes)["proxies"]}
+    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit_content(nodes)["proxies"]}
     assert proxies["vmess-ws"]["ws-opts"] == {
         "path": "/ws",
         "v2ray-http-upgrade": False,
@@ -199,13 +199,13 @@ proxies:
     public-key: public
     allowed-ips: [10.0.0.0/8]
 """
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     assert nodes[0].interface_ip == "10.0.0.2/32"
     assert nodes[0].allowed_ips == ["10.0.0.0/8", "fd00::/8"]
     assert nodes[1].interface_ip is None
     assert nodes[1].allowed_ips == ["10.0.0.0/8"]
 
-    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit(nodes)["proxies"]}
+    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit_content(nodes)["proxies"]}
     assert proxies["wg-both"]["ip"] == "10.0.0.2/32"
     assert proxies["wg-both"]["allowed-ips"] == ["10.0.0.0/8", "fd00::/8"]
     assert "ip" not in proxies["wg-allowed-only"]
@@ -213,7 +213,7 @@ proxies:
 
 
 def test_socks5_tls_is_rejected_when_link_format_cannot_represent_it():
-    node = ClashParser().parse(
+    node = ClashParser().parse_nodes(
         """
 proxies:
   - name: socks-tls
@@ -233,7 +233,7 @@ proxies:
 
 
 def test_emission_result_normalizes_capability_issue_fields():
-    node = ClashParser().parse(
+    node = ClashParser().parse_nodes(
         """
 proxies:
   - name: socks-tls
@@ -261,7 +261,7 @@ proxies:
 
 
 def test_link_builder_failure_becomes_error_issue(monkeypatch):
-    node = ClashParser().parse(
+    node = ClashParser().parse_nodes(
         """
 proxies:
   - name: ss-node
@@ -326,7 +326,7 @@ def test_v2rayn_link_builders_match_declared_http_and_h2_capabilities():
 
 
 def test_semantic_features_are_errors_when_target_would_drop_them():
-    hysteria2 = ClashParser().parse(
+    hysteria2 = ClashParser().parse_nodes(
         """
 proxies:
   - name: hy2-obfs
@@ -338,7 +338,7 @@ proxies:
     obfs-password: secret
 """
     )[0]
-    vmess = ClashParser().parse(
+    vmess = ClashParser().parse_nodes(
         """
 proxies:
   - name: vmess-cipher
@@ -351,5 +351,5 @@ proxies:
     )[0]
 
     assert SurgeEmitter().check_node(hysteria2).supported is True
-    assert "salamander-password=secret" in SurgeEmitter().emit([hysteria2])
+    assert "salamander-password=secret" in SurgeEmitter().emit_content([hysteria2])
     assert V2RayNEmitter().check_node(vmess).supported is False

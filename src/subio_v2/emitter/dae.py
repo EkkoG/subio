@@ -102,11 +102,11 @@ class DaeEmitter(BaseEmitter):
     def emit_subscription(self, nodes: List[Node]) -> str:
         """纯文本订阅：每行一条 URL（不做 base64）。"""
         result = self.emit_result(nodes)
-        self._raise_legacy_emit_error(result)
+        self._raise_emit_error(result)
         self.log_issues(result.issues)
         return result.extras["subscription"]
 
-    def _raise_legacy_emit_error(self, result: EmissionResult[str]) -> None:
+    def _raise_emit_error(self, result: EmissionResult[str]) -> None:
         emit_errors = [issue for issue in result.errors if issue.stage == "emit"]
         if emit_errors:
             raise ValueError(emit_errors[0].message)

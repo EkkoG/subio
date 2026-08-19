@@ -59,7 +59,7 @@ proxies:
     grpc-opts:
       grpc-service-name: svc
 """.replace("__CERT_SHA256__", CERT_SHA256)
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     vm_ws, vm_h2, vm_http, vm_grpc = nodes
     # WS
     assert vm_ws.type == Protocol.VMESS and vm_ws.transport.network == Network.WS
@@ -109,7 +109,7 @@ proxies:
     network: grpc
     tls: false
 """
-    nodes = ClashParser().parse(yaml_text)
+    nodes = ClashParser().parse_nodes(yaml_text)
     vm, vless, trojan = nodes
     assert vm.transport.network == Network.GRPC and vm.tls.enabled is False
     assert vless.transport.network == Network.GRPC and vless.tls.enabled is False
@@ -139,7 +139,7 @@ proxies:
     alpn: ["h2"]
     skip-cert-verify: true
 """
-    v_reality, v_tls = ClashParser().parse(yaml_text)
+    v_reality, v_tls = ClashParser().parse_nodes(yaml_text)
     assert v_reality.tls.enabled and v_reality.tls.reality_opts == {
         "public-key": "pk",
         "short-id": "sid",
@@ -167,7 +167,7 @@ proxies:
     obfs: salamander
     obfs-password: op
 """
-    h2n = ClashParser().parse(yaml_text)[0]
+    h2n = ClashParser().parse_nodes(yaml_text)[0]
     assert h2n.tls.enabled and h2n.tls.ech_opts == {"pqkem-grease": True}
     assert h2n.up == "20 Mbps" and h2n.down == "100 Mbps"
     assert h2n.obfs == "salamander" and h2n.obfs_password == "op"
@@ -191,7 +191,7 @@ proxies:
     headers: {User-Agent: UA, X-Test: XV}
     tls: false
 """
-    s_tls, http_h = ClashParser().parse(yaml_text)
+    s_tls, http_h = ClashParser().parse_nodes(yaml_text)
     assert (
         s_tls.type == Protocol.SOCKS5
         and s_tls.tls.enabled
@@ -214,6 +214,6 @@ proxies:
     public-key: pub
     ip: ["10.0.0.2/32","fd00::/8"]
 """
-    wg = ClashParser().parse(yaml_text)[0]
+    wg = ClashParser().parse_nodes(yaml_text)[0]
     assert wg.interface_ip == ["10.0.0.2/32", "fd00::/8"]
     assert wg.allowed_ips is None

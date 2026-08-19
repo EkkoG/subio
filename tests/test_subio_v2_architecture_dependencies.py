@@ -82,3 +82,27 @@ def test_rules_package_does_not_depend_on_workflow_or_node_models():
     violations = {path: modules for path, modules in violations.items() if modules}
 
     assert violations == {}
+
+
+def test_obsolete_internal_authorities_are_absent():
+    obsolete_paths = (
+        "src/subio_v2/parser/factory.py",
+        "src/subio_v2/emitter/factory.py",
+        "src/subio_v2/workflow/ruleset.py",
+        "src/subio_v2/workflow/rule_parser.py",
+        "src/subio_v2/workflow/ruleset_codec.py",
+        "src/subio_v2/workflow/mrs.py",
+    )
+    assert all(not (REPO_ROOT / path).exists() for path in obsolete_paths)
+
+    production = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "src" / "subio_v2").rglob("*.py")
+    )
+    for symbol in (
+        "PLATFORM_CAPABILITIES",
+        "ParserFactory",
+        "EmitterFactory",
+        "_raise_legacy_emit_error",
+    ):
+        assert symbol not in production

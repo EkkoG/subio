@@ -19,10 +19,10 @@ class BaseEmitter(ABC):
         self._conversion = NodeConversionService(self.platform)
         self.target_context = self._conversion.target_context
 
-    def emit(self, nodes: List[Node]) -> Any:
-        """Compatibility API returning only emitted content."""
+    def emit_content(self, nodes: List[Node]) -> Any:
+        """Return emitted content and raise target-specific emit errors."""
         result = self.emit_result(nodes)
-        self._raise_legacy_emit_error(result)
+        self._raise_emit_error(result)
         self.log_issues(result.issues)
         return result.content
 
@@ -30,8 +30,8 @@ class BaseEmitter(ABC):
     def emit_result(self, nodes: List[Node]) -> EmissionResult[Any]:
         """Return content, actually emitted nodes, and structured issues."""
 
-    def _raise_legacy_emit_error(self, result: EmissionResult[Any]) -> None:
-        """Compatibility hook for emitters that historically raised from emit()."""
+    def _raise_emit_error(self, result: EmissionResult[Any]) -> None:
+        """Raise target-specific errors for content-only emission."""
 
     def check_node(self, node: Node) -> CheckResult:
         return self._conversion.check_node(node)

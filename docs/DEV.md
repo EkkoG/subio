@@ -72,7 +72,7 @@ Config / local snippet
 | `src/subio_v2/workflow/` | typed config、provider/artifact 编排、模板和发布事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
-`ParserFactory` 和 `EmitterFactory` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
+`ParserRegistry` 和 `EmitterRegistry` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
 跨 provider、artifact 或两次运行共享。
 
 ## 3. IR 与扩展字段
@@ -187,8 +187,8 @@ native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明
 
 所有 parser、emitter、capability 和规则 renderer 的公开入口必须先通过
 `src/subio_v2/platforms.py` 规范化。内部注册表、descriptor 分支、`DialectContext` 和结构化
-issue 只使用 `mihomo` 规范名称；不得新增 `PLATFORM_CAPABILITIES["clash-meta"]`、
-`PLATFORM_RULES["clash-meta"]` 或散落的 `platform == "clash-meta"` 分支。
+issue 只使用 `mihomo` 规范名称；不得在 target registry/constraints、`PLATFORM_RULES` 或业务代码中
+新增独立 `clash-meta` authority，也不得增加散落的 `platform == "clash-meta"` 分支。
 
 `clash` 不得规范化为 `mihomo`。废弃状态只影响配置级提示和文档推荐，不得放宽原版 Clash 的
 协议、transport、cipher、feature 或规则能力。`ClashParser`、`ClashEmitter` 和
@@ -196,7 +196,7 @@ issue 只使用 `mihomo` 规范名称；不得新增 `PLATFORM_CAPABILITIES["cla
 artifact 文件名和上传文件名中的 `clash` 也不自动改写。
 
 `clash-meta` 不是废弃平台，也不改变转换结果；Workflow 只在 provider/artifact 配置级各提示
-一次改用 `mihomo`。Factory、Parser、Emitter、CapabilityChecker 和逐节点转换不得重复提示。
+一次改用 `mihomo`。Registry、Parser、Emitter、CapabilityChecker 和逐节点转换不得重复提示。
 
 ### 4.2 Schema 基线
 
@@ -249,13 +249,15 @@ Capability 表只记录 checker 或 serializer 实际读取的协议集合、值
 
 ### 4.4 新增或完善协议
 
-1. 从最新 schema 和目标平台官方文档建立字段矩阵；
-2. 判断字段属于跨平台语义、方言扩展还是同方言 passthrough；
-3. 必要时在 `model/nodes.py` 增加 Node/Enum/Settings；
-4. 新建或更新 `protocols/<name>.py` descriptor；
-5. 在 `protocols/__init__.py` 注册，并同步 capability；
-6. 增加 schema round-trip、required、组合字段和跨平台诊断测试；
-7. 先跑 example，再跑目标测试和全量测试。
+1. 从官方文档建立字段矩阵；没有官方资料的平台只维持现有 serializer/contract 已证明的能力；
+2. 判断字段属于跨平台语义、来源 preservation 还是平台附件；
+3. 在 semantic Node/共享 value object 增加字段，并在唯一 `ProtocolDefinition` 明确 terminal native
+   public/excluded 与 user override 决策；
+4. 更新实际支持该字段的 Clash codec、Surge codec 或 link codec；目标支持由注册 codec 派生，
+   不新增全局 capability/protocol set；
+5. 为字段增加 parse/emit、值域/组合、same-dialect preservation 和 cross-target issue tests；
+6. 若终态 native contract 公开该字段，重新生成 v2 schema 并更新 `docs/subio_node_format.md`；
+7. 先跑 example、targeted/contract tests，再跑全量测试。
 
 官方 schema 已定义且影响运行的稳定语义应进入具体 Node，即使当前只有一个目标平台支持；目标不支持
 时由 capability 产生精确 issue。纯序列化信息和真正未知的新字段留在同方言 `extra`，不要把所有
@@ -301,7 +303,7 @@ provider 默认忽略，只有显式设置 `allow_unsafe_external = true` 才允
 
 Stash 属于 Clash-family，但不是 Mihomo 字段的无差别子集。它需要独立方言上下文：
 
-- `ParserFactory` 提供 Stash parser，调用方不应把 Stash 输入当作普通 Clash；
+- `ParserRegistry` 提供 Stash parser，调用方不应把 Stash 输入当作普通 Clash；
 - 输入归一化必须发生在 descriptor 前，并记录原始方言；
 - Emitter 只生成 Stash 官方字段和值域；
 - Mihomo `extra` 不得直接泄漏到 Stash；
