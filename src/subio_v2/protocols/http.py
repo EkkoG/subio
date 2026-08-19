@@ -8,6 +8,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 class HttpDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HTTP
+    clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "http"
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),

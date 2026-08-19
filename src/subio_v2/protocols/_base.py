@@ -31,7 +31,7 @@ class ProtocolDescriptor(ABC):
     protocol: Protocol
     clash_type: str
     dynamic_clash_type: bool = False
-    clash_dialects: frozenset[str] = frozenset({"mihomo", "clash", "stash"})
+    clash_dialects: frozenset[str] = frozenset({"mihomo"})
 
     @property
     def definition(self) -> ProtocolDefinition:

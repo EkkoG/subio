@@ -40,6 +40,7 @@ def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
 
 class MasqueDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.MASQUE
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"
     fields = (
         scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),

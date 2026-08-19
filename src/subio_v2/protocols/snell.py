@@ -38,6 +38,7 @@ def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
 
 class SnellDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SNELL
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"
     fields = (
         scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),

@@ -8,6 +8,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group, tls
 
 class TrustTunnelDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TRUSTTUNNEL
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
     fields = (
         scalar_field(

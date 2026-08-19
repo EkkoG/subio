@@ -14,6 +14,7 @@ from subio_v2.protocols._fields import (
 
 class VlessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VLESS
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "vless"
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),

@@ -8,6 +8,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 class ShadowsocksRDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SHADOWSOCKSR
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssr"
     fields = (
         scalar_field(

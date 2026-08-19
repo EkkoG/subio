@@ -27,6 +27,7 @@ def _encode_enum(value: Any) -> str:
 
 class MieruDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.MIERU
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"
     fields = (
         scalar_field("port-range", "port_range", emit_policy=EmitPolicy.NOT_NONE),

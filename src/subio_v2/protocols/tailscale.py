@@ -10,6 +10,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 class TailscaleDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TAILSCALE
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tailscale"
     fields = (
         scalar_field("hostname", emit_policy=EmitPolicy.NOT_NONE),

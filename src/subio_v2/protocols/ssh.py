@@ -8,6 +8,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 class SSHDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SSH
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"
     fields = (
         scalar_field(

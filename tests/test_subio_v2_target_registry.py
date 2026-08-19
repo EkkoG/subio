@@ -1,3 +1,5 @@
+import pytest
+
 import subio_v2.protocols as protocol_registry
 from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.emitter.link import link_protocols_for_target
@@ -13,13 +15,14 @@ def test_target_registry_is_the_capability_protocol_authority():
         assert capabilities["protocols"] == protocols_for_target(platform)
 
 
-def test_mihomo_target_matches_registered_dialect_codecs():
+@pytest.mark.parametrize("dialect", ["mihomo", "clash", "stash"])
+def test_clash_family_targets_match_registered_dialect_codecs(dialect):
     registered = {
         descriptor.protocol.value
         for descriptor in protocol_registry.all()
-        if descriptor.supports_dialect("mihomo")
+        if descriptor.supports_dialect(dialect)
     }
-    assert protocols_for_target("mihomo") == registered
+    assert protocols_for_target(dialect) == registered
 
 
 def test_surge_target_matches_serializer_codec_registry():

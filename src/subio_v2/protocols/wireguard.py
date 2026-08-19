@@ -54,6 +54,7 @@ def _encode_peers(value: list[WireguardPeer] | None) -> list[dict[str, Any]] | N
 
 class WireguardDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.WIREGUARD
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "wireguard"
     fields = (
         scalar_field(

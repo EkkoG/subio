@@ -14,6 +14,7 @@ from subio_v2.protocols._fields import (
 
 class VmessDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.VMESS
+    clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "vmess"
     fields = (
         scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),

@@ -14,6 +14,7 @@ from subio_v2.protocols._fields import (
 
 class TrojanDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.TROJAN
+    clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"
     fields = (
         scalar_field(

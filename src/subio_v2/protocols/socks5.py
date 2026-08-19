@@ -8,6 +8,7 @@ from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 class Socks5Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.SOCKS5
+    clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "socks5"
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),

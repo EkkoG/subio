@@ -9,6 +9,7 @@ from subio_v2.protocols._fields import smux_group
 
 class DirectDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.DIRECT
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "direct"
     fields = (smux_group(),)
 

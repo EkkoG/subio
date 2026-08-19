@@ -13,6 +13,7 @@ from subio_v2.protocols._fields import (
 
 class Hysteria2Descriptor(StructuredProtocolDescriptor):
     protocol = Protocol.HYSTERIA2
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria2"
     fields = (
         scalar_field(

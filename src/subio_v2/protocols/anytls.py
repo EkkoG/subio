@@ -26,6 +26,7 @@ def _emit_reuse(out: MutableMapping[str, Any], node: Node) -> None:
 
 class AnyTLSDescriptor(StructuredProtocolDescriptor):
     protocol = Protocol.ANYTLS
+    clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "anytls"
     fields = (
         scalar_field(
