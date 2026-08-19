@@ -1,8 +1,9 @@
 import base64
 from typing import List
+
 from subio_v2.conversion import EmissionResult, IssueSeverity
-from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter import link
+from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import Node
 
 
@@ -58,4 +59,4 @@ class V2RayNEmitter(BaseEmitter):
         return result.extras["list"]
 
     def _emit_node(self, node: Node) -> str | None:
-        return link.build_url(node)
+        return link.build_url(node, target=self.platform)

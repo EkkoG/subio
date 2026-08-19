@@ -10,9 +10,10 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 """
 
 from typing import Dict, List
+
 from subio_v2.conversion import EmissionResult, IssueSeverity
-from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter import link
+from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import Node
 
 
@@ -37,7 +38,7 @@ class DaeEmitter(BaseEmitter):
                 )
                 continue
             try:
-                url = link.build_url(node)
+                url = link.build_url(node, target=self.platform)
             except Exception as exc:
                 issues.append(
                     self.issue_for_node(
@@ -119,7 +120,7 @@ class DaeEmitter(BaseEmitter):
         for node in nodes:
             if node.name in node_by_name:
                 raise ValueError(f"Duplicate node name in dae artifact: {node.name}")
-            url = link.build_url(node)
+            url = link.build_url(node, target="dae")
             if not url:
                 raise ValueError(
                     f"Unable to build dae link for node '{node.name}' ({node.type.value})"

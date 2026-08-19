@@ -1,5 +1,6 @@
 import subio_v2.protocols as protocol_registry
 from subio_v2.capabilities.definitions import all_platform_capabilities
+from subio_v2.emitter.link import link_protocols_for_target
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
 from subio_v2.target_registry import protocols_for_target, target_platforms
 
@@ -28,3 +29,8 @@ def test_surge_target_matches_serializer_codec_registry():
 def test_target_registry_normalizes_public_aliases():
     assert protocols_for_target("clash-meta") == protocols_for_target("mihomo")
     assert protocols_for_target("unknown") == frozenset()
+
+
+def test_link_targets_derive_from_registered_builders():
+    for target in ("dae", "v2rayn"):
+        assert protocols_for_target(target) == link_protocols_for_target(target)

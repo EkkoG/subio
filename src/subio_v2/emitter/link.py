@@ -9,22 +9,23 @@ capabilities 决定接受哪些协议，再调用同一个 builder。
 import base64
 import json
 import urllib.parse
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Callable, Mapping, Optional
 
 from subio_v2.model.nodes import (
+    AnyTLSNode,
+    HttpNode,
+    Hysteria2Node,
+    Network,
     Node,
     Protocol,
     ShadowsocksNode,
-    VmessNode,
-    VlessNode,
-    TrojanNode,
     Socks5Node,
-    HttpNode,
-    Hysteria2Node,
+    TrojanNode,
     TUICNode,
-    AnyTLSNode,
-    Network,
+    VlessNode,
+    VmessNode,
 )
 
 
@@ -214,7 +215,7 @@ def build_trojan_url(node: TrojanNode) -> str:
     return url
 
 
-def build_socks5_url(node: Socks5Node) -> Optional[str]:
+def build_socks5_url(node: Socks5Node) -> str | None:
     """socks5://[user:pass@]server:port#name"""
     if node.tls and node.tls.enabled:
         # There is no interoperable SOCKS5-TLS subscription URI to emit here.
@@ -305,22 +306,41 @@ def build_anytls_url(node: AnyTLSNode) -> str:
     return url
 
 
-LINK_BUILDERS: Mapping[Protocol, Callable[[Node], Optional[str]]] = MappingProxyType(
+@dataclass(frozen=True)
+class LinkCodecSpec:
+    builder: Callable[[Node], str | None]
+    targets: frozenset[str]
+
+
+LINK_CODECS: Mapping[Protocol, LinkCodecSpec] = MappingProxyType(
     {
-        Protocol.SHADOWSOCKS: build_ss_url,
-        Protocol.VMESS: build_vmess_url,
-        Protocol.VLESS: build_vless_url,
-        Protocol.TROJAN: build_trojan_url,
-        Protocol.SOCKS5: build_socks5_url,
-        Protocol.HTTP: build_http_url,
-        Protocol.HYSTERIA2: build_hysteria2_url,
-        Protocol.TUIC: build_tuic_url,
-        Protocol.ANYTLS: build_anytls_url,
+        Protocol.SHADOWSOCKS: LinkCodecSpec(build_ss_url, frozenset({"dae", "v2rayn"})),
+        Protocol.VMESS: LinkCodecSpec(build_vmess_url, frozenset({"dae", "v2rayn"})),
+        Protocol.VLESS: LinkCodecSpec(build_vless_url, frozenset({"dae", "v2rayn"})),
+        Protocol.TROJAN: LinkCodecSpec(build_trojan_url, frozenset({"dae", "v2rayn"})),
+        Protocol.SOCKS5: LinkCodecSpec(build_socks5_url, frozenset({"dae", "v2rayn"})),
+        Protocol.HTTP: LinkCodecSpec(build_http_url, frozenset({"dae"})),
+        Protocol.HYSTERIA2: LinkCodecSpec(build_hysteria2_url, frozenset({"dae"})),
+        Protocol.TUIC: LinkCodecSpec(build_tuic_url, frozenset({"dae"})),
+        Protocol.ANYTLS: LinkCodecSpec(build_anytls_url, frozenset({"dae"})),
     }
+)
+LINK_BUILDERS: Mapping[Protocol, Callable[[Node], str | None]] = MappingProxyType(
+    {protocol: codec.builder for protocol, codec in LINK_CODECS.items()}
 )
 
 
-def build_url(node: Node) -> Optional[str]:
+def link_protocols_for_target(target: str) -> frozenset[str]:
+    return frozenset(
+        protocol.value
+        for protocol, codec in LINK_CODECS.items()
+        if target in codec.targets
+    )
+
+
+def build_url(node: Node, *, target: str | None = None) -> str | None:
     """按 Node 类型分发到具体的 URL 构造函数。"""
-    builder = LINK_BUILDERS.get(node.type)
-    return builder(node) if builder else None
+    codec = LINK_CODECS.get(node.type)
+    if codec is None or (target is not None and target not in codec.targets):
+        return None
+    return codec.builder(node)

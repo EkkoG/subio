@@ -273,7 +273,9 @@ proxies:
 """
     )[0]
     node.source_provider = "source-b"
-    monkeypatch.setattr("subio_v2.emitter.v2rayn.link.build_url", lambda _: None)
+    monkeypatch.setattr(
+        "subio_v2.emitter.v2rayn.link.build_url", lambda _, **__: None
+    )
 
     result = V2RayNEmitter().emit_result([node])
 

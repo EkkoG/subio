@@ -1,3 +1,4 @@
+from subio_v2.emitter.link import link_protocols_for_target
 from subio_v2.platforms import normalize_platform
 
 _TARGET_PROTOCOLS: dict[str, frozenset[str]] = {
@@ -76,22 +77,8 @@ _TARGET_PROTOCOLS: dict[str, frozenset[str]] = {
             "reject",
         }
     ),
-    "dae": frozenset(
-        {
-            "shadowsocks",
-            "vmess",
-            "vless",
-            "trojan",
-            "http",
-            "socks5",
-            "hysteria2",
-            "tuic",
-            "anytls",
-        }
-    ),
-    "v2rayn": frozenset(
-        {"shadowsocks", "vmess", "vless", "trojan", "socks5"}
-    ),
+    "dae": link_protocols_for_target("dae"),
+    "v2rayn": link_protocols_for_target("v2rayn"),
 }
 
 
