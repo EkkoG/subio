@@ -1,0 +1,65 @@
+import ast
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DOMAIN_FILES = (
+    *sorted((REPO_ROOT / "src" / "subio_v2" / "model").glob("*.py")),
+    REPO_ROOT / "src" / "subio_v2" / "protocols" / "definitions.py",
+    REPO_ROOT / "src" / "subio_v2" / "protocols" / "user_overrides.py",
+)
+
+FORBIDDEN_IMPORTS = (
+    "os",
+    "pathlib",
+    "requests",
+    "subprocess",
+    "tempfile",
+    "urllib",
+    "subio_v2.capabilities",
+    "subio_v2.clash",
+    "subio_v2.crypto",
+    "subio_v2.emitter",
+    "subio_v2.parser",
+    "subio_v2.subio_format",
+    "subio_v2.surge",
+    "subio_v2.utils.logger",
+    "subio_v2.workflow",
+)
+
+
+def _imports(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module)
+    return modules
+
+
+def _is_forbidden(module: str) -> bool:
+    return any(
+        module == prefix or module.startswith(f"{prefix}.")
+        for prefix in FORBIDDEN_IMPORTS
+    )
+
+
+def test_domain_does_not_depend_on_application_or_infrastructure():
+    violations = {
+        str(path.relative_to(REPO_ROOT)): sorted(
+            module for module in _imports(path) if _is_forbidden(module)
+        )
+        for path in DOMAIN_FILES
+    }
+    violations = {path: modules for path, modules in violations.items() if modules}
+
+    assert violations == {}
+
+
+def test_node_and_rules_models_do_not_import_each_other():
+    nodes_imports = _imports(REPO_ROOT / "src" / "subio_v2" / "model" / "nodes.py")
+    rules_imports = _imports(REPO_ROOT / "src" / "subio_v2" / "model" / "rules.py")
+
+    assert "subio_v2.model.rules" not in nodes_imports
+    assert "subio_v2.model.nodes" not in rules_imports
