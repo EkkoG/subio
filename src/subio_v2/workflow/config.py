@@ -15,11 +15,66 @@ from subio_v2.errors import ConfigError
 
 
 @dataclass(frozen=True)
+class ConfigEntry(Mapping[str, Any]):
+    data: Mapping[str, Any]
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]):
+        return cls(MappingProxyType(dict(data)))
+
+    def __getitem__(self, key: str) -> Any:
+        return self.data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.data)
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+
+@dataclass(frozen=True)
+class ProviderConfig(ConfigEntry):
+    @property
+    def name(self) -> str:
+        return self.data["name"]
+
+    @property
+    def provider_type(self) -> str:
+        return self.data["type"]
+
+
+@dataclass(frozen=True)
+class ArtifactConfig(ConfigEntry):
+    @property
+    def name(self) -> str:
+        return self.data["name"]
+
+    @property
+    def artifact_type(self) -> str:
+        return self.data["type"]
+
+    @property
+    def providers(self) -> tuple[str, ...]:
+        return tuple(self.data.get("providers", ()))
+
+
+@dataclass(frozen=True)
+class UploaderConfig(ConfigEntry):
+    @property
+    def name(self) -> str:
+        return self.data["name"]
+
+    @property
+    def uploader_type(self) -> str:
+        return self.data["type"]
+
+
+@dataclass(frozen=True)
 class RunConfig(Mapping[str, Any]):
     data: Mapping[str, Any]
-    providers: tuple[Mapping[str, Any], ...]
-    artifacts: tuple[Mapping[str, Any], ...]
-    uploaders: tuple[Mapping[str, Any], ...]
+    providers: tuple[ProviderConfig, ...]
+    artifacts: tuple[ArtifactConfig, ...]
+    uploaders: tuple[UploaderConfig, ...]
     rulesets: tuple[Mapping[str, Any], ...]
     options: Mapping[str, Any]
     filters: Mapping[str, Any]
@@ -32,9 +87,18 @@ class RunConfig(Mapping[str, Any]):
         copied = dict(data)
         return cls(
             data=MappingProxyType(copied),
-            providers=tuple(copied.get("provider", ())),
-            artifacts=tuple(copied.get("artifact", ())),
-            uploaders=tuple(copied.get("uploader", ())),
+            providers=tuple(
+                ProviderConfig.from_mapping(item)
+                for item in copied.get("provider", ())
+            ),
+            artifacts=tuple(
+                ArtifactConfig.from_mapping(item)
+                for item in copied.get("artifact", ())
+            ),
+            uploaders=tuple(
+                UploaderConfig.from_mapping(item)
+                for item in copied.get("uploader", ())
+            ),
             rulesets=tuple(copied.get("ruleset", ())),
             options=MappingProxyType(dict(copied.get("options", {}))),
             filters=MappingProxyType(dict(copied.get("filters", {}))),
@@ -85,6 +149,9 @@ class ConfigLoader:
 
         if not isinstance(data, dict):
             raise ConfigError("Config root must be an object")
+        from subio_v2.workflow.config_validation import ConfigValidator
+
+        ConfigValidator.validate(data)
         return RunConfig.from_mapping(data)
 
     @staticmethod

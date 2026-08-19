@@ -14,7 +14,12 @@ from subio_v2.workflow.artifacts import (
     ArtifactGenerationResult,
     ArtifactGenerationService,
 )
-from subio_v2.workflow.config import RunConfig
+from subio_v2.workflow.config import (
+    ArtifactConfig,
+    ProviderConfig,
+    RunConfig,
+    UploaderConfig,
+)
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
 from subio_v2.workflow.template import TemplateRenderResult
@@ -57,6 +62,35 @@ def test_load_config_formats(tmp_path, monkeypatch):
     yaml_p = write(tmp_path, "cfg.yaml", "a: 4")
     eng = WorkflowEngine(str(yaml_p))
     assert eng.config["a"] == 4
+
+
+def test_run_config_exposes_typed_section_records(tmp_path):
+    cfg = write(
+        tmp_path,
+        "config.toml",
+        """
+[[provider]]
+name = "p"
+type = "mihomo"
+file = "nodes.yaml"
+
+[[artifact]]
+name = "out.yaml"
+type = "mihomo"
+providers = ["p"]
+
+[[uploader]]
+name = "u"
+type = "gist"
+id = "gist-id"
+""",
+    )
+
+    config = WorkflowEngine(str(cfg)).config
+
+    assert isinstance(config.providers[0], ProviderConfig)
+    assert isinstance(config.artifacts[0], ArtifactConfig)
+    assert isinstance(config.uploaders[0], UploaderConfig)
 
 
 def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):

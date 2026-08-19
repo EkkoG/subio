@@ -144,3 +144,12 @@ def test_obsolete_internal_authorities_are_absent():
         "def _write_artifact",
     ):
         assert symbol not in engine_source
+
+    provider_source = (
+        REPO_ROOT / "src" / "subio_v2" / "workflow" / "providers.py"
+    ).read_text(encoding="utf-8")
+    artifact_source = (
+        REPO_ROOT / "src" / "subio_v2" / "workflow" / "artifacts.py"
+    ).read_text(encoding="utf-8")
+    assert 'config.get("provider"' not in provider_source
+    assert 'config.get("artifact"' not in artifact_source

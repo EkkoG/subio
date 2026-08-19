@@ -14,7 +14,7 @@ from subio_v2.processor.common import (
 )
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.utils.logger import logger
-from subio_v2.workflow.config import RunConfig
+from subio_v2.workflow.config import ProviderConfig, RunConfig
 
 
 @dataclass(frozen=True)
@@ -34,9 +34,9 @@ class ProviderLoaderService:
         providers: dict[str, list[Node]] = {}
         provider_issues: dict[str, list[ConversionIssue]] = {}
         with logger.status("[bold green]Loading providers...") as status:
-            for provider_config in config.get("provider", []):
-                name = provider_config["name"]
-                provider_type = provider_config.get("type")
+            for provider_config in config.providers:
+                name = provider_config.name
+                provider_type = provider_config.provider_type
                 status.update(
                     f"[bold green]Loading provider: {name} ({provider_type})"
                 )
@@ -88,7 +88,7 @@ class ProviderLoaderService:
 
     @staticmethod
     def _process_nodes(
-        nodes: list[Node], provider_config: dict[str, object]
+        nodes: list[Node], provider_config: ProviderConfig
     ) -> list[Node]:
         rename = provider_config.get("rename")
         if isinstance(rename, dict):
@@ -108,7 +108,7 @@ class ProviderLoaderService:
         return nodes
 
     def _fetch_content(
-        self, config: dict[str, object], remote_loader: RunRemoteLoader
+        self, config: ProviderConfig, remote_loader: RunRemoteLoader
     ) -> bytes:
         provider_name = str(config.get("name", "unknown"))
         if "url" in config:
@@ -150,7 +150,7 @@ class ProviderLoaderService:
         )
 
     def _decode_content(
-        self, content: bytes, config: dict[str, object]
+        self, content: bytes, config: ProviderConfig
     ) -> str:
         provider_name = str(config.get("name", "unknown"))
         secret_keys = [

@@ -54,7 +54,6 @@ class WorkflowEngine:
             if err:
                 raise ConfigError(f"Invalid global age_public_key: {err}")
 
-        ConfigValidator.validate(self.config)
         ConfigValidator.warn_platform_replacements(self.config)
 
         # Parsers and emitters are constructed by their registries.

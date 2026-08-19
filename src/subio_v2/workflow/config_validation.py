@@ -5,12 +5,11 @@ from typing import Any
 from subio_v2.errors import ConfigError
 from subio_v2.platforms import resolve_platform
 from subio_v2.utils.logger import logger
-from subio_v2.workflow.config import RunConfig
 
 
 class ConfigValidator:
     @classmethod
-    def validate(cls, config: RunConfig) -> None:
+    def validate(cls, config: Mapping[str, Any]) -> None:
         if not isinstance(config, Mapping):
             raise ConfigError("Config root must be an object")
         if not isinstance(config.get("allow_conversion_errors", False), bool):
@@ -44,7 +43,7 @@ class ConfigValidator:
         cls._validate_references(config)
 
     @staticmethod
-    def warn_platform_replacements(config: RunConfig) -> None:
+    def warn_platform_replacements(config: Mapping[str, Any]) -> None:
         for section in ("provider", "artifact"):
             for entry in config.get(section, []):
                 platform = entry.get("type")
@@ -169,7 +168,7 @@ class ConfigValidator:
             raise ConfigError(f"Uploader '{name}' clean must be a boolean")
 
     @staticmethod
-    def _validate_references(config: RunConfig) -> None:
+    def _validate_references(config: Mapping[str, Any]) -> None:
         provider_names = {item["name"] for item in config.get("provider", [])}
         uploader_names = {item["name"] for item in config.get("uploader", [])}
         for artifact in config.get("artifact", []):

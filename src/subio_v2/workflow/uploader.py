@@ -3,7 +3,8 @@ import re
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Dict, List
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from subio_v2.errors import UploadError
 from subio_v2.utils.logger import logger
@@ -21,7 +22,7 @@ class GistBatchUploader:
     """Collect all files for a workflow run and upload each Gist once."""
 
     def __init__(self, dry_run: bool = False, clean_gist: bool = False):
-        self._pending: Dict[str, Dict[str, Any]] = {}
+        self._pending: dict[str, dict[str, Any]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
 
@@ -46,9 +47,9 @@ class GistBatchUploader:
     def add(
         self,
         content: str,
-        artifact_config: Dict[str, Any],
-        upload_item: Dict[str, Any],
-        uploader: Dict[str, Any],
+        artifact_config: Mapping[str, Any],
+        upload_item: Mapping[str, Any],
+        uploader: Mapping[str, Any],
         username: str | None = None,
     ) -> None:
         token = uploader.get("token", "")
@@ -116,7 +117,7 @@ class GistBatchUploader:
         self.reset()
 
     @staticmethod
-    def _git_env(askpass_path: str, token: str) -> Dict[str, str]:
+    def _git_env(askpass_path: str, token: str) -> dict[str, str]:
         env = os.environ.copy()
         env.update(
             {
@@ -129,7 +130,7 @@ class GistBatchUploader:
 
     @staticmethod
     def _run_git(
-        args: List[str], env: Dict[str, str], token: str, *, check: bool = True
+        args: list[str], env: dict[str, str], token: str, *, check: bool = True
     ) -> subprocess.CompletedProcess[str]:
         try:
             return subprocess.run(
@@ -144,7 +145,7 @@ class GistBatchUploader:
             raise UploadError(f"Git command failed: {detail}") from exc
 
     def _upload_batch(
-        self, gist_id: str, token: str, files: Dict[str, str], clean: bool = False
+        self, gist_id: str, token: str, files: dict[str, str], clean: bool = False
     ) -> None:
         if not files:
             raise UploadError(f"Refusing to upload an empty file set to Gist {gist_id}")
@@ -227,8 +228,8 @@ class GistBatchUploader:
 
 def upload(
     content: str,
-    artifact_config: Dict[str, Any],
-    uploader_configs: List[Dict[str, Any]],
+    artifact_config: Mapping[str, Any],
+    uploader_configs: Sequence[Mapping[str, Any]],
     batch_uploader: GistBatchUploader,
     username: str | None = None,
 ) -> None:

@@ -14,7 +14,7 @@ from subio_v2.processor.common import FilterProcessor
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.utils.logger import logger
-from subio_v2.workflow.config import RunConfig
+from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.uploader import GistBatchUploader, upload
 
@@ -53,7 +53,7 @@ class ArtifactGenerationService:
                 include=self.config["filters"].get("include"),
                 exclude=self.config["filters"].get("exclude"),
             )
-        for artifact_config in self.config.get("artifact", []):
+        for artifact_config in self.config.artifacts:
             users = artifact_config.get("users", [])
             single_user = artifact_config.get("user")
             if users:
@@ -69,14 +69,14 @@ class ArtifactGenerationService:
 
     def _generate_one(
         self,
-        artifact_config: dict[str, Any],
+        artifact_config: ArtifactConfig,
         global_filter: FilterProcessor | None,
         username: str | None,
     ) -> None:
-        name = artifact_config["name"]
-        artifact_type = artifact_config.get("type")
+        name = artifact_config.name
+        artifact_type = artifact_config.artifact_type
         nodes: list[Node] = []
-        for provider_name in artifact_config.get("providers", []):
+        for provider_name in artifact_config.providers:
             if provider_name not in self.providers:
                 raise ArtifactGenerationError(
                     f"Artifact '{name}' references unloaded provider '{provider_name}'"
@@ -111,7 +111,7 @@ class ArtifactGenerationService:
 
         artifact_issues = [
             replace(issue, artifact=name, user=username)
-            for provider_name in artifact_config.get("providers", [])
+            for provider_name in artifact_config.providers
             for issue in self.provider_issues.get(provider_name, [])
         ]
         artifact_issues.extend(
@@ -168,7 +168,7 @@ class ArtifactGenerationService:
         template_path: str | None,
         artifact_type: str,
         artifact_options: dict[str, Any],
-        artifact_config: dict[str, Any],
+        artifact_config: ArtifactConfig,
         username: str | None,
         extra_context: dict[str, Any],
     ) -> None:
@@ -258,7 +258,7 @@ class ArtifactGenerationService:
             upload(
                 final_content,
                 artifact_config,
-                self.config.get("uploader", []),
+                self.config.uploaders,
                 self.batch_uploader,
                 username,
             )
