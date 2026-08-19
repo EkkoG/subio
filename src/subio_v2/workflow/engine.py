@@ -1,10 +1,8 @@
 import hashlib
 import os
 import re
-import tempfile
 from collections.abc import Mapping
 from dataclasses import replace
-from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
@@ -33,6 +31,7 @@ from subio_v2.workflow.errors import (
     ConfigError,
     ProviderLoadError,
 )
+from subio_v2.workflow.publication import ArtifactPublisher
 from subio_v2.workflow.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.workflow.ruleset import (
     RuleSetStore,
@@ -57,6 +56,7 @@ class WorkflowEngine:
         self._staged_artifacts: Dict[str, str] = {}
         self.issues: List[ConversionIssue] = []
         self.batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
+        self.publisher = ArtifactPublisher()
 
         # Age encryption keys
         self.global_age_secret_key = self.config.get("age_secret_key", "")
@@ -782,48 +782,4 @@ class WorkflowEngine:
             )
 
     def _commit_artifacts(self) -> None:
-        """Write all generated artifacts only after the whole generation phase succeeds."""
-        dist_dir = Path("dist").resolve()
-        dist_dir.mkdir(parents=True, exist_ok=True)
-        prepared: list[tuple[str, Path]] = []
-
-        try:
-            for filename, content in self._staged_artifacts.items():
-                target = dist_dir / filename
-                if target.parent != dist_dir:
-                    raise ArtifactGenerationError(
-                        f"Artifact path escapes dist directory: {filename!r}"
-                    )
-                fd, temp_name = tempfile.mkstemp(
-                    prefix=f".{filename}.", suffix=".tmp", dir=dist_dir
-                )
-                try:
-                    os.fchmod(fd, 0o600)
-                    with os.fdopen(fd, "w", encoding="utf-8") as output:
-                        output.write(content)
-                        output.flush()
-                        os.fsync(output.fileno())
-                except Exception:
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-                    raise
-                prepared.append((temp_name, target))
-
-            for temp_name, target in prepared:
-                os.replace(temp_name, target)
-            prepared.clear()
-            self._staged_artifacts.clear()
-        except ArtifactGenerationError:
-            raise
-        except Exception as exc:
-            raise ArtifactGenerationError(
-                f"Failed to write generated artifacts: {exc}"
-            ) from exc
-        finally:
-            for temp_name, _ in prepared:
-                try:
-                    os.unlink(temp_name)
-                except FileNotFoundError:
-                    pass
+        self.publisher.commit(self._staged_artifacts)
