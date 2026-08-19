@@ -1,15 +1,15 @@
+from subio_v2 import links as link
 from subio_v2.conversion import IssueSeverity
-from subio_v2.emitter import link
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.model.nodes import (
     Network,
+    Protocol,
     TransportSettings,
     TrojanNode,
     VlessNode,
-    Protocol,
 )
 from subio_v2.parser.clash import ClashParser
 
@@ -229,7 +229,7 @@ proxies:
     assert V2RayNEmitter().check_node(node).supported is False
     assert DaeEmitter().emit_subscription([node]) == ""
     assert V2RayNEmitter().emit_list([node]) == ""
-    assert link.build_socks5_url(node) is None
+    assert link.build_url(node) is None
 
 
 def test_emission_result_normalizes_capability_issue_fields():
@@ -314,8 +314,8 @@ def test_v2rayn_link_builders_match_declared_http_and_h2_capabilities():
         ),
     )
 
-    vless_url = link.build_vless_url(vless)
-    trojan_url = link.build_trojan_url(trojan)
+    vless_url = link.build_url(vless)
+    trojan_url = link.build_url(trojan)
 
     assert "type=http" in vless_url
     assert "path=%2Fone%2C%2Ftwo" in vless_url

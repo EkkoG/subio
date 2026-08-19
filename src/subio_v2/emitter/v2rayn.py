@@ -1,8 +1,7 @@
 import base64
-from typing import List
 
+from subio_v2 import links as link
 from subio_v2.conversion import EmissionResult, IssueSeverity
-from subio_v2.emitter import link
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import Node
 
@@ -10,7 +9,7 @@ from subio_v2.model.nodes import Node
 class V2RayNEmitter(BaseEmitter):
     platform = "v2rayn"
 
-    def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
+    def emit_result(self, nodes: list[Node]) -> EmissionResult[str]:
         checked_nodes, issues = self.emit_with_check(nodes)
 
         lines: list[str] = []
@@ -52,7 +51,7 @@ class V2RayNEmitter(BaseEmitter):
             },
         )
 
-    def emit_list(self, nodes: List[Node]) -> str:
+    def emit_list(self, nodes: list[Node]) -> str:
         """Return plain list of links (for debugging or other formats)"""
         result = self.emit_result(nodes)
         self.log_issues(result.issues)

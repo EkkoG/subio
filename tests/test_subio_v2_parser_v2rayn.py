@@ -1,10 +1,12 @@
-import pytest
-from subio_v2.emitter import link
-from subio_v2.parser.v2rayn import V2RayNParser
-from subio_v2.model.nodes import Network, Protocol
 import base64
 import json
 import urllib.parse
+
+import pytest
+
+from subio_v2 import links as link
+from subio_v2.model.nodes import Network, Protocol
+from subio_v2.parser.v2rayn import V2RayNParser
 
 
 def b64(s: str) -> str:
@@ -102,7 +104,7 @@ def test_vless_reality_grpc_codec_roundtrip_preserves_semantics():
     assert node.tls.certificate_sha256 is None
     assert node.tls.reality_opts == {"public-key": "public", "short-id": "short"}
 
-    rebuilt = urllib.parse.urlparse(link.build_vless_url(node))
+    rebuilt = urllib.parse.urlparse(link.build_url(node))
     query = urllib.parse.parse_qs(rebuilt.query)
     assert query["security"] == ["reality"]
     assert query["serviceName"] == ["svc"]
@@ -117,7 +119,7 @@ def test_vless_grpc_without_tls_is_not_upgraded():
 
     assert node is not None
     assert node.tls.enabled is False
-    rebuilt = urllib.parse.urlparse(link.build_vless_url(node))
+    rebuilt = urllib.parse.urlparse(link.build_url(node))
     query = urllib.parse.parse_qs(rebuilt.query)
     assert query["security"] == ["none"]
     assert query["serviceName"] == ["svc"]
@@ -135,7 +137,7 @@ def test_trojan_ws_codec_roundtrip_preserves_transport():
     assert node.transport.path == "/ws"
     assert node.transport.headers == {"Host": "cdn.example.com"}
 
-    rebuilt = urllib.parse.urlparse(link.build_trojan_url(node))
+    rebuilt = urllib.parse.urlparse(link.build_url(node))
     query = urllib.parse.parse_qs(rebuilt.query)
     assert query["type"] == ["ws"]
     assert query["path"] == ["/ws"]
@@ -162,7 +164,7 @@ def test_vmess_grpc_codec_roundtrip_does_not_force_tls():
     assert node.transport.grpc_service_name == "svc"
     assert node.tls.enabled is False
 
-    encoded = link.build_vmess_url(node).removeprefix("vmess://")
+    encoded = link.build_url(node).removeprefix("vmess://")
     rebuilt = json.loads(base64.b64decode(encoded).decode("utf-8"))
     assert rebuilt["net"] == "grpc"
     assert rebuilt["path"] == "svc"

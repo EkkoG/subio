@@ -35,7 +35,7 @@ def _surge_protocols() -> frozenset[str]:
 
 
 def _link_protocols(target: str) -> frozenset[str]:
-    from subio_v2.emitter.link import link_protocols_for_target
+    from subio_v2.links import protocols_for_target as link_protocols_for_target
 
     return link_protocols_for_target(target)
 

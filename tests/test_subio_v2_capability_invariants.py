@@ -6,9 +6,9 @@ from collections.abc import Callable
 import pytest
 
 import subio_v2.protocols as protocol_registry
+from subio_v2 import links as link
 from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.conversion_service import NodeConversionService
-from subio_v2.emitter import link
 from subio_v2.model.nodes import (
     AnyTLSNode,
     HttpNode,
@@ -189,7 +189,7 @@ def test_link_platform_protocols_have_builders_and_build_baseline_nodes():
         for protocol in PLATFORM_CAPABILITIES[platform]["protocols"]
     }
 
-    assert set(link.LINK_BUILDERS) == declared_protocols
+    assert {codec.protocol for codec in link.all_codecs()} == declared_protocols
     assert declared_protocols <= set(factories)
 
     for platform in LINK_PLATFORMS:
@@ -368,7 +368,7 @@ def test_vless_reality_contract_uses_client_fingerprint():
         assert "reality" in PLATFORM_CAPABILITIES[platform]["vless"]["features"]
         assert NodeConversionService(platform).check_node(node).supported
 
-    url = link.build_vless_url(node)
+    url = link.build_url(node)
     query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     assert query["security"] == ["reality"]
     assert query["pbk"] == ["pk"]

@@ -9,10 +9,9 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 链接并发出 warning。
 """
 
-from typing import Dict, List
 
+from subio_v2 import links as link
 from subio_v2.conversion import EmissionResult, IssueSeverity
-from subio_v2.emitter import link
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import Node
 
@@ -20,10 +19,10 @@ from subio_v2.model.nodes import Node
 class DaeEmitter(BaseEmitter):
     platform = "dae"
 
-    def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
+    def emit_result(self, nodes: list[Node]) -> EmissionResult[str]:
         checked_nodes, issues = self.emit_with_check(nodes)
-        node_by_name: Dict[str, Node] = {}
-        url_by_id: Dict[int, str] = {}
+        node_by_name: dict[str, Node] = {}
+        url_by_id: dict[int, str] = {}
         candidate_nodes: list[Node] = []
 
         for node in checked_nodes:
@@ -99,7 +98,7 @@ class DaeEmitter(BaseEmitter):
             },
         )
 
-    def emit_subscription(self, nodes: List[Node]) -> str:
+    def emit_subscription(self, nodes: list[Node]) -> str:
         """纯文本订阅：每行一条 URL（不做 base64）。"""
         result = self.emit_result(nodes)
         self._raise_emit_error(result)
@@ -113,10 +112,10 @@ class DaeEmitter(BaseEmitter):
 
     @staticmethod
     def _build_indexes(
-        nodes: List[Node],
-    ) -> tuple[Dict[str, Node], Dict[int, str]]:
-        node_by_name: Dict[str, Node] = {}
-        url_by_id: Dict[int, str] = {}
+        nodes: list[Node],
+    ) -> tuple[dict[str, Node], dict[int, str]]:
+        node_by_name: dict[str, Node] = {}
+        url_by_id: dict[int, str] = {}
         for node in nodes:
             if node.name in node_by_name:
                 raise ValueError(f"Duplicate node name in dae artifact: {node.name}")
@@ -132,8 +131,8 @@ class DaeEmitter(BaseEmitter):
     def _build_chain_url(
         self,
         node: Node,
-        node_by_name: Dict[str, Node],
-        url_by_id: Dict[int, str],
+        node_by_name: dict[str, Node],
+        url_by_id: dict[int, str],
         visiting: set[str],
     ) -> str:
         """Resolve the complete dialer chain and reject missing targets or cycles."""

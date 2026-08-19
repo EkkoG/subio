@@ -4,22 +4,22 @@ import urllib.parse
 
 import pytest
 
+from subio_v2 import links as link
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.emitter import link
 from subio_v2.model.nodes import (
-    Protocol,
-    Network,
-    TLSSettings,
-    TransportSettings,
-    ShadowsocksNode,
-    VmessNode,
-    VlessNode,
-    TrojanNode,
-    Socks5Node,
+    AnyTLSNode,
     HttpNode,
     Hysteria2Node,
+    Network,
+    Protocol,
+    ShadowsocksNode,
+    Socks5Node,
+    TLSSettings,
+    TransportSettings,
+    TrojanNode,
     TUICNode,
-    AnyTLSNode,
+    VlessNode,
+    VmessNode,
 )
 
 
@@ -138,7 +138,7 @@ def _http(name="hp"):
 
 def test_build_ss_url_sip002():
     node = _ss()
-    url = link.build_ss_url(node)
+    url = link.build_url(node)
     assert url.startswith("ss://")
     head, _, frag = url.partition("#")
     assert frag == urllib.parse.quote(node.name, safe="")
@@ -152,7 +152,7 @@ def test_build_ss_url_sip002():
 
 def test_build_vmess_url_base64_json():
     node = _vmess()
-    url = link.build_vmess_url(node)
+    url = link.build_url(node)
     assert url.startswith("vmess://")
     payload = url[len("vmess://") :]
     data = json.loads(base64.b64decode(payload).decode())
@@ -167,7 +167,7 @@ def test_build_vmess_url_base64_json():
 
 
 def test_build_vless_url_with_flow_and_tls():
-    url = link.build_vless_url(_vless())
+    url = link.build_url(_vless())
     assert url.startswith(
         "vless://22222222-2222-2222-2222-222222222222@vl.example.com:443?"
     )
@@ -178,7 +178,7 @@ def test_build_vless_url_with_flow_and_tls():
 
 
 def test_build_trojan_url():
-    url = link.build_trojan_url(_trojan())
+    url = link.build_url(_trojan())
     parsed = urllib.parse.urlparse(url)
     assert parsed.scheme == "trojan"
     assert parsed.hostname == "tj.example.com"
@@ -188,7 +188,7 @@ def test_build_trojan_url():
 
 
 def test_build_hysteria2_url():
-    url = link.build_hysteria2_url(_hysteria2())
+    url = link.build_url(_hysteria2())
     assert url.startswith("hysteria2://hypass@hy.example.com:443/?")
     qs = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     assert qs["sni"] == ["hy.example.com"]
@@ -197,7 +197,7 @@ def test_build_hysteria2_url():
 
 
 def test_build_tuic_url_v5():
-    url = link.build_tuic_url(_tuic())
+    url = link.build_url(_tuic())
     parsed = urllib.parse.urlparse(url)
     assert parsed.scheme == "tuic"
     # v5: uuid:password@host:port
@@ -207,16 +207,16 @@ def test_build_tuic_url_v5():
 
 
 def test_build_anytls_url():
-    url = link.build_anytls_url(_anytls())
+    url = link.build_url(_anytls())
     assert url.startswith("anytls://anytlspass@at.example.com:443/?")
     qs = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     assert qs["sni"] == ["at.example.com"]
 
 
 def test_build_socks5_and_http_urls():
-    s = link.build_socks5_url(_socks5())
+    s = link.build_url(_socks5())
     assert s.startswith("socks5://u:p@s5.example.com:1080#")
-    h = link.build_http_url(_http())
+    h = link.build_url(_http())
     assert h.startswith("http://u:p@hp.example.com:8080#")
 
 

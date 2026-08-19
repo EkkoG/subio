@@ -2,7 +2,7 @@ import pytest
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.capabilities.definitions import all_platform_capabilities
-from subio_v2.emitter.link import link_protocols_for_target
+from subio_v2.links import protocols_for_target as link_protocols_for_target
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
 from subio_v2.target_registry import (
     common_policy_for_target,

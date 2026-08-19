@@ -1,0 +1,52 @@
+from types import MappingProxyType
+
+from subio_v2.links import (
+    anytls,
+    http,
+    hysteria2,
+    shadowsocks,
+    socks5,
+    trojan,
+    tuic,
+    vless,
+    vmess,
+)
+from subio_v2.links._base import LinkCodec
+from subio_v2.model.nodes import Node, Protocol
+
+_CODECS = (
+    shadowsocks.CODEC,
+    vmess.CODEC,
+    vless.CODEC,
+    trojan.CODEC,
+    socks5.CODEC,
+    http.CODEC,
+    hysteria2.CODEC,
+    tuic.CODEC,
+    anytls.CODEC,
+)
+
+_BY_PROTOCOL = MappingProxyType({codec.protocol: codec for codec in _CODECS})
+if len(_BY_PROTOCOL) != len(_CODECS):
+    raise RuntimeError("Duplicate link codec protocol")
+
+
+def all_codecs() -> tuple[LinkCodec, ...]:
+    return _CODECS
+
+
+def protocols_for_target(target: str) -> frozenset[str]:
+    return frozenset(
+        codec.protocol.value for codec in _CODECS if target in codec.targets
+    )
+
+
+def build_url(node: Node, *, target: str | None = None) -> str | None:
+    codec = _BY_PROTOCOL.get(node.type)
+    if codec is None or (target is not None and target not in codec.targets):
+        return None
+    return codec.build(node)
+
+
+def get_codec(protocol: Protocol) -> LinkCodec | None:
+    return _BY_PROTOCOL.get(protocol)
