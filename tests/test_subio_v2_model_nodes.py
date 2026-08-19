@@ -1,11 +1,15 @@
+from dataclasses import fields
+
 import pytest
 
 from subio_v2.model.nodes import (
+    BaseNode,
     Protocol,
     ShadowsocksNode,
     SourcePassthroughNode,
     SSHNode,
 )
+from subio_v2.model.records import NodeRecord
 from subio_v2.protocols.user_overrides import (
     clone_node_for_user,
     get_nodes_for_user,
@@ -83,3 +87,26 @@ def test_source_passthrough_user_override_keeps_common_endpoint_behavior():
     assert cloned is not None
     assert cloned.server == "new.example"
     assert cloned.port == 8443
+
+
+def test_lifecycle_metadata_is_owned_by_node_record_and_hidden_from_repr():
+    semantic_fields = {item.name for item in fields(BaseNode)}
+    assert "record" in semantic_fields
+    assert {
+        "original_name",
+        "extra",
+        "source_extensions",
+        "source_provider",
+        "source_context",
+    }.isdisjoint(semantic_fields)
+
+    node = make_node("record")
+    node.record = NodeRecord(
+        original_name="before",
+        source_provider="provider",
+        source_extensions={"surge": {"private-key": "secret"}},
+    )
+
+    assert node.original_name == "before"
+    assert node.source_provider == "provider"
+    assert "secret" not in repr(node)

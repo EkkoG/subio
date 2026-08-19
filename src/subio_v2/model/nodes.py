@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from subio_v2.dialect import DialectContext
+from subio_v2.model.records import NodeRecord
+
+if TYPE_CHECKING:
+    from subio_v2.dialect import DialectContext
 
 
 class Protocol(StrEnum):
@@ -173,20 +178,51 @@ class BaseNode:
     # Multi-user support: maps username to credential overrides
     # e.g., {"lisa": {"password": "xxx"}, "vita": {"password": "yyy"}}
     users: Optional[Dict[str, Dict[str, Any]]] = None
-    # Original name before any rename processing (for filtering)
-    original_name: Optional[str] = None
     interface_name: Optional[str] = None
     routing_mark: Optional[int] = None
-    # Unmapped Clash fields preserved for round-trip emit
-    extra: Dict[str, Any] = field(default_factory=dict)
     surge_options: SurgePolicyOptions = field(default_factory=SurgePolicyOptions)
     shadow_tls: ShadowTLSSettings = field(default_factory=ShadowTLSSettings)
-    source_extensions: Dict[str, Any] = field(default_factory=dict, repr=False)
-    # Workflow provenance for structured conversion issues; never emitted.
-    source_provider: Optional[str] = field(default=None, repr=False, compare=False)
-    source_context: Optional[DialectContext] = field(
-        default=None, repr=False, compare=False
-    )
+    record: NodeRecord = field(default_factory=NodeRecord, repr=False, compare=False)
+
+    @property
+    def original_name(self) -> str | None:
+        return self.record.original_name
+
+    @original_name.setter
+    def original_name(self, value: str | None) -> None:
+        self.record.original_name = value
+
+    @property
+    def extra(self) -> dict[str, Any]:
+        return self.record.extra
+
+    @extra.setter
+    def extra(self, value: dict[str, Any]) -> None:
+        self.record.extra = value
+
+    @property
+    def source_extensions(self) -> dict[str, Any]:
+        return self.record.source_extensions
+
+    @source_extensions.setter
+    def source_extensions(self, value: dict[str, Any]) -> None:
+        self.record.source_extensions = value
+
+    @property
+    def source_provider(self) -> str | None:
+        return self.record.source_provider
+
+    @source_provider.setter
+    def source_provider(self, value: str | None) -> None:
+        self.record.source_provider = value
+
+    @property
+    def source_context(self) -> DialectContext | None:
+        return self.record.source_context
+
+    @source_context.setter
+    def source_context(self, value: DialectContext | None) -> None:
+        self.record.source_context = value
 
 
 @dataclass

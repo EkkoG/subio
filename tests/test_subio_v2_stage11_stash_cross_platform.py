@@ -10,9 +10,9 @@ from subio_v2.model.nodes import (
     TailscaleNode,
     TrustTunnelNode,
 )
+from subio_v2.model.records import NodeRecord
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.stash import StashParser
-
 
 STAGE11_PROTOCOLS = {"tailscale", "masque", "trusttunnel"}
 
@@ -248,7 +248,7 @@ def test_tailscale_omitted_exit_node_semantics_are_not_guessed():
             mode=MasqueMode.H3_L4_PROXY,
             private_key="private",
             public_key="public",
-            source_provider="mihomo-provider",
+            record=NodeRecord(source_provider="mihomo-provider"),
         ),
         MasqueNode(
             name="surge-forward",
@@ -258,7 +258,7 @@ def test_tailscale_omitted_exit_node_semantics_are_not_guessed():
             mode=MasqueMode.FORWARD_PROXY,
             username="user",
             password="secret",
-            source_provider="surge-provider",
+            record=NodeRecord(source_provider="surge-provider"),
         ),
     ],
 )
@@ -284,7 +284,7 @@ def test_stash_trust_tunnel_diagnoses_platform_only_semantics():
         password="secret",
         websocket=True,
         headers="X-Test: value",
-        source_provider="surge-provider",
+        record=NodeRecord(source_provider="surge-provider"),
     )
 
     rejected = StashEmitter().emit_result([unsupported])
@@ -304,7 +304,7 @@ def test_stash_trust_tunnel_diagnoses_platform_only_semantics():
         username="user",
         password="secret",
         health_check=True,
-        source_provider="mihomo-provider",
+        record=NodeRecord(source_provider="mihomo-provider"),
     )
     warned = StashEmitter().emit_result([lossy])
 

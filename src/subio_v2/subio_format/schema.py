@@ -228,11 +228,7 @@ PUBLIC_FIELD_ENUMS: dict[tuple[type, str], tuple[Any, ...]] = {
 
 NON_PUBLIC_NODE_FIELDS = frozenset(
     {
-        "original_name",
-        "extra",
-        "source_extensions",
-        "source_provider",
-        "source_context",
+        "record",
     }
 )
 
