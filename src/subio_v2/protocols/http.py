@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import HttpNode, HttpVariant, Node, Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
-class HttpDescriptor(StructuredProtocolDescriptor):
+class HttpCodec(StructuredClashProtocolCodec):
     protocol = Protocol.HTTP
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "http"
@@ -104,4 +104,4 @@ class HttpDescriptor(StructuredProtocolDescriptor):
         ]
 
 
-DESCRIPTOR = HttpDescriptor()
+CODEC = HttpCodec()

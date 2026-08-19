@@ -11,11 +11,11 @@ from subio_v2.capabilities.definitions import (
 )
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
-class ShadowsocksDescriptor(StructuredProtocolDescriptor):
+class ShadowsocksCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWSOCKS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "ss"
@@ -132,4 +132,4 @@ class ShadowsocksDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = ShadowsocksDescriptor()
+CODEC = ShadowsocksCodec()

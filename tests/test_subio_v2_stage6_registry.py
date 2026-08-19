@@ -24,7 +24,7 @@ from subio_v2.model.nodes import (
 )
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 
 SCHEMA_SNAPSHOT = (
     Path(__file__).parent / "fixtures/mihomo/schema/proxies-88d5239.json"
@@ -44,7 +44,7 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert known_types == set(snapshot["proxy_types"])
     assert len(known_types) == 26
     assert all(
-        isinstance(descriptor, StructuredProtocolDescriptor)
+        isinstance(descriptor, StructuredClashProtocolCodec)
         for descriptor in descriptors
     )
     assert registry.get(Protocol.MIERU).node_class is MieruNode

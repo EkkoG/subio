@@ -3,11 +3,11 @@ from __future__ import annotations
 from subio_v2.capabilities.definitions import SS_CIPHERS_STASH
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksRNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
-class ShadowsocksRDescriptor(StructuredProtocolDescriptor):
+class ShadowsocksRCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWSOCKSR
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssr"
@@ -44,4 +44,4 @@ class ShadowsocksRDescriptor(StructuredProtocolDescriptor):
         ]
 
 
-DESCRIPTOR = ShadowsocksRDescriptor()
+CODEC = ShadowsocksRCodec()

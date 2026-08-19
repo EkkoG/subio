@@ -1,9 +1,9 @@
 from subio_v2.model.nodes import Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
-class JuicityDescriptor(StructuredProtocolDescriptor):
+class JuicityCodec(StructuredClashProtocolCodec):
     protocol = Protocol.JUICITY
     clash_type = "juicity"
     clash_dialects = frozenset({"stash"})
@@ -24,4 +24,4 @@ class JuicityDescriptor(StructuredProtocolDescriptor):
     )
 
 
-DESCRIPTOR = JuicityDescriptor()
+CODEC = JuicityCodec()

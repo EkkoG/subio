@@ -25,10 +25,8 @@ class NodeValidationError:
     message: str
 
 
-class ProtocolDescriptor(ABC):
-    """
-    Descriptor for one protocol's Clash parse/emit/check behavior.
-    """
+class ClashProtocolCodec(ABC):
+    """One protocol's Clash-family parse, emit, and target-check contract."""
 
     protocol: Protocol
     clash_type: str
@@ -78,8 +76,8 @@ class ProtocolDescriptor(ABC):
         return []
 
 
-class StructuredProtocolDescriptor(ProtocolDescriptor):
-    """Descriptor whose handled, parse, and emit behavior share one field spec."""
+class StructuredClashProtocolCodec(ClashProtocolCodec):
+    """Codec whose handled, parse, and emit behavior share one field spec."""
 
     fields: tuple[ClashFieldSpec, ...] = ()
 

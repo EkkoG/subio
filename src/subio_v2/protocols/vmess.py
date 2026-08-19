@@ -11,7 +11,7 @@ from subio_v2.capabilities.definitions import (
 )
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -21,7 +21,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class VmessDescriptor(StructuredProtocolDescriptor):
+class VmessCodec(StructuredClashProtocolCodec):
     protocol = Protocol.VMESS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "vmess"
@@ -173,4 +173,4 @@ class VmessDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = VmessDescriptor()
+CODEC = VmessCodec()

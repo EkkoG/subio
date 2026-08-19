@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Hysteria2Node, Node, Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -11,7 +11,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class Hysteria2Descriptor(StructuredProtocolDescriptor):
+class Hysteria2Codec(StructuredClashProtocolCodec):
     protocol = Protocol.HYSTERIA2
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria2"
@@ -96,4 +96,4 @@ class Hysteria2Descriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = Hysteria2Descriptor()
+CODEC = Hysteria2Codec()

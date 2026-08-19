@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import MasqueMode, MasqueNode, Node, Protocol
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -38,7 +38,7 @@ def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
         raise ValueError("Unsupported Mihomo MASQUE mode or transport")
 
 
-class MasqueDescriptor(StructuredProtocolDescriptor):
+class MasqueCodec(StructuredClashProtocolCodec):
     protocol = Protocol.MASQUE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"
@@ -196,4 +196,4 @@ class MasqueDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = MasqueDescriptor()
+CODEC = MasqueCodec()

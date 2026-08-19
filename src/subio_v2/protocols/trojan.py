@@ -8,7 +8,7 @@ from subio_v2.capabilities.definitions import (
 )
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -18,7 +18,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class TrojanDescriptor(StructuredProtocolDescriptor):
+class TrojanCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TROJAN
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"
@@ -115,4 +115,4 @@ class TrojanDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = TrojanDescriptor()
+CODEC = TrojanCodec()

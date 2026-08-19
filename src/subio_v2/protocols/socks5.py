@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, Socks5Node
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
 
 
-class Socks5Descriptor(StructuredProtocolDescriptor):
+class Socks5Codec(StructuredClashProtocolCodec):
     protocol = Protocol.SOCKS5
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "socks5"
@@ -51,4 +51,4 @@ class Socks5Descriptor(StructuredProtocolDescriptor):
         ]
 
 
-DESCRIPTOR = Socks5Descriptor()
+CODEC = Socks5Codec()

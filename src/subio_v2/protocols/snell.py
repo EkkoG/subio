@@ -5,7 +5,7 @@ from typing import Any
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SnellNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -36,7 +36,7 @@ def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
         }
 
 
-class SnellDescriptor(StructuredProtocolDescriptor):
+class SnellCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SNELL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"
@@ -159,4 +159,4 @@ class SnellDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = SnellDescriptor()
+CODEC = SnellCodec()

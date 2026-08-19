@@ -9,7 +9,7 @@ from subio_v2.model.nodes import (
     SudokuHTTPMaskSettings,
     SudokuNode,
 )
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -72,7 +72,7 @@ def _emit_httpmask(out: MutableMapping[str, Any], node: Node) -> None:
     out["httpmask"] = payload
 
 
-class SudokuDescriptor(StructuredProtocolDescriptor):
+class SudokuCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SUDOKU
     clash_type = "sudoku"
     target_constraints = {"mihomo": {"features": {"smux"}}}
@@ -291,4 +291,4 @@ class SudokuDescriptor(StructuredProtocolDescriptor):
         )
 
 
-DESCRIPTOR = SudokuDescriptor()
+CODEC = SudokuCodec()

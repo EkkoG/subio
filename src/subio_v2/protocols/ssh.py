@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, SSHNode
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
-class SSHDescriptor(StructuredProtocolDescriptor):
+class SSHCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"
@@ -70,4 +70,4 @@ class SSHDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = SSHDescriptor()
+CODEC = SSHCodec()

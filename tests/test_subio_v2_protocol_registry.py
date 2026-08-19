@@ -8,7 +8,7 @@ import pytest
 import subio_v2.protocols as registry
 from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.model.nodes import BaseNode, Protocol
-from subio_v2.protocols._base import ProtocolDescriptor
+from subio_v2.protocols._base import ClashProtocolCodec
 from subio_v2.protocols.definitions import (
     TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS,
     TERMINAL_NATIVE_COMMON_FIELDS,
@@ -17,7 +17,7 @@ from subio_v2.protocols.definitions import (
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 
-class ConflictingDescriptor(ProtocolDescriptor):
+class ConflictingCodec(ClashProtocolCodec):
     protocol = Protocol.SHADOWSOCKS
     clash_type = "conflict"
 
@@ -28,7 +28,7 @@ class ConflictingDescriptor(ProtocolDescriptor):
         raise NotImplementedError
 
 
-class ClashTypeConflictingDescriptor(ProtocolDescriptor):
+class ClashTypeConflictingCodec(ClashProtocolCodec):
     protocol = object()
     clash_type = "ss"
 
@@ -39,7 +39,7 @@ class ClashTypeConflictingDescriptor(ProtocolDescriptor):
         raise NotImplementedError
 
 
-class UndefinedProtocolDescriptor(ProtocolDescriptor):
+class UndefinedClashProtocolCodec(ClashProtocolCodec):
     protocol = object()
     clash_type = "undefined"
 
@@ -147,19 +147,19 @@ def test_mihomo_capabilities_match_registered_protocols():
 def test_registry_rejects_conflicting_protocol():
     list(registry.all())
     with pytest.raises(ValueError, match="Protocol already registered"):
-        registry.register(ConflictingDescriptor())
+        registry.register(ConflictingCodec())
 
 
 def test_registry_rejects_conflicting_clash_type():
     list(registry.all())
     with pytest.raises(ValueError, match="Clash type already registered"):
-        registry.register(ClashTypeConflictingDescriptor())
+        registry.register(ClashTypeConflictingCodec())
 
 
 def test_registry_rejects_protocol_without_definition():
     list(registry.all())
     with pytest.raises(ValueError, match="Protocol has no definition"):
-        registry.register(UndefinedProtocolDescriptor())
+        registry.register(UndefinedClashProtocolCodec())
 
 
 def test_importing_protocol_module_has_no_registration_side_effect():
@@ -169,8 +169,9 @@ def test_importing_protocol_module_has_no_registration_side_effect():
             "-c",
             (
                 "import subio_v2.protocols as r; "
+                "before = tuple(r.all()); "
                 "import subio_v2.protocols.vmess; "
-                "assert not r._registry"
+                "assert tuple(r.all()) == before"
             ),
         ],
         capture_output=True,

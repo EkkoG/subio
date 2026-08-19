@@ -10,7 +10,7 @@ from subio_v2.capabilities.definitions import (
 )
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VlessNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -20,7 +20,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class VlessDescriptor(StructuredProtocolDescriptor):
+class VlessCodec(StructuredClashProtocolCodec):
     protocol = Protocol.VLESS
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "vless"
@@ -141,4 +141,4 @@ class VlessDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = VlessDescriptor()
+CODEC = VlessCodec()

@@ -5,7 +5,7 @@ from typing import Any
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import AnyTLSNode, Node, Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -24,7 +24,7 @@ def _emit_reuse(out: MutableMapping[str, Any], node: Node) -> None:
         out["disable-reuse"] = True
 
 
-class AnyTLSDescriptor(StructuredProtocolDescriptor):
+class AnyTLSCodec(StructuredClashProtocolCodec):
     protocol = Protocol.ANYTLS
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "anytls"
@@ -84,4 +84,4 @@ class AnyTLSDescriptor(StructuredProtocolDescriptor):
         ]
 
 
-DESCRIPTOR = AnyTLSDescriptor()
+CODEC = AnyTLSCodec()

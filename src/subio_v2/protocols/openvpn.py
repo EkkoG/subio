@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from subio_v2.model.nodes import Node, OpenVPNNode, Protocol
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 _PROTOS = {"udp", "udp4", "tcp", "tcp-client", "tcp4", "tcp4-client"}
@@ -27,7 +27,7 @@ def _optional_string(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
-class OpenVPNDescriptor(StructuredProtocolDescriptor):
+class OpenVPNCodec(StructuredClashProtocolCodec):
     protocol = Protocol.OPENVPN
     clash_type = "openvpn"
     target_constraints = {"mihomo": {"features": {"smux"}}}
@@ -179,4 +179,4 @@ class OpenVPNDescriptor(StructuredProtocolDescriptor):
             )
 
 
-DESCRIPTOR = OpenVPNDescriptor()
+CODEC = OpenVPNCodec()

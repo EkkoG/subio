@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from subio_v2.model.nodes import Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -10,7 +10,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class GostRelayDescriptor(StructuredProtocolDescriptor):
+class GostRelayCodec(StructuredClashProtocolCodec):
     protocol = Protocol.GOST_RELAY
     clash_type = "gost-relay"
     target_constraints = {"mihomo": {"features": {"smux"}}}
@@ -35,4 +35,4 @@ class GostRelayDescriptor(StructuredProtocolDescriptor):
     )
 
 
-DESCRIPTOR = GostRelayDescriptor()
+CODEC = GostRelayCodec()

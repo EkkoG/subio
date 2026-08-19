@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TrustTunnelNode
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group, tls_group
 
 
-class TrustTunnelDescriptor(StructuredProtocolDescriptor):
+class TrustTunnelCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
@@ -186,4 +186,4 @@ class TrustTunnelDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = TrustTunnelDescriptor()
+CODEC = TrustTunnelCodec()

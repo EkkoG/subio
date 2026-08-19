@@ -4,11 +4,11 @@ from typing import Any, Dict
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, RejectNode
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import smux_group
 
 
-class RejectDescriptor(StructuredProtocolDescriptor):
+class RejectCodec(StructuredClashProtocolCodec):
     protocol = Protocol.REJECT
     clash_type = "reject"
     target_constraints = {
@@ -60,4 +60,4 @@ class RejectDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = RejectDescriptor()
+CODEC = RejectCodec()

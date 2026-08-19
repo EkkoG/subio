@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, TUICNode
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     scalar_field,
@@ -13,7 +13,7 @@ from subio_v2.protocols._fields import (
 )
 
 
-class TUICDescriptor(StructuredProtocolDescriptor):
+class TUICCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TUIC
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tuic"
@@ -133,4 +133,4 @@ class TUICDescriptor(StructuredProtocolDescriptor):
         return warnings
 
 
-DESCRIPTOR = TUICDescriptor()
+CODEC = TUICCodec()

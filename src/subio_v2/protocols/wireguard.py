@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -52,7 +52,7 @@ def _encode_peers(value: list[WireguardPeer] | None) -> list[dict[str, Any]] | N
     return peers
 
 
-class WireguardDescriptor(StructuredProtocolDescriptor):
+class WireguardCodec(StructuredClashProtocolCodec):
     protocol = Protocol.WIREGUARD
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "wireguard"
@@ -155,4 +155,4 @@ class WireguardDescriptor(StructuredProtocolDescriptor):
         return errors
 
 
-DESCRIPTOR = WireguardDescriptor()
+CODEC = WireguardCodec()

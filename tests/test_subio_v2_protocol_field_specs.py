@@ -6,7 +6,7 @@ import subio_v2.protocols as registry
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.model.nodes import BaseNode, Protocol, ShadowsocksNode
 from subio_v2.parser.clash import ClashParser
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
@@ -18,7 +18,7 @@ class SpecNode(BaseNode):
     not_none: int | None = None
 
 
-class SpecDescriptor(StructuredProtocolDescriptor):
+class SpecCodec(StructuredClashProtocolCodec):
     protocol = Protocol.HTTP
     clash_type = "spec"
     node_class = SpecNode
@@ -31,7 +31,7 @@ class SpecDescriptor(StructuredProtocolDescriptor):
 
 
 def test_field_spec_derives_alias_handling_extra_and_emit_policies():
-    descriptor = SpecDescriptor()
+    descriptor = SpecCodec()
     node = descriptor.parse_clash(
         {
             "name": "spec",
@@ -102,7 +102,7 @@ proxies:
 
 def test_structured_descriptor_specs_reference_real_unique_node_fields():
     for descriptor in registry.all():
-        if not isinstance(descriptor, StructuredProtocolDescriptor):
+        if not isinstance(descriptor, StructuredClashProtocolCodec):
             continue
         node_fields = {item.name for item in fields(descriptor.node_class)}
         consumed: set[str] = set()
@@ -122,4 +122,4 @@ def test_structured_descriptor_rejects_wrong_node_type():
         port=443,
     )
     with pytest.raises(TypeError, match="Expected SpecNode"):
-        SpecDescriptor().emit_clash(node)
+        SpecCodec().emit_clash(node)

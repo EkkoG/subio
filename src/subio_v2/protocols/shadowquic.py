@@ -4,7 +4,7 @@ import copy
 from collections.abc import Mapping, MutableMapping
 
 from subio_v2.model.nodes import Node, Protocol, ShadowQUICNode, TLSSettings
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
     field_group,
@@ -34,7 +34,7 @@ def _emit_tls(out: MutableMapping[str, object], node: Node) -> None:
         out["alpn"] = copy.deepcopy(node.tls.alpn)
 
 
-class ShadowQUICDescriptor(StructuredProtocolDescriptor):
+class ShadowQUICCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWQUIC
     clash_type = "shadowquic"
     target_constraints = {"mihomo": {"features": {"smux"}}}
@@ -103,4 +103,4 @@ class ShadowQUICDescriptor(StructuredProtocolDescriptor):
         return errors
 
 
-DESCRIPTOR = ShadowQUICDescriptor()
+CODEC = ShadowQUICCodec()

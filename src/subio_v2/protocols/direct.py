@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from subio_v2.model.nodes import Node, Protocol
-from subio_v2.protocols._base import StructuredProtocolDescriptor
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import smux_group
 
 
-class DirectDescriptor(StructuredProtocolDescriptor):
+class DirectCodec(StructuredClashProtocolCodec):
     protocol = Protocol.DIRECT
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "direct"
@@ -25,4 +25,4 @@ class DirectDescriptor(StructuredProtocolDescriptor):
         out.pop("port", None)
 
 
-DESCRIPTOR = DirectDescriptor()
+CODEC = DirectCodec()

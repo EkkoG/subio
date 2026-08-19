@@ -13,7 +13,7 @@ from subio_v2.model.nodes import (
     Node,
     Protocol,
 )
-from subio_v2.protocols._base import NodeValidationError, StructuredProtocolDescriptor
+from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 
 
@@ -25,7 +25,7 @@ def _encode_enum(value: Any) -> str:
     return value.value
 
 
-class MieruDescriptor(StructuredProtocolDescriptor):
+class MieruCodec(StructuredClashProtocolCodec):
     protocol = Protocol.MIERU
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"
@@ -200,4 +200,4 @@ class MieruDescriptor(StructuredProtocolDescriptor):
         return 1 <= start <= end <= 65535
 
 
-DESCRIPTOR = MieruDescriptor()
+CODEC = MieruCodec()
