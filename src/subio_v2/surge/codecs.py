@@ -5,7 +5,6 @@ from enum import StrEnum
 
 from subio_v2.model.nodes import Protocol
 
-
 DEFAULT_SURGE_TARGET = "latest"
 
 
@@ -27,7 +26,6 @@ class SurgeCodecSpec:
     protocol: Protocol | None
     policy_kind: SurgePolicyKind
     udp_behavior: SurgeUdpBehavior
-    emitter_handler: str | None = None
     consumed_parameters: frozenset[str] = frozenset()
     emitted_parameters: frozenset[str] = frozenset()
     normalized_parameters: tuple[tuple[str, str], ...] = ()
@@ -46,7 +44,6 @@ def _spec(
     protocol: Protocol | None,
     kind: SurgePolicyKind = SurgePolicyKind.NODE,
     udp: SurgeUdpBehavior,
-    handler: str | None = None,
     consumed: tuple[str, ...] = (),
     emitted: tuple[str, ...] | None = None,
     normalized: tuple[tuple[str, str], ...] = (),
@@ -57,7 +54,6 @@ def _spec(
         protocol=protocol,
         policy_kind=kind,
         udp_behavior=udp,
-        emitter_handler=handler,
         consumed_parameters=frozenset(consumed),
         emitted_parameters=frozenset(consumed if emitted is None else emitted),
         normalized_parameters=normalized,
@@ -100,7 +96,6 @@ SURGE_CODEC_SPECS = (
         "ss",
         protocol=Protocol.SHADOWSOCKS,
         udp=SurgeUdpBehavior.EXPLICIT,
-        handler="_parts_ss",
         consumed=(
             "encrypt-method",
             "password",
@@ -114,7 +109,6 @@ SURGE_CODEC_SPECS = (
         "vmess",
         protocol=Protocol.VMESS,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_vmess",
         consumed=(
             "username",
             "encrypt-method",
@@ -129,56 +123,48 @@ SURGE_CODEC_SPECS = (
         "trojan",
         protocol=Protocol.TROJAN,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_trojan",
         consumed=("password", "ws", "ws-path", "ws-headers"),
     ),
     _spec(
         "socks5",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
-        handler="_parts_socks5",
         consumed=("username", "password", "udp-relay"),
     ),
     _spec(
         "socks5-tls",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
-        handler="_parts_socks5",
         consumed=("username", "password", "udp-relay"),
     ),
     _spec(
         "http",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
-        handler="_parts_http",
         consumed=("username", "password"),
     ),
     _spec(
         "https",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
-        handler="_parts_http",
         consumed=("username", "password"),
     ),
     _spec(
         "h2-connect",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.EXPLICIT,
-        handler="_parts_http",
         consumed=("username", "password", "headers", "max-streams", "udp-relay"),
     ),
     _spec(
         "anytls",
         protocol=Protocol.ANYTLS,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_anytls",
         consumed=("password", "reuse"),
     ),
     _spec(
         "ssh",
         protocol=Protocol.SSH,
         udp=SurgeUdpBehavior.UNSUPPORTED,
-        handler="_parts_ssh",
         consumed=(
             "username",
             "password",
@@ -192,7 +178,6 @@ SURGE_CODEC_SPECS = (
         "snell",
         protocol=Protocol.SNELL,
         udp=SurgeUdpBehavior.VERSIONED,
-        handler="_parts_snell",
         consumed=(
             "psk",
             "version",
@@ -207,21 +192,18 @@ SURGE_CODEC_SPECS = (
         "tuic",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_tuic",
         consumed=("token", "version", "port-hopping", "port-hopping-interval"),
     ),
     _spec(
         "tuic-v5",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_tuic",
         consumed=("uuid", "password", "port-hopping", "port-hopping-interval"),
     ),
     _spec(
         "hysteria2",
         protocol=Protocol.HYSTERIA2,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_hysteria2",
         consumed=(
             "password",
             "download-bandwidth",
@@ -255,21 +237,18 @@ SURGE_CODEC_SPECS = (
         "wireguard",
         protocol=Protocol.WIREGUARD,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_wireguard",
         consumed=("section-name",),
     ),
     _spec(
         "tailscale",
         protocol=Protocol.TAILSCALE,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_tailscale",
         consumed=("section-name",),
     ),
     _spec(
         "masque",
         protocol=Protocol.MASQUE,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_masque",
         consumed=(
             "username",
             "password",
@@ -281,21 +260,18 @@ SURGE_CODEC_SPECS = (
         "trust-tunnel",
         protocol=Protocol.TRUSTTUNNEL,
         udp=SurgeUdpBehavior.UNSUPPORTED,
-        handler="_parts_trust_tunnel",
         consumed=("username", "password", "headers", "max-streams", "h3", "ws"),
     ),
     _spec(
         "direct",
         protocol=Protocol.DIRECT,
         udp=SurgeUdpBehavior.AUTOMATIC,
-        handler="_parts_direct",
     ),
     *(
         _spec(
             keyword,
             protocol=Protocol.REJECT,
             udp=SurgeUdpBehavior.UNSUPPORTED,
-            handler="_parts_reject",
         )
         for keyword in (
             "reject",
@@ -329,21 +305,6 @@ SURGE_MULTI_VALUE_PARAMETERS = {
 SURGE_BUILTIN_ALIAS_TYPES = frozenset(
     {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
 )
-
-_handlers: dict[Protocol, str] = {}
-for _codec in SURGE_CODEC_SPECS:
-    if _codec.policy_kind != SurgePolicyKind.NODE:
-        continue
-    if _codec.protocol is None or _codec.emitter_handler is None:
-        raise RuntimeError(f"Incomplete Surge node codec: {_codec.keyword}")
-    existing_handler = _handlers.get(_codec.protocol)
-    if existing_handler is not None and existing_handler != _codec.emitter_handler:
-        raise RuntimeError(
-            f"Conflicting Surge emitter handlers for {_codec.protocol.value}"
-        )
-    _handlers[_codec.protocol] = _codec.emitter_handler
-SURGE_EMITTER_HANDLERS = dict(_handlers)
-
 
 def get_surge_codec(keyword: str) -> SurgeCodecSpec | None:
     return SURGE_CODEC_BY_KEYWORD.get(keyword.lower())

@@ -1,33 +1,27 @@
 import base64
 import copy
 import hashlib
-from typing import Any, Callable, List
+from typing import Any, List
 
 from subio_v2.conversion import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.model.nodes import (
-    HttpNode,
-    AnyTLSNode,
-    HttpVariant,
-    Hysteria2Node,
-    DirectNode,
-    Network,
     Node,
-    Protocol,
-    RejectNode,
     ShadowsocksNode,
-    SnellNode,
     Socks5Node,
+    SourcePassthroughNode,
     SSHNode,
-    TrojanNode,
     TailscaleNode,
-    MasqueMode,
-    MasqueNode,
-    TrustTunnelNode,
-    TUICNode,
     VmessNode,
     WireguardNode,
-    SourcePassthroughNode,
+)
+from subio_v2.surge.codecs import DEFAULT_SURGE_TARGET
+from subio_v2.surge.emitters import get_surge_protocol_emitter
+from subio_v2.surge.resources import (
+    SurgeKeystoreEntry,
+    SurgeNamedSection,
+    SurgeNodeAttachments,
+    peek_surge_node_attachments,
 )
 from subio_v2.surge.syntax import (
     SurgeParameter,
@@ -35,16 +29,6 @@ from subio_v2.surge.syntax import (
     SurgeProxyRecord,
     serialize_parameter_list,
     serialize_proxy_line,
-)
-from subio_v2.surge.codecs import (
-    DEFAULT_SURGE_TARGET,
-    SURGE_EMITTER_HANDLERS,
-)
-from subio_v2.surge.resources import (
-    SurgeKeystoreEntry,
-    SurgeNamedSection,
-    SurgeNodeAttachments,
-    peek_surge_node_attachments,
 )
 
 
@@ -57,8 +41,6 @@ class _SurgeEmissionError(ValueError):
 
 class SurgeEmitter(BaseEmitter):
     platform = "surge"
-
-    _HANDLERS: dict[Protocol, str] = dict(SURGE_EMITTER_HANDLERS)
 
     def __init__(
         self,
@@ -279,11 +261,10 @@ class SurgeEmitter(BaseEmitter):
             node_keystore_map = {}
         if isinstance(node, SourcePassthroughNode):
             return self._emit_source_passthrough_node(node)
-        handler_name = self._HANDLERS.get(node.type)
-        if not handler_name:
+        emitter = get_surge_protocol_emitter(node.type)
+        if emitter is None:
             return None
-        handler: Callable[..., list[str]] = getattr(self, handler_name)
-        config_parts = handler(node, node_keystore_map)
+        config_parts = emitter(node, node_keystore_map)
         config_parts.extend(self._common_opts(node))
         proxy_type, *raw_parts = config_parts
         positional: list[str] = []
@@ -434,132 +415,6 @@ class SurgeEmitter(BaseEmitter):
             )
         )
 
-    def _parts_direct(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, DirectNode)
-        return ["direct"]
-
-    def _parts_reject(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, RejectNode)
-        return [node.mode.value]
-
-    def _parts_ss(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, ShadowsocksNode)
-        config_parts = ["ss", self._server_str(node), str(node.port)]
-        config_parts.append(f"encrypt-method={node.cipher}")
-        if node.password or node.cipher != "none":
-            config_parts.append(f"password={node.password}")
-        if node.udp_port is not None:
-            config_parts.append(f"udp-port={node.udp_port}")
-        if node.plugin == "obfs":
-            obfs_mode = (
-                node.plugin_opts.get("mode", "http") if node.plugin_opts else "http"
-            )
-            config_parts.append(f"obfs={obfs_mode}")
-            obfs_host = node.plugin_opts.get("host", "") if node.plugin_opts else ""
-            if obfs_host:
-                config_parts.append(f"obfs-host={obfs_host}")
-        return config_parts
-
-    def _parts_vmess(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, VmessNode)
-        config_parts = [
-            "vmess",
-            self._server_str(node),
-            str(node.port),
-            f"username={node.uuid}",
-        ]
-        if node.vmess_aead:
-            config_parts.append("vmess-aead=true")
-        if node.cipher and node.cipher != "aes-128-gcm":
-            config_parts.append(f"encrypt-method={node.cipher}")
-        if node.transport.network == Network.WS:
-            config_parts.append("ws=true")
-            if node.transport.path:
-                config_parts.append(f"ws-path={node.transport.path}")
-            if node.transport.headers:
-                headers = "|".join(
-                    [f"{k}:{v}" for k, v in node.transport.headers.items()]
-                )
-                config_parts.append(f"ws-headers={headers}")
-        return config_parts
-
-    def _parts_trojan(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, TrojanNode)
-        config_parts = [
-            "trojan",
-            self._server_str(node),
-            str(node.port),
-            f"password={node.password}",
-        ]
-        if node.transport.network == Network.WS:
-            config_parts.append("ws=true")
-            if node.transport.path:
-                config_parts.append(f"ws-path={node.transport.path}")
-            if node.transport.headers:
-                headers = "|".join(
-                    [f"{k}:{v}" for k, v in node.transport.headers.items()]
-                )
-                config_parts.append(f"ws-headers={headers}")
-        return config_parts
-
-    def _parts_socks5(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, Socks5Node)
-        proxy_type = "socks5-tls" if (node.tls and node.tls.enabled) else "socks5"
-        config_parts = [proxy_type, self._server_str(node), str(node.port)]
-        if node.username:
-            config_parts.append(f"username={node.username}")
-        if node.password:
-            config_parts.append(f"password={node.password}")
-        return config_parts
-
-    def _parts_http(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, HttpNode)
-        if node.variant == HttpVariant.H2_CONNECT:
-            proxy_type = "h2-connect"
-        elif node.variant == HttpVariant.HTTP:
-            proxy_type = "http"
-        elif node.variant == HttpVariant.HTTPS:
-            proxy_type = "https"
-        else:
-            proxy_type = "https" if (node.tls and node.tls.enabled) else "http"
-        config_parts = [proxy_type, self._server_str(node), str(node.port)]
-        if node.username:
-            config_parts.append(f"username={node.username}")
-        if node.password:
-            config_parts.append(f"password={node.password}")
-        if node.headers:
-            headers = "|".join(f"{key}:{value}" for key, value in node.headers.items())
-            config_parts.append(f"headers={headers}")
-        if node.max_streams is not None:
-            config_parts.append(f"max-streams={node.max_streams}")
-        if node.variant == HttpVariant.H2_CONNECT and node.udp:
-            config_parts.append("udp-relay=true")
-        return config_parts
-
-    def _parts_anytls(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, AnyTLSNode)
-        config_parts = [
-            "anytls",
-            self._server_str(node),
-            str(node.port),
-            f"password={node.password}",
-        ]
-        if not node.reuse:
-            config_parts.append("reuse=false")
-        return config_parts
-
-    def _parts_wireguard(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, WireguardNode)
-        extension = node.source_extensions.get("surge", {})
-        section_name = extension.get("section_name") or node.name
-        return ["wireguard", f"section-name={section_name}"]
-
-    def _parts_tailscale(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, TailscaleNode)
-        extension = node.source_extensions.get("surge", {})
-        section_name = extension.get("section_name") or node.name
-        return ["tailscale", f"section-name={section_name}"]
-
     @staticmethod
     def _tailscale_section_lines(
         node: TailscaleNode, existing: SurgeNamedSection | None
@@ -612,40 +467,6 @@ class SurgeEmitter(BaseEmitter):
             if key not in known_keys:
                 lines.append(raw_line)
         return tuple(lines)
-
-    def _parts_masque(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, MasqueNode)
-        if node.mode != MasqueMode.FORWARD_PROXY:
-            raise ValueError(f"Surge does not support MASQUE mode '{node.mode.value}'")
-        config_parts = ["masque", self._server_str(node), str(node.port)]
-        if node.username:
-            config_parts.append(f"username={node.username}")
-        if node.password:
-            config_parts.append(f"password={node.password}")
-        if node.ports:
-            config_parts.append(f"port-hopping={node.ports}")
-        if node.hop_interval is not None:
-            config_parts.append(f"port-hopping-interval={node.hop_interval}")
-        return config_parts
-
-    def _parts_trust_tunnel(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, TrustTunnelNode)
-        config_parts = [
-            "trust-tunnel",
-            self._server_str(node),
-            str(node.port),
-            f"username={node.username}",
-            f"password={node.password}",
-        ]
-        if node.headers:
-            config_parts.append(f"headers={node.headers}")
-        if node.max_streams is not None:
-            config_parts.append(f"max-streams={node.max_streams}")
-        if node.quic:
-            config_parts.append("h3=true")
-        if node.websocket:
-            config_parts.append("ws=true")
-        return config_parts
 
     @staticmethod
     def _wireguard_peer_parameters(
@@ -785,89 +606,6 @@ class SurgeEmitter(BaseEmitter):
             if key not in known_keys:
                 lines.append(raw_line)
         return tuple(lines)
-
-    def _parts_ssh(self, node: Node, node_keystore_map: dict[int, str]) -> list[str]:
-        assert isinstance(node, SSHNode)
-        config_parts = ["ssh", self._server_str(node), str(node.port)]
-        if node.username:
-            config_parts.append(f"username={node.username}")
-        if node.password:
-            config_parts.append(f"password={node.password}")
-        keystore_id = node.keystore_id or node_keystore_map.get(id(node))
-        if keystore_id:
-            config_parts.append(f"private-key={keystore_id}")
-        elif node.private_key:
-            config_parts.append(f"private-key={node.private_key}")
-        if node.idle_timeout is not None:
-            config_parts.append(f"idle-timeout={node.idle_timeout}")
-        for fingerprint in node.server_fingerprints or []:
-            config_parts.append(f"server-fingerprint={fingerprint}")
-        return config_parts
-
-    def _parts_snell(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, SnellNode)
-        config_parts = [
-            "snell",
-            self._server_str(node),
-            str(node.port),
-            f"psk={node.psk}",
-        ]
-        if node.version:
-            config_parts.append(f"version={node.version}")
-        if node.reuse is not None:
-            config_parts.append(f"reuse={str(node.reuse).lower()}")
-        if node.udp_port is not None:
-            config_parts.append(f"udp-port={node.udp_port}")
-        if node.mode:
-            config_parts.append(f"mode={node.mode}")
-        if node.obfs:
-            config_parts.append(f"obfs={node.obfs}")
-        if node.obfs_host:
-            config_parts.append(f"obfs-host={node.obfs_host}")
-        return config_parts
-
-    def _parts_tuic(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, TUICNode)
-        if node.version == 5:
-            config_parts = ["tuic-v5", self._server_str(node), str(node.port)]
-            if node.password:
-                config_parts.append(f"password={node.password}")
-            if node.uuid:
-                config_parts.append(f"uuid={node.uuid}")
-            if node.ports:
-                config_parts.append(f"port-hopping={node.ports}")
-            if node.hop_interval is not None:
-                config_parts.append(f"port-hopping-interval={node.hop_interval}")
-            return config_parts
-        config_parts = ["tuic", self._server_str(node), str(node.port)]
-        if node.token:
-            config_parts.append(f"token={node.token}")
-        if node.version:
-            config_parts.append(f"version={node.version}")
-        if node.ports:
-            config_parts.append(f"port-hopping={node.ports}")
-        if node.hop_interval is not None:
-            config_parts.append(f"port-hopping-interval={node.hop_interval}")
-        return config_parts
-
-    def _parts_hysteria2(self, node: Node, _: dict[int, str]) -> list[str]:
-        assert isinstance(node, Hysteria2Node)
-        config_parts = ["hysteria2", self._server_str(node), str(node.port)]
-        if node.password:
-            config_parts.append(f"password={node.password}")
-        if node.down:
-            config_parts.append(f"download-bandwidth={node.down}")
-        if node.up:
-            config_parts.append(f"upload-bandwidth={node.up}")
-        if node.obfs == "salamander" and node.obfs_password:
-            config_parts.append(f"salamander-password={node.obfs_password}")
-        elif node.obfs == "gecko" and node.obfs_password:
-            config_parts.append(f"gecko-password={node.obfs_password}")
-        if node.ports:
-            config_parts.append(f"port-hopping={node.ports}")
-        if node.hop_interval is not None:
-            config_parts.append(f"port-hopping-interval={node.hop_interval}")
-        return config_parts
 
     def _common_opts(self, node: Node) -> list[str]:
         config_parts: list[str] = []

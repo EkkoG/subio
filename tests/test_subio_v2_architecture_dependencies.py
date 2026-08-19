@@ -115,6 +115,9 @@ def test_obsolete_internal_authorities_are_absent():
         "StructuredProtocolDescriptor",
         "DESCRIPTOR",
         "_PROTOCOL_FIELDS",
+        "SURGE_EMITTER_HANDLERS",
+        "_HANDLERS",
+        "def _parts_",
         "_raise_legacy_emit_error",
     ):
         assert symbol not in production
