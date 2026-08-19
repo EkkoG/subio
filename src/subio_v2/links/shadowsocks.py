@@ -17,4 +17,57 @@ def build(node: Node) -> str:
     return f"{url}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.SHADOWSOCKS, frozenset({"dae", "v2rayn"}), build)
+def parse(line: str) -> Node | None:
+    try:
+        url = urllib.parse.urlparse(line)
+        if not url.hostname:
+            decoded = base64.b64decode(
+                url.netloc + "=" * ((4 - len(url.netloc) % 4) % 4)
+            ).decode()
+            if "@" not in decoded:
+                return None
+            userinfo, hostport = decoded.split("@", 1)
+            method, password = userinfo.split(":", 1)
+            server, port_text = hostport.split(":", 1)
+            port = int(port_text)
+        else:
+            server, port = url.hostname, url.port
+            if url.username and ":" not in url.username and not url.password:
+                auth = base64.b64decode(
+                    url.username + "=" * ((4 - len(url.username) % 4) % 4)
+                ).decode()
+                method, password = auth.split(":", 1)
+            else:
+                method, password = url.username, url.password
+        name = urllib.parse.unquote(url.fragment) if url.fragment else f"{server}:{port}"
+        query = urllib.parse.parse_qs(url.query)
+        plugin_value = query.get("plugin", [None])[0]
+        plugin = None
+        plugin_opts = None
+        if plugin_value:
+            parts = plugin_value.split(";")
+            plugin = parts[0]
+            plugin_opts = dict(
+                part.split("=", 1) for part in parts[1:] if "=" in part
+            )
+        return ShadowsocksNode(
+            name=name,
+            type=Protocol.SHADOWSOCKS,
+            server=server,
+            port=port,
+            cipher=method,
+            password=password,
+            plugin=plugin,
+            plugin_opts=plugin_opts,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+CODEC = LinkCodec(
+    Protocol.SHADOWSOCKS,
+    frozenset({"dae", "v2rayn"}),
+    build,
+    schemes=frozenset({"ss"}),
+    parse=parse,
+)

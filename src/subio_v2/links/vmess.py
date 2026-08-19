@@ -2,7 +2,14 @@ import base64
 import json
 
 from subio_v2.links._base import LinkCodec
-from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
+from subio_v2.model.nodes import (
+    Network,
+    Node,
+    Protocol,
+    TLSSettings,
+    TransportSettings,
+    VmessNode,
+)
 
 
 def build(node: Node) -> str:
@@ -41,4 +48,54 @@ def build(node: Node) -> str:
     return "vmess://" + base64.b64encode(payload).decode()
 
 
-CODEC = LinkCodec(Protocol.VMESS, frozenset({"dae", "v2rayn"}), build)
+def parse(line: str) -> Node | None:
+    try:
+        payload = line.removeprefix("vmess://")
+        payload += "=" * ((4 - len(payload) % 4) % 4)
+        data = json.loads(base64.b64decode(payload).decode())
+        network = data.get("net", "tcp")
+        try:
+            network_value: Network | str = Network(network)
+        except ValueError:
+            network_value = network
+        transport = TransportSettings(network=network_value)
+        if network == Network.WS.value:
+            transport.path = data.get("path")
+            if data.get("host"):
+                transport.headers = {"Host": data["host"]}
+        elif network == Network.H2.value:
+            transport.path = data.get("path")
+            if data.get("host"):
+                transport.host = data["host"].split(",")
+        elif network == Network.GRPC.value:
+            transport.grpc_service_name = data.get("path")
+        elif network == Network.HTTP.value:
+            transport.path = data.get("path")
+            if data.get("host"):
+                transport.headers = {"Host": data["host"]}
+        return VmessNode(
+            name=data.get("ps", "VMess"),
+            type=Protocol.VMESS,
+            server=data.get("add"),
+            port=int(data.get("port")),
+            uuid=data.get("id"),
+            alter_id=int(data.get("aid", 0)),
+            cipher=data.get("scy", "auto"),
+            transport=transport,
+            tls=TLSSettings(
+                enabled=data.get("tls") == "tls",
+                server_name=data.get("sni") or data.get("host"),
+                alpn=data.get("alpn", "").split(",") if data.get("alpn") else None,
+            ),
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+CODEC = LinkCodec(
+    Protocol.VMESS,
+    frozenset({"dae", "v2rayn"}),
+    build,
+    schemes=frozenset({"vmess"}),
+    parse=parse,
+)

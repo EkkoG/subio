@@ -30,7 +30,7 @@ def test_v2rayn_parse_vmess_uri():
         "alpn": "h2,http/1.1",
     }
     uri = "vmess://" + b64(json.dumps(obj))
-    node = V2RayNParser()._parse_line(uri)
+    node = link.parse_url(uri)
     assert node and node.type == Protocol.VMESS
     assert node.transport.network.value == "ws"
     assert node.tls.enabled and node.tls.server_name == "sni"
@@ -39,7 +39,7 @@ def test_v2rayn_parse_vmess_uri():
 
 def test_v2rayn_parse_ss_uri_plain_and_b64_userinfo():
     plain = "ss://aes-256-gcm:pass@server:1234#myname"
-    node1 = V2RayNParser()._parse_line(plain)
+    node1 = link.parse_url(plain)
     assert node1 and node1.type == Protocol.SHADOWSOCKS
     assert node1.cipher == "aes-256-gcm" and node1.password == "pass"
     assert node1.server == "server" and node1.port == 1234
@@ -48,20 +48,20 @@ def test_v2rayn_parse_ss_uri_plain_and_b64_userinfo():
     # base64 userinfo
     userinfo = b64("aes-256-gcm:pass")
     b64uri = f"ss://{userinfo}@server:5678#n"
-    node2 = V2RayNParser()._parse_line(b64uri)
+    node2 = link.parse_url(b64uri)
     assert node2 and node2.port == 5678 and node2.name == "n"
 
 
 def test_v2rayn_parse_trojan_and_vless():
     tro = "trojan://pass@t.example:443?sni=example.com&allowInsecure=1#tname"
-    node_t = V2RayNParser()._parse_line(tro)
+    node_t = link.parse_url(tro)
     assert node_t and node_t.type == Protocol.TROJAN and node_t.tls.enabled
     assert (
         node_t.tls.server_name == "example.com" and node_t.tls.skip_cert_verify is True
     )
 
     vless = "vless://uuid@vhost:8443?type=ws&security=tls&path=/x&host=h&sni=s#vname"
-    node_v = V2RayNParser()._parse_line(vless)
+    node_v = link.parse_url(vless)
     assert (
         node_v
         and node_v.type == Protocol.VLESS
@@ -95,7 +95,7 @@ def test_vless_reality_grpc_codec_roundtrip_preserves_semantics():
         "vless://uuid@example.com:443?type=grpc&security=reality"
         "&serviceName=svc&sni=example.com&pbk=public&sid=short&fp=chrome#node"
     )
-    node = V2RayNParser()._parse_line(uri)
+    node = link.parse_url(uri)
 
     assert node is not None
     assert node.transport.network == Network.GRPC
@@ -115,7 +115,7 @@ def test_vless_reality_grpc_codec_roundtrip_preserves_semantics():
 
 def test_vless_grpc_without_tls_is_not_upgraded():
     uri = "vless://uuid@example.com:80?type=grpc&security=none&serviceName=svc#node"
-    node = V2RayNParser()._parse_line(uri)
+    node = link.parse_url(uri)
 
     assert node is not None
     assert node.tls.enabled is False
@@ -130,7 +130,7 @@ def test_trojan_ws_codec_roundtrip_preserves_transport():
         "trojan://pass@example.com:443?type=ws&path=%2Fws"
         "&host=cdn.example.com&sni=example.com#node"
     )
-    node = V2RayNParser()._parse_line(uri)
+    node = link.parse_url(uri)
 
     assert node is not None
     assert node.transport.network == Network.WS
@@ -157,7 +157,7 @@ def test_vmess_grpc_codec_roundtrip_does_not_force_tls():
         "path": "svc",
         "tls": "",
     }
-    node = V2RayNParser()._parse_line("vmess://" + b64(json.dumps(payload)))
+    node = link.parse_url("vmess://" + b64(json.dumps(payload)))
 
     assert node is not None
     assert node.transport.network == Network.GRPC

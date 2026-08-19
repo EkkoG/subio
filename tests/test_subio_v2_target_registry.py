@@ -1,6 +1,7 @@
 import pytest
 
 import subio_v2.protocols as protocol_registry
+from subio_v2 import links
 from subio_v2.capabilities.definitions import all_platform_capabilities
 from subio_v2.links import protocols_for_target as link_protocols_for_target
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
@@ -53,3 +54,12 @@ def test_target_registry_normalizes_public_aliases():
 def test_link_targets_derive_from_registered_builders():
     for target in ("dae", "v2rayn"):
         assert protocols_for_target(target) == link_protocols_for_target(target)
+
+
+def test_link_input_schemes_are_owned_by_bidirectional_codecs():
+    assert links.input_schemes() == {"ss", "vmess", "vless", "trojan"}
+    assert all(
+        codec.parse is not None
+        for codec in links.all_codecs()
+        if codec.schemes
+    )

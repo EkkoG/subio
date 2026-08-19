@@ -1,7 +1,14 @@
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import Network, Node, Protocol, TrojanNode
+from subio_v2.model.nodes import (
+    Network,
+    Node,
+    Protocol,
+    TLSSettings,
+    TransportSettings,
+    TrojanNode,
+)
 
 
 def build(node: Node) -> str:
@@ -41,4 +48,61 @@ def build(node: Node) -> str:
     return f"{url}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.TROJAN, frozenset({"dae", "v2rayn"}), build)
+def parse(line: str) -> Node | None:
+    try:
+        url = urllib.parse.urlparse(line)
+        query = urllib.parse.parse_qs(url.query)
+        network = query.get("type", ["tcp"])[0]
+        try:
+            network_value: Network | str = Network(network)
+        except ValueError:
+            network_value = network
+        transport = TransportSettings(network=network_value)
+        if network == Network.WS.value:
+            transport.path = query.get("path", [None])[0]
+            if query.get("host"):
+                transport.headers = {"Host": query["host"][0]}
+        elif network == Network.H2.value:
+            transport.path = query.get("path", [None])[0]
+            if query.get("host"):
+                transport.host = query["host"][0].split(",")
+        elif network == Network.GRPC.value:
+            transport.grpc_service_name = query.get("serviceName", [None])[0]
+        security = query.get("security", ["tls"])[0]
+        return TrojanNode(
+            name=(
+                urllib.parse.unquote(url.fragment)
+                if url.fragment
+                else f"{url.hostname}:{url.port}"
+            ),
+            type=Protocol.TROJAN,
+            server=url.hostname,
+            port=url.port,
+            password=url.username,
+            transport=transport,
+            tls=TLSSettings(
+                enabled=True,
+                server_name=query.get("sni", [None])[0] or url.hostname,
+                skip_cert_verify=query.get("allowInsecure", ["0"])[0] == "1",
+                client_fingerprint=query.get("fp", [None])[0],
+                reality_opts=(
+                    {
+                        "public-key": query.get("pbk", [""])[0],
+                        "short-id": query.get("sid", [""])[0],
+                    }
+                    if security == "reality"
+                    else None
+                ),
+            ),
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+CODEC = LinkCodec(
+    Protocol.TROJAN,
+    frozenset({"dae", "v2rayn"}),
+    build,
+    schemes=frozenset({"trojan"}),
+    parse=parse,
+)

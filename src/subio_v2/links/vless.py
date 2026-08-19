@@ -1,7 +1,14 @@
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import Network, Node, Protocol, VlessNode
+from subio_v2.model.nodes import (
+    Network,
+    Node,
+    Protocol,
+    TLSSettings,
+    TransportSettings,
+    VlessNode,
+)
 
 
 def build(node: Node) -> str:
@@ -55,4 +62,67 @@ def build(node: Node) -> str:
     return f"vless://{node.uuid}@{node.server}:{node.port}?{query}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.VLESS, frozenset({"dae", "v2rayn"}), build)
+def parse(line: str) -> Node | None:
+    try:
+        url = urllib.parse.urlparse(line)
+        query = urllib.parse.parse_qs(url.query)
+        network = query.get("type", ["tcp"])[0]
+        try:
+            network_value: Network | str = Network(network)
+        except ValueError:
+            network_value = network
+        transport = TransportSettings(network=network_value)
+        if network == Network.WS.value:
+            transport.path = query.get("path", [None])[0]
+            if query.get("host"):
+                transport.headers = {"Host": query["host"][0]}
+        elif network == Network.H2.value:
+            transport.path = query.get("path", [None])[0]
+            if query.get("host"):
+                transport.host = query["host"][0].split(",")
+        elif network == Network.GRPC.value:
+            transport.grpc_service_name = query.get("serviceName", [None])[0]
+        elif network == Network.HTTP.value:
+            path = query.get("path", [None])[0]
+            transport.path = path.split(",") if path else None
+            if query.get("host"):
+                transport.headers = {"Host": query["host"][0]}
+        security = query.get("security", ["none"])[0]
+        return VlessNode(
+            name=(
+                urllib.parse.unquote(url.fragment)
+                if url.fragment
+                else f"{url.hostname}:{url.port}"
+            ),
+            type=Protocol.VLESS,
+            server=url.hostname,
+            port=url.port,
+            uuid=url.username,
+            flow=query.get("flow", [None])[0],
+            transport=transport,
+            tls=TLSSettings(
+                enabled=security in {"tls", "reality"},
+                server_name=query.get("sni", [None])[0],
+                skip_cert_verify=query.get("allowInsecure", ["0"])[0] == "1",
+                client_fingerprint=query.get("fp", [None])[0],
+                reality_opts=(
+                    {
+                        "public-key": query.get("pbk", [""])[0],
+                        "short-id": query.get("sid", [""])[0],
+                    }
+                    if security == "reality"
+                    else None
+                ),
+            ),
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+CODEC = LinkCodec(
+    Protocol.VLESS,
+    frozenset({"dae", "v2rayn"}),
+    build,
+    schemes=frozenset({"vless"}),
+    parse=parse,
+)
