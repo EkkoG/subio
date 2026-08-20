@@ -7,9 +7,9 @@ from subio_v2.conversion import (
     IssueSeverity,
     TargetCheckResult,
 )
-from subio_v2.conversion_service import NodeConversionService
-from subio_v2.model.nodes import Node
+from subio_v2.conversion_service import TargetValidationService
 from subio_v2.formats import normalize_format
+from subio_v2.model.nodes import Node
 from subio_v2.utils.logger import logger
 
 
@@ -20,7 +20,7 @@ class BaseEmitter(ABC):
 
     def __init__(self):
         self.platform = normalize_format(self.platform)
-        self._conversion = NodeConversionService(self.platform)
+        self._conversion = TargetValidationService(self.platform)
         self.target_context = self._conversion.target_context
 
     @abstractmethod

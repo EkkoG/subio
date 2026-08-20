@@ -1,57 +1,84 @@
 from collections.abc import Callable
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.capabilities.definitions import (
-    get_platform_capabilities,
-)
 from subio_v2.conversion import (
     ConversionIssue,
     IssueSeverity,
     TargetCheckResult,
 )
 from subio_v2.dialect import dialect_context_for_platform, extension_semantic_fields
+from subio_v2.formats import normalize_format
+from subio_v2.links import all_codecs as all_link_codecs
 from subio_v2.model.nodes import (
     Node,
     SourcePassthroughNode,
     SurgePolicyOptions,
     VmessNode,
 )
-from subio_v2.formats import normalize_format
+from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
+from subio_v2.target_registry import common_policy_for_target
 from subio_v2.validation import validate_node
 
 
-class NodeConversionService:
+def _protocol_codecs_for_target(platform: str) -> dict:
+    if platform in {"mihomo", "clash", "stash"}:
+        return {
+            codec.protocol: codec
+            for codec in protocol_registry.all()
+            if codec.supports_dialect(platform)
+        }
+    if platform == "surge":
+        return dict(SURGE_PROTOCOL_CODECS)
+    if platform in {"dae", "v2rayn"}:
+        return {
+            codec.protocol: codec
+            for codec in all_link_codecs()
+            if platform in codec.targets
+        }
+    return {}
+
+
+class TargetValidationService:
     def __init__(self, platform: str):
         self.platform = normalize_format(platform)
         self.target_context = dialect_context_for_platform(self.platform)
-        self.capabilities = get_platform_capabilities(self.platform)
-        if not self.capabilities:
+        self.protocol_codecs = _protocol_codecs_for_target(self.platform)
+        self.common_policy = common_policy_for_target(self.platform)
+        if self.common_policy is None or not self.protocol_codecs:
             raise ValueError(f"Unknown platform: {platform}")
 
     def check_node(self, node: Node) -> TargetCheckResult:
         result = TargetCheckResult(supported=True)
-        protocol = node.type.value
-
         for error in validate_node(node):
             result.add_error(error.message, field=error.field)
 
         if result.has_errors():
             return result
 
-        if protocol not in self.capabilities.get("protocols", set()):
+        target_codec = self.protocol_codecs.get(node.type)
+        if target_codec is None:
+            supported = ", ".join(
+                sorted(protocol.value for protocol in self.protocol_codecs)
+            )
             result.add_error(
-                f"Protocol '{protocol}' is not supported by {self.platform}",
+                f"Protocol '{node.type.value}' is not supported by {self.platform}",
                 field="type",
-                suggestion=(
-                    "Use a supported protocol: "
-                    + ", ".join(sorted(self.capabilities.get("protocols", set())))
-                ),
+                suggestion=f"Use a supported protocol: {supported}",
             )
             return result
 
         descriptor = protocol_registry.get(node.type)
         if descriptor:
-            protocol_capabilities = self.capabilities.get(protocol, {})
+            if self.platform in {"surge", "dae", "v2rayn"}:
+                protocol_capabilities = (
+                    dict(target_codec.target_constraints)
+                    if self.platform == "surge"
+                    else dict(target_codec.target_constraints.get(self.platform, {}))
+                )
+            else:
+                protocol_capabilities = dict(
+                    descriptor.constraints_for_target(self.platform)
+                )
             for warning in descriptor.check(
                 node, protocol_capabilities, self.platform
             ):
@@ -65,7 +92,7 @@ class NodeConversionService:
     def _check_common_target_fields(
         self, node: Node, result: TargetCheckResult
     ) -> None:
-        global_features = self.capabilities.get("global_features", {})
+        global_features = self.common_policy.as_feature_map()
 
         unsupported_fields: list[str] = []
         if self.platform != "surge":
@@ -269,3 +296,7 @@ class NodeConversionService:
                 )
 
         return supported_nodes, issues
+
+
+# Temporary name for tests and downstream slices while consumers migrate.
+NodeConversionService = TargetValidationService

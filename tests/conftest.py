@@ -56,6 +56,7 @@ CONTRACT_TEST_MODULES = {
     "test_program_structure_simplification_protocol_spec.py": "protocol-spec",
     "test_program_structure_simplification_surge.py": "surge-structure",
     "test_program_structure_simplification_links.py": "link-structure",
+    "test_program_structure_simplification_target_validation.py": "target-validation",
 }
 
 
