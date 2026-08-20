@@ -1,6 +1,6 @@
 import pytest
 
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from tests.support_target_views import all_platform_capabilities
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.model.nodes import (

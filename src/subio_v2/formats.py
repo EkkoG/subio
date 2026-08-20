@@ -6,6 +6,20 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class TargetCommonPolicy:
+    tfo: bool
+    mptcp: bool
+    dialer_proxy: bool
+
+    def as_feature_map(self) -> dict[str, bool]:
+        return {
+            "tfo": self.tfo,
+            "mptcp": self.mptcp,
+            "dialer_proxy": self.dialer_proxy,
+        }
+
+
+@dataclass(frozen=True)
 class FormatSpec:
     name: str
     aliases: frozenset[str] = frozenset()
@@ -13,6 +27,7 @@ class FormatSpec:
     replacement: str | None = None
     parser_factory: Callable[..., Any] | None = None
     emitter_factory: Callable[[], Any] | None = None
+    common_policy: TargetCommonPolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -109,6 +124,7 @@ _FORMAT_SPECS = (
         aliases=frozenset({"clash-meta"}),
         parser_factory=_clash_parser,
         emitter_factory=_clash_emitter,
+        common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec(
         "clash",
@@ -116,15 +132,31 @@ _FORMAT_SPECS = (
         replacement="mihomo",
         parser_factory=_clash_parser_for_clash,
         emitter_factory=_clash_emitter_for_clash,
+        common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
     ),
     FormatSpec(
         "stash",
         parser_factory=_stash_parser,
         emitter_factory=_stash_emitter,
+        common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
     ),
-    FormatSpec("surge", parser_factory=_surge_parser, emitter_factory=_surge_emitter),
-    FormatSpec("dae", emitter_factory=_dae_emitter),
-    FormatSpec("v2rayn", parser_factory=_v2rayn_parser, emitter_factory=_v2rayn_emitter),
+    FormatSpec(
+        "surge",
+        parser_factory=_surge_parser,
+        emitter_factory=_surge_emitter,
+        common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
+    ),
+    FormatSpec(
+        "dae",
+        emitter_factory=_dae_emitter,
+        common_policy=TargetCommonPolicy(tfo=False, mptcp=True, dialer_proxy=True),
+    ),
+    FormatSpec(
+        "v2rayn",
+        parser_factory=_v2rayn_parser,
+        emitter_factory=_v2rayn_emitter,
+        common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
+    ),
     FormatSpec("subio", parser_factory=_subio_parser),
 )
 
@@ -166,6 +198,11 @@ def normalize_format(format_name: str) -> str:
 
 def get_format(format_name: str) -> FormatSpec | None:
     return _FORMAT_BY_REQUESTED.get(format_name)
+
+
+def common_policy_for_format(format_name: str) -> TargetCommonPolicy | None:
+    spec = get_format(format_name)
+    return spec.common_policy if spec is not None else None
 
 
 def get_parser(

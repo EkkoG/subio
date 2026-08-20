@@ -7,7 +7,7 @@ from subio_v2.conversion import (
     TargetCheckResult,
 )
 from subio_v2.dialect import dialect_context_for_platform, extension_semantic_fields
-from subio_v2.formats import normalize_format
+from subio_v2.formats import common_policy_for_format, normalize_format
 from subio_v2.links import all_codecs as all_link_codecs
 from subio_v2.model.nodes import (
     Node,
@@ -16,7 +16,6 @@ from subio_v2.model.nodes import (
     VmessNode,
 )
 from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
-from subio_v2.target_registry import common_policy_for_target
 from subio_v2.validation import validate_node
 
 
@@ -39,7 +38,7 @@ class TargetValidationService:
         self.platform = normalize_format(platform)
         self.target_context = dialect_context_for_platform(self.platform)
         self.protocol_codecs = _protocol_codecs_for_target(self.platform)
-        self.common_policy = common_policy_for_target(self.platform)
+        self.common_policy = common_policy_for_format(self.platform)
         if self.common_policy is None or not self.protocol_codecs:
             raise ValueError(f"Unknown platform: {platform}")
 
@@ -295,7 +294,3 @@ class TargetValidationService:
                 )
 
         return supported_nodes, issues
-
-
-# Temporary name for tests and downstream slices while consumers migrate.
-NodeConversionService = TargetValidationService

@@ -2,34 +2,32 @@ import pytest
 
 import subio_v2.protocols as protocol_registry
 from subio_v2 import links
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from subio_v2.formats import all_formats, common_policy_for_format
 from subio_v2.links import protocols_for_target as link_protocols_for_target
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
-from subio_v2.target_registry import (
-    common_policy_for_target,
-    protocols_for_target,
-    target_platforms,
-)
+from tests.support_target_views import all_platform_capabilities, protocols_for_target
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 
 def test_target_registry_is_the_capability_protocol_authority():
-    assert target_platforms() == frozenset(PLATFORM_CAPABILITIES)
+    assert {
+        spec.name for spec in all_formats() if common_policy_for_format(spec.name)
+    } | {"clash-meta"} == frozenset(PLATFORM_CAPABILITIES)
     for platform, capabilities in PLATFORM_CAPABILITIES.items():
         assert capabilities["protocols"] == protocols_for_target(platform)
 
 
 def test_target_registry_owns_platform_common_policy():
     for platform, capabilities in PLATFORM_CAPABILITIES.items():
-        policy = common_policy_for_target(platform)
+        policy = common_policy_for_format(platform)
         assert policy is not None
         assert capabilities["global_features"] == policy.as_feature_map()
 
-    assert common_policy_for_target("clash-meta") == common_policy_for_target(
+    assert common_policy_for_format("clash-meta") == common_policy_for_format(
         "mihomo"
     )
-    assert common_policy_for_target("unknown") is None
+    assert common_policy_for_format("unknown") is None
 
 
 @pytest.mark.parametrize("dialect", ["mihomo", "clash", "stash"])

@@ -5,8 +5,8 @@ from typing import Any
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.dialect import DialectContext
+from subio_v2.formats import common_policy_for_format
 from subio_v2.model.nodes import Node
-from subio_v2.target_registry import common_policy_for_target
 
 
 def pre_descriptor_normalize(
@@ -29,7 +29,7 @@ def post_descriptor_emit(
     """Apply target capability gates and report modeled fields that were dropped."""
     output = data
     dropped: set[str] = set()
-    common_policy = common_policy_for_target(platform)
+    common_policy = common_policy_for_format(platform)
     global_features = common_policy.as_feature_map() if common_policy else {}
 
     for semantic_field, output_key, capability in (

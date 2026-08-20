@@ -1,6 +1,6 @@
 import pytest
 
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from tests.support_target_views import all_platform_capabilities
 from subio_v2.formats import get_emitter, get_parser
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()

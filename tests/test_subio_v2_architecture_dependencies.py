@@ -132,6 +132,10 @@ def test_obsolete_internal_authorities_are_absent():
         "src/subio_v2/workflow/ruleset_codec.py",
         "src/subio_v2/workflow/mrs.py",
         "src/subio_v2/capabilities/checker.py",
+        "src/subio_v2/capabilities/__init__.py",
+        "src/subio_v2/capabilities/definitions.py",
+        "src/subio_v2/target_registry.py",
+        "src/subio_v2/conversion_service.py",
         "src/subio_v2/emitter/link.py",
     )
     assert all(not (REPO_ROOT / path).exists() for path in obsolete_paths)

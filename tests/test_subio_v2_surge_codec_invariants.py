@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from tests.support_target_views import all_platform_capabilities
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.model.nodes import Protocol
 from subio_v2.parser.surge import SurgeParser

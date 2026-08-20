@@ -7,9 +7,9 @@ from subio_v2.conversion import (
     IssueSeverity,
     TargetCheckResult,
 )
-from subio_v2.conversion_service import TargetValidationService
 from subio_v2.formats import normalize_format
 from subio_v2.model.nodes import Node
+from subio_v2.target_validation import TargetValidationService
 from subio_v2.utils.logger import logger
 
 

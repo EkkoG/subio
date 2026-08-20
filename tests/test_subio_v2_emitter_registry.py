@@ -1,6 +1,6 @@
 import pytest
 
-from subio_v2.conversion_service import NodeConversionService
+from subio_v2.target_validation import TargetValidationService as NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.stash import StashEmitter

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 import subio_v2.protocols as registry
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter

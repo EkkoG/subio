@@ -6,7 +6,7 @@ from typing import get_type_hints
 import pytest
 
 import subio_v2.protocols as registry
-from subio_v2.capabilities.definitions import all_platform_capabilities
+from tests.support_target_views import all_platform_capabilities
 from subio_v2.model.nodes import BaseNode, Protocol
 from subio_v2.protocols._base import ClashProtocolCodec
 from subio_v2.protocols.definitions import (
