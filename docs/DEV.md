@@ -1,8 +1,7 @@
 # SubIO v2 开发指南
 
-本文档描述当前有效的架构边界和扩展方法。当前能力见 `docs/support_matrix.md`；
-`docs/development_plan.md`、`docs/v2_fix_plan.md` 和 `docs/surge_support_plan.md` 只记录已完成的
-设计与实施过程。
+本文档描述当前有效的架构边界和扩展方法。当前能力见 `docs/support_matrix.md`；历史实施过程不作为当前
+架构入口，新增工作只依据本文、支持矩阵、公开资料和可复现测试。
 
 ## 1. 项目边界
 
@@ -163,7 +162,7 @@ required、范围和协议组合以 `validate_node()` 及 codec validation 为�
 
 公开格式只包含 concrete Node、公开 dataclass 嵌套设置和受限 mapping。Reality、ECH、Brutal、
 AmneziaWG、Shadowsocks plugin、Snell obfs 与 header mapping 的 native key/type 契约集中在
-`subio_format/schema.py`；codec 负责把 snake_case native key 归一化为现有 Node IR 的内部键。
+`adapters/subio/schema.py`；codec 负责把 snake_case native key 归一化为现有 Node IR 的内部键。
 `source_context`、`source_provider`、
 `original_name`、`extra`、`source_extensions`、`transport.extra`、`SourcePassthroughNode` 和 Surge
 External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Tailscale
@@ -281,7 +280,7 @@ Surge target constraints 的唯一 executable codec。
 新增或修改 Surge 协议时：
 
 1. 先更新对应 `SurgeCodecSpec`；
-2. 在 `surge/parsers.py` 和 `surge/emitters.py` 实现 callable，并绑定到同一 spec；
+2. 在 `adapters/surge/parsers.py` 和 `adapters/surge/emitters.py` 实现 callable，并绑定到同一 spec；
 3. 更新官方离线 fixture 和 codec invariant；不要把 Surge constraints 放回 Clash protocol codec；
 4. 运行 `tests/test_subio_v2_surge_codec_invariants.py`。
 

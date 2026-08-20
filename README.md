@@ -185,4 +185,3 @@ subio convert example/config.toml --clean-gist
 - [支持矩阵](./docs/support_matrix.md)
 - [端到端测试](./docs/e2e_testing.md)
 - [文档索引](./docs/README.md)
-- [已完成的项目级计划](./docs/development_plan.md)
