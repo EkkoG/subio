@@ -1,9 +1,40 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import Any, Callable
 
 from subio_v2.model.nodes import Protocol
+from subio_v2.surge.emitters import (
+    emit_anytls,
+    emit_direct,
+    emit_http,
+    emit_hysteria2,
+    emit_masque,
+    emit_reject,
+    emit_shadowsocks,
+    emit_snell,
+    emit_socks5,
+    emit_ssh,
+    emit_tailscale,
+    emit_trojan,
+    emit_trust_tunnel,
+    emit_tuic,
+    emit_vmess,
+    emit_wireguard,
+)
+from subio_v2.surge.parsers import (
+    parse_anytls,
+    parse_http,
+    parse_hysteria2,
+    parse_shadowsocks,
+    parse_snell,
+    parse_socks5,
+    parse_ssh,
+    parse_trojan,
+    parse_tuic,
+    parse_vmess,
+)
 
 DEFAULT_SURGE_TARGET = "latest"
 
@@ -30,6 +61,8 @@ class SurgeCodecSpec:
     emitted_parameters: frozenset[str] = frozenset()
     normalized_parameters: tuple[tuple[str, str], ...] = ()
     multi_value_parameters: frozenset[str] = frozenset()
+    parser: Callable[[Any], Any] | None = None
+    emitter: Callable[[Any, dict[int, str]], list[str]] | None = None
 
     @property
     def parameter_path_sources(self) -> frozenset[str]:
@@ -283,9 +316,57 @@ SURGE_CODEC_SPECS = (
 )
 
 
+_SURGE_PARSERS: dict[str, Callable[[Any], Any]] = {
+    "ss": parse_shadowsocks,
+    "vmess": parse_vmess,
+    "trojan": parse_trojan,
+    "socks5": parse_socks5,
+    "socks5-tls": parse_socks5,
+    "http": parse_http,
+    "https": parse_http,
+    "h2-connect": parse_http,
+    "anytls": parse_anytls,
+    "ssh": parse_ssh,
+    "snell": parse_snell,
+    "tuic": parse_tuic,
+    "tuic-v5": parse_tuic,
+    "hysteria2": parse_hysteria2,
+}
+_SURGE_EMITTERS: dict[Protocol, Callable[[Any, dict[int, str]], list[str]]] = {
+    Protocol.DIRECT: emit_direct,
+    Protocol.REJECT: emit_reject,
+    Protocol.SHADOWSOCKS: emit_shadowsocks,
+    Protocol.VMESS: emit_vmess,
+    Protocol.TROJAN: emit_trojan,
+    Protocol.SOCKS5: emit_socks5,
+    Protocol.HTTP: emit_http,
+    Protocol.ANYTLS: emit_anytls,
+    Protocol.WIREGUARD: emit_wireguard,
+    Protocol.TAILSCALE: emit_tailscale,
+    Protocol.MASQUE: emit_masque,
+    Protocol.TRUSTTUNNEL: emit_trust_tunnel,
+    Protocol.SSH: emit_ssh,
+    Protocol.SNELL: emit_snell,
+    Protocol.TUIC: emit_tuic,
+    Protocol.HYSTERIA2: emit_hysteria2,
+}
+
+SURGE_CODEC_SPECS = tuple(
+    replace(
+        spec,
+        parser=_SURGE_PARSERS.get(spec.keyword),
+        emitter=_SURGE_EMITTERS.get(spec.protocol),
+    )
+    for spec in SURGE_CODEC_SPECS
+)
 SURGE_CODEC_BY_KEYWORD = {spec.keyword: spec for spec in SURGE_CODEC_SPECS}
 if len(SURGE_CODEC_BY_KEYWORD) != len(SURGE_CODEC_SPECS):
     raise RuntimeError("Duplicate Surge codec keyword")
+
+SURGE_PROTOCOL_CODECS = {}
+for _spec_item in SURGE_CODEC_SPECS:
+    if _spec_item.protocol is not None and _spec_item.protocol not in SURGE_PROTOCOL_CODECS:
+        SURGE_PROTOCOL_CODECS[_spec_item.protocol] = _spec_item
 
 SURGE_NODE_PROTOCOLS = frozenset(
     spec.protocol.value
@@ -308,3 +389,7 @@ SURGE_BUILTIN_ALIAS_TYPES = frozenset(
 
 def get_surge_codec(keyword: str) -> SurgeCodecSpec | None:
     return SURGE_CODEC_BY_KEYWORD.get(keyword.lower())
+
+
+def get_surge_protocol_codec(protocol: Protocol) -> SurgeCodecSpec | None:
+    return SURGE_PROTOCOL_CODECS.get(protocol)

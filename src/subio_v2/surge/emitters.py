@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from types import MappingProxyType
 
 from subio_v2.model.nodes import (
     AnyTLSNode,
@@ -11,7 +10,6 @@ from subio_v2.model.nodes import (
     MasqueNode,
     Network,
     Node,
-    Protocol,
     RejectNode,
     ShadowsocksNode,
     SnellNode,
@@ -268,29 +266,3 @@ def emit_hysteria2(node: Node, _: dict[int, str]) -> list[str]:
     if node.hop_interval is not None:
         parts.append(f"port-hopping-interval={node.hop_interval}")
     return parts
-
-
-SURGE_PROTOCOL_EMITTERS = MappingProxyType(
-    {
-        Protocol.DIRECT: emit_direct,
-        Protocol.REJECT: emit_reject,
-        Protocol.SHADOWSOCKS: emit_shadowsocks,
-        Protocol.VMESS: emit_vmess,
-        Protocol.TROJAN: emit_trojan,
-        Protocol.SOCKS5: emit_socks5,
-        Protocol.HTTP: emit_http,
-        Protocol.ANYTLS: emit_anytls,
-        Protocol.WIREGUARD: emit_wireguard,
-        Protocol.TAILSCALE: emit_tailscale,
-        Protocol.MASQUE: emit_masque,
-        Protocol.TRUSTTUNNEL: emit_trust_tunnel,
-        Protocol.SSH: emit_ssh,
-        Protocol.SNELL: emit_snell,
-        Protocol.TUIC: emit_tuic,
-        Protocol.HYSTERIA2: emit_hysteria2,
-    }
-)
-
-
-def get_surge_protocol_emitter(protocol: Protocol) -> SurgeProtocolEmitter | None:
-    return SURGE_PROTOCOL_EMITTERS.get(protocol)

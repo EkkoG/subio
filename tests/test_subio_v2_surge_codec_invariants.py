@@ -13,11 +13,10 @@ from subio_v2.surge.codecs import (
     SURGE_COMMON_PARAMETER_PATHS,
     SURGE_COMMON_PARAMETERS,
     SURGE_NODE_PROTOCOLS,
+    SURGE_PROTOCOL_CODECS,
     SurgePolicyKind,
     SurgeUdpBehavior,
 )
-from subio_v2.surge.emitters import SURGE_PROTOCOL_EMITTERS
-from subio_v2.surge.parsers import SURGE_PROTOCOL_PARSERS
 from subio_v2.surge.syntax import parse_proxy_line
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
@@ -26,10 +25,10 @@ FIXTURE_DIR = Path(__file__).parent / "fixtures" / "surge" / "official"
 
 def test_surge_capabilities_and_emitters_derive_from_codec_registry():
     assert PLATFORM_CAPABILITIES["surge"]["protocols"] == set(SURGE_NODE_PROTOCOLS)
-    assert {protocol.value for protocol in SURGE_PROTOCOL_EMITTERS} == set(
+    assert {protocol.value for protocol in SURGE_PROTOCOL_CODECS} == set(
         SURGE_NODE_PROTOCOLS
     )
-    assert all(callable(emitter) for emitter in SURGE_PROTOCOL_EMITTERS.values())
+    assert all(callable(codec.emitter) for codec in SURGE_PROTOCOL_CODECS.values())
 
 
 def test_surge_codec_keywords_are_unique_and_cover_official_fixtures():
@@ -64,7 +63,7 @@ def test_every_node_codec_has_protocol_and_emitter():
         if codec.policy_kind != SurgePolicyKind.NODE:
             continue
         assert codec.protocol is not None
-        assert codec.protocol in SURGE_PROTOCOL_EMITTERS
+        assert codec.emitter is not None
 
 
 @pytest.mark.parametrize(
@@ -169,7 +168,10 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         and codec.keyword not in {"wireguard", "tailscale"}
     }
     assert sampled == registered
-    assert set(SURGE_PROTOCOL_PARSERS) == registered - {
+    parser_keywords = {
+        codec.keyword for codec in SURGE_CODEC_SPECS if codec.parser is not None
+    }
+    assert parser_keywords == registered - {
         "direct",
         "reject",
         "reject-drop",
@@ -178,7 +180,11 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
         "masque",
         "trust-tunnel",
     }
-    assert all(callable(parser) for parser in SURGE_PROTOCOL_PARSERS.values())
+    assert all(
+        callable(codec.parser)
+        for codec in SURGE_CODEC_SPECS
+        if codec.parser is not None
+    )
 
 
 @pytest.mark.parametrize(

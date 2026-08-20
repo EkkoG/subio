@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from types import MappingProxyType
 
 from subio_v2.model.nodes import (
     AnyTLSNode,
@@ -305,27 +304,3 @@ def parse_hysteria2(context: SurgeProtocolParseContext) -> Node | None:
         tls=context.build_tls(enabled=True),
         udp=True,
     )
-
-
-SURGE_PROTOCOL_PARSERS = MappingProxyType(
-    {
-        "ss": parse_shadowsocks,
-        "vmess": parse_vmess,
-        "trojan": parse_trojan,
-        "socks5": parse_socks5,
-        "socks5-tls": parse_socks5,
-        "http": parse_http,
-        "https": parse_http,
-        "h2-connect": parse_http,
-        "anytls": parse_anytls,
-        "ssh": parse_ssh,
-        "snell": parse_snell,
-        "tuic": parse_tuic,
-        "tuic-v5": parse_tuic,
-        "hysteria2": parse_hysteria2,
-    }
-)
-
-
-def get_surge_protocol_parser(keyword: str) -> SurgeProtocolParser | None:
-    return SURGE_PROTOCOL_PARSERS.get(keyword.lower())

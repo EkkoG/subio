@@ -15,8 +15,10 @@ from subio_v2.model.nodes import (
     VmessNode,
     WireguardNode,
 )
-from subio_v2.surge.codecs import DEFAULT_SURGE_TARGET
-from subio_v2.surge.emitters import get_surge_protocol_emitter
+from subio_v2.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    get_surge_protocol_codec,
+)
 from subio_v2.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -261,7 +263,8 @@ class SurgeEmitter(BaseEmitter):
             node_keystore_map = {}
         if isinstance(node, SourcePassthroughNode):
             return self._emit_source_passthrough_node(node)
-        emitter = get_surge_protocol_emitter(node.type)
+        codec = get_surge_protocol_codec(node.type)
+        emitter = codec.emitter if codec is not None else None
         if emitter is None:
             return None
         config_parts = emitter(node, node_keystore_map)

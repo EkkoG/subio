@@ -37,7 +37,6 @@ from subio_v2.surge.codecs import (
 )
 from subio_v2.surge.parsers import (
     SurgeProtocolParseContext,
-    get_surge_protocol_parser,
 )
 from subio_v2.surge.resources import (
     SurgeKeystoreEntry,
@@ -855,7 +854,8 @@ class SurgeParser(BaseParser):
             return None
 
         keyword = record.type.lower()
-        parser = get_surge_protocol_parser(keyword)
+        codec = get_surge_codec(keyword)
+        parser = codec.parser if codec is not None else None
         if parser is None or len(record.positional) < 2:
             return None
 
