@@ -38,8 +38,8 @@ Config
   -> Provider
   -> Parser
   -> Node IR
-  -> Processor (filter / rename / override / relation checks)
-  -> NodeConversionService (domain + target codec validation)
+  -> pure transforms (filter / rename / dialer relation)
+  -> TargetValidationService.encode_node (semantic + target codec validation/encode)
   -> Target Emitter
   -> Artifact
   -> Uploader
@@ -72,12 +72,14 @@ Config / local snippet
 | `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
-| `src/subio_v2/capabilities/` | 共享值域常量和从 target codec 聚合的只读能力快照 |
+| `src/subio_v2/formats.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
+| `src/subio_v2/protocols/values.py` | 不带 target 语义的共享协议值域常量 |
+| `src/subio_v2/target_validation.py` | 从实际 target codec 派生支持并返回 checked encode result |
 | `src/subio_v2/rules/` | 可分享规则集 grammar、codec、IR runtime 和 renderer |
 | `src/subio_v2/workflow/` | typed config、provider/artifact 编排、模板和发布事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
-`get_parser()` 和 `get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
+`formats.get_parser()` 和 `formats.get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
 跨 provider、artifact 或两次运行共享。
 
 ## 3. IR 与扩展字段
@@ -105,7 +107,7 @@ Config / local snippet
 
 Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 codec 输出后再经过
 `post_descriptor_emit()`。未知字段只有来源和目标 dialect 相同时才能合并；跨方言未消费字段必须
-产生 `conversion.unconsumed-source-field`，不能依赖 capability 日志后仍写入结果。
+产生 `conversion.unconsumed-source-field`，不能依赖 target validation 日志后仍写入结果。
 
 这些数据不是通用语义。Emitter 只能消费属于自己目标方言的扩展；跨方言未消费内容必须
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。
@@ -167,11 +169,11 @@ AmneziaWG、Shadowsocks plugin、Snell obfs 与 header mapping 的 native key/ty
 `original_name`、`extra`、`source_extensions`、`transport.extra`、`SourcePassthroughNode` 和 Surge
 External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Tailscale
 `interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
-codec；native codec 从 `ProtocolDefinition` 取得 Node class，但不能借用 Clash 字段规格。
+codec；native codec 从 `ProtocolSpec` 取得 Node class，但不能借用 Clash 字段规格。
 
-目标无关语义由 `src/subio_v2/validation.py` 校验，`NodeConversionService` 随后调用目标 codec
-约束检查平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
-native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明确列出，并且必须仍是 Node
+目标无关语义由 `src/subio_v2/validation.py` 校验，`TargetValidationService.encode_node()` 随后调用实际
+target codec 完成支持、约束检查和编码。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
+native override 字段由逐协议 `ProtocolSpec.user_override_fields` 明确列出，并且必须仍是 Node
 模型与通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，
 必须明确选择加入 terminal native policy 或排除，并更新 schema、用户文档和注册表不变量测试。
 
@@ -188,11 +190,11 @@ native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明
 |---|---|---|
 | `mihomo` | 规范名称 | 现代 Mihomo YAML |
 | `clash-meta` | 兼容别名 | 与 `mihomo` 完全相同，配置级提示替换为规范名称 |
-| `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 capability 和规则范围 |
+| `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 codec 和规则范围 |
 
-所有 parser、emitter、capability 和规则 renderer 的公开入口必须先通过
-`src/subio_v2/platforms.py` 规范化。内部 codec registry、`DialectContext` 和结构化
-issue 只使用 `mihomo` 规范名称；不得在 target registry/constraints、`PLATFORM_RULES` 或业务代码中
+所有 parser、emitter 和规则 renderer 的公开入口必须先通过
+`src/subio_v2/formats.py` 规范化。内部 codec registry、`DialectContext` 和结构化
+issue 只使用 `mihomo` 规范名称；不得在 target constraints、规则输出表或业务代码中
 新增独立 `clash-meta` authority，也不得增加散落的 `platform == "clash-meta"` 分支。
 
 `clash` 不得规范化为 `mihomo`。废弃状态只影响配置级提示和文档推荐，不得放宽原版 Clash 的
@@ -246,8 +248,8 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 `consumed_keys` 只能包含已经写入 IR、并能从同一规格重新生成的字段。未强类型化字段应留给
 `extra`，否则会出现“解析时消费、生成时丢失”。
 
-目标支持由注册 codec 派生；共享 capability 查询只聚合 codec 的值域和 feature flag，
-不用 `features` 罗列客户端的理论能力或文档标签。协议的组合条件与对应 codec 共置。
+目标支持由实际 target codec 派生；不建立独立 capability snapshot 或手写平台协议集合。协议的组合条件
+与对应 target codec 共置，编码和诊断通过同一 checked encode result 返回。
 
 未知 transport 和非 active transport option block 必须完整保留，不能降级为 TCP，也不能
 因为提取了一个子字段而删除整个嵌套配置。
@@ -256,16 +258,16 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 
 1. 从官方文档建立字段矩阵；没有官方资料的平台只维持现有 serializer/contract 已证明的能力；
 2. 判断字段属于跨平台语义、来源 preservation 还是平台附件；
-3. 在 semantic Node/共享 value object 增加字段，并在唯一 `ProtocolDefinition` 明确 terminal native
+3. 在 semantic Node/共享 value object 增加字段，并在唯一 `ProtocolSpec` 明确 terminal native
    public/excluded 与 user override 决策；
-4. 更新实际支持该字段的 Clash codec、Surge codec 或 link codec；目标支持由注册 codec 派生，
-   不新增全局 capability/protocol set；
+4. 更新实际支持该字段的 Clash/Surge/Link target codec；目标支持由实际 codec 派生，不新增全局
+   target protocol set；
 5. 为字段增加 parse/emit、值域/组合、same-dialect preservation 和 cross-target issue tests；
 6. 若终态 native contract 公开该字段，重新生成 v2 schema 并更新 `docs/subio_node_format.md`；
 7. 先跑 example、targeted/contract tests，再跑全量测试。
 
 官方 schema 已定义且影响运行的稳定语义应进入具体 Node，即使当前只有一个目标平台支持；目标不支持
-时由 capability 产生精确 issue。纯序列化信息和真正未知的新字段留在同方言 `extra`，不要把所有
+时由 target codec 产生精确 issue。纯序列化信息和真正未知的新字段留在同方言 `extra`，不要把所有
 schema 元数据机械复制进 IR。
 
 ## 5. Surge
@@ -274,20 +276,21 @@ schema 元数据机械复制进 IR。
 
 Surge 代理行不能使用普通 `split(",")`。值可以包含逗号、等号、引号和重复参数。
 `src/subio_v2/surge/syntax.py` 负责 tokenizer/serializer，
-`src/subio_v2/surge/codecs.py` 负责 keyword、协议、参数集合和 UDP 行为的共享规格。
+`src/subio_v2/surge/codecs.py` 负责 keyword、协议、参数集合、UDP 行为、parser/emitter callable 和
+Surge target constraints 的唯一 executable codec。
 
 新增或修改 Surge 协议时：
 
-1. 先更新 `SurgeCodecSpec`；
-2. 在 `surge/parsers.py` 和 `surge/emitters.py` 实现对应 callable；
-3. 在协议自身 Clash codec 中更新需要的 target constraints，并更新官方离线 fixture；
+1. 先更新对应 `SurgeCodecSpec`；
+2. 在 `surge/parsers.py` 和 `surge/emitters.py` 实现 callable，并绑定到同一 spec；
+3. 更新官方离线 fixture 和 codec invariant；不要把 Surge constraints 放回 Clash protocol codec；
 4. 运行 `tests/test_subio_v2_surge_codec_invariants.py`。
 
-Codec 注册表用于共享规格和不变量，不要求把所有 Parser/Emitter 逻辑改写成元编程框架。
-除非能消除已知错误，不为“纯注册表”进行大规模重写。
+Codec registry 是实际 parser/emitter/target 支持入口，不允许再建立平行 handler map；协议特殊资源仍由
+document adapter 按节点附件所有权处理。
 
 分享链接位于 `src/subio_v2/links/`。每种协议拥有独立 `LinkCodec`；支持输入的 codec 同时声明
-scheme parser，dae/v2rayN 输出能力由 codec target registration 派生。不要在 document parser、
+scheme parser、dae/v2rayN 输出能力和 target constraints，均由 codec target registration 派生。不要在 document parser、
 dae emitter 或 v2rayN emitter 中新增 scheme/protocol 分支。
 
 ### 5.2 UDP 与跨平台协议
@@ -301,7 +304,7 @@ Tailscale、MASQUE 和 Trust Tunnel 是跨平台协议，应使用强类型节�
 
 - Tailscale 需要区分登录方式、exit-node 选择和平台运行状态；
 - MASQUE 需要区分 forward proxy、CONNECT-IP、`h3-l4proxy`、H2/H3 传输和认证模型；
-- Trust Tunnel 的公共认证/TLS 可映射，平台扩展按 capability 诊断。
+- Trust Tunnel 的公共认证/TLS 可映射，平台扩展按 target codec 诊断。
 
 External Proxy Program 的本地 `file` provider 默认允许 Surge -> Surge 同平台透传；远程 URL
 provider 默认忽略，只有显式设置 `allow_unsafe_external = true` 才允许同平台透传并记录高可见度
@@ -372,12 +375,14 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 
 - `ConfigLoader` 读取 TOML/YAML/JSON/JSON5，`ConfigValidator` 在构造 runtime config 前完成语义验证；
 - `RunConfig` 暴露 typed `ProviderConfig`、`ArtifactConfig`、`UploaderConfig` records；
-- `ProviderLoaderService` 负责 provider IO、remote dedup、Age/UTF-8、parser 和 provider processors；
+- `ProviderLoaderService` 负责 provider IO、remote dedup、Age/UTF-8、parser 和 `workflow.transforms`；
 - `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、issue policy、template/ruleset、Age 和 upload staging；
 - `ArtifactPublisher` 负责本地文件发布事务；
-- `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界。
+- `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
+  artifact builder 返回 typed `ArtifactDraft`，所有 issue 在单一 artifact gate 决策后才进入 staging，
+  upload request 在完整生成循环后才入队。
 
-application service 只通过 `get_parser()`、`get_emitter()` 和窄结果类型访问 adapter，不导入具体
+application service 只通过 `formats.get_parser()`、`formats.get_emitter()` 和窄结果类型访问 adapter，不导入具体
 Surge/Clash/link 实现。一次 run 的 loader、parser、emitter 和 uploader 状态不得泄漏到下一次运行。
 
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并

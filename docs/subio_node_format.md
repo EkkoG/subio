@@ -213,7 +213,7 @@ down = 100
 
 ### 4.5 `surge_options`
 
-这些字段只描述 Surge policy 公共行为；转到不支持的目标时会产生 capability issue。
+这些字段只描述 Surge policy 公共行为；转到不支持的目标时会产生 target codec issue。
 
 <!-- nested-fields:SurgePolicyOptions -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -700,7 +700,7 @@ alpn = ["h3"]
 <!-- /subio-example -->
 
 TLS 默认启用。v4 必须只使用 `token`；v5 必须使用 `uuid` + `password`，不能混入 v4 token。
-省略 `version` 时 codec 按凭据自动推断。端口跳跃与底层代理的组合由目标 capability 检查。
+省略 `version` 时 codec 按凭据自动推断。端口跳跃与底层代理的组合由目标 codec 检查。
 
 <!-- protocol-fields:tuic -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -881,7 +881,7 @@ server、port、public_key、allowed_ips。当前 Node IR 仍保留顶层 bootst
 - `routing_mark`、部分 SMUX/Brutal 和部分新协议字段主要由 Mihomo-family 表达；
 - `surge_options`、`vmess_aead`、Trust Tunnel WebSocket 等是 Surge profile；
 - MASQUE、Tailscale、Trust Tunnel 在多个平台同名，但 mode、transport、认证或自动选择语义不同；
-- plugin、cipher、transport、协议版本和 TLS 子功能都可能受目标 capability 限制；
+- plugin、cipher、transport、协议版本和 TLS 子功能都可能受目标 codec 限制；
 - 无法表达的字段会生成字段级 conversion issue，不会因为来自原生格式就静默删除。
 
 默认情况下 conversion ERROR 会阻止 artifact 发布。`allow_conversion_errors = true` 会整体放行，只适合
@@ -1028,7 +1028,7 @@ server_name = "hy2.example.com"
 ```
 <!-- /subio-example -->
 
-TLS 默认启用。配置 `obfs` 时应同时配置 `obfs_password`；目标 capability 会检查可用混淆模式。
+TLS 默认启用。配置 `obfs` 时应同时配置 `obfs_password`；目标 codec 会检查可用混淆模式。
 
 <!-- protocol-fields:hysteria2 -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -1377,7 +1377,7 @@ headers = { User-Agent = "SubIO" }
 <!-- /subio-example -->
 
 `cipher = "none"` 时密码可以为空；其他 cipher 必须提供密码。插件的允许字段见 4.6，目标是否支持
-对应 cipher/plugin 由 capability 检查。
+对应 cipher/plugin 由目标 codec 检查。
 
 <!-- protocol-fields:shadowsocks -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -1456,7 +1456,7 @@ Snell version 接受 `1..6`；平台支持范围不同。`udp_port` 仅适用于
 | 字段 | 类型 | 省略时 | 说明 |
 |---|---|---|---|
 | `psk` | string | 空字符串（校验失败） | 必填预共享密钥 |
-| `version` | integer enum | `null`（按 v1 处理） | `1` 到 `6` |
+| `version` | integer enum | `null`（按默认版本策略处理） | `1` 到 `6` |
 | `reuse` | boolean | `null` | 连接复用开关；只在部分版本生效 |
 | `udp_port` | integer | `null` | 独立 UDP 端口 |
 | `mode` | string | `null` | Snell v6 mode |

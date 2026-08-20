@@ -1,7 +1,7 @@
 # SubIO v2 支持矩阵
 
 本文记录当前代码和测试能够证明的输入、输出与协议范围。这里的“支持”表示 SubIO 的 parser、
-capability 和 emitter 能生成目标格式；同名协议的具体 method、transport、认证和字段仍会逐节点
+target codec 和 emitter 能生成目标格式；同名协议的具体 method、transport、认证和字段仍会逐节点
 校验。目标客户端理论上支持、但 SubIO 尚无 serializer 或 round-trip 证据的能力不在矩阵内。
 
 ## 1. 节点格式
@@ -23,7 +23,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 | `artifact.type` | 状态 | 当前协议能力 |
 |---|---|---|
 | `mihomo` | 推荐 | 26 种当前 schema type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；未来未知 type 仅允许 Mihomo 同方言保真 |
-| `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 capability、emitter 和规则输出，加载配置时产生替代提示 |
+| `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 target codec、emitter 和规则输出，加载配置时产生替代提示 |
 | `clash` | 已废弃但仍支持 | SS、VMess、Trojan、HTTP、SOCKS5；保持原版 Clash 的独立能力边界 |
 | `stash` | 支持 | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
 | `surge` | 支持 | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
@@ -34,7 +34,7 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 
 - SubIO v2 可直接构造当前 27 种公开具体 Node IR，不调用 Mihomo parser；`source-passthrough`、
   Surge External 和运行期来源/保真字段不属于该格式，完整契约见 `docs/subio_node_format.md`；
-- Stash capability 当前为 20 种协议；Stash-only 的 Juicity 不会伪装成 Mihomo 强类型协议；
+- Stash target codec 当前开放 20 种协议；Stash-only 的 Juicity 不会伪装成 Mihomo 强类型协议；
 - 固定 schema 基线中的 Mihomo type 均使用强类型 IR 和结构化 codec；实际数量由 schema fixture
   与 codec registry 不变量核对，不维护独立手写计数；`dns` 只表示
   内部 DNS 模块出站，不扩展为 DNS section 转换；
