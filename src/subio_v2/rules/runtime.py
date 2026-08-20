@@ -27,7 +27,7 @@ from subio_v2.model.rules import (
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
-    RuleSetInputCodecRegistry,
+    RuleSetInputCodecCatalog,
     RuleSetInputSelection,
 )
 from subio_v2.rules.config import RuleSetConfig
@@ -540,7 +540,7 @@ def load_remote_resource(
 
 def load_rulesets(
     ruleset_configs: list[RuleSetConfig] | tuple[RuleSetConfig, ...] | list[dict[str, Any]],
-    registry: RuleSetInputCodecRegistry = DEFAULT_RULESET_CODEC_REGISTRY,
+    registry: RuleSetInputCodecCatalog = DEFAULT_RULESET_CODEC_REGISTRY,
     *,
     loader: RunRemoteLoader | None = None,
 ) -> RuleSetStore:

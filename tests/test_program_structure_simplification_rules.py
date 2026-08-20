@@ -21,3 +21,10 @@ def test_rule_renderer_no_longer_has_duplicate_platform_rules_table():
     source = (Path(__file__).parents[1] / "src/subio_v2/rules/runtime.py").read_text()
     assert "PLATFORM_RULES" not in source
     assert "_output_rules_for_target" in source
+
+
+def test_ruleset_input_catalog_is_immutable_and_not_a_mutable_registry():
+    source = (Path(__file__).parents[1] / "src/subio_v2/rules/codecs.py").read_text()
+    assert "RuleSetInputCodecRegistry" not in source
+    assert "class RuleSetInputCodecCatalog" in source
+    assert "MappingProxyType" in source

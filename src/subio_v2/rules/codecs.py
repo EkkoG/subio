@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Protocol
 
 import yaml
@@ -89,25 +90,13 @@ class RuleSetInputCodec(Protocol):
     ) -> RuleSetParseResult: ...
 
 
-class RuleSetInputCodecRegistry:
-    def __init__(self) -> None:
-        self._codecs: dict[tuple[str, str, str], RuleSetInputCodec] = {}
-
-    def register(
-        self,
-        dialect: str,
-        behavior: str,
-        format_name: str,
-        codec: RuleSetInputCodec,
-    ) -> None:
-        key = (dialect, behavior, format_name)
-        if key in self._codecs:
-            raise ValueError(f"Duplicate ruleset input codec: {key!r}")
-        self._codecs[key] = codec
+@dataclass(frozen=True)
+class RuleSetInputCodecCatalog:
+    codecs: MappingProxyType
 
     def get(self, selection: RuleSetInputSelection) -> RuleSetInputCodec:
         key = (selection.dialect, selection.behavior, selection.format)
-        codec = self._codecs.get(key)
+        codec = self.codecs.get(key)
         if codec is None:
             raise ConfigError(
                 "Unsupported ruleset input combination: "
@@ -118,7 +107,7 @@ class RuleSetInputCodecRegistry:
 
     @property
     def combinations(self) -> tuple[tuple[str, str, str], ...]:
-        return tuple(sorted(self._codecs))
+        return tuple(sorted(self.codecs))
 
 
 class ClassicalTextCodec:
@@ -330,44 +319,56 @@ def _parse_ipcidr(value: str, source: str, line_number: int) -> Predicate:
     return Predicate(rule_type=rule_type, matcher=value, source_line=line_number)
 
 
-def create_default_ruleset_codec_registry() -> RuleSetInputCodecRegistry:
-    registry = RuleSetInputCodecRegistry()
+def create_default_ruleset_codec_registry() -> RuleSetInputCodecCatalog:
+    codecs: dict[tuple[str, str, str], RuleSetInputCodec] = {}
+
+    def add(
+        dialect: str,
+        behavior: str,
+        format_name: str,
+        codec: RuleSetInputCodec,
+    ) -> None:
+        key = (dialect, behavior, format_name)
+        if key in codecs:
+            raise ValueError(f"Duplicate ruleset input codec: {key!r}")
+        codecs[key] = codec
+
     for dialect, parser in (
         ("mihomo", MIHOMO_CLASSICAL_PARSER),
         ("stash", STASH_CLASSICAL_PARSER),
     ):
-        registry.register(dialect, "classical", "text", ClassicalTextCodec(parser))
-        registry.register(dialect, "classical", "yaml", ClassicalYamlCodec(parser))
+        add(dialect, "classical", "text", ClassicalTextCodec(parser))
+        add(dialect, "classical", "yaml", ClassicalYamlCodec(parser))
         for behavior in ("domain", "ipcidr"):
-            registry.register(
+            add(
                 dialect,
                 behavior,
                 "text",
                 ScalarRuleSetCodec(behavior, "text"),
             )
-            registry.register(
+            add(
                 dialect,
                 behavior,
                 "yaml",
                 ScalarRuleSetCodec(behavior, "yaml"),
             )
-            registry.register(
+            add(
                 dialect,
                 behavior,
                 "mrs",
                 MrsRuleSetCodec(behavior),
             )
 
-    registry.register(
+    add(
         "surge",
         "classical",
         "text",
         ClassicalTextCodec(SURGE_CLASSICAL_PARSER),
     )
-    registry.register(
+    add(
         "surge", "domain", "text", ScalarRuleSetCodec("domain", "text")
     )
-    return registry
+    return RuleSetInputCodecCatalog(MappingProxyType(codecs))
 
 
 DEFAULT_RULESET_CODEC_REGISTRY = create_default_ruleset_codec_registry()
