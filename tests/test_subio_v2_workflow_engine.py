@@ -112,15 +112,12 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     content_yaml = {"proxies": [{"name": "n1"}, {"name": "n2"}]}
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
+    rendered, issues = service._render_content(
+        content_yaml, None, "clash", {}, None, {}, "out.yaml"
+    )
+    assert issues == []
     service._stage(
-        "out.yaml",
-        content_yaml,
-        None,
-        "clash",
-        {},
-        ArtifactConfig(name="out.yaml", artifact_type="clash"),
-        None,
-        {},
+        "out.yaml", rendered, ArtifactConfig(name="out.yaml", artifact_type="clash"), None
     )
     eng.publisher.commit(service.staged_artifacts)
     out1 = (tmp_path / "dist" / "out.yaml").read_text()
@@ -130,15 +127,12 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
 
     # Text content with template: should use renderer result
     service = artifact_service(eng)
+    rendered, issues = service._render_content(
+        "rawtext", "tpl", "surge", {}, None, {}, "out.txt"
+    )
+    assert issues == []
     service._stage(
-        "out.txt",
-        "rawtext",
-        "tpl",
-        "surge",
-        {},
-        ArtifactConfig(name="out.txt", artifact_type="surge", template="tpl"),
-        None,
-        {},
+        "out.txt", rendered, ArtifactConfig(name="out.txt", artifact_type="surge"), None
     )
     eng.publisher.commit(service.staged_artifacts)
     out2 = (tmp_path / "dist" / "out.txt").read_text()
@@ -162,12 +156,8 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
     service._stage(
         "file-{user}.txt",
         "c",
-        None,
-        "surge",
-        {},
         ArtifactConfig(name="file-{user}.txt", artifact_type="surge"),
         "alice",
-        {},
     )
     eng.publisher.commit(service.staged_artifacts)
     assert (tmp_path / "dist" / "file-alice.txt").exists()
@@ -217,12 +207,8 @@ def test_write_artifact_rejects_path_traversal(tmp_path, monkeypatch):
         service._stage(
             "../escape.txt",
             "secret",
-            None,
-            "surge",
-            {},
             ArtifactConfig(name="../escape.txt", artifact_type="surge"),
             None,
-            {},
         )
 
     assert not (tmp_path / "escape.txt").exists()

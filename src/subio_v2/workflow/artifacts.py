@@ -45,8 +45,12 @@ class ArtifactGenerationService:
         self.global_age_public_key = global_age_public_key
         self.staged_artifacts: dict[str, str] = {}
         self.issues: list[ConversionIssue] = []
+        self._upload_requests: list[tuple[str, ArtifactConfig, str | None]] = []
 
     def generate(self) -> ArtifactGenerationResult:
+        self.staged_artifacts.clear()
+        self.issues.clear()
+        self._upload_requests.clear()
         global_filter = self.config.filters
         for artifact_config in self.config.artifacts:
             users = artifact_config.users
@@ -58,6 +62,14 @@ class ArtifactGenerationService:
                 self._generate_one(
                     artifact_config, global_filter, single_user or None
                 )
+        for content, artifact_config, username in self._upload_requests:
+            upload(
+                content,
+                artifact_config,
+                self.config.uploaders,
+                self.batch_uploader,
+                username,
+            )
         return ArtifactGenerationResult(
             dict(self.staged_artifacts), list(self.issues)
         )
@@ -112,11 +124,27 @@ class ArtifactGenerationService:
         artifact_issues.extend(
             replace(issue, artifact=name, user=username) for issue in emission.issues
         )
+        extra_context = emission.extras.get("template_context", {})
+        if not isinstance(extra_context, dict):
+            raise ArtifactGenerationError(
+                f"Emitter for artifact '{display_name}' returned an invalid "
+                "template context"
+            )
+        rendered_content, ruleset_issues = self._render_content(
+            emission.content,
+            artifact_config.template,
+            artifact_type,
+            artifact_config.options,
+            username,
+            extra_context,
+            name,
+        )
+        artifact_issues.extend(ruleset_issues)
         self.issues.extend(artifact_issues)
-        emitter.log_issues(artifact_issues)
         errors = [
             issue for issue in artifact_issues if issue.severity == IssueSeverity.ERROR
         ]
+        BaseEmitter.log_issues(artifact_issues)
         allow_errors = bool(
             self.config.allow_conversion_errors
             or artifact_config.allow_conversion_errors
@@ -137,34 +165,20 @@ class ArtifactGenerationService:
                 "set allow_empty=true to permit this",
                 issues=artifact_issues,
             )
-        extra_context = emission.extras.get("template_context", {})
-        if not isinstance(extra_context, dict):
-            raise ArtifactGenerationError(
-                f"Emitter for artifact '{display_name}' returned an invalid "
-                "template context"
-            )
-        self._stage(
-            name,
-            emission.content,
-            artifact_config.template,
-            artifact_type,
-            artifact_config.options,
-            artifact_config,
-            username,
-            extra_context,
-        )
+        stored_content = self._stage(name, rendered_content, artifact_config, username)
+        if artifact_config.upload:
+            self._upload_requests.append((stored_content, artifact_config, username))
 
-    def _stage(
+    def _render_content(
         self,
-        filename: str,
         content: str | dict[str, Any],
         template_path: str | None,
         artifact_type: str,
         artifact_options: dict[str, Any],
-        artifact_config: ArtifactConfig,
         username: str | None,
         extra_context: dict[str, Any],
-    ) -> None:
+        artifact_name: str,
+    ) -> tuple[str, list[ConversionIssue]]:
         is_yaml_data = isinstance(content, dict)
         raw_content = (
             yaml.dump(content.get("proxies", []), allow_unicode=True, sort_keys=False)
@@ -186,36 +200,24 @@ class ArtifactGenerationService:
             )
             final_content = render_result.content
             ruleset_issues = [
-                replace(issue, artifact=filename, user=username)
+                replace(issue, artifact=artifact_name, user=username)
                 for issue in render_result.issues
             ]
-            self.issues.extend(ruleset_issues)
-            BaseEmitter.log_issues(ruleset_issues)
-            errors = [
-                issue
-                for issue in ruleset_issues
-                if issue.severity == IssueSeverity.ERROR
-            ]
-            allow_errors = bool(
-                self.config.allow_conversion_errors
-                or artifact_config.allow_conversion_errors
-            )
-            if errors and not allow_errors:
-                raise ArtifactGenerationError(
-                    f"Artifact '{filename}' has {len(errors)} ruleset conversion error(s)",
-                    issues=errors,
-                )
-            if errors:
-                logger.warning(
-                    f"Artifact '{filename}' is continuing with {len(errors)} "
-                    "ruleset conversion error(s) because "
-                    "allow_conversion_errors=true"
-                )
+            return final_content, ruleset_issues
         elif is_yaml_data:
             final_content = yaml.dump(content, allow_unicode=True, sort_keys=False)
         else:
             final_content = raw_content
+        return final_content, []
 
+    def _stage(
+        self,
+        filename: str,
+        content: str,
+        artifact_config: ArtifactConfig,
+        username: str | None,
+    ) -> str:
+        final_content = content
         actual_filename = (
             filename.replace("{user}", username) if username else filename
         )
@@ -245,11 +247,4 @@ class ArtifactGenerationService:
                 f"Multiple artifacts would overwrite 'dist/{actual_filename}'"
             )
         self.staged_artifacts[actual_filename] = final_content
-        if artifact_config.upload:
-            upload(
-                final_content,
-                artifact_config,
-                self.config.uploaders,
-                self.batch_uploader,
-                username,
-            )
+        return final_content
