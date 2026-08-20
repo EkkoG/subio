@@ -69,14 +69,14 @@ class SurgeEmitter(BaseEmitter):
         return str(server)
 
     def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
-        checked_nodes, issues = self.emit_with_check(nodes)
+        issues = []
 
         lines: list[str] = []
         emitted_nodes: list[Node] = []
         emitted_policy_name_set: set[str] = set()
         emitted_attachments = SurgeNodeAttachments()
 
-        for node in checked_nodes:
+        for node in nodes:
             if node.name in emitted_policy_name_set:
                 issues.append(
                     self.issue_for_node(
@@ -88,48 +88,22 @@ class SurgeEmitter(BaseEmitter):
                     )
                 )
                 continue
+            encoded = self.encode_node(node, self._encode_protocol)
+            issues.extend(encoded.issues)
+            if encoded.supported_node is None:
+                continue
+            line, node_attachments = encoded.content
             try:
-                if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
-                    raise _SurgeEmissionError(
-                        "Shadow TLS version must be 2 or 3",
-                        field="shadow_tls.version",
-                    )
-                if (
-                    node.shadow_tls.enabled
-                    and node.shadow_tls.version == 3
-                    and not node.shadow_tls.server_name
-                ):
-                    raise _SurgeEmissionError(
-                        "Shadow TLS version 3 requires shadow-tls-sni",
-                        field="shadow_tls.server_name",
-                    )
-
-                node_keystore_map: dict[int, str] = {}
-                node_attachments = self._attachments_for_node(node, node_keystore_map)
-                line = self._emit_node(node, node_keystore_map)
-                if line is None:
-                    raise _SurgeEmissionError(
-                        "No Surge emitter is registered for this protocol",
-                        field="type",
-                    )
-
                 merged_attachments = emitted_attachments.clone()
-                try:
-                    merged_attachments.merge(node_attachments)
-                except ValueError as exc:
-                    raise _SurgeEmissionError(
-                        str(exc),
-                        field="source_extensions.surge.attachments",
-                        code="conversion.attachment-conflict",
-                    ) from exc
-            except _SurgeEmissionError as exc:
+                merged_attachments.merge(node_attachments)
+            except ValueError as exc:
                 issues.append(
                     self.issue_for_node(
                         node,
                         IssueSeverity.ERROR,
                         str(exc),
-                        field=exc.field,
-                        code=exc.code,
+                        field="source_extensions.surge.attachments",
+                        code="conversion.attachment-conflict",
                     )
                 )
                 continue
@@ -180,6 +154,33 @@ class SurgeEmitter(BaseEmitter):
                 }
             },
         )
+
+    def _encode_protocol(
+        self, node: Node
+    ) -> tuple[str, SurgeNodeAttachments]:
+        if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
+            raise _SurgeEmissionError(
+                "Shadow TLS version must be 2 or 3",
+                field="shadow_tls.version",
+            )
+        if (
+            node.shadow_tls.enabled
+            and node.shadow_tls.version == 3
+            and not node.shadow_tls.server_name
+        ):
+            raise _SurgeEmissionError(
+                "Shadow TLS version 3 requires shadow-tls-sni",
+                field="shadow_tls.server_name",
+            )
+        node_keystore_map: dict[int, str] = {}
+        node_attachments = self._attachments_for_node(node, node_keystore_map)
+        line = self._emit_node(node, node_keystore_map)
+        if line is None:
+            raise _SurgeEmissionError(
+                "No Surge emitter is registered for this protocol",
+                field="type",
+            )
+        return line, node_attachments
 
     def _attachments_for_node(
         self, node: Node, node_keystore_map: dict[int, str]

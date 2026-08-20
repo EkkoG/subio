@@ -100,11 +100,15 @@ class TargetValidationService:
         try:
             content = encoder(node)
         except Exception as exc:
+            field = getattr(exc, "field", None)
+            code = getattr(exc, "code", "conversion")
             issues.append(
                 self.issue_for_node(
                     node,
                     IssueSeverity.ERROR,
-                    f"Failed to encode {self.platform} node: {exc}",
+                    str(exc),
+                    field=field,
+                    code=code,
                     stage="emit",
                 )
             )
