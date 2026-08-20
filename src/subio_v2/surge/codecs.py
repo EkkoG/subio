@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
@@ -85,6 +85,8 @@ def _spec(
     normalized: tuple[tuple[str, str], ...] = (),
     multi: tuple[str, ...] = (),
     constraints: Mapping[str, Any] | None = None,
+    parser: Callable[[Any], Any] | None = None,
+    emitter: Callable[[Any, dict[int, str]], list[str]] | None = None,
 ) -> SurgeCodecSpec:
     return SurgeCodecSpec(
         keyword=keyword,
@@ -96,6 +98,8 @@ def _spec(
         normalized_parameters=normalized,
         multi_value_parameters=frozenset(multi),
         target_constraints=MappingProxyType(dict(constraints or {})),
+        parser=parser,
+        emitter=emitter,
     )
 
 
@@ -134,6 +138,8 @@ SURGE_CODEC_SPECS = (
         "ss",
         protocol=Protocol.SHADOWSOCKS,
         udp=SurgeUdpBehavior.EXPLICIT,
+        parser=parse_shadowsocks,
+        emitter=emit_shadowsocks,
         consumed=(
             "encrypt-method",
             "password",
@@ -155,6 +161,8 @@ SURGE_CODEC_SPECS = (
         "vmess",
         protocol=Protocol.VMESS,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_vmess,
+        emitter=emit_vmess,
         consumed=(
             "username",
             "encrypt-method",
@@ -170,6 +178,8 @@ SURGE_CODEC_SPECS = (
         "trojan",
         protocol=Protocol.TROJAN,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_trojan,
+        emitter=emit_trojan,
         consumed=("password", "ws", "ws-path", "ws-headers"),
         constraints={"transports": {"tcp", "ws"}},
     ),
@@ -177,6 +187,8 @@ SURGE_CODEC_SPECS = (
         "socks5",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
+        parser=parse_socks5,
+        emitter=emit_socks5,
         consumed=("username", "password", "udp-relay"),
         constraints={"features": {"tls"}},
     ),
@@ -184,6 +196,8 @@ SURGE_CODEC_SPECS = (
         "socks5-tls",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
+        parser=parse_socks5,
+        emitter=emit_socks5,
         consumed=("username", "password", "udp-relay"),
         constraints={"features": {"tls"}},
     ),
@@ -191,6 +205,8 @@ SURGE_CODEC_SPECS = (
         "http",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
+        parser=parse_http,
+        emitter=emit_http,
         consumed=("username", "password"),
         constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
@@ -198,6 +214,8 @@ SURGE_CODEC_SPECS = (
         "https",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
+        parser=parse_http,
+        emitter=emit_http,
         consumed=("username", "password"),
         constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
@@ -205,6 +223,8 @@ SURGE_CODEC_SPECS = (
         "h2-connect",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.EXPLICIT,
+        parser=parse_http,
+        emitter=emit_http,
         consumed=("username", "password", "headers", "max-streams", "udp-relay"),
         constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
@@ -212,12 +232,16 @@ SURGE_CODEC_SPECS = (
         "anytls",
         protocol=Protocol.ANYTLS,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_anytls,
+        emitter=emit_anytls,
         consumed=("password", "reuse"),
     ),
     _spec(
         "ssh",
         protocol=Protocol.SSH,
         udp=SurgeUdpBehavior.UNSUPPORTED,
+        parser=parse_ssh,
+        emitter=emit_ssh,
         consumed=(
             "username",
             "password",
@@ -232,6 +256,8 @@ SURGE_CODEC_SPECS = (
         "snell",
         protocol=Protocol.SNELL,
         udp=SurgeUdpBehavior.VERSIONED,
+        parser=parse_snell,
+        emitter=emit_snell,
         consumed=(
             "psk",
             "version",
@@ -255,6 +281,8 @@ SURGE_CODEC_SPECS = (
         "tuic",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_tuic,
+        emitter=emit_tuic,
         consumed=("token", "version", "port-hopping", "port-hopping-interval"),
         constraints={"versions": {4, 5}},
     ),
@@ -262,6 +290,8 @@ SURGE_CODEC_SPECS = (
         "tuic-v5",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_tuic,
+        emitter=emit_tuic,
         consumed=("uuid", "password", "port-hopping", "port-hopping-interval"),
         constraints={"versions": {4, 5}},
     ),
@@ -269,6 +299,8 @@ SURGE_CODEC_SPECS = (
         "hysteria2",
         protocol=Protocol.HYSTERIA2,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_hysteria2,
+        emitter=emit_hysteria2,
         consumed=(
             "password",
             "download-bandwidth",
@@ -303,18 +335,21 @@ SURGE_CODEC_SPECS = (
         "wireguard",
         protocol=Protocol.WIREGUARD,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        emitter=emit_wireguard,
         consumed=("section-name",),
     ),
     _spec(
         "tailscale",
         protocol=Protocol.TAILSCALE,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        emitter=emit_tailscale,
         consumed=("section-name",),
     ),
     _spec(
         "masque",
         protocol=Protocol.MASQUE,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        emitter=emit_masque,
         consumed=(
             "username",
             "password",
@@ -326,18 +361,21 @@ SURGE_CODEC_SPECS = (
         "trust-tunnel",
         protocol=Protocol.TRUSTTUNNEL,
         udp=SurgeUdpBehavior.UNSUPPORTED,
+        emitter=emit_trust_tunnel,
         consumed=("username", "password", "headers", "max-streams", "h3", "ws"),
     ),
     _spec(
         "direct",
         protocol=Protocol.DIRECT,
         udp=SurgeUdpBehavior.AUTOMATIC,
+        emitter=emit_direct,
     ),
     *(
         _spec(
             keyword,
             protocol=Protocol.REJECT,
             udp=SurgeUdpBehavior.UNSUPPORTED,
+            emitter=emit_reject,
             constraints={
                 "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
             },
@@ -351,50 +389,6 @@ SURGE_CODEC_SPECS = (
     ),
 )
 
-
-_SURGE_PARSERS: dict[str, Callable[[Any], Any]] = {
-    "ss": parse_shadowsocks,
-    "vmess": parse_vmess,
-    "trojan": parse_trojan,
-    "socks5": parse_socks5,
-    "socks5-tls": parse_socks5,
-    "http": parse_http,
-    "https": parse_http,
-    "h2-connect": parse_http,
-    "anytls": parse_anytls,
-    "ssh": parse_ssh,
-    "snell": parse_snell,
-    "tuic": parse_tuic,
-    "tuic-v5": parse_tuic,
-    "hysteria2": parse_hysteria2,
-}
-_SURGE_EMITTERS: dict[Protocol, Callable[[Any, dict[int, str]], list[str]]] = {
-    Protocol.DIRECT: emit_direct,
-    Protocol.REJECT: emit_reject,
-    Protocol.SHADOWSOCKS: emit_shadowsocks,
-    Protocol.VMESS: emit_vmess,
-    Protocol.TROJAN: emit_trojan,
-    Protocol.SOCKS5: emit_socks5,
-    Protocol.HTTP: emit_http,
-    Protocol.ANYTLS: emit_anytls,
-    Protocol.WIREGUARD: emit_wireguard,
-    Protocol.TAILSCALE: emit_tailscale,
-    Protocol.MASQUE: emit_masque,
-    Protocol.TRUSTTUNNEL: emit_trust_tunnel,
-    Protocol.SSH: emit_ssh,
-    Protocol.SNELL: emit_snell,
-    Protocol.TUIC: emit_tuic,
-    Protocol.HYSTERIA2: emit_hysteria2,
-}
-
-SURGE_CODEC_SPECS = tuple(
-    replace(
-        spec,
-        parser=_SURGE_PARSERS.get(spec.keyword),
-        emitter=_SURGE_EMITTERS.get(spec.protocol),
-    )
-    for spec in SURGE_CODEC_SPECS
-)
 SURGE_CODEC_BY_KEYWORD = {spec.keyword: spec for spec in SURGE_CODEC_SPECS}
 if len(SURGE_CODEC_BY_KEYWORD) != len(SURGE_CODEC_SPECS):
     raise RuntimeError("Duplicate Surge codec keyword")
