@@ -109,6 +109,7 @@ class WorkflowEngine:
                 apply_manifest(
                     self.config_path,
                     artifact_result.summaries,
+                    preparation.provider_result.summaries,
                     dist_dir=Path("dist"),
                     clean=self.clean_dist,
                 )
@@ -126,31 +127,38 @@ class WorkflowEngine:
         """Run all pure/load/generate stages without writing or uploading."""
 
         remote_loader = self._remote_loader()
-        remote_rulesets = (
-            load_rulesets(self.config.rulesets, loader=remote_loader)
-            if self.config.rulesets
-            else RuleSetStore()
-        )
-        rulesets = merge_stores(self._local_rulesets, remote_rulesets)
-        provider_result = ProviderLoaderService(
-            self.config_path, self.global_age_secret_key
-        ).load(self.config, remote_loader)
-        artifact_result = ArtifactGenerationService(
-            self.config,
-            provider_result.providers,
-            provider_result.issues,
-            self.renderer,
-            rulesets,
-            self.global_age_public_key,
-        ).generate()
-        return WorkflowPreparation(provider_result, artifact_result)
+        try:
+            remote_rulesets = (
+                load_rulesets(self.config.rulesets, loader=remote_loader)
+                if self.config.rulesets
+                else RuleSetStore()
+            )
+            rulesets = merge_stores(self._local_rulesets, remote_rulesets)
+            provider_result = ProviderLoaderService(
+                self.config_path, self.global_age_secret_key
+            ).load(self.config, remote_loader)
+            artifact_result = ArtifactGenerationService(
+                self.config,
+                provider_result.providers,
+                provider_result.issues,
+                self.renderer,
+                rulesets,
+                self.global_age_public_key,
+            ).generate()
+            return WorkflowPreparation(provider_result, artifact_result)
+        finally:
+            remote_loader.close()
 
     def load_providers(self) -> ProviderLoadResult:
         """Load providers for inspect without generating or publishing artifacts."""
 
-        return ProviderLoaderService(
-            self.config_path, self.global_age_secret_key
-        ).load(self.config, self._remote_loader())
+        remote_loader = self._remote_loader()
+        try:
+            return ProviderLoaderService(
+                self.config_path, self.global_age_secret_key
+            ).load(self.config, remote_loader)
+        finally:
+            remote_loader.close()
 
     def _remote_loader(self) -> RunRemoteLoader:
         return RunRemoteLoader(

@@ -18,10 +18,19 @@ from subio_v2.workflow.transforms import filter_nodes, rename_nodes, set_dialer_
 
 
 @dataclass(frozen=True)
+class ProviderSummary:
+    name: str
+    content_sha256: str
+    parsed_nodes: int
+    selected_nodes: int
+
+
+@dataclass(frozen=True)
 class ProviderLoadResult:
     providers: dict[str, list[Node]]
     issues: dict[str, list[ConversionIssue]]
     metadata: dict[str, RemoteMetadata] = field(default_factory=dict)
+    summaries: dict[str, ProviderSummary] = field(default_factory=dict)
 
 
 class ProviderLoaderService:
@@ -35,6 +44,7 @@ class ProviderLoaderService:
         providers: dict[str, list[Node]] = {}
         provider_issues: dict[str, list[ConversionIssue]] = {}
         provider_metadata: dict[str, RemoteMetadata] = {}
+        provider_summaries: dict[str, ProviderSummary] = {}
         with logger.status("[bold green]Loading providers...") as status:
             for provider_config in config.providers:
                 name = provider_config.name
@@ -75,18 +85,30 @@ class ProviderLoaderService:
                         f"Failed to parse provider '{name}': {exc}"
                     ) from exc
                 nodes = parse_result.nodes
+                parsed_node_count = len(nodes)
                 for node in nodes:
                     node.source_provider = name
                 provider_issues[name] = [
                     replace(issue, source=name) for issue in parse_result.issues
                 ]
                 nodes = self._process_nodes(nodes, provider_config)
+                provider_summaries[name] = ProviderSummary(
+                    name=name,
+                    content_sha256=hashlib.sha256(content_bytes).hexdigest(),
+                    parsed_nodes=parsed_node_count,
+                    selected_nodes=len(nodes),
+                )
                 logger.info(
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: "
                     f"[bold]{len(nodes)}[/bold] nodes"
                 )
                 providers[name] = nodes
-        return ProviderLoadResult(providers, provider_issues, provider_metadata)
+        return ProviderLoadResult(
+            providers,
+            provider_issues,
+            provider_metadata,
+            provider_summaries,
+        )
 
     @staticmethod
     def _process_nodes(

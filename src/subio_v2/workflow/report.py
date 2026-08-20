@@ -65,10 +65,21 @@ def build_report(
     providers: list[dict[str, Any]] = []
     for name, nodes in provider_result.providers.items():
         provider_issues = list(provider_result.issues.get(name, ()))
+        provider_summary = provider_result.summaries.get(name)
         providers.append(
             {
                 "name": name,
                 "node_count": len(nodes),
+                "parsed_nodes": (
+                    provider_summary.parsed_nodes
+                    if provider_summary is not None
+                    else len(nodes)
+                ),
+                "content_sha256": (
+                    provider_summary.content_sha256
+                    if provider_summary is not None
+                    else None
+                ),
                 "issue_counts": _issue_counts(provider_issues),
                 "issue_codes": sorted({issue.code for issue in provider_issues}),
             }

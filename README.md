@@ -154,8 +154,9 @@ classical 输入支持三平台官方自包含 predicate、options 和 `AND`/`OR
 等价语义；Stash `no-track` 与 Surge 专属 options 只输出到各自平台。
 
 已有 `[[ruleset]] name/url`、模板 callable、policy 参数和输出文本格式保持不变。Python API 中
-`EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取，模板
-变量从 `extras["template_context"]` 读取。Parser 和 Emitter 的结构化结果只返回节点、内容和问题；
+`EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取；模板通过
+`nodes.render()`、`nodes.names()`、`nodes.count()` 和 `nodes.exists()` 读取安全节点摘要，旧模板变量
+继续由 workflow 兼容适配。Parser 和 Emitter 的结构化结果只返回节点、内容、问题和有界 fragments；
 Surge Keystore 及命名 section 作为节点附件随节点流转。
 
 然后执行 `subio` 命令即可。

@@ -6,12 +6,14 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.workflow.artifacts import ArtifactSummary
+from subio_v2.workflow.providers import ProviderSummary
 
 MANIFEST_NAME = ".subio-manifest.json"
 MANIFEST_VERSION = 1
@@ -51,11 +53,23 @@ def _config_digest(config_path: str) -> str:
     return hasher.hexdigest()
 
 
-def build_manifest(config_path: str, summaries: tuple[ArtifactSummary, ...]) -> dict[str, Any]:
+def build_manifest(
+    config_path: str,
+    summaries: tuple[ArtifactSummary, ...],
+    provider_summaries: Mapping[str, ProviderSummary] | None = None,
+) -> dict[str, Any]:
     return {
         "version": MANIFEST_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         "config_sha256": _config_digest(config_path),
+        "providers": {
+            name: {
+                "content_sha256": summary.content_sha256,
+                "parsed_nodes": summary.parsed_nodes,
+                "selected_nodes": summary.selected_nodes,
+            }
+            for name, summary in (provider_summaries or {}).items()
+        },
         "artifacts": {
             summary.filename: {
                 "name": summary.name,
@@ -83,7 +97,11 @@ def managed_orphans(
     orphaned = sorted(set(artifacts) - current_filenames - {MANIFEST_NAME})
     for filename in orphaned:
         target = dist_dir / filename
-        if target.is_symlink() or target.resolve().parent != dist_dir.resolve():
+        if (
+            target.is_symlink()
+            or target.is_dir()
+            or target.resolve().parent != dist_dir.resolve()
+        ):
             raise ArtifactGenerationError(
                 f"Refusing to clean unsafe managed artifact path: {filename!r}"
             )
@@ -119,6 +137,7 @@ def write_manifest(dist_dir: Path, manifest: dict[str, Any]) -> None:
 def apply_manifest(
     config_path: str,
     summaries: tuple[ArtifactSummary, ...],
+    provider_summaries: Mapping[str, ProviderSummary] | None = None,
     *,
     dist_dir: Path,
     clean: bool,
@@ -126,7 +145,33 @@ def apply_manifest(
     previous = read_manifest(dist_dir)
     current = {summary.filename for summary in summaries}
     orphaned = managed_orphans(dist_dir, previous, current) if clean else ()
-    for filename in orphaned:
-        (dist_dir / filename).unlink()
-    write_manifest(dist_dir, build_manifest(config_path, summaries))
+    moved: list[tuple[Path, Path]] = []
+    try:
+        for filename in orphaned:
+            target = dist_dir / filename
+            if not target.exists():
+                continue
+            fd, temporary_name = tempfile.mkstemp(
+                prefix=".subio-clean-", suffix=".tmp", dir=dist_dir
+            )
+            os.close(fd)
+            temporary = Path(temporary_name)
+            temporary.unlink()
+            os.replace(target, temporary)
+            moved.append((temporary, target))
+        write_manifest(
+            dist_dir,
+            build_manifest(config_path, summaries, provider_summaries),
+        )
+    except Exception:
+        for temporary, target in reversed(moved):
+            if temporary.exists() and not target.exists():
+                os.replace(temporary, target)
+        raise
+    finally:
+        for temporary, _ in moved:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
     return orphaned

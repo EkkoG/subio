@@ -26,6 +26,7 @@ class Session:
     def __init__(self, responses):
         self.responses = iter(responses)
         self.calls = []
+        self.closed = False
 
     def mount(self, *args, **kwargs):
         return None
@@ -33,6 +34,9 @@ class Session:
     def get(self, url, headers=None, timeout=None):
         self.calls.append((url, headers, timeout))
         return next(self.responses)
+
+    def close(self):
+        self.closed = True
 
 
 def test_remote_loader_reuses_session_and_parses_metadata(monkeypatch):
@@ -63,6 +67,8 @@ def test_remote_loader_reuses_session_and_parses_metadata(monkeypatch):
     }
     assert len(session.calls) == 1
     assert session.calls[0][2] == 7
+    loader.close()
+    assert session.closed
 
 
 def test_remote_loader_enforces_response_limit(monkeypatch):
@@ -104,6 +110,10 @@ def test_remote_loader_can_explicitly_use_stale_cache_on_error(tmp_path, monkeyp
             raise RuntimeError("network")
 
     sessions = [Session([Response()]), ErrorSession([])]
+    warnings = []
+    monkeypatch.setattr(
+        "subio_v2.infrastructure.remote.logger.warning", warnings.append
+    )
     monkeypatch.setattr(
         "subio_v2.infrastructure.remote.requests.Session",
         lambda: sessions.pop(0),
@@ -121,6 +131,9 @@ def test_remote_loader_can_explicitly_use_stale_cache_on_error(tmp_path, monkeyp
 
     assert stale.content == b"payload"
     assert stale.metadata.state == "stale"
+    assert warnings == [
+        "Using stale cached remote resource after the request failed"
+    ]
 
 
 def test_remote_config_validates_limits_and_cache_flags():

@@ -17,6 +17,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from subio_v2.infrastructure.logging import logger
+
 
 class RemoteLoadError(RuntimeError):
     """Sanitized remote resource failure."""
@@ -165,6 +167,9 @@ class RunRemoteLoader:
             return result
         except Exception as exc:
             if disk is not None and self.stale_if_error:
+                logger.warning(
+                    "Using stale cached remote resource after the request failed"
+                )
                 result = replace(
                     disk[0], metadata=replace(disk[0].metadata, state="stale")
                 )
@@ -176,6 +181,13 @@ class RunRemoteLoader:
             raise RemoteLoadError(
                 f"Failed to fetch remote resource: {type(exc).__name__}"
             ) from exc
+
+    def close(self) -> None:
+        session = self._session
+        self._session = None
+        close = getattr(session, "close", None)
+        if callable(close):
+            close()
 
     def _read_response_content(self, response: Any) -> bytes:
         iterator = getattr(response, "iter_content", None)
