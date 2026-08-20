@@ -5,9 +5,19 @@ from typing import Any, Dict
 from subio_v2.model.nodes import Node, Protocol, RematchNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.REMATCH,
+    node_class=RematchNode,
+    requires_endpoint=False,
+    user_override_fields=frozenset({"server", "port"}),
+    terminal_native_fields=frozenset({"smux", "target_rematch_name", "target_sub_rule"}),
+)
 
 
 class RematchCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.REMATCH
     clash_type = "rematch"
     target_constraints = {"mihomo": {"features": {"smux"}}}

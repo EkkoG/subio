@@ -227,6 +227,7 @@ class BaseNode:
 
 @dataclass
 class ShadowsocksNode(BaseNode):
+    type: Protocol = field(default=Protocol.SHADOWSOCKS)
     cipher: str = "chacha20-ietf-poly1305"
     password: str = field(default="", repr=False)
     udp_port: Optional[int] = None
@@ -234,13 +235,9 @@ class ShadowsocksNode(BaseNode):
     plugin_opts: Optional[Dict[str, Any]] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SHADOWSOCKS:
-            self.type = Protocol.SHADOWSOCKS
-
-
 @dataclass
 class ShadowsocksRNode(BaseNode):
+    type: Protocol = field(default=Protocol.SHADOWSOCKSR)
     cipher: str = ""
     password: str = ""
     obfs: str = ""
@@ -249,13 +246,9 @@ class ShadowsocksRNode(BaseNode):
     protocol_param: Optional[str] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SHADOWSOCKSR:
-            self.type = Protocol.SHADOWSOCKSR
-
-
 @dataclass
 class VmessNode(BaseNode):
+    type: Protocol = field(default=Protocol.VMESS)
     uuid: str = field(default="", repr=False)
     alter_id: int = 0
     cipher: str = "auto"
@@ -266,13 +259,9 @@ class VmessNode(BaseNode):
     smux: SmuxSettings = field(default_factory=SmuxSettings)
     packet_encoding: Optional[str] = None
 
-    def __post_init__(self):
-        if self.type != Protocol.VMESS:
-            self.type = Protocol.VMESS
-
-
 @dataclass
 class VlessNode(BaseNode):
+    type: Protocol = field(default=Protocol.VLESS)
     uuid: str = field(default="", repr=False)
     flow: Optional[str] = None  # xtls-rprx-vision
     tls: TLSSettings = field(default_factory=TLSSettings)
@@ -280,47 +269,30 @@ class VlessNode(BaseNode):
     smux: SmuxSettings = field(default_factory=SmuxSettings)
     packet_encoding: Optional[str] = None
 
-    def __post_init__(self):
-        if self.type != Protocol.VLESS:
-            self.type = Protocol.VLESS
-
-
 @dataclass
 class TrojanNode(BaseNode):
+    type: Protocol = field(default=Protocol.TROJAN)
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
     transport: TransportSettings = field(default_factory=TransportSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.TROJAN:
-            self.type = Protocol.TROJAN
-
-
 @dataclass
 class Socks5Node(BaseNode):
+    type: Protocol = field(default=Protocol.SOCKS5)
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
     tls: TLSSettings = field(default_factory=TLSSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SOCKS5:
-            self.type = Protocol.SOCKS5
-
-
 @dataclass
 class HttpNode(BaseNode):
+    type: Protocol = field(default=Protocol.HTTP)
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
     headers: Optional[Dict[str, str]] = None
     variant: HttpVariant = HttpVariant.AUTO
     max_streams: Optional[int] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
-
-    def __post_init__(self):
-        if self.type != Protocol.HTTP:
-            self.type = Protocol.HTTP
-
 
 @dataclass
 class WireguardPeer:
@@ -334,6 +306,7 @@ class WireguardPeer:
 
 @dataclass
 class WireguardNode(BaseNode):
+    type: Protocol = field(default=Protocol.WIREGUARD)
     private_key: str = field(default="", repr=False)
     public_key: str = ""
     preshared_key: Optional[str] = None
@@ -351,13 +324,9 @@ class WireguardNode(BaseNode):
     refresh_server_ip_interval: Optional[int] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.WIREGUARD:
-            self.type = Protocol.WIREGUARD
-
-
 @dataclass
 class TailscaleNode(BaseNode):
+    type: Protocol = field(default=Protocol.TAILSCALE)
     hostname: Optional[str] = None
     auth_key: Optional[str] = field(default=None, repr=False)
     interactive_login: bool = False
@@ -376,13 +345,9 @@ class TailscaleNode(BaseNode):
     mtu: Optional[int] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.TAILSCALE:
-            self.type = Protocol.TAILSCALE
-
-
 @dataclass
 class MasqueNode(BaseNode):
+    type: Protocol = field(default=Protocol.MASQUE)
     mode: MasqueMode = MasqueMode.FORWARD_PROXY
     transport: str = "h3"
     connect_uri: Optional[str] = None
@@ -404,13 +369,9 @@ class MasqueNode(BaseNode):
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.MASQUE:
-            self.type = Protocol.MASQUE
-
-
 @dataclass
 class TrustTunnelNode(BaseNode):
+    type: Protocol = field(default=Protocol.TRUSTTUNNEL)
     username: str = ""
     password: str = field(default="", repr=False)
     headers: Optional[str] = None
@@ -426,44 +387,28 @@ class TrustTunnelNode(BaseNode):
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.TRUSTTUNNEL:
-            self.type = Protocol.TRUSTTUNNEL
-
-
 @dataclass
 class DirectNode(BaseNode):
+    type: Protocol = field(default=Protocol.DIRECT)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
-
-    def __post_init__(self):
-        if self.type != Protocol.DIRECT:
-            self.type = Protocol.DIRECT
-
 
 @dataclass
 class DNSNode(BaseNode):
     """Mihomo DNS outbound that redirects traffic to the internal DNS module."""
 
+    type: Protocol = field(default=Protocol.DNS)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
-
-    def __post_init__(self):
-        if self.type != Protocol.DNS:
-            self.type = Protocol.DNS
-
 
 @dataclass
 class RematchNode(BaseNode):
+    type: Protocol = field(default=Protocol.REMATCH)
     target_rematch_name: Optional[str] = None
     target_sub_rule: Optional[str] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.REMATCH:
-            self.type = Protocol.REMATCH
-
-
 @dataclass
 class GostRelayNode(BaseNode):
+    type: Protocol = field(default=Protocol.GOST_RELAY)
     forward: bool = False
     mux: bool = False
     username: Optional[str] = None
@@ -471,13 +416,9 @@ class GostRelayNode(BaseNode):
     tls: TLSSettings = field(default_factory=TLSSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.GOST_RELAY:
-            self.type = Protocol.GOST_RELAY
-
-
 @dataclass
 class ShadowQUICNode(BaseNode):
+    type: Protocol = field(default=Protocol.SHADOWQUIC)
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
@@ -497,13 +438,9 @@ class ShadowQUICNode(BaseNode):
     max_open_streams: Optional[int] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SHADOWQUIC:
-            self.type = Protocol.SHADOWQUIC
-
-
 @dataclass
 class OpenVPNNode(BaseNode):
+    type: Protocol = field(default=Protocol.OPENVPN)
     proto: str = "udp"
     dev: str = "tun"
     cipher: str = "AES-128-GCM"
@@ -529,11 +466,6 @@ class OpenVPNNode(BaseNode):
     dns_servers: Optional[List[str]] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.OPENVPN:
-            self.type = Protocol.OPENVPN
-
-
 @dataclass
 class SudokuHTTPMaskSettings:
     disable: Optional[bool] = None
@@ -546,6 +478,7 @@ class SudokuHTTPMaskSettings:
 
 @dataclass
 class SudokuNode(BaseNode):
+    type: Protocol = field(default=Protocol.SUDOKU)
     key: str = field(default="", repr=False)
     aead_method: str = "chacha20-poly1305"
     padding_min: int = 10
@@ -565,25 +498,20 @@ class SudokuNode(BaseNode):
     legacy_http_mask_multiplex: Optional[str] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SUDOKU:
-            self.type = Protocol.SUDOKU
-
-
 @dataclass
 class RejectNode(BaseNode):
+    type: Protocol = field(default=Protocol.REJECT)
     mode: RejectMode = RejectMode.REJECT
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
-        if self.type != Protocol.REJECT:
-            self.type = Protocol.REJECT
         if not isinstance(self.mode, RejectMode):
             self.mode = RejectMode(self.mode)
 
 
 @dataclass
 class AnyTLSNode(BaseNode):
+    type: Protocol = field(default=Protocol.ANYTLS)
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     reuse: bool = True
@@ -591,13 +519,9 @@ class AnyTLSNode(BaseNode):
     idle_session_timeout: Optional[int] = None
     min_idle_session: Optional[int] = None
 
-    def __post_init__(self):
-        if self.type != Protocol.ANYTLS:
-            self.type = Protocol.ANYTLS
-
-
 @dataclass
 class HysteriaNode(BaseNode):
+    type: Protocol = field(default=Protocol.HYSTERIA)
     ports: Optional[str] = None
     hysteria_protocol: Optional[str] = None
     obfs_protocol: Optional[str] = None
@@ -612,13 +536,9 @@ class HysteriaNode(BaseNode):
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.HYSTERIA:
-            self.type = Protocol.HYSTERIA
-
-
 @dataclass
 class Hysteria2Node(BaseNode):
+    type: Protocol = field(default=Protocol.HYSTERIA2)
     password: str = field(default="", repr=False)
     ports: Optional[str] = None
     hop_interval: Optional[int] = None
@@ -629,13 +549,9 @@ class Hysteria2Node(BaseNode):
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.HYSTERIA2:
-            self.type = Protocol.HYSTERIA2
-
-
 @dataclass
 class SSHNode(BaseNode):
+    type: Protocol = field(default=Protocol.SSH)
     username: str = ""
     password: Optional[str] = field(default=None, repr=False)
     private_key: Optional[str] = field(default=None, repr=False)
@@ -646,13 +562,9 @@ class SSHNode(BaseNode):
     idle_timeout: Optional[int] = None
     server_fingerprints: Optional[List[str]] = None
 
-    def __post_init__(self):
-        if self.type != Protocol.SSH:
-            self.type = Protocol.SSH
-
-
 @dataclass
 class SnellNode(BaseNode):
+    type: Protocol = field(default=Protocol.SNELL)
     psk: str = field(default="", repr=False)
     version: Optional[int] = None
     reuse: Optional[bool] = None
@@ -664,13 +576,9 @@ class SnellNode(BaseNode):
     tls: TLSSettings = field(default_factory=TLSSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
-    def __post_init__(self):
-        if self.type != Protocol.SNELL:
-            self.type = Protocol.SNELL
-
-
 @dataclass
 class MieruNode(BaseNode):
+    type: Protocol = field(default=Protocol.MIERU)
     port_range: Optional[str] = None
     transport: Optional[MieruTransport] = None
     username: str = ""
@@ -681,8 +589,6 @@ class MieruNode(BaseNode):
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
     def __post_init__(self):
-        if self.type != Protocol.MIERU:
-            self.type = Protocol.MIERU
         if self.port_range is not None:
             self.port_range = str(self.port_range)
         if self.transport is not None and not isinstance(
@@ -701,17 +607,14 @@ class MieruNode(BaseNode):
 
 @dataclass
 class JuicityNode(BaseNode):
+    type: Protocol = field(default=Protocol.JUICITY)
     uuid: str = field(default="", repr=False)
     password: str = field(default="", repr=False)
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
 
-    def __post_init__(self):
-        if self.type != Protocol.JUICITY:
-            self.type = Protocol.JUICITY
-
-
 @dataclass
 class TUICNode(BaseNode):
+    type: Protocol = field(default=Protocol.TUIC)
     token: Optional[str] = field(default=None, repr=False)  # TUIC v4 uses token
     password: Optional[str] = field(default=None, repr=False)  # TUIC v5 password
     uuid: Optional[str] = field(default=None, repr=False)  # TUIC v5 uses uuid
@@ -720,11 +623,6 @@ class TUICNode(BaseNode):
     hop_interval: Optional[int] = None
     tls: TLSSettings = field(default_factory=lambda: TLSSettings(enabled=True))
     smux: SmuxSettings = field(default_factory=SmuxSettings)
-
-    def __post_init__(self):
-        if self.type != Protocol.TUIC:
-            self.type = Protocol.TUIC
-
 
 @dataclass
 class SourcePassthroughNode(BaseNode):

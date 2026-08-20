@@ -17,9 +17,19 @@ from subio_v2.protocols._fields import (
     tls_group,
     transport_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.TROJAN,
+    node_class=TrojanNode,
+    user_override_fields=frozenset({"server", "port", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "password"}),
+    terminal_native_fields=frozenset({"password", "smux", "tls", "transport"}),
+)
 
 
 class TrojanCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.TROJAN
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"

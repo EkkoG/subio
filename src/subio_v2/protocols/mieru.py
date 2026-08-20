@@ -16,6 +16,16 @@ from subio_v2.model.nodes import (
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.MIERU,
+    node_class=MieruNode,
+    requires_endpoint=False,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"handshake_mode", "multiplexing", "password", "port_range", "smux", "traffic_pattern", "transport", "username"}),
+)
 
 
 def _decode_optional_enum(enum_type: type, value: Any) -> Any:
@@ -27,6 +37,7 @@ def _encode_enum(value: Any) -> str:
 
 
 class MieruCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.MIERU
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"

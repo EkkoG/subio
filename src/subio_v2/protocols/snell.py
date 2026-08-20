@@ -13,6 +13,15 @@ from subio_v2.protocols._fields import (
     scalar_field,
     smux_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SNELL,
+    node_class=SnellNode,
+    user_override_fields=frozenset({"server", "port", "psk"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "psk"}),
+    terminal_native_fields=frozenset({"mode", "obfs", "obfs_host", "obfs_opts", "psk", "reuse", "smux", "tls", "udp_port", "version"}),
+)
 
 
 def _parse_obfs_opts(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -38,6 +47,7 @@ def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
 
 
 class SnellCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SNELL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"

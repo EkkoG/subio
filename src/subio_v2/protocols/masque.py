@@ -14,6 +14,15 @@ from subio_v2.protocols._fields import (
     smux_group,
     tls_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.MASQUE,
+    node_class=MasqueNode,
+    user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "public_key"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "public_key"}),
+    terminal_native_fields=frozenset({"bbr_profile", "congestion_controller", "connect_uri", "cwnd", "dns_servers", "handshake_timeout", "hop_interval", "interface_ip", "interface_ipv6", "mode", "mtu", "password", "ports", "private_key", "public_key", "remote_dns_resolve", "smux", "tls", "transport", "username"}),
+)
 
 
 def _parse_network(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -40,6 +49,7 @@ def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
 
 
 class MasqueCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.MASQUE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"

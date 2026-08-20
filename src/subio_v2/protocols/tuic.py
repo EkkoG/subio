@@ -12,9 +12,19 @@ from subio_v2.protocols._fields import (
     smux_group,
     tls_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.TUIC,
+    node_class=TUICNode,
+    user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
+    terminal_native_fields=frozenset({"hop_interval", "password", "ports", "smux", "tls", "token", "uuid", "version"}),
+)
 
 
 class TUICCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.TUIC
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tuic"

@@ -6,6 +6,15 @@ from subio_v2.model.nodes import Node, Protocol, WireguardNode, WireguardPeer
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.WIREGUARD,
+    node_class=WireguardNode,
+    user_override_fields=frozenset({"server", "port", "private_key", "public_key", "preshared_key"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "private_key", "public_key", "preshared_key"}),
+    terminal_native_fields=frozenset({"allowed_ips", "amnezia_wg_option", "dns_servers", "interface_ip", "interface_ipv6", "mtu", "peers", "persistent_keepalive", "preshared_key", "private_key", "public_key", "refresh_server_ip_interval", "remote_dns_resolve", "reserved", "smux", "workers"}),
+)
 
 
 def _decode_peers(value: Any) -> list[WireguardPeer] | None:
@@ -54,6 +63,7 @@ def _encode_peers(value: list[WireguardPeer] | None) -> list[dict[str, Any]] | N
 
 
 class WireguardCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.WIREGUARD
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "wireguard"

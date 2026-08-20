@@ -5,9 +5,21 @@ from subio_v2.model.nodes import HttpNode, HttpVariant, Node, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.HTTP,
+    node_class=HttpNode,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "username", "password"}
+    ),
+    terminal_native_fields=frozenset({"headers", "max_streams", "password", "tls", "username", "variant"}),
+)
 
 
 class HttpCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.HTTP
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "http"

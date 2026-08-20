@@ -6,9 +6,19 @@ from subio_v2.model.nodes import Node, Protocol, ShadowsocksRNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SHADOWSOCKSR,
+    node_class=ShadowsocksRNode,
+    user_override_fields=frozenset({"server", "port", "cipher", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "cipher", "password"}),
+    terminal_native_fields=frozenset({"cipher", "obfs", "obfs_param", "password", "protocol_param", "smux", "ssr_protocol"}),
+)
 
 
 class ShadowsocksRCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SHADOWSOCKSR
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssr"

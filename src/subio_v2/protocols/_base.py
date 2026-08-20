@@ -16,7 +16,6 @@ from subio_v2.conversion import IssueDraft
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import BaseNode, Node, Protocol
 from subio_v2.protocols._fields import ClashFieldSpec
-from subio_v2.protocols.definitions import ProtocolDefinition, get_definition
 from subio_v2.protocols.spec import ProtocolSpec
 
 
@@ -38,13 +37,10 @@ class ClashProtocolCodec(ABC):
     spec: ProtocolSpec | None = None
 
     @property
-    def definition(self) -> ProtocolDefinition:
-        if self.spec is not None:
-            return self.spec
-        definition = get_definition(self.protocol)
-        if definition is None:
+    def definition(self) -> ProtocolSpec:
+        if self.spec is None:
             raise ValueError(f"Protocol has no definition: {self.protocol!r}")
-        return definition
+        return self.spec
 
     @property
     def node_class(self) -> type[BaseNode]:

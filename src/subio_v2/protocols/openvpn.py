@@ -5,6 +5,15 @@ from typing import Any
 from subio_v2.model.nodes import Node, OpenVPNNode, Protocol
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.OPENVPN,
+    node_class=OpenVPNNode,
+    user_override_fields=frozenset({"server", "port", "username", "password", "auth", "cipher", "private_key"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"auth", "ca", "certificate", "cipher", "comp_lzo", "data_ciphers", "data_ciphers_fallback", "dev", "dns_servers", "handshake_timeout", "key_direction", "mtu", "password", "peer_info", "ping", "ping_restart", "private_key", "proto", "remote_dns_resolve", "smux", "tls_auth", "tls_crypt", "tls_crypt_v2", "username"}),
+)
 
 _PROTOS = {"udp", "udp4", "tcp", "tcp-client", "tcp4", "tcp4-client"}
 _DEVICES = {"tun"}
@@ -28,6 +37,7 @@ def _optional_string(value: Any) -> str | None:
 
 
 class OpenVPNCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.OPENVPN
     clash_type = "openvpn"
     target_constraints = {"mihomo": {"features": {"smux"}}}

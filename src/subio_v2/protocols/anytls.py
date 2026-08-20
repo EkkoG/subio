@@ -13,6 +13,17 @@ from subio_v2.protocols._fields import (
     scalar_field,
     tls_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.ANYTLS,
+    node_class=AnyTLSNode,
+    user_override_fields=frozenset({"server", "port", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "password"}),
+    terminal_native_fields=frozenset(
+        {"idle_session_check_interval", "idle_session_timeout", "min_idle_session", "password", "reuse", "tls"}
+    ),
+)
 
 
 def _parse_reuse(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -26,6 +37,7 @@ def _emit_reuse(out: MutableMapping[str, Any], node: Node) -> None:
 
 
 class AnyTLSCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.ANYTLS
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "anytls"

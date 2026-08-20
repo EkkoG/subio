@@ -11,6 +11,15 @@ from subio_v2.protocols._fields import (
     scalar_field,
     smux_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SHADOWQUIC,
+    node_class=ShadowQUICNode,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"bbr_profile", "congestion_controller", "cwnd", "disable_mtu_discovery", "down", "keep_alive_interval", "max_datagram_frame_size", "max_open_streams", "password", "quic_versions", "recv_window", "recv_window_conn", "smux", "tls", "udp_over_stream", "up", "username", "zero_rtt"}),
+)
 
 _CONGESTION_CONTROLLERS = {"cubic", "new_reno", "bbr_meta_v1", "bbr_meta_v2", "bbr"}
 _BBR_PROFILES = {"standard", "conservative", "aggressive"}
@@ -35,6 +44,7 @@ def _emit_tls(out: MutableMapping[str, object], node: Node) -> None:
 
 
 class ShadowQUICCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SHADOWQUIC
     clash_type = "shadowquic"
     target_constraints = {"mihomo": {"features": {"smux"}}}

@@ -5,9 +5,20 @@ from subio_v2.model.nodes import Node, Protocol, SSHNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SSH,
+    node_class=SSHNode,
+    user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "private_key_passphrase"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "private_key_passphrase"}),
+    terminal_native_fields=frozenset({"host_key", "host_key_algorithms", "idle_timeout", "password", "private_key", "private_key_passphrase", "server_fingerprints", "username"}),
+    terminal_native_excluded_fields=frozenset({"keystore_id"}),
+)
 
 
 class SSHCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"

@@ -28,10 +28,24 @@ def test_representative_protocol_specs_are_local_and_authoritative():
         }
 
 
-def test_representative_protocols_are_removed_from_central_definition_tables():
+def test_all_protocol_codecs_have_local_specs():
+    codecs = tuple(registry.all())
+    assert len(codecs) == 27
+    assert all(codec.spec is not None for codec in codecs)
+    assert len(registry.all_definitions()) == 27
+
+
+def test_concrete_nodes_have_protocol_defaults_without_type_argument():
+    assert ShadowsocksNode(name="ss").type is Protocol.SHADOWSOCKS
+    assert VlessNode(name="vless").type is Protocol.VLESS
+    assert VmessNode(name="vmess").type is Protocol.VMESS
+    source = (Path(__file__).parents[1] / "src/subio_v2/model/nodes.py").read_text()
+    assert "self.type != Protocol." not in source
+
+
+def test_protocols_are_removed_from_central_definition_tables():
     definitions = (Path(__file__).parents[1] / "src/subio_v2/protocols/definitions.py").read_text()
-    for protocol in ("SHADOWSOCKS", "VLESS", "VMESS"):
-        assert f"Protocol.{protocol}:" not in definitions
+    assert "Protocol." not in definitions
 
 
 def test_native_and_override_consumers_use_protocol_registry_for_specs():

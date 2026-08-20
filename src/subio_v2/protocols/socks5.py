@@ -5,9 +5,19 @@ from subio_v2.model.nodes import Node, Protocol, Socks5Node
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SOCKS5,
+    node_class=Socks5Node,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"password", "tls", "username"}),
+)
 
 
 class Socks5Codec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SOCKS5
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "socks5"

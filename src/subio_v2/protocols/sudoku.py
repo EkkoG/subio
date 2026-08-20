@@ -16,6 +16,15 @@ from subio_v2.protocols._fields import (
     scalar_field,
     smux_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.SUDOKU,
+    node_class=SudokuNode,
+    user_override_fields=frozenset({"server", "port"}),
+    terminal_native_user_override_fields=frozenset({"server", "port"}),
+    terminal_native_fields=frozenset({"aead_method", "custom_table", "custom_tables", "enable_pure_downlink", "httpmask", "key", "legacy_http_mask", "legacy_http_mask_host", "legacy_http_mask_mode", "legacy_http_mask_multiplex", "legacy_http_mask_strategy", "legacy_http_mask_tls", "legacy_path_root", "multiplex", "padding_max", "padding_min", "smux", "table_type"}),
+)
 
 _AEAD_METHODS = {"chacha20-poly1305", "aes-128-gcm", "none"}
 _TABLE_TYPES = {
@@ -73,6 +82,7 @@ def _emit_httpmask(out: MutableMapping[str, Any], node: Node) -> None:
 
 
 class SudokuCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.SUDOKU
     clash_type = "sudoku"
     target_constraints = {"mihomo": {"features": {"smux"}}}

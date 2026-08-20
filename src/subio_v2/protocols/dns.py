@@ -2,12 +2,22 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from subio_v2.model.nodes import Node, Protocol
+from subio_v2.model.nodes import DNSNode, Node, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.DNS,
+    node_class=DNSNode,
+    requires_endpoint=False,
+    user_override_fields=frozenset({"server", "port"}),
+    terminal_native_fields=frozenset({"smux"}),
+)
 
 
 class DNSCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.DNS
     clash_type = "dns"
     target_constraints = {"mihomo": {"features": {"smux"}}}

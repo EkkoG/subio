@@ -6,9 +6,19 @@ from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, RejectNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import smux_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.REJECT,
+    node_class=RejectNode,
+    requires_endpoint=False,
+    user_override_fields=frozenset({"server", "port"}),
+    terminal_native_fields=frozenset({"mode", "smux"}),
+)
 
 
 class RejectCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.REJECT
     clash_type = "reject"
     target_constraints = {

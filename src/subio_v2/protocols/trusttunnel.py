@@ -5,9 +5,19 @@ from subio_v2.model.nodes import Node, Protocol, TrustTunnelNode
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group, tls_group
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.TRUSTTUNNEL,
+    node_class=TrustTunnelNode,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"bbr_profile", "congestion_controller", "cwnd", "headers", "health_check", "max_connections", "max_streams", "min_streams", "password", "quic", "smux", "tls", "username", "websocket"}),
+)
 
 
 class TrustTunnelCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
