@@ -178,6 +178,10 @@ subio check example/config.toml --format json --compare-dist
 subio inspect providers example/config.toml
 subio inspect artifacts example/config.toml --format json
 
+# 显式记录产物清单；clean-dist 只清理上一份清单管理的旧文件
+subio convert example/config.toml --write-manifest
+subio convert example/config.toml --clean-dist
+
 # 清理 gist 中所有现有文件后再上传
 subio convert example/config.toml --clean-gist
 ```

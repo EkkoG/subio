@@ -386,6 +386,8 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
   显式开启后使用用户私有目录、hash 文件名和 `0600` 文件权限，默认不使用 stale 内容；
 - Provider 的 ETag、Last-Modified、响应长度和 Subscription-UserInfo 只形成结构化 inspect/report 元数据，
   不进入模板、不转发原始响应，也不转发下游请求信息；
+- `dist/.subio-manifest.json` 只有在显式使用 `--write-manifest` 或 `--clean-dist` 时才生成；清理只针对上一份
+  Manifest 记录的受管文件，默认不删除旧文件或手工文件。
 - `ArtifactPublisher` 负责本地文件发布事务；
 - `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
   artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，

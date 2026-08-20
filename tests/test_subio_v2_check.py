@@ -81,3 +81,30 @@ def test_check_json_missing_config_is_still_machine_readable(
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "error"
     assert report["error"] == "Config file not found"
+
+
+def test_check_compare_dist_reports_manifest_orphans(tmp_path, monkeypatch, capsys):
+    config = _write_config(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / ".subio-manifest.json").write_text(
+        json.dumps({"version": 1, "artifacts": {"old.yaml": {}}})
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "subio",
+            "check",
+            str(config),
+            "--format",
+            "json",
+            "--compare-dist",
+        ],
+    )
+
+    assert main() == 0
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["orphan_files"] == ["old.yaml"]

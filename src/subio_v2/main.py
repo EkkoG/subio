@@ -243,6 +243,16 @@ def main():
         action="store_true",
         help="Clean all existing files in gist before uploading",
     )
+    convert_parser.add_argument(
+        "--write-manifest",
+        action="store_true",
+        help="Write the generated artifact manifest under dist",
+    )
+    convert_parser.add_argument(
+        "--clean-dist",
+        action="store_true",
+        help="Remove only stale artifacts recorded by the previous manifest",
+    )
 
     report_formats = ("text", "json")
     check_parser = subparsers.add_parser(
@@ -331,7 +341,11 @@ def main():
 
         try:
             engine = WorkflowEngine(
-                config_path, dry_run=args.dry_run, clean_gist=args.clean_gist
+                config_path,
+                dry_run=args.dry_run,
+                clean_gist=args.clean_gist,
+                write_manifest=args.write_manifest,
+                clean_dist=args.clean_dist,
             )
             engine.run()
         except WorkflowError as exc:

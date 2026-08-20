@@ -9,6 +9,7 @@ from typing import Any
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
+from subio_v2.workflow.manifest import MANIFEST_NAME, read_manifest
 from subio_v2.workflow.providers import ProviderLoadResult
 
 
@@ -120,6 +121,14 @@ def build_report(
         "artifacts": artifacts,
         "issues": [_issue_dict(issue) for issue in issues],
     }
+    if dist_dir is not None:
+        previous = read_manifest(dist_dir)
+        if previous is not None:
+            managed = set(previous.get("artifacts", {}))
+            current = {artifact["filename"] for artifact in artifacts}
+            report["orphan_files"] = sorted(managed - current - {MANIFEST_NAME})
+        else:
+            report["orphan_files"] = []
     if fatal_error:
         report["error"] = fatal_error
     return report
@@ -146,6 +155,8 @@ def render_report(report: dict[str, Any], output_format: str) -> str:
             f"{artifact['supported_nodes']}/{artifact['input_nodes']} nodes, "
             f"{artifact['dist_status']}, sha256:{artifact['sha256'][:12]}"
         )
+    if report.get("orphan_files"):
+        lines.append("orphan files: " + ", ".join(report["orphan_files"]))
     for issue in report["issues"]:
         location = issue.get("artifact") or issue.get("source") or issue.get("node")
         prefix = f"{location}: " if location else ""

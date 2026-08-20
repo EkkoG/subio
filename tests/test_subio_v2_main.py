@@ -60,11 +60,20 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
     calls = {"init": None, "ran": False}
 
     class DummyEngine:
-        def __init__(self, config_path, dry_run=False, clean_gist=False):
+        def __init__(
+            self,
+            config_path,
+            dry_run=False,
+            clean_gist=False,
+            write_manifest=False,
+            clean_dist=False,
+        ):
             calls["init"] = {
                 "config_path": config_path,
                 "dry_run": dry_run,
                 "clean_gist": clean_gist,
+                "write_manifest": write_manifest,
+                "clean_dist": clean_dist,
             }
 
         def run(self):
@@ -90,6 +99,8 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
         "config_path": str(cfg),
         "dry_run": True,
         "clean_gist": True,
+        "write_manifest": False,
+        "clean_dist": False,
     }
     assert calls["ran"] is True
 

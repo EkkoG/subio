@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.core.results import (
@@ -21,6 +22,7 @@ from subio_v2.workflow.artifacts import (
 )
 from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
+from subio_v2.workflow.manifest import apply_manifest
 from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
 from subio_v2.workflow.publication import ArtifactPublisher
 from subio_v2.workflow.template import TemplateRenderer
@@ -35,12 +37,19 @@ class WorkflowPreparation:
 
 class WorkflowEngine:
     def __init__(
-        self, config_path: str, dry_run: bool = False, clean_gist: bool = False
+        self,
+        config_path: str,
+        dry_run: bool = False,
+        clean_gist: bool = False,
+        write_manifest: bool = False,
+        clean_dist: bool = False,
     ):
         self.config_path = config_path
         self.config: RunConfig = ConfigLoader.load(self.config_path)
         self.dry_run = dry_run
         self.clean_gist = clean_gist
+        self.write_manifest = write_manifest or clean_dist
+        self.clean_dist = clean_dist
         self.batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
         self.publisher = ArtifactPublisher()
 
@@ -96,6 +105,13 @@ class WorkflowEngine:
             queued_uploads = self.batch_uploader.pending_uploads()
             self._commit_artifacts(artifact_result.drafts)
             self.batch_uploader.flush()
+            if self.write_manifest:
+                apply_manifest(
+                    self.config_path,
+                    artifact_result.summaries,
+                    dist_dir=Path("dist"),
+                    clean=self.clean_dist,
+                )
         except BaseException:
             self.batch_uploader.abort()
             raise
