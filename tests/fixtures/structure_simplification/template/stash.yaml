@@ -1,0 +1,7 @@
+proxies:
+{{ proxies }}
+
+proxy-groups:
+  - name: All
+    type: select
+    proxies: {{ proxies_names }}

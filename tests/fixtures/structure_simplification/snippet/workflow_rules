@@ -1,0 +1,3 @@
+primary, fallback
+DOMAIN-SUFFIX,example.test,{{ primary }}
+MATCH,{{ fallback }}

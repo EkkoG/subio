@@ -1,0 +1,61 @@
+log_level = "INFO"
+
+[options]
+proxy_test_url = "https://connectivity-check.example.test/generate_204"
+
+[[provider]]
+name = "nodes"
+type = "subio"
+file = "nodes.yaml"
+
+[[provider]]
+name = "user-nodes"
+type = "subio"
+file = "users.yaml"
+
+[[provider]]
+name = "surge-resource"
+type = "surge"
+file = "surge-resource.conf"
+
+[[artifact]]
+name = "mihomo.yaml"
+type = "mihomo"
+template = "mihomo.yaml"
+providers = ["nodes"]
+upload = [{ to = "dry-run-gist" }]
+
+[[artifact]]
+name = "stash.yaml"
+type = "stash"
+template = "stash.yaml"
+providers = ["nodes"]
+
+[[artifact]]
+name = "surge.conf"
+type = "surge"
+template = "surge.conf"
+providers = ["nodes", "surge-resource"]
+allow_conversion_errors = true
+
+[[artifact]]
+name = "dae.txt"
+type = "dae"
+providers = ["nodes"]
+
+[[artifact]]
+name = "v2rayn.txt"
+type = "v2rayn"
+providers = ["nodes"]
+
+[[artifact]]
+name = "user-{user}.yaml"
+type = "mihomo"
+template = "mihomo.yaml"
+providers = ["user-nodes"]
+users = ["alice", "bob"]
+
+[[uploader]]
+name = "dry-run-gist"
+type = "gist"
+id = "fixture-gist"

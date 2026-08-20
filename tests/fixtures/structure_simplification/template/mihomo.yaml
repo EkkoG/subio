@@ -1,0 +1,13 @@
+proxies:
+{{ proxies }}
+
+proxy-groups:
+  - name: All
+    type: select
+    proxies: {{ proxies_names }}
+  - name: Shadowsocks
+    type: select
+    proxies: {{ filter.regex_filter(proxies_names, '^ss-') }}
+
+rules:
+{{ workflow_rules("DIRECT", "All") }}

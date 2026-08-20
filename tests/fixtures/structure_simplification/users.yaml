@@ -1,0 +1,12 @@
+version: 2
+nodes:
+  - type: shadowsocks
+    name: user-ss
+    server: user.example.test
+    port: 8388
+    cipher: aes-256-gcm
+    users:
+      alice:
+        password: alice-example-password
+      bob:
+        password: bob-example-password

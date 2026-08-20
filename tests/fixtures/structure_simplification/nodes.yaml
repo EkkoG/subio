@@ -1,0 +1,18 @@
+version: 2
+nodes:
+  - type: shadowsocks
+    name: ss-main
+    server: ss.example.test
+    port: 8388
+    cipher: aes-256-gcm
+    password: example-ss-password
+  - type: vmess
+    name: vmess-main
+    server: vmess.example.test
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000021
+  - type: vless
+    name: vless-main
+    server: vless.example.test
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000022
