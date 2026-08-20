@@ -25,8 +25,8 @@ from subio_v2.model.nodes import (
 
 
 def _roundtrip(yaml_text: str) -> list[dict]:
-    nodes = ClashParser().parse_nodes(yaml_text)
-    out = ClashEmitter().emit_content(nodes)
+    nodes = ClashParser().parse_result(yaml_text).nodes
+    out = ClashEmitter().emit_result(nodes).content
     return out["proxies"]
 
 
@@ -65,7 +65,7 @@ proxies:
   - {name: dr1, type: direct}
   - {name: dn1, type: dns}
 """
-    nodes = ClashParser().parse_nodes(yaml_text)
+    nodes = ClashParser().parse_result(yaml_text).nodes
     assert len(nodes) == 25
     types = {n.type for n in nodes}
     assert Protocol.SHADOWSOCKS in types
@@ -118,14 +118,14 @@ proxies:
     udp-over-tcp: false
     udp-over-tcp-version: 0
 """
-    nodes = ClashParser().parse_nodes(yaml_text)
+    nodes = ClashParser().parse_result(yaml_text).nodes
     nodes_by_name = {node.name: node for node in nodes}
     assert nodes_by_name["ss-uot-enabled"].extra["udp-over-tcp"] is True
     assert nodes_by_name["ss-uot-enabled"].extra["udp-over-tcp-version"] == 2
     assert nodes_by_name["ss-uot-falsy"].extra["udp-over-tcp"] is False
     assert nodes_by_name["ss-uot-falsy"].extra["udp-over-tcp-version"] == 0
 
-    proxies = ClashEmitter().emit_content(nodes)["proxies"]
+    proxies = ClashEmitter().emit_result(nodes).content["proxies"]
     proxies_by_name = {proxy["name"]: proxy for proxy in proxies}
     assert proxies_by_name["ss-uot-enabled"]["udp-over-tcp"] is True
     assert proxies_by_name["ss-uot-enabled"]["udp-over-tcp-version"] == 2
@@ -147,10 +147,10 @@ proxies:
     udp-relay-mode: quic
     heartbeat-interval: 15000
 """
-    nodes = ClashParser().parse_nodes(yaml_text)
+    nodes = ClashParser().parse_result(yaml_text).nodes
     assert nodes[0].type == Protocol.TUIC
     assert nodes[0].extra.get("congestion-controller") == "bbr"
-    proxies = ClashEmitter().emit_content(nodes)["proxies"]
+    proxies = ClashEmitter().emit_result(nodes).content["proxies"]
     assert proxies[0]["congestion-controller"] == "bbr"
     assert proxies[0]["udp-relay-mode"] == "quic"
 
@@ -167,14 +167,14 @@ proxies:
       enabled: false
       count: 0
 """
-    nodes = ClashParser().parse_nodes(yaml_text)
+    nodes = ClashParser().parse_result(yaml_text).nodes
 
     assert len(nodes) == 1
     assert isinstance(nodes[0], SourcePassthroughNode)
     assert nodes[0].original_type == "future-protocol"
     assert nodes[0].raw["future-opts"] == {"enabled": False, "count": 0}
 
-    proxies = ClashEmitter(platform="clash-meta").emit_content(nodes)["proxies"]
+    proxies = ClashEmitter(platform="clash-meta").emit_result(nodes).content["proxies"]
     assert proxies == [
         {
             "name": "future",

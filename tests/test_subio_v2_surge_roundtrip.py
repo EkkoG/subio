@@ -19,7 +19,7 @@ any = anytls, example.com, 443, password=secret, reuse=false, sni=any.example.co
     assert node.tls.server_name == "any.example.com"
     assert NodeConversionService("surge").check_node(node).supported
 
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
     assert "any = anytls" in output
     assert "reuse=false" in output
     assert 'alpn="h2,http/1.1"' in output
@@ -27,12 +27,12 @@ any = anytls, example.com, 443, password=secret, reuse=false, sni=any.example.co
 
 
 def test_surge_h2_connect_round_trip_and_capability_boundary():
-    node = SurgeParser().parse_nodes(
+    node = SurgeParser().parse_result(
         """
 [Proxy]
 h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:SubIO|X-Test:a=b", max-streams=8, udp-relay=true
 """
-    )[0]
+    ).nodes[0]
 
     assert node.variant == HttpVariant.H2_CONNECT
     assert node.tls.enabled is True
@@ -42,7 +42,7 @@ h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:S
     assert NodeConversionService("surge").check_node(node).supported
     assert not NodeConversionService("clash-meta").check_node(node).supported
 
-    output = SurgeEmitter().emit_content([node])
+    output = SurgeEmitter().emit_result([node]).content
     assert "h2 = h2-connect" in output
     assert "headers=User-Agent:SubIO|X-Test:a=b" in output
     assert "max-streams=8" in output
@@ -66,13 +66,13 @@ ssh = ssh, example.com, 22, username=root, password=p, idle-timeout=60, server-f
     ]
     assert NodeConversionService("surge").check_node(node).supported
 
-    output = SurgeEmitter().emit_content([node])
+    output = SurgeEmitter().emit_result([node]).content
     assert "idle-timeout=60" in output
     assert output.count("server-fingerprint=") == 3
 
 
 def test_surge_ssh_requires_authentication_material():
-    node = SurgeParser().parse_nodes("[Proxy]\nssh = ssh, example.com, 22, username=root")[0]
+    node = SurgeParser().parse_result("[Proxy]\nssh = ssh, example.com, 22, username=root").nodes[0]
 
     result = NodeConversionService("surge").check_node(node)
 

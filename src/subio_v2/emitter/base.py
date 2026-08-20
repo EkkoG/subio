@@ -23,19 +23,9 @@ class BaseEmitter(ABC):
         self._conversion = NodeConversionService(self.platform)
         self.target_context = self._conversion.target_context
 
-    def emit_content(self, nodes: list[Node]) -> Any:
-        """Return emitted content and raise target-specific emit errors."""
-        result = self.emit_result(nodes)
-        self._raise_emit_error(result)
-        self.log_issues(result.issues)
-        return result.content
-
     @abstractmethod
     def emit_result(self, nodes: list[Node]) -> EmissionResult[Any]:
         """Return content, actually emitted nodes, and structured issues."""
-
-    def _raise_emit_error(self, result: EmissionResult[Any]) -> None:
-        """Raise target-specific errors for content-only emission."""
 
     def check_node(self, node: Node) -> TargetCheckResult:
         return self._conversion.check_node(node)

@@ -59,7 +59,7 @@ def test_field_spec_derives_alias_handling_extra_and_emit_policies():
 
 
 def test_migrated_descriptors_roundtrip_fields_and_unknown_extensions():
-    nodes = ClashParser().parse_nodes(
+    nodes = ClashParser().parse_result(
         """
 proxies:
   - name: http-fields
@@ -88,9 +88,9 @@ proxies:
     host-key: [host-key]
     host-key-algorithms: [ssh-ed25519]
 """
-    )
+    ).nodes
 
-    emitted = {proxy["name"]: proxy for proxy in ClashEmitter().emit_content(nodes)["proxies"]}
+    emitted = {proxy["name"]: proxy for proxy in ClashEmitter().emit_result(nodes).content["proxies"]}
     assert emitted["http-fields"]["headers"] == {"User-Agent": "UA"}
     assert emitted["http-fields"]["sni"] == "tls.example.com"
     assert emitted["http-fields"]["future-field"] is False

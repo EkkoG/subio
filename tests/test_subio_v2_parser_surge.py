@@ -19,7 +19,7 @@ TRO3 = trojan, s3, 3000, password=tp
 SOCK = socks5, s4, 4000, username=user, password=pass
 HTTP = https, s5, 5000, username=aa, password=bb
 """
-    nodes = SurgeParser().parse_nodes(conf)
+    nodes = SurgeParser().parse_result(conf).nodes
     names = [n.name for n in nodes]
     assert names == ["SS1", "VM2", "TRO3", "SOCK", "HTTP"]
     assert nodes[0].type == Protocol.SHADOWSOCKS and nodes[0].plugin == "obfs"
@@ -30,19 +30,19 @@ HTTP = https, s5, 5000, username=aa, password=bb
 
     # No sections style line
     conf2 = "SSa = ss, s, 1, encrypt-method=aes-256-gcm, password=p\nBadLine"
-    nodes2 = SurgeParser().parse_nodes(conf2)
+    nodes2 = SurgeParser().parse_result(conf2).nodes
     assert [n.name for n in nodes2] == ["SSa"]
 
 
 def test_surge_parser_invalid_types_and_values_skip_line():
     conf = "Bad = vmess, s, notaport\n[Proxy]\nN = vmess, s, 80, tls=true"
-    nodes = SurgeParser().parse_nodes(conf)
+    nodes = SurgeParser().parse_result(conf).nodes
     assert [n.name for n in nodes] == ["N"]
 
 
 def test_surge_invalid_content_type_raises_value_error():
     with pytest.raises(ValueError, match="Invalid content type"):
-        SurgeParser().parse_nodes({"not": "str"})
+        SurgeParser().parse_result({"not": "str"}).nodes
 
     with pytest.raises(ValueError, match="Invalid content type"):
         SurgeParser().parse_result({"not": "str"})
@@ -89,7 +89,7 @@ vmess1 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
 vmess2 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977ffa7a81, vmess-aead=false
 vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977ffa7a81
 """
-    nodes = SurgeParser().parse_nodes(conf)
+    nodes = SurgeParser().parse_result(conf).nodes
     assert len(nodes) == 3
     assert nodes[0].vmess_aead is True
     assert nodes[1].vmess_aead is False
@@ -97,15 +97,15 @@ vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
 
     # Test emitter preserves vmess-aead parameter and does not output encrypt-method
     emitter = SurgeEmitter()
-    output = emitter.emit_content([nodes[0]])
+    output = emitter.emit_result([nodes[0]]).content
     assert "vmess-aead=true" in output
     assert "encrypt-method" not in output  # Should not output encrypt-method
 
-    output2 = emitter.emit_content([nodes[1]])
+    output2 = emitter.emit_result([nodes[1]]).content
     assert "vmess-aead=false" not in output2  # Should not output false
     assert "encrypt-method" not in output2  # Should not output encrypt-method
 
-    output3 = emitter.emit_content([nodes[2]])
+    output3 = emitter.emit_result([nodes[2]]).content
     assert "vmess-aead" not in output3  # Should not output if False
     assert "encrypt-method" not in output3  # Should not output encrypt-method
 
@@ -127,7 +127,7 @@ def test_surge_emitter_preserves_obfs_host_for_tls_mode():
         plugin="obfs",
         plugin_opts={"mode": "tls"},
     )
-    output1 = emitter.emit_content([node1])
+    output1 = emitter.emit_result([node1]).content
     assert "obfs=tls" in output1
     assert "obfs-host" not in output1  # Should not output obfs-host for tls mode
 
@@ -142,7 +142,7 @@ def test_surge_emitter_preserves_obfs_host_for_tls_mode():
         plugin="obfs",
         plugin_opts={"mode": "tls", "host": "bing.com"},
     )
-    output2 = emitter.emit_content([node2])
+    output2 = emitter.emit_result([node2]).content
     assert "obfs=tls" in output2
     assert "obfs-host=bing.com" in output2
 
@@ -157,7 +157,7 @@ def test_surge_emitter_preserves_obfs_host_for_tls_mode():
         plugin="obfs",
         plugin_opts={"mode": "http", "host": "bing.com"},
     )
-    output3 = emitter.emit_content([node3])
+    output3 = emitter.emit_result([node3]).content
     assert "obfs=http" in output3
     assert "obfs-host=bing.com" in output3  # Should output obfs-host for http mode
 
@@ -178,7 +178,7 @@ tuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2", tfo=true, ip
     assert node.interface_name == "en0"
     assert node.dialer_proxy == "entry"
 
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
     assert 'alpn="h3,h2"' in output
     assert "tfo=true" in output
     assert "ip-version=prefer-v4" in output
@@ -187,7 +187,7 @@ tuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2", tfo=true, ip
 
 
 def test_surge_udp_relay_is_emitted_only_for_opt_in_protocols():
-    nodes = SurgeParser().parse_nodes(
+    nodes = SurgeParser().parse_result(
         """
 [Proxy]
 http = http, example.com, 80
@@ -199,7 +199,7 @@ hysteria2 = hysteria2, example.com, 443, password=p
 socks = socks5, example.com, 1080, udp-relay=true
 ss = ss, example.com, 8388, encrypt-method=aes-256-gcm, password=p, udp-relay=true
 """
-    )
+    ).nodes
 
     by_name = {node.name: node for node in nodes}
     assert by_name["http"].udp is False
@@ -212,7 +212,7 @@ ss = ss, example.com, 8388, encrypt-method=aes-256-gcm, password=p, udp-relay=tr
 
     lines = {
         line.split(" = ", 1)[0]: line
-        for line in SurgeEmitter().emit_content(nodes).splitlines()
+        for line in SurgeEmitter().emit_result(nodes).content.splitlines()
         if " = " in line
     }
     for name in ("http", "vmess", "trojan", "snell", "tuic", "hysteria2"):
@@ -237,7 +237,7 @@ invalid = hysteria2, example.com, 443, password=p, salamander-password=a, gecko-
     ]
     assert [issue.node for issue in result.issues] == ["invalid"]
 
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
     assert "salamander-password=secret-a" in output
     assert "gecko-password=secret-b" in output
     assert "obfs=" not in output
@@ -264,7 +264,7 @@ hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hoppin
     assert by_name["hy2"].ports == "443-445"
     assert by_name["hy2"].hop_interval == 20
 
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
     default_line = next(
         line for line in output.splitlines() if line.startswith("default =")
     )
@@ -278,18 +278,18 @@ hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hoppin
 
 
 def test_surge_snell_versioned_fields_round_trip():
-    nodes = SurgeParser().parse_nodes(
+    nodes = SurgeParser().parse_result(
         """
 [Proxy]
 snell = snell, example.com, 443, psk=p, version=6, reuse=false, udp-port=8443, mode=quic
 """
-    )
+    ).nodes
 
     node = nodes[0]
     assert node.reuse is False
     assert node.udp_port == 8443
     assert node.mode == "quic"
-    output = SurgeEmitter().emit_content(nodes)
+    output = SurgeEmitter().emit_result(nodes).content
     assert "reuse=false" in output
     assert "udp-port=8443" in output
     assert "mode=quic" in output
@@ -316,7 +316,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         password="example",
         transport=TransportSettings(network=Network.WS, path=None),
     )
-    output1 = emitter.emit_content([node1])
+    output1 = emitter.emit_result([node1]).content
     assert "ws=true" in output1
     assert "ws-path" not in output1  # Should not output ws-path when path is None
 
@@ -329,7 +329,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         password="example",
         transport=TransportSettings(network=Network.WS, path="/path"),
     )
-    output2 = emitter.emit_content([node2])
+    output2 = emitter.emit_result([node2]).content
     assert "ws=true" in output2
     assert "ws-path=/path" in output2  # Should output ws-path when path has value
 
@@ -342,7 +342,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         uuid="test-uuid",
         transport=TransportSettings(network=Network.WS, path=None),
     )
-    output3 = emitter.emit_content([node3])
+    output3 = emitter.emit_result([node3]).content
     assert "ws=true" in output3
     assert "ws-path" not in output3  # Should not output ws-path when path is None
 
@@ -355,7 +355,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         uuid="test-uuid",
         transport=TransportSettings(network=Network.WS, path="/ws-path"),
     )
-    output4 = emitter.emit_content([node4])
+    output4 = emitter.emit_result([node4]).content
     assert "ws=true" in output4
     assert "ws-path=/ws-path" in output4  # Should output ws-path when path has value
 
@@ -385,7 +385,7 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
     assert ssh2.private_key and "BEGIN OPENSSH PRIVATE KEY" in ssh2.private_key
 
     # Test emitter
-    output = SurgeEmitter().emit_content(nodes)
+    output = SurgeEmitter().emit_result(nodes).content
 
     # Check output
     assert "ssh1 = ssh, 1.1.1.1, 22, username=root, password=123" in output
@@ -406,7 +406,7 @@ key-id = type = openssh-private-key, base64 = S0VZ
     )
     node = result.nodes[0]
     attachment = get_surge_node_attachments(node).keystore["key-id"]
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
 
     assert "private-key=key-id" in output
     assert "[Keystore]" in output
@@ -437,25 +437,25 @@ client-cert = type = p12, base64 = Q0VSVA==, password = "a,b"
 
 def test_surge_parser_keystore_attachments_are_isolated_between_parse_calls():
     parser = SurgeParser()
-    first = parser.parse_nodes(
+    first = parser.parse_result(
         """
 [Proxy]
 first = ssh, first.example.com, 22, username=root, private-key=first-key
 [Keystore]
 first-key = type = openssh-private-key, base64 = S0VZLTE=
 """
-    )
+    ).nodes
     first_attachments = get_surge_node_attachments(first[0])
     assert set(first_attachments.keystore) == {"first-key"}
 
-    second = parser.parse_nodes(
+    second = parser.parse_result(
         """
 [Proxy]
 second = ssh, second.example.com, 22, username=root, private-key=second-key
 [Keystore]
 second-key = type = openssh-private-key, base64 = S0VZLTI=
 """
-    )
+    ).nodes
 
     second_attachments = get_surge_node_attachments(second[0])
     assert set(second_attachments.keystore) == {"second-key"}
@@ -498,7 +498,7 @@ o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
     )
 
     emitter = SurgeEmitter()
-    output = emitter.emit_content([node])
+    output = emitter.emit_result([node]).content
 
     # Check that node is not modified
     assert node.keystore_id is None
@@ -521,7 +521,7 @@ o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
 
     # Test deterministic: same node should generate same keystore ID
     emitter2 = SurgeEmitter()
-    output2 = emitter2.emit_content([node])
+    output2 = emitter2.emit_result([node]).content
     private_key_part2 = output2.split("private-key=")[1].split(",")[0].split()[0]
     assert private_key_part == private_key_part2  # Should be deterministic
 
@@ -568,7 +568,7 @@ o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
     )
 
     emitter = SurgeEmitter()
-    output = emitter.emit_content([node1, node2])
+    output = emitter.emit_result([node1, node2]).content
 
     # Check that both keys are base64 encoded in Keystore
     assert "[Keystore]" in output

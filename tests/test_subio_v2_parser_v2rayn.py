@@ -81,13 +81,13 @@ def test_v2rayn_parse_subscription_base64_multiple_lines():
         ]
     )
     b64sub = b64(content)
-    nodes = V2RayNParser().parse_nodes(b64sub)
+    nodes = V2RayNParser().parse_result(b64sub).nodes
     assert len(nodes) == 2
 
 
 def test_v2rayn_invalid_content_type_raises_value_error():
     with pytest.raises(ValueError, match="Invalid content type"):
-        V2RayNParser().parse_nodes({"bad": "type"})
+        V2RayNParser().parse_result({"bad": "type"}).nodes
 
 
 def test_vless_reality_grpc_codec_roundtrip_preserves_semantics():

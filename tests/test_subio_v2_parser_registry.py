@@ -48,8 +48,8 @@ shared = type = openssh-private-key, base64 = S0VZLUI=
     assert isinstance(parser_a, SurgeParser)
     assert isinstance(parser_b, SurgeParser)
 
-    nodes_a = parser_a.parse_nodes(provider_a)
-    nodes_b = parser_b.parse_nodes(provider_b)
+    nodes_a = parser_a.parse_result(provider_a).nodes
+    nodes_b = parser_b.parse_result(provider_b).nodes
 
     entry_a = get_surge_node_attachments(nodes_a[0]).keystore["shared"]
     entry_b = get_surge_node_attachments(nodes_b[0]).keystore["shared"]

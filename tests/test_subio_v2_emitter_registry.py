@@ -47,9 +47,9 @@ def test_clash_family_emitters_apply_their_own_capabilities():
     assert isinstance(mihomo, ClashEmitter)
     assert isinstance(stash, StashEmitter)
 
-    assert clash.emit_content([node])["proxies"] == []
-    assert len(mihomo.emit_content([node])["proxies"]) == 1
-    assert len(stash.emit_content([node])["proxies"]) == 1
+    assert clash.emit_result([node]).content["proxies"] == []
+    assert len(mihomo.emit_result([node]).content["proxies"]) == 1
+    assert len(stash.emit_result([node]).content["proxies"]) == 1
 
 
 def test_emitter_rejects_unknown_platform_instead_of_disabling_checks():

@@ -225,7 +225,7 @@ def test_build_socks5_and_http_urls():
 
 def test_dae_emit_node_block_format():
     nodes = [_ss("hk"), _vmess("jp")]
-    out = DaeEmitter().emit_content(nodes)
+    out = DaeEmitter().emit_result(nodes).content
     lines = out.splitlines()
     assert len(lines) == 2
     assert lines[0].startswith("'hk': '") and lines[0].endswith("'")
@@ -251,7 +251,7 @@ def test_dae_emit_dialer_chain_appends_arrow():
     base_node = _ss("base")
     chained = _vmess("chained")
     chained.dialer_proxy = "base"
-    out = DaeEmitter().emit_content([base_node, chained])
+    out = DaeEmitter().emit_result([base_node, chained]).content
     lines = out.splitlines()
     base_line = next(line for line in lines if line.startswith("'base':"))
     chained_line = next(line for line in lines if line.startswith("'chained':"))
@@ -265,13 +265,13 @@ def test_dae_emit_dialer_chain_appends_arrow():
 def test_dae_emit_dialer_chain_unknown_target_fails():
     chained = _vmess("orphan")
     chained.dialer_proxy = "missing"
-    with pytest.raises(ValueError, match="unknown dialer_proxy"):
-        DaeEmitter().emit_content([chained])
+    result = DaeEmitter().emit_result([chained])
+    assert any("unknown dialer_proxy" in issue.message for issue in result.errors)
 
 
 def test_dae_rejects_duplicate_node_names():
-    with pytest.raises(ValueError, match="Duplicate node name"):
-        DaeEmitter().emit_content([_ss("same"), _vmess("same")])
+    result = DaeEmitter().emit_result([_ss("same"), _vmess("same")])
+    assert any("Duplicate node name" in issue.message for issue in result.errors)
 
 
 def test_dae_resolves_full_dialer_chain_and_rejects_cycles():
@@ -281,19 +281,19 @@ def test_dae_resolves_full_dialer_chain_and_rejects_cycles():
     middle.dialer_proxy = "base"
     leaf.dialer_proxy = "middle"
 
-    out = DaeEmitter().emit_content([base, middle, leaf])
+    out = DaeEmitter().emit_result([base, middle, leaf]).content
     leaf_line = next(line for line in out.splitlines() if line.startswith("'leaf':"))
     assert leaf_line.count(" -> ") == 2
 
     base.dialer_proxy = "leaf"
-    with pytest.raises(ValueError, match="Cyclic dae dialer chain"):
-        DaeEmitter().emit_content([base, middle, leaf])
+    result = DaeEmitter().emit_result([base, middle, leaf])
+    assert any("Cyclic dae dialer chain" in issue.message for issue in result.errors)
 
 
 def test_dae_emit_filters_unsupported_protocols():
     """Hysteria2/TUIC/AnyTLS 在 dae 能力集中应被接受，输出对应 URL 行。"""
     nodes = [_hysteria2(), _tuic(), _anytls()]
-    out = DaeEmitter().emit_content(nodes)
+    out = DaeEmitter().emit_result(nodes).content
     assert "hysteria2://" in out
     assert "tuic://" in out
     assert "anytls://" in out

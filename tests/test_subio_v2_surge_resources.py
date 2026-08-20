@@ -75,7 +75,7 @@ unused = type = p12, base64 = VU5VU0VE
     assert set(attachments.keystore) == {"client"}
     assert "unused" not in attachments.keystore
 
-    output = SurgeEmitter().emit_content(result.nodes)
+    output = SurgeEmitter().emit_result(result.nodes).content
     assert "sni=off" in output
     assert "server-cert-verify-name=verify.example.com" in output
     assert "server-cert-fingerprint-sha256=AA:BB" in output
@@ -111,9 +111,9 @@ def test_surge_missing_client_certificate_is_an_emit_error():
 
 
 def test_surge_source_extensions_warn_on_cross_platform_emit():
-    node = SurgeParser().parse_nodes(
+    node = SurgeParser().parse_result(
         "[Proxy]\nproxy = http, example.com, 80, future=value, no-error-alert=true"
-    )[0]
+    ).nodes[0]
 
     result = ClashEmitter().emit_result([node])
 
@@ -317,7 +317,7 @@ private-key = secret
 
     assert result.issues == []
     assert peek_surge_node_attachments(result.nodes[0]) is None
-    assert "unused" not in SurgeEmitter().emit_content(result.nodes)
+    assert "unused" not in SurgeEmitter().emit_result(result.nodes).content
 
 
 def test_emitter_ignores_unreferenced_entries_inside_node_attachments():
@@ -333,7 +333,7 @@ def test_emitter_ignores_unreferenced_entries_inside_node_attachments():
     attachments.keystore["client"] = keystore_entry("type = p12, base64 = Q0xJRU5U")
     attachments.keystore["unused"] = keystore_entry("type = p12, base64 = VU5VU0VE")
 
-    output = SurgeEmitter().emit_content([node])
+    output = SurgeEmitter().emit_result([node]).content
 
     assert "client = type = p12" in output
     assert "unused" not in output
@@ -350,8 +350,8 @@ def test_surge_emitter_does_not_leak_attachments_between_calls():
         private_key="KEY",
     )
 
-    first = emitter.emit_content([ssh])
-    second = emitter.emit_content([DirectNode(name="direct", type=Protocol.DIRECT)])
+    first = emitter.emit_result([ssh]).content
+    second = emitter.emit_result([DirectNode(name="direct", type=Protocol.DIRECT)]).content
 
     assert "[Keystore]" in first
     assert "[Keystore]" not in second

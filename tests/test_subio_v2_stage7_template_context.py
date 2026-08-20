@@ -72,9 +72,6 @@ template = "custom.j2"
     class CustomEmitter(BaseEmitter):
         platform = "clash-meta"
 
-        def emit_content(self, nodes: list[Node]) -> str:
-            return self.emit_result(nodes).content
-
         def emit_result(self, nodes: list[Node]) -> EmissionResult[str]:
             return EmissionResult(
                 content="payload",

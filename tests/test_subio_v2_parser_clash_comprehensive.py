@@ -87,7 +87,7 @@ proxies:
     username: root
     password: rpw
 """.replace("__CERT_SHA256__", CERT_SHA256)
-    nodes = ClashParser().parse_nodes(yaml_text)
+    nodes = ClashParser().parse_result(yaml_text).nodes
     names = [n.name for n in nodes]
     assert names == [
         "ss1",
