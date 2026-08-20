@@ -48,7 +48,11 @@ class TargetValidationService:
 
     def check_node(self, node: Node) -> TargetCheckResult:
         result = TargetCheckResult(supported=True)
-        for error in validate_node(node):
+        for error in validate_node(
+            node,
+            definition=protocol_registry.get_definition(node.type),
+            descriptor=protocol_registry.get(node.type),
+        ):
             result.add_error(error.message, field=error.field)
 
         if result.has_errors():

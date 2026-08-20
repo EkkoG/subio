@@ -1,12 +1,32 @@
 from __future__ import annotations
 
-import subio_v2.protocols as protocol_registry
+from dataclasses import dataclass
+from typing import Protocol as TypingProtocol
+
 from subio_v2.core.nodes import Node, RejectMode, RejectNode
-from subio_v2.protocols._base import NodeValidationError
 
 
-def validate_node(node: Node) -> list[NodeValidationError]:
-    """Validate target-independent node structure and protocol semantics."""
+@dataclass(frozen=True)
+class NodeValidationError:
+    field: str
+    message: str
+
+
+class ProtocolDefinitionLike(TypingProtocol):
+    requires_endpoint: bool
+
+
+class ProtocolDescriptorLike(TypingProtocol):
+    def validate(self, node: Node) -> list[NodeValidationError]: ...
+
+
+def validate_node(
+    node: Node,
+    *,
+    definition: ProtocolDefinitionLike | None = None,
+    descriptor: ProtocolDescriptorLike | None = None,
+) -> list[NodeValidationError]:
+    """Validate generic node structure plus explicitly supplied protocol semantics."""
 
     errors: list[NodeValidationError] = []
     if not node.name:
@@ -14,7 +34,6 @@ def validate_node(node: Node) -> list[NodeValidationError]:
     if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
         errors.append(NodeValidationError("mode", "Reject mode is invalid"))
 
-    definition = protocol_registry.get_definition(node.type)
     if definition is not None and definition.requires_endpoint:
         if not node.server:
             errors.append(NodeValidationError("server", "Server is required"))
@@ -29,9 +48,6 @@ def validate_node(node: Node) -> list[NodeValidationError]:
                 )
             )
 
-    desc = protocol_registry.get(node.type)
-    if desc is None:
-        return errors
-
-    errors.extend(desc.validate(node))
+    if descriptor is not None:
+        errors.extend(descriptor.validate(node))
     return errors

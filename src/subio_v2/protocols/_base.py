@@ -15,14 +15,9 @@ from subio_v2.adapters.clash_family.fields import (
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import BaseNode, Node, Protocol
 from subio_v2.core.results import IssueDraft
+from subio_v2.core.validation import NodeValidationError
 from subio_v2.protocols._fields import ClashFieldSpec
 from subio_v2.protocols.spec import ProtocolSpec
-
-
-@dataclass(frozen=True)
-class NodeValidationError:
-    field: str
-    message: str
 
 
 @dataclass(frozen=True)

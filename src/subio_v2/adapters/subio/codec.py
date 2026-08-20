@@ -230,7 +230,11 @@ class SubioNodeCodec:
         issues: list[ConversionIssue] = []
         for username, candidate in validation_targets:
             field_prefix = path if username is None else f"{path}.users.{username}"
-            for error in validate_node(candidate):
+            for error in validate_node(
+                candidate,
+                definition=protocol_registry.get_definition(protocol),
+                descriptor=protocol_registry.get(protocol),
+            ):
                 message = error.message
                 if username is not None:
                     message = f"SubIO user '{username}' produces an invalid node: {message}"
