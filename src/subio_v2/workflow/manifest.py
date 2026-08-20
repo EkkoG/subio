@@ -146,6 +146,8 @@ def apply_manifest(
     current = {summary.filename for summary in summaries}
     orphaned = managed_orphans(dist_dir, previous, current) if clean else ()
     moved: list[tuple[Path, Path]] = []
+    restored: set[Path] = set()
+    committed = False
     try:
         for filename in orphaned:
             target = dist_dir / filename
@@ -163,13 +165,25 @@ def apply_manifest(
             dist_dir,
             build_manifest(config_path, summaries, provider_summaries),
         )
+        committed = True
     except Exception:
+        rollback_errors: list[OSError] = []
         for temporary, target in reversed(moved):
             if temporary.exists() and not target.exists():
-                os.replace(temporary, target)
+                try:
+                    os.replace(temporary, target)
+                    restored.add(temporary)
+                except OSError as exc:
+                    rollback_errors.append(exc)
+        if rollback_errors:
+            raise ArtifactGenerationError(
+                "Failed to rollback managed artifact cleanup"
+            ) from rollback_errors[0]
         raise
     finally:
         for temporary, _ in moved:
+            if not committed and temporary not in restored:
+                continue
             try:
                 temporary.unlink()
             except FileNotFoundError:

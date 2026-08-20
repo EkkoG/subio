@@ -87,6 +87,7 @@ def _run_check(args) -> int:
                     preparation.provider_result,
                     preparation.artifact_result,
                     dist_dir=Path("dist") if args.compare_dist else None,
+                    ruleset_metadata=preparation.ruleset_metadata,
                 )
             except WorkflowError as exc:
                 report = build_report(
@@ -115,6 +116,7 @@ def _run_inspect(args) -> int:
                     report = build_report(
                         preparation.provider_result,
                         preparation.artifact_result,
+                        ruleset_metadata=preparation.ruleset_metadata,
                     )
             except WorkflowError as exc:
                 report = build_report(

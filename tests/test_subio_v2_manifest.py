@@ -1,5 +1,6 @@
 import json
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -146,6 +147,34 @@ def test_clean_dist_restores_files_when_manifest_write_fails(tmp_path, monkeypat
         apply_manifest(str(config), (summary("new.yaml"),), dist_dir=dist, clean=True)
 
     assert old.read_text() == "old"
+
+
+def test_clean_dist_keeps_unrestored_temp_when_rollback_fails(tmp_path, monkeypatch):
+    config = tmp_path / "config.toml"
+    config.write_text("options = {}")
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    old = dist / "old.yaml"
+    old.write_text("old")
+    write_manifest(dist, build_manifest(str(config), (summary("old.yaml"),)))
+
+    monkeypatch.setattr(
+        "subio_v2.workflow.manifest.write_manifest",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("manifest unavailable")),
+    )
+    original_replace = __import__("subio_v2.workflow.manifest", fromlist=["os"]).os.replace
+
+    def fail_restore(source, target):
+        if Path(target) == old:
+            raise OSError("restore unavailable")
+        return original_replace(source, target)
+
+    monkeypatch.setattr("subio_v2.workflow.manifest.os.replace", fail_restore)
+    with pytest.raises(ArtifactGenerationError, match="rollback"):
+        apply_manifest(str(config), (summary("new.yaml"),), dist_dir=dist, clean=True)
+
+    assert not old.exists()
+    assert list(dist.glob(".subio-clean-*.tmp"))
 
 
 def test_workflow_writes_manifest_only_when_requested(tmp_path, monkeypatch):

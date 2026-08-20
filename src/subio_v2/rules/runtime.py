@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Mapping
+from typing import Any
 
 from subio_v2.adapters.catalog import normalize_format
 from subio_v2.core.dialect import DialectContext
@@ -21,7 +22,11 @@ from subio_v2.core.rule_model import (
     RuleRenderResult,
 )
 from subio_v2.infrastructure.logging import logger
-from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.infrastructure.remote import (
+    RemoteLoadError,
+    RemoteMetadata,
+    RunRemoteLoader,
+)
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
     RuleSetInputCodecCatalog,
@@ -213,14 +218,24 @@ def load_remote_resource(
     debug: bool = False,
     *,
     loader: RunRemoteLoader | None = None,
+    metadata_sink: dict[str, RemoteMetadata] | None = None,
+    resource_name: str | None = None,
 ) -> bytes:
     """Load remote ruleset bytes without text decoding or content sniffing."""
     del debug
     headers = {"User-Agent": user_agent} if user_agent else {}
+    owned_loader = loader is None
+    active_loader = loader or RunRemoteLoader()
     try:
-        return (loader or RunRemoteLoader()).fetch(url, headers=headers)
+        content = active_loader.fetch(url, headers=headers)
+        if metadata_sink is not None and active_loader.last_result is not None:
+            metadata_sink[resource_name or "remote"] = active_loader.last_result.metadata
+        return content
     except RemoteLoadError as exc:
         raise ConfigError(str(exc).replace("remote resource", "remote ruleset")) from exc
+    finally:
+        if owned_loader:
+            active_loader.close()
 
 
 def load_rulesets(
@@ -228,6 +243,7 @@ def load_rulesets(
     registry: RuleSetInputCodecCatalog = DEFAULT_RULESET_CODEC_REGISTRY,
     *,
     loader: RunRemoteLoader | None = None,
+    metadata_sink: dict[str, RemoteMetadata] | None = None,
 ) -> RuleSetStore:
     store = RuleSetStore()
     if not isinstance(ruleset_configs, (list, tuple)):
@@ -265,7 +281,13 @@ def load_rulesets(
 
         codec = registry.get(selection)
         logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
-        content = load_remote_resource(url, user_agent, loader=loader)
+        content = load_remote_resource(
+            url,
+            user_agent,
+            loader=loader,
+            metadata_sink=metadata_sink,
+            resource_name=name,
+        )
         if not content:
             raise ConfigError(f"Ruleset {name!r} is empty")
 

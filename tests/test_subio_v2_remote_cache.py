@@ -4,6 +4,7 @@ import pytest
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.rules.runtime import load_remote_resource
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.providers import ProviderLoadResult
 from subio_v2.workflow.report import build_report
@@ -68,6 +69,14 @@ def test_remote_loader_reuses_session_and_parses_metadata(monkeypatch):
     assert len(session.calls) == 1
     assert session.calls[0][2] == 7
     loader.close()
+    assert session.closed
+
+
+def test_direct_ruleset_loader_closes_owned_session(monkeypatch):
+    session = Session([Response()])
+    monkeypatch.setattr("subio_v2.infrastructure.remote.requests.Session", lambda: session)
+
+    assert load_remote_resource("https://example.test/rules") == b"payload"
     assert session.closed
 
 
@@ -166,3 +175,24 @@ def test_provider_metadata_is_reported_without_source_content():
         "expire": 200,
     }
     assert "content" not in report["providers"][0]["remote"]
+
+
+def test_stale_ruleset_metadata_is_visible_in_report():
+    from subio_v2.infrastructure.remote import RemoteMetadata
+
+    report = build_report(
+        ruleset_metadata={"rules": RemoteMetadata(state="stale")}
+    )
+
+    assert report["rulesets"] == [
+        {
+            "name": "rules",
+            "state": "stale",
+            "etag": False,
+            "last_modified": False,
+            "content_length": None,
+        }
+    ]
+    assert [issue["code"] for issue in report["issues"]] == [
+        "remote.stale-cache"
+    ]

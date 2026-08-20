@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
+from subio_v2.infrastructure.remote import RemoteMetadata
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
 from subio_v2.workflow.manifest import MANIFEST_NAME, read_manifest
 from subio_v2.workflow.providers import ProviderLoadResult
@@ -58,6 +60,7 @@ def build_report(
     dist_dir: Path | None = None,
     fatal_error: str | None = None,
     extra_issues: tuple[ConversionIssue, ...] = (),
+    ruleset_metadata: Mapping[str, RemoteMetadata] | None = None,
 ) -> dict[str, Any]:
     provider_result = provider_result or ProviderLoadResult({}, {})
     artifact_result = artifact_result or ArtifactGenerationResult(())
@@ -99,6 +102,22 @@ def build_report(
                     metadata.subscription_user_info or {}
                 ),
             }
+            if metadata.state == "stale":
+                issues.append(_stale_issue("provider", name))
+
+    rulesets = []
+    for name, metadata in (ruleset_metadata or {}).items():
+        rulesets.append(
+            {
+                "name": name,
+                "state": metadata.state,
+                "etag": bool(metadata.etag),
+                "last_modified": bool(metadata.last_modified),
+                "content_length": metadata.content_length,
+            }
+        )
+        if metadata.state == "stale":
+            issues.append(_stale_issue("ruleset", name))
 
     artifacts = [
         {
@@ -129,6 +148,7 @@ def build_report(
             "issue_counts": _issue_counts(issues),
         },
         "providers": providers,
+        "rulesets": rulesets,
         "artifacts": artifacts,
         "issues": [_issue_dict(issue) for issue in issues],
     }
@@ -143,6 +163,20 @@ def build_report(
     if fatal_error:
         report["error"] = fatal_error
     return report
+
+
+def _stale_issue(kind: str, name: str) -> ConversionIssue:
+    return ConversionIssue(
+        severity=IssueSeverity.WARNING,
+        node=None,
+        protocol=None,
+        source=name,
+        target=None,
+        field=None,
+        message=f"Using stale cached {kind} resource after the request failed",
+        stage="remote",
+        code="remote.stale-cache",
+    )
 
 
 def render_report(report: dict[str, Any], output_format: str) -> str:

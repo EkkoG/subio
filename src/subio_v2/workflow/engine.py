@@ -8,7 +8,7 @@ from subio_v2.core.results import (
 )
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
-from subio_v2.infrastructure.remote import RunRemoteLoader
+from subio_v2.infrastructure.remote import RemoteMetadata, RunRemoteLoader
 from subio_v2.rules.runtime import (
     RuleSetStore,
     load_rulesets,
@@ -33,6 +33,7 @@ from subio_v2.workflow.uploader import GistBatchUploader, queue_upload_requests
 class WorkflowPreparation:
     provider_result: ProviderLoadResult
     artifact_result: ArtifactGenerationResult
+    ruleset_metadata: dict[str, RemoteMetadata]
 
 
 class WorkflowEngine:
@@ -128,8 +129,13 @@ class WorkflowEngine:
 
         remote_loader = self._remote_loader()
         try:
+            ruleset_metadata: dict[str, RemoteMetadata] = {}
             remote_rulesets = (
-                load_rulesets(self.config.rulesets, loader=remote_loader)
+                load_rulesets(
+                    self.config.rulesets,
+                    loader=remote_loader,
+                    metadata_sink=ruleset_metadata,
+                )
                 if self.config.rulesets
                 else RuleSetStore()
             )
@@ -145,7 +151,11 @@ class WorkflowEngine:
                 rulesets,
                 self.global_age_public_key,
             ).generate()
-            return WorkflowPreparation(provider_result, artifact_result)
+            return WorkflowPreparation(
+                provider_result,
+                artifact_result,
+                ruleset_metadata,
+            )
         finally:
             remote_loader.close()
 
