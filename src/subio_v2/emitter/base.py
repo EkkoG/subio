@@ -56,12 +56,6 @@ class BaseEmitter(ABC):
             code=code,
         )
 
-    def emit_with_check(
-        self, nodes: list[Node]
-    ) -> tuple[list[Node], list[ConversionIssue]]:
-        """Run target checks exactly once and return normalized issues."""
-        return self._conversion.select(nodes, self.check_node)
-
     def encode_node(
         self, node: Node, encoder: Callable[[Node], object]
     ):

@@ -34,6 +34,7 @@ def test_target_validation_no_longer_constructs_capability_snapshots():
     assert "self.capabilities" not in source
     assert "TargetValidationService" in emitter
     assert "NodeConversionService" not in emitter
+    assert "emit_with_check" not in emitter
     assert not list((root / "src/subio_v2/capabilities").glob("*.py"))
     assert not (root / "src/subio_v2/target_registry.py").exists()
     assert not (root / "src/subio_v2/conversion_service.py").exists()
