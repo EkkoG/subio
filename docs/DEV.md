@@ -380,6 +380,8 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
   `ArtifactDraft` 与 `ArtifactUploadRequest`；不直接访问 uploader 或本地文件；
 - `TemplateContextBuilder` 负责统一提供 `nodes.render()`、`nodes.names()`、`nodes.count()` 和 `nodes.exists()`，
   旧 `proxies`、`proxies_names`、`subscription` 和 `filter.*` 仅作为兼容模板入口；
+- `WorkflowEngine.prepare()` 负责完整加载、解析、选择、目标检查和模板渲染，但不写文件、不上传；
+  `subio check` 和 `subio inspect` 只消费该准备结果，`convert` 才进入现有本地写入和 Gist 队列；
 - `ArtifactPublisher` 负责本地文件发布事务；
 - `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
   artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，

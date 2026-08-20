@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from subio_v2.core.errors import WorkflowError
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.report import build_report, render_report
 
 # Supported config file extensions in priority order
 CONFIG_EXTENSIONS = [".toml", ".yaml", ".yml", ".json", ".json5"]
@@ -46,6 +48,79 @@ def find_default_config() -> str | None:
         if os.path.exists(path):
             return path
     return None
+
+
+def _resolve_config_path(config: str | None) -> str | None:
+    path = config or find_default_config()
+    if not path or not os.path.exists(path):
+        logger.error(
+            "Config file not found. Looked for: "
+            + ", ".join(f"config{ext}" for ext in CONFIG_EXTENSIONS)
+        )
+        return None
+    return path
+
+
+def _write_report(report: dict, output_format: str, output: str | None) -> None:
+    content = render_report(report, output_format)
+    if output:
+        _atomic_write_bytes(output, content.encode("utf-8"))
+        logger.info(f"Report written to {output}")
+    elif output_format == "json":
+        sys.stdout.write(content)
+    else:
+        print(content, end="")
+
+
+def _run_check(args) -> int:
+    config_path = _resolve_config_path(args.config)
+    if config_path is None:
+        return 1
+    quiet = args.report_format == "json" and args.output is None
+    context = logger.silenced() if quiet else nullcontext()
+    with context:
+        try:
+            engine = WorkflowEngine(config_path, dry_run=True)
+            preparation = engine.prepare()
+            report = build_report(
+                preparation.provider_result,
+                preparation.artifact_result,
+                dist_dir=Path("dist") if args.compare_dist else None,
+            )
+        except WorkflowError as exc:
+            report = build_report(
+                fatal_error=str(exc),
+                extra_issues=tuple(getattr(exc, "issues", ())),
+            )
+    _write_report(report, args.report_format, args.output)
+    return 1 if report["status"] == "error" else 0
+
+
+def _run_inspect(args) -> int:
+    config_path = _resolve_config_path(args.config)
+    if config_path is None:
+        return 1
+    quiet = args.report_format == "json" and args.output is None
+    context = logger.silenced() if quiet else nullcontext()
+    with context:
+        try:
+            engine = WorkflowEngine(config_path, dry_run=True)
+            if args.inspect_command == "providers":
+                provider_result = engine.load_providers()
+                report = build_report(provider_result)
+            else:
+                preparation = engine.prepare()
+                report = build_report(
+                    preparation.provider_result,
+                    preparation.artifact_result,
+                )
+        except WorkflowError as exc:
+            report = build_report(
+                fatal_error=str(exc),
+                extra_issues=tuple(getattr(exc, "issues", ())),
+            )
+    _write_report(report, args.report_format, args.output)
+    return 1 if report["status"] == "error" else 0
 
 
 def _cmd_age_keygen(args):
@@ -167,6 +242,36 @@ def main():
         help="Clean all existing files in gist before uploading",
     )
 
+    report_formats = ("text", "json")
+    check_parser = subparsers.add_parser(
+        "check",
+        help="Validate and render without writing artifacts or uploading",
+        description="Run the complete workflow prepare stage without side effects.",
+    )
+    check_parser.add_argument("config", nargs="?", help="Path to config file")
+    check_parser.add_argument("--format", dest="report_format", choices=report_formats, default="text")
+    check_parser.add_argument("--output", help="Write the report to a file")
+    check_parser.add_argument(
+        "--compare-dist",
+        action="store_true",
+        help="Compare generated artifact hashes with the dist directory",
+    )
+
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="Inspect providers or generated artifacts",
+    )
+    inspect_sub = inspect_parser.add_subparsers(
+        title="inspect targets", dest="inspect_command", metavar="<target>"
+    )
+    for target in ("providers", "artifacts"):
+        target_parser = inspect_sub.add_parser(target)
+        target_parser.add_argument("config", nargs="?", help="Path to config file")
+        target_parser.add_argument(
+            "--format", dest="report_format", choices=report_formats, default="text"
+        )
+        target_parser.add_argument("--output", help="Write the report to a file")
+
     # subio age {keygen,convert,encrypt,decrypt}
     age_parser = subparsers.add_parser(
         "age",
@@ -218,12 +323,8 @@ def main():
 
     # Handle "convert" subcommand
     if args.subcommand == "convert":
-        config_path = args.config or find_default_config()
-
-        if not config_path or not os.path.exists(config_path):
-            logger.error(
-                f"Config file not found. Looked for: {', '.join(f'config{ext}' for ext in CONFIG_EXTENSIONS)}"
-            )
+        config_path = _resolve_config_path(args.config)
+        if config_path is None:
             return 1
 
         try:
@@ -235,6 +336,15 @@ def main():
             logger.error(str(exc))
             return 1
         return 0
+
+    if args.subcommand == "check":
+        return _run_check(args)
+
+    if args.subcommand == "inspect":
+        if not args.inspect_command:
+            inspect_parser.print_help()
+            return 0
+        return _run_inspect(args)
 
     # No subcommand given
     parser.print_help()

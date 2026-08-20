@@ -1,3 +1,4 @@
+import hashlib
 import os
 from dataclasses import dataclass, replace
 from typing import Any
@@ -31,6 +32,19 @@ class ArtifactDraft:
 
 
 @dataclass(frozen=True)
+class ArtifactSummary:
+    name: str
+    artifact_type: str
+    filename: str
+    user: str | None
+    input_nodes: int
+    supported_nodes: int
+    content_bytes: int
+    content_sha256: str
+    issue_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ArtifactUploadRequest:
     content: str
     artifact_config: ArtifactConfig
@@ -42,6 +56,7 @@ class ArtifactGenerationResult:
     drafts: tuple[ArtifactDraft, ...]
     issues: tuple[ConversionIssue, ...] = ()
     upload_requests: tuple[ArtifactUploadRequest, ...] = ()
+    summaries: tuple[ArtifactSummary, ...] = ()
 
 
 class ArtifactGenerationService:
@@ -66,6 +81,7 @@ class ArtifactGenerationService:
         drafts: list[ArtifactDraft] = []
         issues: list[ConversionIssue] = []
         upload_requests: list[ArtifactUploadRequest] = []
+        summaries: list[ArtifactSummary] = []
         filenames: set[str] = set()
         global_filter = self.config.filters
         for artifact_config in self.config.artifacts:
@@ -77,32 +93,37 @@ class ArtifactGenerationService:
                         artifact_config, global_filter, username
                     )
                     self._collect_result(
-                        result, drafts, issues, upload_requests, filenames
+                        result, drafts, issues, upload_requests, summaries, filenames
                     )
             else:
                 result = self._generate_one(
                     artifact_config, global_filter, single_user or None
                 )
                 self._collect_result(
-                    result, drafts, issues, upload_requests, filenames
+                    result, drafts, issues, upload_requests, summaries, filenames
                 )
         return ArtifactGenerationResult(
             drafts=tuple(drafts),
             issues=tuple(issues),
             upload_requests=tuple(upload_requests),
+            summaries=tuple(summaries),
         )
 
     @staticmethod
     def _collect_result(
         result: tuple[
-            ArtifactDraft, tuple[ConversionIssue, ...], ArtifactUploadRequest | None
+            ArtifactDraft,
+            tuple[ConversionIssue, ...],
+            ArtifactUploadRequest | None,
+            ArtifactSummary,
         ],
         drafts: list[ArtifactDraft],
         issues: list[ConversionIssue],
         upload_requests: list[ArtifactUploadRequest],
+        summaries: list[ArtifactSummary],
         filenames: set[str],
     ) -> None:
-        draft, artifact_issues, upload_request = result
+        draft, artifact_issues, upload_request, summary = result
         if draft.filename in filenames:
             raise ArtifactGenerationError(
                 f"Multiple artifacts would overwrite 'dist/{draft.filename}'"
@@ -112,6 +133,7 @@ class ArtifactGenerationService:
         issues.extend(artifact_issues)
         if upload_request is not None:
             upload_requests.append(upload_request)
+        summaries.append(summary)
 
     def _generate_one(
         self,
@@ -119,7 +141,10 @@ class ArtifactGenerationService:
         global_filter,
         username: str | None,
     ) -> tuple[
-        ArtifactDraft, tuple[ConversionIssue, ...], ArtifactUploadRequest | None
+        ArtifactDraft,
+        tuple[ConversionIssue, ...],
+        ArtifactUploadRequest | None,
+        ArtifactSummary,
     ]:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
@@ -223,7 +248,18 @@ class ArtifactGenerationService:
             if artifact_config.upload
             else None
         )
-        return draft, tuple(artifact_issues), upload_request
+        summary = ArtifactSummary(
+            name=name,
+            artifact_type=artifact_type,
+            filename=draft.filename,
+            user=username,
+            input_nodes=len(nodes),
+            supported_nodes=len(emission.supported_nodes),
+            content_bytes=len(draft.content.encode("utf-8")),
+            content_sha256=hashlib.sha256(draft.content.encode("utf-8")).hexdigest(),
+            issue_codes=tuple(sorted({issue.code for issue in artifact_issues})),
+        )
+        return draft, tuple(artifact_issues), upload_request, summary
 
     def _render_content(
         self,

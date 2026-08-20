@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.core.results import (
@@ -13,13 +14,23 @@ from subio_v2.rules.runtime import (
     load_snippets,
     merge_stores,
 )
-from subio_v2.workflow.artifacts import ArtifactDraft, ArtifactGenerationService
+from subio_v2.workflow.artifacts import (
+    ArtifactDraft,
+    ArtifactGenerationResult,
+    ArtifactGenerationService,
+)
 from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
-from subio_v2.workflow.providers import ProviderLoaderService
+from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
 from subio_v2.workflow.publication import ArtifactPublisher
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.uploader import GistBatchUploader, queue_upload_requests
+
+
+@dataclass(frozen=True)
+class WorkflowPreparation:
+    provider_result: ProviderLoadResult
+    artifact_result: ArtifactGenerationResult
 
 
 class WorkflowEngine:
@@ -73,25 +84,9 @@ class WorkflowEngine:
         else:
             logger.info("--- Starting SubIO v2 Workflow ---")
         self.batch_uploader.begin()
-        remote_loader = RunRemoteLoader()
         try:
-            remote_rulesets = (
-                load_rulesets(self.config.rulesets, loader=remote_loader)
-                if self.config.rulesets
-                else RuleSetStore()
-            )
-            rulesets = merge_stores(self._local_rulesets, remote_rulesets)
-            provider_result = ProviderLoaderService(
-                self.config_path, self.global_age_secret_key
-            ).load(self.config, remote_loader)
-            artifact_result = ArtifactGenerationService(
-                self.config,
-                provider_result.providers,
-                provider_result.issues,
-                self.renderer,
-                rulesets,
-                self.global_age_public_key,
-            ).generate()
+            preparation = self.prepare()
+            artifact_result = preparation.artifact_result
             queue_upload_requests(
                 artifact_result.upload_requests,
                 self.config.uploaders,
@@ -110,6 +105,36 @@ class WorkflowEngine:
             uploaded=[] if self.dry_run else queued_uploads,
             issues=list(artifact_result.issues),
         )
+
+    def prepare(self) -> WorkflowPreparation:
+        """Run all pure/load/generate stages without writing or uploading."""
+
+        remote_loader = RunRemoteLoader()
+        remote_rulesets = (
+            load_rulesets(self.config.rulesets, loader=remote_loader)
+            if self.config.rulesets
+            else RuleSetStore()
+        )
+        rulesets = merge_stores(self._local_rulesets, remote_rulesets)
+        provider_result = ProviderLoaderService(
+            self.config_path, self.global_age_secret_key
+        ).load(self.config, remote_loader)
+        artifact_result = ArtifactGenerationService(
+            self.config,
+            provider_result.providers,
+            provider_result.issues,
+            self.renderer,
+            rulesets,
+            self.global_age_public_key,
+        ).generate()
+        return WorkflowPreparation(provider_result, artifact_result)
+
+    def load_providers(self) -> ProviderLoadResult:
+        """Load providers for inspect without generating or publishing artifacts."""
+
+        return ProviderLoaderService(
+            self.config_path, self.global_age_secret_key
+        ).load(self.config, RunRemoteLoader())
 
     def _commit_artifacts(self, drafts: tuple[ArtifactDraft, ...]) -> None:
         self.publisher.commit(drafts)

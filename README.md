@@ -170,6 +170,14 @@ subio convert example/config.toml
 # 干运行模式（不推送到远程，仅本地生成）
 subio convert example/config.toml --dry-run
 
+# 只验收，不写 dist、不上传
+subio check example/config.toml
+subio check example/config.toml --format json --compare-dist
+
+# 查看 Provider 或 Artifact 摘要
+subio inspect providers example/config.toml
+subio inspect artifacts example/config.toml --format json
+
 # 清理 gist 中所有现有文件后再上传
 subio convert example/config.toml --clean-gist
 ```

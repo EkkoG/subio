@@ -48,6 +48,7 @@ def test_old_format_registry_paths_are_removed_and_consumers_use_catalog():
     providers = (root / "src/subio_v2/workflow/providers.py").read_text()
     artifacts = (root / "src/subio_v2/workflow/artifacts.py").read_text()
     assert "from subio_v2.adapters.catalog import get_parser" in providers
-    assert "from subio_v2.adapters.catalog import get_emitter" in artifacts
+    assert "from subio_v2.adapters.catalog import" in artifacts
+    assert "get_emitter" in artifacts
     assert "parser.registry" not in providers
     assert "emitter.registry" not in artifacts
