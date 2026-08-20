@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.links import all_codecs, protocols_for_target
+from subio_v2.adapters.links.codecs import all_codecs, protocols_for_target
 
 
 def test_link_codecs_own_dae_and_v2rayn_constraints():

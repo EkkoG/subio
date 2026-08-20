@@ -10,10 +10,10 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 """
 
 
-from subio_v2 import links as link
-from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.adapters.base import BaseEmitter
+from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Node
+from subio_v2.core.results import EmissionResult, IssueSeverity
 
 
 class DaeEmitter(BaseEmitter):

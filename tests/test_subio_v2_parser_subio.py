@@ -12,9 +12,9 @@ from subio_v2.core.nodes import (
     ShadowsocksNode,
     VlessNode,
 )
-from subio_v2.parser.subio import SubioParser
+from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.protocols.definitions import TERMINAL_NATIVE_COMMON_FIELDS
-from subio_v2.subio_format.schema import (
+from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
     build_json_schema,

@@ -71,13 +71,13 @@ def _surge_parser(
 
 
 def _subio_parser(**_: Any) -> Any:
-    from subio_v2.parser.subio import SubioParser
+    from subio_v2.adapters.subio.parser import SubioParser
 
     return SubioParser()
 
 
 def _v2rayn_parser(**_: Any) -> Any:
-    from subio_v2.parser.v2rayn import V2RayNParser
+    from subio_v2.adapters.links.parser import V2RayNParser
 
     return V2RayNParser()
 
@@ -107,13 +107,13 @@ def _surge_emitter() -> Any:
 
 
 def _dae_emitter() -> Any:
-    from subio_v2.emitter.dae import DaeEmitter
+    from subio_v2.adapters.links.dae import DaeEmitter
 
     return DaeEmitter()
 
 
 def _v2rayn_emitter() -> Any:
-    from subio_v2.emitter.v2rayn import V2RayNEmitter
+    from subio_v2.adapters.links.v2rayn import V2RayNEmitter
 
     return V2RayNEmitter()
 

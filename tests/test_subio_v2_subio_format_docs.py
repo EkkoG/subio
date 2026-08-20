@@ -7,8 +7,8 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.core.nodes import Protocol
-from subio_v2.parser.subio import SubioParser
-from subio_v2.subio_format.schema import (
+from subio_v2.adapters.subio.parser import SubioParser
+from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
     public_mapping_spec,

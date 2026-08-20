@@ -1,9 +1,9 @@
-from subio_v2 import links as link
+from subio_v2.adapters.links import codecs as link
 from subio_v2.core.results import IssueSeverity
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
-from subio_v2.emitter.dae import DaeEmitter
+from subio_v2.adapters.links.dae import DaeEmitter
 from subio_v2.adapters.surge.emitter import SurgeEmitter
-from subio_v2.emitter.v2rayn import V2RayNEmitter
+from subio_v2.adapters.links.v2rayn import V2RayNEmitter
 from subio_v2.core.nodes import (
     Network,
     Protocol,
@@ -274,7 +274,7 @@ proxies:
     ).nodes[0]
     node.source_provider = "source-b"
     monkeypatch.setattr(
-        "subio_v2.emitter.v2rayn.link.build_url", lambda _, **__: None
+        "subio_v2.adapters.links.v2rayn.link.build_url", lambda _, **__: None
     )
 
     result = V2RayNEmitter().emit_result([node])

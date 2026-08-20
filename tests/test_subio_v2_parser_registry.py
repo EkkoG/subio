@@ -1,9 +1,9 @@
 from subio_v2.adapters.catalog import get_parser
 from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.adapters.clash_family.parser import StashParser
-from subio_v2.parser.subio import SubioParser
+from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.adapters.surge.parser import SurgeParser
-from subio_v2.parser.v2rayn import V2RayNParser
+from subio_v2.adapters.links.parser import V2RayNParser
 from subio_v2.adapters.surge.resources import get_surge_node_attachments
 
 

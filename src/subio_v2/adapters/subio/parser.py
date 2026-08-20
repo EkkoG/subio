@@ -5,8 +5,8 @@ import json5
 import toml
 import yaml
 
+from subio_v2.adapters.subio.codec import SubioNodeCodec
 from subio_v2.core.results import ParseResult
-from subio_v2.subio_format.codec import SubioNodeCodec
 
 
 class SubioParser:

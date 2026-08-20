@@ -1,9 +1,9 @@
 import base64
 
-from subio_v2 import links as link
-from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.adapters.base import BaseEmitter
+from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Node
+from subio_v2.core.results import EmissionResult, IssueSeverity
 
 
 class V2RayNEmitter(BaseEmitter):

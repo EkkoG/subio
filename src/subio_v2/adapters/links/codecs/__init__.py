@@ -1,6 +1,8 @@
 from types import MappingProxyType
 
-from subio_v2.links import (
+from subio_v2.core.nodes import Node, Protocol
+
+from . import (
     anytls,
     http,
     hysteria2,
@@ -11,8 +13,7 @@ from subio_v2.links import (
     vless,
     vmess,
 )
-from subio_v2.links._base import LinkCodec
-from subio_v2.core.nodes import Node, Protocol
+from ._base import LinkCodec
 
 _CODECS = (
     shadowsocks.CODEC,

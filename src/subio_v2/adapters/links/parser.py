@@ -2,10 +2,10 @@ import base64
 import urllib.parse
 from typing import Any
 
-from subio_v2 import links
-from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.adapters.links import codecs as links
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 
 
 class V2RayNParser:

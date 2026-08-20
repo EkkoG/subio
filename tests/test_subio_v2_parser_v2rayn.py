@@ -4,9 +4,9 @@ import urllib.parse
 
 import pytest
 
-from subio_v2 import links as link
+from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Network, Protocol
-from subio_v2.parser.v2rayn import V2RayNParser
+from subio_v2.adapters.links.parser import V2RayNParser
 
 
 def b64(s: str) -> str:

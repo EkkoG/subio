@@ -4,8 +4,8 @@ import urllib.parse
 
 import pytest
 
-from subio_v2 import links as link
-from subio_v2.emitter.dae import DaeEmitter
+from subio_v2.adapters.links import codecs as link
+from subio_v2.adapters.links.dae import DaeEmitter
 from subio_v2.core.nodes import (
     AnyTLSNode,
     HttpNode,

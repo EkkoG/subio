@@ -1,49 +1,38 @@
 import urllib.parse
 
-from subio_v2.links._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
 from subio_v2.core.nodes import (
     Network,
     Node,
     Protocol,
     TLSSettings,
     TransportSettings,
-    VlessNode,
+    TrojanNode,
 )
 
 
 def build(node: Node) -> str:
-    assert isinstance(node, VlessNode)
-    params: dict[str, str] = {"type": node.transport.network_value}
+    assert isinstance(node, TrojanNode)
+    params: dict[str, str] = {}
     if node.tls.enabled:
-        if node.tls.reality_opts:
-            params["security"] = "reality"
-            if node.tls.reality_opts.get("public-key"):
-                params["pbk"] = node.tls.reality_opts["public-key"]
-            if node.tls.reality_opts.get("short-id"):
-                params["sid"] = node.tls.reality_opts["short-id"]
-        else:
-            params["security"] = "tls"
         if node.tls.server_name:
             params["sni"] = node.tls.server_name
-        if node.tls.client_fingerprint:
-            params["fp"] = node.tls.client_fingerprint
         if node.tls.skip_cert_verify:
             params["allowInsecure"] = "1"
         if node.tls.alpn:
             params["alpn"] = ",".join(node.tls.alpn)
-    else:
-        params["security"] = "none"
-    if node.flow:
-        params["flow"] = node.flow
     if node.transport.network == Network.WS:
+        params["type"] = "ws"
         if node.transport.path:
             params["path"] = str(node.transport.path)
         if node.transport.headers and "Host" in node.transport.headers:
             params["host"] = node.transport.headers["Host"]
     elif node.transport.network == Network.GRPC:
+        params["type"] = "grpc"
         if node.transport.grpc_service_name:
             params["serviceName"] = node.transport.grpc_service_name
     elif node.transport.network == Network.H2:
+        params["type"] = "h2"
         if node.transport.path:
             params["path"] = str(node.transport.path)
         if node.transport.host:
@@ -52,14 +41,11 @@ def build(node: Node) -> str:
                 if isinstance(node.transport.host, list)
                 else node.transport.host
             )
-    elif node.transport.network == Network.HTTP:
-        path = node.transport.path
-        if path:
-            params["path"] = path if isinstance(path, str) else ",".join(path)
-        if node.transport.headers and "Host" in node.transport.headers:
-            params["host"] = node.transport.headers["Host"]
-    query = urllib.parse.urlencode(params)
-    return f"vless://{node.uuid}@{node.server}:{node.port}?{query}#{quote_name(node.name)}"
+    password = urllib.parse.quote(node.password, safe="")
+    url = f"trojan://{password}@{node.server}:{node.port}"
+    if params:
+        url += f"?{urllib.parse.urlencode(params)}"
+    return f"{url}#{quote_name(node.name)}"
 
 
 def parse(line: str) -> Node | None:
@@ -82,27 +68,21 @@ def parse(line: str) -> Node | None:
                 transport.host = query["host"][0].split(",")
         elif network == Network.GRPC.value:
             transport.grpc_service_name = query.get("serviceName", [None])[0]
-        elif network == Network.HTTP.value:
-            path = query.get("path", [None])[0]
-            transport.path = path.split(",") if path else None
-            if query.get("host"):
-                transport.headers = {"Host": query["host"][0]}
-        security = query.get("security", ["none"])[0]
-        return VlessNode(
+        security = query.get("security", ["tls"])[0]
+        return TrojanNode(
             name=(
                 urllib.parse.unquote(url.fragment)
                 if url.fragment
                 else f"{url.hostname}:{url.port}"
             ),
-            type=Protocol.VLESS,
+            type=Protocol.TROJAN,
             server=url.hostname,
             port=url.port,
-            uuid=url.username,
-            flow=query.get("flow", [None])[0],
+            password=url.username,
             transport=transport,
             tls=TLSSettings(
-                enabled=security in {"tls", "reality"},
-                server_name=query.get("sni", [None])[0],
+                enabled=True,
+                server_name=query.get("sni", [None])[0] or url.hostname,
                 skip_cert_verify=query.get("allowInsecure", ["0"])[0] == "1",
                 client_fingerprint=query.get("fp", [None])[0],
                 reality_opts=(
@@ -120,21 +100,13 @@ def parse(line: str) -> Node | None:
 
 
 CODEC = LinkCodec(
-    Protocol.VLESS,
+    Protocol.TROJAN,
     frozenset({"dae", "v2rayn"}),
     build,
-    schemes=frozenset({"vless"}),
+    schemes=frozenset({"trojan"}),
     parse=parse,
     target_constraints={
-        "dae": {
-            "transports": {"tcp", "ws", "h2", "grpc"},
-            "features": {"reality"},
-            "flows": {"xtls-rprx-vision"},
-        },
-        "v2rayn": {
-            "transports": {"tcp", "ws", "grpc", "h2", "http"},
-            "features": {"reality"},
-            "flows": {"xtls-rprx-vision"},
-        },
+        "dae": {"transports": {"tcp", "ws", "grpc"}},
+        "v2rayn": {"transports": {"tcp", "ws", "h2", "grpc"}},
     },
 )

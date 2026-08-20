@@ -51,7 +51,7 @@ def test_protocols_are_removed_from_central_definition_tables():
 def test_native_and_override_consumers_use_protocol_registry_for_specs():
     root = Path(__file__).parents[1] / "src/subio_v2"
     overrides = (root / "protocols/user_overrides.py").read_text()
-    schema = (root / "subio_format/schema.py").read_text()
+    schema = (root / "adapters/subio/schema.py").read_text()
     assert "protocol_registry.get_definition" in overrides
     assert "protocol_registry.get_definition" in schema
     assert "from subio_v2.protocols.definitions import get_definition" not in overrides
@@ -68,8 +68,8 @@ def test_stash_protocol_specific_transforms_live_on_protocol_codecs():
 
 def test_native_contract_uses_v2_wording_without_legacy_decoder_paths():
     root = Path(__file__).parents[1]
-    codec = (root / "src/subio_v2/subio_format/codec.py").read_text()
-    schema = (root / "src/subio_v2/subio_format/schema.py").read_text()
+    codec = (root / "src/subio_v2/adapters/subio/codec.py").read_text()
+    schema = (root / "src/subio_v2/adapters/subio/schema.py").read_text()
     docs = (root / "docs/subio_node_format.md").read_text()
     assert "SubIO v1" not in codec
     assert "node v1 schema" not in schema

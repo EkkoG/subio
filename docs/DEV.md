@@ -68,7 +68,7 @@ Config / local snippet
 | `src/subio_v2/infrastructure/` | Age、remote loader 和日志等低层外部副作用 |
 | `src/subio_v2/adapters/` | 格式 catalog、target validation、checked emitter 和各格式 family adapter |
 | `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
-| `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
+| `src/subio_v2/adapters/links/` | v2rayN/dae document adapter 与逐协议 link codec |
 | `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/adapters/surge/` | Surge document adapter、词法、codec 规格、安全门禁和节点附件 |
 | `src/subio_v2/adapters/catalog.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
@@ -153,7 +153,7 @@ version = 2 + nodes
 ```
 
 原生路径使用 `Protocol.value` 和 snake_case IR 字段，不调用 `parse_clash()`，也不接受单字段
-Mihomo alias。`src/subio_v2/subio_format/schema.py` 是公开字段 allowlist 与确定性 JSON Schema 的
+Mihomo alias。`src/subio_v2/adapters/subio/schema.py` 是公开字段 allowlist 与确定性 JSON Schema 的
 来源；`schemas/subio-node-v2.schema.json` 是提交仓库的机器可读快照。修改其中任一侧时必须运行
 schema 生成命令，并由测试证明快照、协议注册表和 runtime 字段一致。
 
@@ -288,7 +288,7 @@ Surge target constraints 的唯一 executable codec。
 Codec registry 是实际 parser/emitter/target 支持入口，不允许再建立平行 handler map；协议特殊资源仍由
 document adapter 按节点附件所有权处理。
 
-分享链接位于 `src/subio_v2/links/`。每种协议拥有独立 `LinkCodec`；支持输入的 codec 同时声明
+分享链接位于 `src/subio_v2/adapters/links/codecs/`。每种协议拥有独立 `LinkCodec`；支持输入的 codec 同时声明
 scheme parser、dae/v2rayN 输出能力和 target constraints，均由 codec target registration 派生。不要在 document parser、
 dae emitter 或 v2rayN emitter 中新增 scheme/protocol 分支。
 
@@ -413,7 +413,7 @@ SubIO 原生节点格式：
 
 ```bash
 uv run python -m pytest tests/test_subio_v2_parser_subio.py -v
-uv run python -m subio_v2.subio_format.schema schemas/subio-node-v2.schema.json
+uv run python -m subio_v2.adapters.subio.schema schemas/subio-node-v2.schema.json
 ```
 
 Surge：
