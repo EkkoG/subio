@@ -67,10 +67,12 @@ class ClashEmitter(BaseEmitter):
     ) -> tuple[Dict[str, Any] | None, tuple[str, ...]]:
         if isinstance(node, SourcePassthroughNode):
             return self._emit_source_passthrough(node), ()
-        desc = protocol_registry.get(node.type)
-        if not desc or not desc.supports_dialect(self.target_context.dialect):
+        target_codec = protocol_registry.target_codec(
+            self.target_context.dialect, node.type
+        )
+        if target_codec is None:
             return None, ()
-        proxy = desc.emit_clash(node, self.target_context)
+        proxy = target_codec.emit(node, self.target_context)
         return self._post_descriptor_emit(proxy, node)
 
     @staticmethod

@@ -22,11 +22,7 @@ from subio_v2.validation import validate_node
 
 def _protocol_codecs_for_target(platform: str) -> dict:
     if platform in {"mihomo", "clash", "stash"}:
-        return {
-            codec.protocol: codec
-            for codec in protocol_registry.all()
-            if codec.supports_dialect(platform)
-        }
+        return protocol_registry.target_codecs_for(platform)
     if platform == "surge":
         return dict(SURGE_PROTOCOL_CODECS)
     if platform in {"dae", "v2rayn"}:
@@ -68,7 +64,12 @@ class TargetValidationService:
             return result
 
         descriptor = protocol_registry.get(node.type)
-        if descriptor:
+        if self.platform in {"mihomo", "clash", "stash"}:
+            for warning in target_codec.check(node):
+                result.warnings.append(warning)
+                if warning.severity == IssueSeverity.ERROR:
+                    result.supported = False
+        elif descriptor:
             if self.platform in {"surge", "dae", "v2rayn"}:
                 protocol_capabilities = (
                     dict(target_codec.target_constraints)
@@ -79,9 +80,7 @@ class TargetValidationService:
                 protocol_capabilities = dict(
                     descriptor.constraints_for_target(self.platform)
                 )
-            for warning in descriptor.check(
-                node, protocol_capabilities, self.platform
-            ):
+            for warning in descriptor.check(node, protocol_capabilities, self.platform):
                 result.warnings.append(warning)
                 if warning.severity == IssueSeverity.ERROR:
                     result.supported = False

@@ -32,7 +32,7 @@ from subio_v2.protocols import (
     vmess,
     wireguard,
 )
-from subio_v2.protocols._base import ClashProtocolCodec
+from subio_v2.protocols._base import ClashProtocolCodec, ClashTargetCodec
 from subio_v2.protocols.definitions import ProtocolDefinition
 from subio_v2.protocols.spec import ProtocolSpec
 
@@ -44,6 +44,8 @@ __all__ = [
     "by_clash_type",
     "get",
     "get_definition",
+    "target_codec",
+    "target_codecs_for",
     "register",
 ]
 
@@ -108,6 +110,21 @@ def get_definition(protocol: Protocol) -> ProtocolSpec | None:
     if codec is not None and codec.spec is not None:
         return codec.spec
     return None
+
+
+def target_codec(target: str, protocol: Protocol) -> ClashTargetCodec | None:
+    codec = _registry.get(protocol)
+    if codec is None or not codec.supports_dialect(target):
+        return None
+    return ClashTargetCodec(target=target, protocol_codec=codec)
+
+
+def target_codecs_for(target: str) -> dict[Protocol, ClashTargetCodec]:
+    return {
+        protocol: ClashTargetCodec(target=target, protocol_codec=codec)
+        for protocol, codec in _registry.items()
+        if codec.supports_dialect(target)
+    }
 
 
 def all_definitions() -> tuple[ProtocolSpec, ...]:

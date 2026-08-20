@@ -3,17 +3,17 @@ from __future__ import annotations
 import base64
 import binascii
 
-from subio_v2.capabilities.definitions import (
-    SS_CIPHERS_2022,
-    SS_CIPHERS_EXTENDED,
-    SS_CIPHERS_STASH,
-)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
+from subio_v2.protocols.values import (
+    SS_CIPHERS_2022,
+    SS_CIPHERS_EXTENDED,
+    SS_CIPHERS_STASH,
+)
 
 SPEC = ProtocolSpec(
     protocol=Protocol.SHADOWSOCKS,

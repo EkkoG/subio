@@ -25,6 +25,28 @@ class NodeValidationError:
     message: str
 
 
+@dataclass(frozen=True)
+class ClashTargetCodec:
+    target: str
+    protocol_codec: "ClashProtocolCodec"
+
+    @property
+    def protocol(self) -> Protocol:
+        return self.protocol_codec.protocol
+
+    @property
+    def target_constraints(self) -> Mapping[str, Any]:
+        return self.protocol_codec.constraints_for_target(self.target)
+
+    def check(self, node: Node) -> list[IssueDraft]:
+        return self.protocol_codec.check(
+            node, dict(self.target_constraints), self.target
+        )
+
+    def emit(self, node: Node, context: DialectContext | None = None) -> Dict[str, Any]:
+        return self.protocol_codec.emit_clash(node, context)
+
+
 class ClashProtocolCodec(ABC):
     """One protocol's Clash-family parse, emit, and target-check contract."""
 

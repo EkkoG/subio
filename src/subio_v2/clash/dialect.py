@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from subio_v2.capabilities.definitions import get_platform_capabilities
+import subio_v2.protocols as protocol_registry
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import Node
 from subio_v2.target_registry import common_policy_for_target
@@ -29,7 +29,6 @@ def post_descriptor_emit(
     """Apply target capability gates and report modeled fields that were dropped."""
     output = data
     dropped: set[str] = set()
-    capabilities = get_platform_capabilities(platform) or {}
     common_policy = common_policy_for_target(platform)
     global_features = common_policy.as_feature_map() if common_policy else {}
 
@@ -42,7 +41,10 @@ def post_descriptor_emit(
             output.pop(output_key, None)
             dropped.add(semantic_field)
 
-    protocol_caps = capabilities.get(node.type.value, {})
+    target_codec = protocol_registry.target_codec(platform, node.type)
+    protocol_caps = (
+        dict(target_codec.target_constraints) if target_codec is not None else {}
+    )
     if "smux" in output and "smux" not in protocol_caps.get("features", set()):
         output.pop("smux", None)
         dropped.add("smux")

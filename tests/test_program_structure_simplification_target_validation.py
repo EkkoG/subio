@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import subio_v2.protocols as protocol_registry
 from subio_v2.conversion_service import TargetValidationService
 from subio_v2.links import all_codecs
 from subio_v2.model.nodes import Protocol
@@ -17,6 +18,12 @@ def test_target_validation_protocols_derive_from_actual_target_codecs():
     }
     assert Protocol.VLESS not in surge.protocol_codecs
     assert Protocol.VLESS in dae.protocol_codecs
+    mihomo = TargetValidationService("mihomo")
+    assert set(mihomo.protocol_codecs) == {
+        codec.protocol
+        for codec in protocol_registry.all()
+        if codec.supports_dialect("mihomo")
+    }
 
 
 def test_target_validation_no_longer_constructs_capability_snapshots():
@@ -28,3 +35,7 @@ def test_target_validation_no_longer_constructs_capability_snapshots():
     assert "self.capabilities" not in source
     assert "TargetValidationService" in emitter
     assert "NodeConversionService" not in emitter
+    clash_emitter = (
+        Path(__file__).parents[1] / "src/subio_v2/emitter/clash.py"
+    ).read_text()
+    assert "protocol_registry.target_codec" in clash_emitter

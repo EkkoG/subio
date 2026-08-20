@@ -1,14 +1,5 @@
 from __future__ import annotations
 
-from subio_v2.capabilities.definitions import (
-    TRANSPORT_GRPC,
-    TRANSPORT_H2,
-    TRANSPORT_HTTP,
-    TRANSPORT_TCP,
-    TRANSPORT_WS,
-    VMESS_CIPHERS,
-    VMESS_CIPHERS_STASH,
-)
 from subio_v2.conversion import IssueDraft, IssueSeverity
 from subio_v2.model.nodes import Network, Node, Protocol, VmessNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
@@ -21,6 +12,15 @@ from subio_v2.protocols._fields import (
     transport_group,
 )
 from subio_v2.protocols.spec import ProtocolSpec
+from subio_v2.protocols.values import (
+    TRANSPORT_GRPC,
+    TRANSPORT_H2,
+    TRANSPORT_HTTP,
+    TRANSPORT_TCP,
+    TRANSPORT_WS,
+    VMESS_CIPHERS,
+    VMESS_CIPHERS_STASH,
+)
 
 SPEC = ProtocolSpec(
     protocol=Protocol.VMESS,
