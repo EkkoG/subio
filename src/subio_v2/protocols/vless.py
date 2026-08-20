@@ -48,16 +48,6 @@ class VlessCodec(StructuredClashProtocolCodec):
         )
     }
     target_constraints = {
-        "dae": {
-            "transports": {
-                TRANSPORT_TCP,
-                TRANSPORT_WS,
-                TRANSPORT_GRPC,
-                TRANSPORT_H2,
-            },
-            "features": {"reality"},
-            "flows": {"xtls-rprx-vision"},
-        },
         "mihomo": {
             "transports": {
                 TRANSPORT_TCP,
@@ -86,17 +76,6 @@ class VlessCodec(StructuredClashProtocolCodec):
                 "xtls-rprx-splice",
                 "xtls-rprx-vision",
             },
-        },
-        "v2rayn": {
-            "transports": {
-                TRANSPORT_TCP,
-                TRANSPORT_WS,
-                TRANSPORT_GRPC,
-                TRANSPORT_H2,
-                TRANSPORT_HTTP,
-            },
-            "features": {"reality"},
-            "flows": {"xtls-rprx-vision"},
         },
     }
     fields = (

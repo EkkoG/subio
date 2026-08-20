@@ -40,10 +40,8 @@ class TUICCodec(StructuredClashProtocolCodec):
         )
     }
     target_constraints = {
-        "dae": {"versions": {5}},
         "mihomo": {"versions": {4, 5}},
         "stash": {"versions": {4, 5}},
-        "surge": {"versions": {4, 5}},
     }
     fields = (
         scalar_field("token", emit_policy=EmitPolicy.TRUTHY),

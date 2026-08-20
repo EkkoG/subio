@@ -67,15 +67,6 @@ class VmessCodec(StructuredClashProtocolCodec):
                 TRANSPORT_HTTP,
             },
         },
-        "dae": {
-            "ciphers": VMESS_CIPHERS,
-            "transports": {
-                TRANSPORT_TCP,
-                TRANSPORT_WS,
-                TRANSPORT_GRPC,
-                TRANSPORT_H2,
-            },
-        },
         "mihomo": {
             "ciphers": VMESS_CIPHERS,
             "transports": {
@@ -89,20 +80,6 @@ class VmessCodec(StructuredClashProtocolCodec):
         },
         "stash": {
             "ciphers": VMESS_CIPHERS_STASH,
-            "transports": {
-                TRANSPORT_TCP,
-                TRANSPORT_WS,
-                TRANSPORT_GRPC,
-                TRANSPORT_H2,
-                TRANSPORT_HTTP,
-            },
-        },
-        "surge": {
-            "ciphers": VMESS_CIPHERS,
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS},
-        },
-        "v2rayn": {
-            "ciphers": VMESS_CIPHERS,
             "transports": {
                 TRANSPORT_TCP,
                 TRANSPORT_WS,

@@ -27,4 +27,9 @@ def build(node: Node) -> str:
     return f"{url}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.HYSTERIA2, frozenset({"dae"}), build)
+CODEC = LinkCodec(
+    Protocol.HYSTERIA2,
+    frozenset({"dae"}),
+    build,
+    target_constraints={"dae": {"features": {"obfs"}}},
+)

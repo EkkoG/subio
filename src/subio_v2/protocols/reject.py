@@ -23,9 +23,6 @@ class RejectCodec(StructuredClashProtocolCodec):
     clash_type = "reject"
     target_constraints = {
         "mihomo": {"modes": {"reject"}, "features": {"smux"}},
-        "surge": {
-            "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
-        },
     }
     fields = (smux_group(),)
 

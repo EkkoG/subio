@@ -28,7 +28,6 @@ class Socks5Codec(StructuredClashProtocolCodec):
         "clash": {"features": {"tls"}},
         "mihomo": {"features": {"tls"}},
         "stash": {"features": {"tls"}},
-        "surge": {"features": {"tls"}},
     }
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.TRUTHY),

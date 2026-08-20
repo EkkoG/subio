@@ -16,4 +16,9 @@ def build(node: Node) -> str:
     return f"{scheme}://{userinfo}{node.server}:{node.port}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.HTTP, frozenset({"dae"}), build)
+CODEC = LinkCodec(
+    Protocol.HTTP,
+    frozenset({"dae"}),
+    build,
+    target_constraints={"dae": {"features": {"tls"}}},
+)

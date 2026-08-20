@@ -99,7 +99,30 @@ def get_platform_capabilities(platform: str) -> dict[str, object] | None:
         return None
     constraints: dict[str, dict[str, object]] = {}
     for protocol_name in protocols:
-        descriptor = protocol_registry.get(Protocol(protocol_name))
+        protocol = Protocol(protocol_name)
+        if platform == "surge":
+            from subio_v2.surge.codecs import get_surge_protocol_codec
+
+            codec = get_surge_protocol_codec(protocol)
+            if codec is None:
+                raise RuntimeError(
+                    f"Target protocol has no registered Surge codec: {protocol_name}"
+                )
+            constraints[protocol_name] = dict(codec.target_constraints)
+            continue
+        if platform in {"dae", "v2rayn"}:
+            from subio_v2.links import get_codec
+
+            codec = get_codec(protocol)
+            if codec is None or platform not in codec.targets:
+                raise RuntimeError(
+                    f"Target protocol has no registered link codec: {protocol_name}"
+                )
+            constraints[protocol_name] = dict(
+                codec.target_constraints.get(platform, {})
+            )
+            continue
+        descriptor = protocol_registry.get(protocol)
         if descriptor is None:
             raise RuntimeError(
                 f"Target protocol has no registered codec: {protocol_name}"

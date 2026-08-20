@@ -38,9 +38,6 @@ class TrojanCodec(StructuredClashProtocolCodec):
     }
     target_constraints = {
         "clash": {"transports": {TRANSPORT_TCP, TRANSPORT_WS}},
-        "dae": {
-            "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC}
-        },
         "mihomo": {
             "transports": {
                 TRANSPORT_TCP,
@@ -52,15 +49,6 @@ class TrojanCodec(StructuredClashProtocolCodec):
         },
         "stash": {
             "transports": {TRANSPORT_TCP, TRANSPORT_WS, TRANSPORT_GRPC}
-        },
-        "surge": {"transports": {TRANSPORT_TCP, TRANSPORT_WS}},
-        "v2rayn": {
-            "transports": {
-                TRANSPORT_TCP,
-                TRANSPORT_WS,
-                TRANSPORT_GRPC,
-                TRANSPORT_H2,
-            }
         },
     }
     fields = (

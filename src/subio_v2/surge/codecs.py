@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from enum import StrEnum
-from typing import Any, Callable
+from types import MappingProxyType
+from typing import Any
 
 from subio_v2.model.nodes import Protocol
 from subio_v2.surge.emitters import (
@@ -61,6 +63,7 @@ class SurgeCodecSpec:
     emitted_parameters: frozenset[str] = frozenset()
     normalized_parameters: tuple[tuple[str, str], ...] = ()
     multi_value_parameters: frozenset[str] = frozenset()
+    target_constraints: Mapping[str, Any] = MappingProxyType({})
     parser: Callable[[Any], Any] | None = None
     emitter: Callable[[Any, dict[int, str]], list[str]] | None = None
 
@@ -81,6 +84,7 @@ def _spec(
     emitted: tuple[str, ...] | None = None,
     normalized: tuple[tuple[str, str], ...] = (),
     multi: tuple[str, ...] = (),
+    constraints: Mapping[str, Any] | None = None,
 ) -> SurgeCodecSpec:
     return SurgeCodecSpec(
         keyword=keyword,
@@ -91,6 +95,7 @@ def _spec(
         emitted_parameters=frozenset(consumed if emitted is None else emitted),
         normalized_parameters=normalized,
         multi_value_parameters=frozenset(multi),
+        target_constraints=MappingProxyType(dict(constraints or {})),
     )
 
 
@@ -137,6 +142,14 @@ SURGE_CODEC_SPECS = (
             "obfs",
             "obfs-host",
         ),
+        constraints={"ciphers": {
+            "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm",
+            "aes-128-cfb", "aes-128-ctr", "aes-128-gcm", "aes-192-cfb",
+            "aes-192-ctr", "aes-192-gcm", "aes-256-cfb", "aes-256-ctr",
+            "aes-256-gcm", "chacha20", "chacha20-ietf",
+            "chacha20-ietf-poly1305", "none", "rc4", "rc4-md5", "salsa20",
+            "xchacha20-ietf-poly1305",
+        }, "plugins": {"obfs"}},
     ),
     _spec(
         "vmess",
@@ -151,42 +164,49 @@ SURGE_CODEC_SPECS = (
             "ws-path",
             "ws-headers",
         ),
+        constraints={"ciphers": {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"}, "transports": {"tcp", "ws"}},
     ),
     _spec(
         "trojan",
         protocol=Protocol.TROJAN,
         udp=SurgeUdpBehavior.AUTOMATIC,
         consumed=("password", "ws", "ws-path", "ws-headers"),
+        constraints={"transports": {"tcp", "ws"}},
     ),
     _spec(
         "socks5",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
         consumed=("username", "password", "udp-relay"),
+        constraints={"features": {"tls"}},
     ),
     _spec(
         "socks5-tls",
         protocol=Protocol.SOCKS5,
         udp=SurgeUdpBehavior.EXPLICIT,
         consumed=("username", "password", "udp-relay"),
+        constraints={"features": {"tls"}},
     ),
     _spec(
         "http",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         consumed=("username", "password"),
+        constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
     _spec(
         "https",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         consumed=("username", "password"),
+        constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
     _spec(
         "h2-connect",
         protocol=Protocol.HTTP,
         udp=SurgeUdpBehavior.EXPLICIT,
         consumed=("username", "password", "headers", "max-streams", "udp-relay"),
+        constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
     _spec(
         "anytls",
@@ -206,6 +226,7 @@ SURGE_CODEC_SPECS = (
             "server-fingerprint",
         ),
         multi=("server-fingerprint",),
+        constraints={"auth_methods": {"password", "private_key"}},
     ),
     _spec(
         "snell",
@@ -220,18 +241,29 @@ SURGE_CODEC_SPECS = (
             "obfs",
             "obfs-host",
         ),
+        constraints={
+            "obfs_modes": {"http", "tls"},
+            "obfs_modes_by_version": {
+                1: {"http", "tls"}, 2: {"http", "tls"}, 3: {"http", "tls"},
+                4: {"http"}, 5: {"http"}, 6: set(),
+            },
+            "reuse_versions": {4, 5, 6},
+            "versions": {1, 2, 3, 4, 5, 6},
+        },
     ),
     _spec(
         "tuic",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
         consumed=("token", "version", "port-hopping", "port-hopping-interval"),
+        constraints={"versions": {4, 5}},
     ),
     _spec(
         "tuic-v5",
         protocol=Protocol.TUIC,
         udp=SurgeUdpBehavior.AUTOMATIC,
         consumed=("uuid", "password", "port-hopping", "port-hopping-interval"),
+        constraints={"versions": {4, 5}},
     ),
     _spec(
         "hysteria2",
@@ -265,6 +297,7 @@ SURGE_CODEC_SPECS = (
             ("obfs", "salamander-password/gecko-password"),
             ("obfs-password", "salamander-password/gecko-password"),
         ),
+        constraints={"features": {"obfs"}, "obfs_modes": {"salamander", "gecko"}},
     ),
     _spec(
         "wireguard",
@@ -305,6 +338,9 @@ SURGE_CODEC_SPECS = (
             keyword,
             protocol=Protocol.REJECT,
             udp=SurgeUdpBehavior.UNSUPPORTED,
+            constraints={
+                "modes": {"reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
+            },
         )
         for keyword in (
             "reject",

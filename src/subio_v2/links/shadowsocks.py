@@ -70,4 +70,52 @@ CODEC = LinkCodec(
     build,
     schemes=frozenset({"ss"}),
     parse=parse,
+    target_constraints={
+        "dae": {
+            "ciphers": frozenset(
+                {
+                    "2022-blake3-aes-128-gcm",
+                    "2022-blake3-aes-256-gcm",
+                    "2022-blake3-chacha20-poly1305",
+                    "aes-128-cfb",
+                    "aes-128-ctr",
+                    "aes-128-gcm",
+                    "aes-192-cfb",
+                    "aes-192-ctr",
+                    "aes-256-cfb",
+                    "aes-256-ctr",
+                    "aes-256-gcm",
+                    "chacha20-ietf",
+                    "chacha20-ietf-poly1305",
+                    "rc4-md5",
+                    "xchacha20",
+                    "xchacha20-ietf-poly1305",
+                }
+            ),
+            "plugins": {"obfs", "shadow-tls"},
+        },
+        "v2rayn": {
+            "ciphers": frozenset(
+                {
+                    "2022-blake3-aes-128-gcm",
+                    "2022-blake3-aes-256-gcm",
+                    "2022-blake3-chacha20-poly1305",
+                    "aes-128-cfb",
+                    "aes-128-ctr",
+                    "aes-128-gcm",
+                    "aes-192-cfb",
+                    "aes-192-ctr",
+                    "aes-256-cfb",
+                    "aes-256-ctr",
+                    "aes-256-gcm",
+                    "chacha20-ietf",
+                    "chacha20-ietf-poly1305",
+                    "rc4-md5",
+                    "xchacha20",
+                    "xchacha20-ietf-poly1305",
+                }
+            ),
+            "plugins": {"obfs", "v2ray-plugin"},
+        },
+    },
 )

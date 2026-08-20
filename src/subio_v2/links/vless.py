@@ -125,4 +125,16 @@ CODEC = LinkCodec(
     build,
     schemes=frozenset({"vless"}),
     parse=parse,
+    target_constraints={
+        "dae": {
+            "transports": {"tcp", "ws", "h2", "grpc"},
+            "features": {"reality"},
+            "flows": {"xtls-rprx-vision"},
+        },
+        "v2rayn": {
+            "transports": {"tcp", "ws", "grpc", "h2", "http"},
+            "features": {"reality"},
+            "flows": {"xtls-rprx-vision"},
+        },
+    },
 )

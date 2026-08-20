@@ -31,7 +31,7 @@ class SSHCodec(StructuredClashProtocolCodec):
     }
     target_constraints = {
         target: {"auth_methods": {"password", "private_key"}}
-        for target in ("mihomo", "stash", "surge")
+        for target in ("mihomo", "stash")
     }
     fields = (
         scalar_field(

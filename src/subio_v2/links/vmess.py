@@ -98,4 +98,14 @@ CODEC = LinkCodec(
     build,
     schemes=frozenset({"vmess"}),
     parse=parse,
+    target_constraints={
+        "dae": {
+            "ciphers": {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"},
+            "transports": {"tcp", "ws", "h2", "grpc"},
+        },
+        "v2rayn": {
+            "ciphers": {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"},
+            "transports": {"tcp", "ws", "h2", "grpc", "http"},
+        },
+    },
 )

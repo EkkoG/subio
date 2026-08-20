@@ -105,4 +105,8 @@ CODEC = LinkCodec(
     build,
     schemes=frozenset({"trojan"}),
     parse=parse,
+    target_constraints={
+        "dae": {"transports": {"tcp", "ws", "grpc"}},
+        "v2rayn": {"transports": {"tcp", "ws", "h2", "grpc"}},
+    },
 )

@@ -1,6 +1,8 @@
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Any
 
 from subio_v2.model.nodes import Node, Protocol
 
@@ -14,6 +16,7 @@ class LinkCodec:
     build: Callable[[Node], str | None]
     schemes: frozenset[str] = frozenset()
     parse: LinkParser | None = None
+    target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
 
 
 def quote_name(name: str) -> str:
