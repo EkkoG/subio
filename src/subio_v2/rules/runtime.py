@@ -10,6 +10,7 @@ from typing import Any, Callable, Mapping
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.dialect import DialectContext, dialect_context_for_platform
 from subio_v2.errors import ConfigError
+from subio_v2.formats import normalize_format
 from subio_v2.model.rules import (
     BoundRule,
     DefaultParameter,
@@ -23,132 +24,46 @@ from subio_v2.model.rules import (
     RuleExpression,
     RuleRenderResult,
 )
-from subio_v2.formats import normalize_format
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
     RuleSetInputCodecRegistry,
     RuleSetInputSelection,
 )
+from subio_v2.rules.config import RuleSetConfig
 from subio_v2.rules.parser import (
     MIHOMO_CLASSICAL_PARSER,
+    STASH_CLASSICAL_PARSER,
+    SURGE_CLASSICAL_PARSER,
     parse_argument_names,
     validate_identifier,
 )
 from subio_v2.utils.logger import logger
-from subio_v2.rules.config import RuleSetConfig
 
 CLASH_PLATFORMS = frozenset({"clash", "mihomo", "stash"})
 LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
 
-PLATFORM_RULES: dict[str, frozenset[str]] = {
-    "mihomo": frozenset(
-        {
-            "DOMAIN",
-            "DOMAIN-SUFFIX",
-            "DOMAIN-KEYWORD",
-            "DOMAIN-WILDCARD",
-            "DOMAIN-REGEX",
-            "GEOSITE",
-            "IP-CIDR",
-            "IP-CIDR6",
-            "IP-SUFFIX",
-            "IP-ASN",
-            "GEOIP",
-            "SRC-GEOIP",
-            "SRC-IP-ASN",
-            "SRC-IP-CIDR",
-            "SRC-IP-SUFFIX",
-            "DST-PORT",
-            "SRC-PORT",
-            "IN-PORT",
-            "IN-TYPE",
-            "IN-USER",
-            "IN-NAME",
-            "REMATCH-NAME",
-            "PROCESS-PATH",
-            "PROCESS-PATH-WILDCARD",
-            "PROCESS-PATH-REGEX",
-            "PROCESS-NAME",
-            "PROCESS-NAME-WILDCARD",
-            "PROCESS-NAME-REGEX",
-            "UID",
-            "NETWORK",
-            "DSCP",
-            "MATCH",
-            *LOGICAL_RULES,
-        }
-    ),
-    "clash": frozenset(
-        {
-            "DOMAIN",
-            "DOMAIN-SUFFIX",
-            "DOMAIN-KEYWORD",
-            "IP-CIDR",
-            "IP-CIDR6",
-            "GEOIP",
-            "DST-PORT",
-            "SRC-PORT",
-            "PROCESS-NAME",
-            "MATCH",
-        }
-    ),
-    "stash": frozenset(
-        {
-            "DOMAIN",
-            "DOMAIN-SUFFIX",
-            "DOMAIN-KEYWORD",
-            "DOMAIN-WILDCARD",
-            "DOMAIN-REGEX",
-            "GEOSITE",
-            "IP-CIDR",
-            "IP-CIDR6",
-            "IP-ASN",
-            "GEOIP",
-            "SRC-IP",
-            "DST-PORT",
-            "PROCESS-NAME",
-            "PROCESS-PATH",
-            "USER-AGENT",
-            "URL-REGEX",
-            "NETWORK",
-            "PROTOCOL",
-            "MATCH",
-            *LOGICAL_RULES,
-        }
-    ),
-    "surge": frozenset(
-        {
-            "DOMAIN",
-            "DOMAIN-SUFFIX",
-            "DOMAIN-KEYWORD",
-            "DOMAIN-WILDCARD",
-            "IP-CIDR",
-            "IP-CIDR6",
-            "IP-ASN",
-            "GEOIP",
-            "SRC-IP",
-            "DEST-PORT",
-            "SRC-PORT",
-            "IN-PORT",
-            "PROCESS-NAME",
-            "USER-AGENT",
-            "URL-REGEX",
-            "PROTOCOL",
-            "DEVICE-NAME",
-            "MAC-ADDRESS",
-            "HOSTNAME-TYPE",
-            "SUBNET",
-            "CELLULAR-RADIO",
-            "CELLULAR-CARRIER",
-            "FINAL",
-            *LOGICAL_RULES,
-        }
-    ),
-    "dae": frozenset(
-        {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "MATCH"}
-    ),
-}
+_CLASH_OUTPUT_RULES = frozenset(
+    {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "GEOIP", "DST-PORT", "SRC-PORT", "PROCESS-NAME", "MATCH"}
+)
+_DAE_OUTPUT_RULES = frozenset(
+    {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "MATCH"}
+)
+_OUTPUT_RULE_TARGETS = frozenset({"mihomo", "clash", "stash", "surge", "dae"})
+
+
+def _output_rules_for_target(platform: str) -> frozenset[str]:
+    if platform == "mihomo":
+        return MIHOMO_CLASSICAL_PARSER.spec.output_rules
+    if platform == "stash":
+        return STASH_CLASSICAL_PARSER.spec.output_rules
+    if platform == "surge":
+        return SURGE_CLASSICAL_PARSER.spec.output_rules
+    if platform == "clash":
+        return _CLASH_OUTPUT_RULES
+    if platform == "dae":
+        return _DAE_OUTPUT_RULES
+    return frozenset()
 
 
 @dataclass
@@ -174,7 +89,7 @@ class RuleSetRenderer:
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
         platform = normalize_format(platform)
-        if platform not in PLATFORM_RULES:
+        if platform not in _OUTPUT_RULE_TARGETS:
             raise ValueError(f"Unknown ruleset target platform: {platform}")
         target_context = dialect_context_for_platform(platform)
         issues = [replace(issue, target=platform) for issue in ruleset.issues]
@@ -393,7 +308,7 @@ class RuleSetRenderer:
         return rule_type, matcher, options
 
     def _is_supported(self, rule_type: str, platform: str) -> bool:
-        return rule_type in PLATFORM_RULES[platform]
+        return rule_type in _output_rules_for_target(platform)
 
     def _unsupported_option(
         self,
