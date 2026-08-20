@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import ipaddress
 import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping
 
-from subio_v2.conversion import ConversionIssue, IssueSeverity
-from subio_v2.dialect import DialectContext, dialect_context_for_platform
+from subio_v2.conversion import ConversionIssue
+from subio_v2.dialect import DialectContext
 from subio_v2.errors import ConfigError
 from subio_v2.formats import normalize_format
 from subio_v2.model.rules import (
@@ -16,12 +15,9 @@ from subio_v2.model.rules import (
     DefaultParameter,
     HeadlessRuleSet,
     LiteralPolicy,
-    LogicalExpression,
     ParameterizedRuleSet,
     ParameterReference,
-    Predicate,
     RuleComment,
-    RuleExpression,
     RuleRenderResult,
 )
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
@@ -31,60 +27,13 @@ from subio_v2.rules.codecs import (
     RuleSetInputSelection,
 )
 from subio_v2.rules.config import RuleSetConfig
+from subio_v2.rules.output import get_rule_output_dialect
 from subio_v2.rules.parser import (
     MIHOMO_CLASSICAL_PARSER,
-    STASH_CLASSICAL_PARSER,
-    SURGE_CLASSICAL_PARSER,
     parse_argument_names,
     validate_identifier,
 )
 from subio_v2.utils.logger import logger
-
-CLASH_PLATFORMS = frozenset({"clash", "mihomo", "stash"})
-LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
-
-_CLASH_OUTPUT_RULES = frozenset(
-    {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "GEOIP", "DST-PORT", "SRC-PORT", "PROCESS-NAME", "MATCH"}
-)
-_DAE_OUTPUT_RULES = frozenset(
-    {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "MATCH"}
-)
-_CLASH_OUTPUT_OPTIONS = frozenset({"no-resolve"})
-_DAE_OUTPUT_OPTIONS = frozenset({"no-resolve"})
-_OUTPUT_RULE_TARGETS = frozenset({"mihomo", "clash", "stash", "surge", "dae"})
-
-
-def _output_rules_for_target(platform: str) -> frozenset[str]:
-    if platform == "mihomo":
-        return MIHOMO_CLASSICAL_PARSER.spec.output_rules
-    if platform == "stash":
-        return STASH_CLASSICAL_PARSER.spec.output_rules
-    if platform == "surge":
-        return SURGE_CLASSICAL_PARSER.spec.output_rules
-    if platform == "clash":
-        return _CLASH_OUTPUT_RULES
-    if platform == "dae":
-        return _DAE_OUTPUT_RULES
-    return frozenset()
-
-
-def _output_spec_for_target(platform: str):
-    return {
-        "mihomo": MIHOMO_CLASSICAL_PARSER.spec,
-        "stash": STASH_CLASSICAL_PARSER.spec,
-        "surge": SURGE_CLASSICAL_PARSER.spec,
-    }.get(platform)
-
-
-def _output_options_for_target(platform: str) -> tuple[frozenset[str], tuple[str, ...]]:
-    if platform == "clash":
-        return _CLASH_OUTPUT_OPTIONS, ()
-    if platform == "dae":
-        return _DAE_OUTPUT_OPTIONS, ()
-    spec = _output_spec_for_target(platform)
-    if spec is None:
-        return frozenset(), ()
-    return spec.output_options, spec.output_option_prefixes
 
 
 @dataclass
@@ -110,10 +59,10 @@ class RuleSetRenderer:
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
         platform = normalize_format(platform)
-        if platform not in _OUTPUT_RULE_TARGETS:
+        output_dialect = get_rule_output_dialect(platform)
+        if output_dialect is None:
             raise ValueError(f"Unknown ruleset target platform: {platform}")
-        target_context = dialect_context_for_platform(platform)
-        issues = [replace(issue, target=platform) for issue in ruleset.issues]
+        issues = [replace(issue, target=output_dialect.name) for issue in ruleset.issues]
         lines: list[str] = []
 
         for entry in ruleset.entries:
@@ -122,19 +71,14 @@ class RuleSetRenderer:
                 continue
 
             policy = self._resolve_policy(entry, ruleset, arguments)
-            rendered, expression_issues = self._render_expression(
-                ruleset.name,
-                entry.expression,
-                platform,
-                ruleset.source_context,
-                target_context,
-                policy,
-                nested=False,
+            rendered, expression_issues = output_dialect.render(
+                source=ruleset.name,
+                expression=entry.expression,
+                source_context=ruleset.source_context,
+                policy=policy,
             )
             issues.extend(expression_issues)
             if rendered is not None:
-                if platform in CLASH_PLATFORMS:
-                    rendered = f"- {rendered}"
                 lines.append(rendered)
 
         return RuleRenderResult(content="\n".join(lines), issues=tuple(issues))
@@ -153,268 +97,6 @@ class RuleSetRenderer:
         if isinstance(binding, LiteralPolicy):
             return binding.value
         raise TypeError(f"Unsupported policy binding: {type(binding).__name__}")
-
-    def _render_expression(
-        self,
-        source: str,
-        expression: RuleExpression,
-        platform: str,
-        source_context: DialectContext,
-        target_context: DialectContext,
-        policy: str | None,
-        *,
-        nested: bool,
-    ) -> tuple[str | None, list[ConversionIssue]]:
-        rule_type, matcher = self._canonical_expression(expression, source_context)
-        options = expression.options
-        rule_type, matcher, options = self._target_form(
-            rule_type,
-            matcher,
-            options,
-            platform,
-            target_context,
-        )
-        if not self._is_supported(rule_type, platform):
-            return None, [
-                self._issue(
-                    source,
-                    expression,
-                    platform,
-                    "ruleset.unsupported-target-rule",
-                    f"Rule type {rule_type} cannot be rendered for {platform}",
-                )
-            ]
-
-        option_issue = self._unsupported_option(
-            source, expression, platform, options
-        )
-        if option_issue is not None:
-            return None, [option_issue]
-
-        if platform == "dae":
-            assert isinstance(expression, Predicate)
-            return self._render_dae(expression, policy), []
-
-        if isinstance(expression, LogicalExpression):
-            operands: list[str] = []
-            issues: list[ConversionIssue] = []
-            for operand in expression.operands:
-                rendered, operand_issues = self._render_expression(
-                    source,
-                    operand,
-                    platform,
-                    source_context,
-                    target_context,
-                    None,
-                    nested=True,
-                )
-                issues.extend(operand_issues)
-                if rendered is None:
-                    return None, issues
-                operands.append(f"({rendered})")
-            fields = [rule_type, f"({','.join(operands)})"]
-        else:
-            fields = [rule_type]
-            if matcher:
-                fields.append(self._serialize_matcher(rule_type, matcher))
-
-        if policy is not None:
-            fields.append(self._serialize_token(policy))
-        fields.extend(self._serialize_option(option) for option in options)
-        return ",".join(fields), []
-
-    def _canonical_expression(
-        self,
-        expression: RuleExpression,
-        source_context: DialectContext,
-    ) -> tuple[str, str]:
-        rule_type = (
-            expression.operator
-            if isinstance(expression, LogicalExpression)
-            else expression.rule_type
-        )
-        matcher = expression.matcher if isinstance(expression, Predicate) else ""
-
-        if rule_type == "FINAL":
-            rule_type = "MATCH"
-        elif rule_type == "DEST-PORT":
-            rule_type = "DST-PORT"
-
-        if not isinstance(expression, Predicate):
-            return rule_type, matcher
-
-        if source_context.dialect in {"stash", "surge"}:
-            if rule_type == "SRC-IP":
-                try:
-                    network = ipaddress.ip_network(matcher, strict=False)
-                except ValueError:
-                    pass
-                else:
-                    rule_type = "SRC-IP-CIDR"
-                    if "/" not in matcher:
-                        matcher = f"{matcher}/{network.max_prefixlen}"
-            elif rule_type == "PROTOCOL" and matcher.lower() in {"tcp", "udp"}:
-                rule_type = "NETWORK"
-            elif rule_type == "PROCESS-NAME":
-                rule_type, matcher = self._canonical_process_matcher(matcher)
-        return rule_type, matcher
-
-    @staticmethod
-    def _canonical_process_matcher(matcher: str) -> tuple[str, str]:
-        has_wildcard = "*" in matcher or "?" in matcher
-        if matcher.startswith("/"):
-            if matcher.endswith("/"):
-                return "PROCESS-PATH-WILDCARD", f"{matcher}*"
-            if has_wildcard:
-                return "PROCESS-PATH-WILDCARD", matcher
-            return "PROCESS-PATH", matcher
-        if has_wildcard:
-            return "PROCESS-NAME-WILDCARD", matcher
-        return "PROCESS-NAME", matcher
-
-    @staticmethod
-    def _target_form(
-        rule_type: str,
-        matcher: str,
-        options: tuple[str, ...],
-        platform: str,
-        target_context: DialectContext,
-    ) -> tuple[str, str, tuple[str, ...]]:
-        if (
-            target_context.dialect in {"stash", "surge"}
-            and rule_type in {"IP-CIDR", "IP-CIDR6"}
-            and "src" in options
-        ):
-            rule_type = "SRC-IP"
-            options = tuple(
-                option for option in options if option not in {"src", "no-resolve"}
-            )
-
-        if target_context.dialect == "surge":
-            if rule_type == "MATCH":
-                rule_type = "FINAL"
-            elif rule_type == "DST-PORT":
-                rule_type = "DEST-PORT"
-            elif rule_type == "NETWORK":
-                rule_type = "PROTOCOL"
-            elif rule_type == "SRC-IP-CIDR":
-                rule_type = "SRC-IP"
-            elif rule_type in {
-                "PROCESS-NAME-WILDCARD",
-                "PROCESS-PATH",
-                "PROCESS-PATH-WILDCARD",
-            }:
-                rule_type = "PROCESS-NAME"
-        elif target_context.dialect == "stash":
-            if rule_type == "SRC-IP-CIDR":
-                rule_type = "SRC-IP"
-            elif rule_type in {
-                "PROCESS-NAME-WILDCARD",
-                "PROCESS-PATH-WILDCARD",
-            }:
-                rule_type = "PROCESS-NAME"
-        elif target_context.dialect in {"mihomo", "clash"}:
-            if platform == "mihomo" and rule_type == "SRC-IP":
-                try:
-                    network = ipaddress.ip_network(matcher, strict=False)
-                except ValueError:
-                    pass
-                else:
-                    rule_type = "SRC-IP-CIDR"
-                    if "/" not in matcher:
-                        matcher = f"{matcher}/{network.max_prefixlen}"
-            if rule_type == "PROTOCOL" and matcher.lower() in {"tcp", "udp"}:
-                rule_type = "NETWORK"
-
-        return rule_type, matcher, options
-
-    def _is_supported(self, rule_type: str, platform: str) -> bool:
-        return rule_type in _output_rules_for_target(platform)
-
-    def _unsupported_option(
-        self,
-        source: str,
-        expression: RuleExpression,
-        platform: str,
-        options: tuple[str, ...],
-    ) -> ConversionIssue | None:
-        allowed, prefixes = _output_options_for_target(platform)
-        for option in options:
-            if option in allowed or option.startswith(prefixes):
-                continue
-            if option:
-                return self._issue(
-                    source,
-                    expression,
-                    platform,
-                    "ruleset.unsupported-target-option",
-                    f"Rule option {option!r} cannot be rendered for {platform}",
-                )
-        return None
-
-    @staticmethod
-    def _serialize_token(value: str) -> str:
-        if not any(char in value for char in (",", '"', "\n", "\r")):
-            return value
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-
-    def _serialize_matcher(self, rule_type: str, matcher: str) -> str:
-        if rule_type in {"DST-PORT", "SRC-PORT", "DEST-PORT", "IN-PORT"}:
-            fragments = matcher.split(",")
-            if fragments and all(
-                fragment.isdigit()
-                or (
-                    "-" in fragment
-                    and all(part.isdigit() for part in fragment.split("-", 1))
-                )
-                for fragment in fragments
-            ):
-                return matcher
-        return self._serialize_token(matcher)
-
-    def _serialize_option(self, option: str) -> str:
-        if "=" not in option:
-            return option
-        name, value = option.split("=", 1)
-        return f"{name}={self._serialize_token(value)}"
-
-    @staticmethod
-    def _render_dae(expression: Predicate, policy: str | None) -> str:
-        assert policy is not None
-        if expression.rule_type in {"MATCH", "FINAL"}:
-            return f"fallback: {policy}"
-        if expression.rule_type == "DOMAIN":
-            return f"domain(full: {expression.matcher}) -> {policy}"
-        if expression.rule_type == "DOMAIN-SUFFIX":
-            return f"domain(suffix: {expression.matcher}) -> {policy}"
-        if expression.rule_type == "DOMAIN-KEYWORD":
-            return f"domain(keyword: {expression.matcher}) -> {policy}"
-        return f"dip({expression.matcher}) -> {policy}"
-
-    @staticmethod
-    def _issue(
-        source: str,
-        expression: RuleExpression,
-        target: str,
-        code: str,
-        message: str,
-    ) -> ConversionIssue:
-        return ConversionIssue(
-            severity=IssueSeverity.ERROR,
-            node=None,
-            protocol=None,
-            source=source,
-            target=target,
-            field=(
-                f"line {expression.source_line}"
-                if expression.source_line is not None
-                else None
-            ),
-            message=message,
-            stage="render",
-            code=code,
-        )
 
 
 RULESET_RENDERER = RuleSetRenderer()

@@ -128,9 +128,6 @@ class ClassicalDialectSpec:
     option_prefixes: tuple[str, ...] = ()
     comment_prefixes: tuple[str, ...] = ("#", "//")
     max_logic_depth: int | None = None
-    output_rules: frozenset[str] = frozenset()
-    output_options: frozenset[str] = frozenset()
-    output_option_prefixes: tuple[str, ...] = ()
 
 
 _MIHOMO_IP_OPTIONS = frozenset({"no-resolve", "src"})
@@ -143,8 +140,6 @@ MIHOMO_CLASSICAL_SPEC = ClassicalDialectSpec(
     },
     non_shareable_rules=frozenset({"RULE-SET", "SUB-RULE"}),
     catch_all_rules=frozenset({"MATCH"}),
-    output_rules=MIHOMO_PREDICATES | {"MATCH"} | LOGICAL_RULES,
-    output_options=frozenset({"src", "no-resolve"}),
 )
 
 STASH_CLASSICAL_SPEC = ClassicalDialectSpec(
@@ -159,8 +154,6 @@ STASH_CLASSICAL_SPEC = ClassicalDialectSpec(
     external_ruleset_rules=frozenset({"RULE-SET"}),
     catch_all_rules=frozenset({"MATCH"}),
     global_options=frozenset({"no-track"}),
-    output_rules=(STASH_PREDICATES - {"SCRIPT"}) | {"MATCH"} | LOGICAL_RULES,
-    output_options=frozenset({"no-resolve", "no-track"}),
 )
 
 SURGE_CLASSICAL_SPEC = ClassicalDialectSpec(
@@ -188,13 +181,6 @@ SURGE_CLASSICAL_SPEC = ClassicalDialectSpec(
     ),
     comment_prefixes=("#", "//", ";"),
     max_logic_depth=10,
-    output_rules=(SURGE_PREDICATES - {"SCRIPT"}) | {"FINAL"} | LOGICAL_RULES,
-    output_options=frozenset({"no-resolve", "extended-matching", "requires-resolve"}),
-    output_option_prefixes=(
-        "notification-text=",
-        "notification-interval=",
-        "always-capture=",
-    ),
 )
 
 
