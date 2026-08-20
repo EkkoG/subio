@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from subio_v2.core.results import EmissionResult
-from subio_v2.emitter.base import BaseEmitter
+from subio_v2.adapters.base import BaseEmitter
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter

@@ -1,7 +1,7 @@
 import pytest
 
 from tests.support_target_views import all_platform_capabilities
-from subio_v2.formats import get_emitter, get_parser
+from subio_v2.adapters.catalog import get_emitter, get_parser
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter

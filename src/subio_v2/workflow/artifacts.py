@@ -6,9 +6,9 @@ import yaml
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.infrastructure import age
-from subio_v2.emitter.base import BaseEmitter
+from subio_v2.adapters.base import BaseEmitter
 from subio_v2.core.errors import ArtifactGenerationError
-from subio_v2.formats import get_emitter
+from subio_v2.adapters.catalog import get_emitter
 from subio_v2.core.nodes import Node
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore

@@ -118,8 +118,8 @@ def test_workflow_services_depend_on_registry_interfaces_not_concrete_adapters()
     assert not {
         module for module in artifact_imports if module.startswith(concrete_prefixes)
     }
-    assert "subio_v2.formats" in provider_imports
-    assert "subio_v2.formats" in artifact_imports
+    assert "subio_v2.adapters.catalog" in provider_imports
+    assert "subio_v2.adapters.catalog" in artifact_imports
 
 
 def test_obsolete_internal_authorities_are_absent():

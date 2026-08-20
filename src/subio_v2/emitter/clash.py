@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 import subio_v2.protocols as protocol_registry
 from subio_v2.clash.dialect import post_descriptor_emit
 from subio_v2.core.results import EmissionResult, IssueSeverity
-from subio_v2.emitter.base import BaseEmitter
+from subio_v2.adapters.base import BaseEmitter
 from subio_v2.core.nodes import Node, SourcePassthroughNode
 
 

@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from subio_v2.core.errors import ConfigError
-from subio_v2.formats import resolve_format
+from subio_v2.adapters.catalog import resolve_format
 from subio_v2.infrastructure.logging import logger
 
 

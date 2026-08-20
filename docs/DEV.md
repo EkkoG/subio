@@ -66,21 +66,19 @@ Config / local snippet
 |---|---|
 | `src/subio_v2/core/` | 跨平台节点语义、共享设置、结构化结果和目标无关校验 |
 | `src/subio_v2/infrastructure/` | Age、remote loader 和日志等低层外部副作用 |
-| `src/subio_v2/parser/` | 将来源格式解析成节点和结构化问题 |
-| `src/subio_v2/subio_format/` | 版本化原生 SubIO 节点 schema 与 object-to-Node codec |
-| `src/subio_v2/emitter/` | 将最终节点生成目标格式 |
+| `src/subio_v2/adapters/` | 格式 catalog、target validation、checked emitter 和各格式 family adapter |
 | `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
 | `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
-| `src/subio_v2/formats.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
+| `src/subio_v2/adapters/catalog.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
 | `src/subio_v2/protocols/values.py` | 不带 target 语义的共享协议值域常量 |
-| `src/subio_v2/target_validation.py` | 从实际 target codec 派生支持并返回 checked encode result |
-| `src/subio_v2/rules/` | 可分享规则集 grammar、codec、IR runtime 和 renderer |
+| `src/subio_v2/adapters/target.py` | 从实际 target codec 派生支持并返回 checked encode result |
+| `src/subio_v2/rules/` | 可分享规则集 grammar、输入 codec、不可变 output dialect、IR runtime 和 renderer |
 | `src/subio_v2/workflow/` | typed config、provider/artifact 编排、模板和发布事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
-`formats.get_parser()` 和 `formats.get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
+`adapters.catalog.get_parser()` 和 `adapters.catalog.get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
 跨 provider、artifact 或两次运行共享。
 
 ## 3. IR 与扩展字段
@@ -194,7 +192,7 @@ native override 字段由逐协议 `ProtocolSpec.user_override_fields` 明确列
 | `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 codec 和规则范围 |
 
 所有 parser、emitter 和规则 renderer 的公开入口必须先通过
-`src/subio_v2/formats.py` 规范化。内部 codec registry、`DialectContext` 和结构化
+`src/subio_v2/adapters/catalog.py` 规范化。内部 codec registry、`DialectContext` 和结构化
 issue 只使用 `mihomo` 规范名称；不得在 target constraints、规则输出表或业务代码中
 新增独立 `clash-meta` authority，也不得增加散落的 `platform == "clash-meta"` 分支。
 
@@ -384,7 +382,7 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
   artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，
   完整生成成功后才由入口统一校验并入队 upload request。
 
-application service 只通过 `formats.get_parser()`、`formats.get_emitter()` 和窄结果类型访问 adapter，不导入具体
+application service 只通过 `adapters.catalog.get_parser()`、`adapters.catalog.get_emitter()` 和窄结果类型访问 adapter，不导入具体
 Surge/Clash/link 实现。一次 run 的 loader、parser、emitter 和 uploader 状态不得泄漏到下一次运行。
 
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并

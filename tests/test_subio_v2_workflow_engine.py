@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity, WorkflowResult
-from subio_v2.emitter.base import BaseEmitter
+from subio_v2.adapters.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.core.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.infrastructure.remote import RunRemoteLoader
@@ -915,7 +915,7 @@ def test_ruleset_errors_are_logged_with_source_line_and_target(monkeypatch):
         def dim(self, message):
             messages.append(("dim", message))
 
-    monkeypatch.setattr("subio_v2.emitter.base.logger", DummyLogger())
+    monkeypatch.setattr("subio_v2.adapters.base.logger", DummyLogger())
     BaseEmitter.log_issues(
         [
             ConversionIssue(

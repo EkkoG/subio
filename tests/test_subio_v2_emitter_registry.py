@@ -1,12 +1,12 @@
 import pytest
 
-from subio_v2.target_validation import TargetValidationService as NodeConversionService
+from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
-from subio_v2.formats import get_emitter
+from subio_v2.adapters.catalog import get_emitter
 from subio_v2.core.nodes import Protocol, VlessNode
 
 

@@ -1,4 +1,4 @@
-from subio_v2.formats import get_parser
+from subio_v2.adapters.catalog import get_parser
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.stash import StashParser
 from subio_v2.parser.subio import SubioParser

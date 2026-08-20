@@ -8,7 +8,7 @@ import pytest
 import subio_v2.protocols as protocol_registry
 from subio_v2 import links as link
 from tests.support_target_views import all_platform_capabilities
-from subio_v2.target_validation import TargetValidationService as NodeConversionService
+from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.core.nodes import (
     AnyTLSNode,
     HttpNode,

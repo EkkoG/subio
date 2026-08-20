@@ -2,7 +2,7 @@ import pytest
 
 import subio_v2.protocols as protocol_registry
 from subio_v2 import links
-from subio_v2.formats import all_formats, common_policy_for_format
+from subio_v2.adapters.catalog import all_formats, common_policy_for_format
 from subio_v2.links import protocols_for_target as link_protocols_for_target
 from subio_v2.surge.codecs import SURGE_NODE_PROTOCOLS
 from tests.support_target_views import all_platform_capabilities, protocols_for_target

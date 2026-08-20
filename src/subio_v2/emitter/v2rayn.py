@@ -2,7 +2,7 @@ import base64
 
 from subio_v2 import links as link
 from subio_v2.core.results import EmissionResult, IssueSeverity
-from subio_v2.emitter.base import BaseEmitter
+from subio_v2.adapters.base import BaseEmitter
 from subio_v2.core.nodes import Node
 
 

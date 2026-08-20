@@ -10,7 +10,7 @@ from typing import TypeAlias
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.core.dialect import DialectContext, dialect_context_for_platform
-from subio_v2.formats import normalize_format
+from subio_v2.adapters.catalog import normalize_format
 from subio_v2.core.rule_model import LogicalExpression, Predicate, RuleExpression
 from subio_v2.rules.parser import (
     MIHOMO_PREDICATES,

@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from subio_v2.core.results import ConversionIssue
 from subio_v2.infrastructure import age
 from subio_v2.core.errors import ProviderLoadError
-from subio_v2.formats import get_parser
+from subio_v2.adapters.catalog import get_parser
 from subio_v2.core.nodes import Node
 from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.infrastructure.logging import logger

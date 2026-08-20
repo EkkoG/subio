@@ -5,7 +5,7 @@ from typing import Any
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.core.dialect import DialectContext
-from subio_v2.formats import common_policy_for_format
+from subio_v2.adapters.catalog import common_policy_for_format
 from subio_v2.core.nodes import Node
 
 

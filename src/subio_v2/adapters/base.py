@@ -2,15 +2,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
+from subio_v2.adapters.catalog import normalize_format
+from subio_v2.adapters.target import TargetValidationService
+from subio_v2.core.nodes import Node
 from subio_v2.core.results import (
     ConversionIssue,
     EmissionResult,
     IssueSeverity,
     TargetCheckResult,
 )
-from subio_v2.formats import normalize_format
-from subio_v2.core.nodes import Node
-from subio_v2.target_validation import TargetValidationService
 from subio_v2.infrastructure.logging import logger
 
 

@@ -1,4 +1,4 @@
-from subio_v2.formats import normalize_format, resolve_format
+from subio_v2.adapters.catalog import normalize_format, resolve_format
 
 
 def test_platform_resolution_distinguishes_alias_and_deprecation():
