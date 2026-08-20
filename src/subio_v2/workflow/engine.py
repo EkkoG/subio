@@ -1,13 +1,10 @@
 import os
-from typing import Dict, List
 
 from subio_v2.conversion import (
-    ConversionIssue,
     WorkflowResult,
 )
 from subio_v2.crypto import age
 from subio_v2.errors import ConfigError
-from subio_v2.model.nodes import Node
 from subio_v2.remote import RunRemoteLoader
 from subio_v2.rules.runtime import (
     RuleSetStore,
@@ -22,7 +19,7 @@ from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.providers import ProviderLoaderService
 from subio_v2.workflow.publication import ArtifactPublisher
 from subio_v2.workflow.template import TemplateRenderer
-from subio_v2.workflow.uploader import GistBatchUploader
+from subio_v2.workflow.uploader import GistBatchUploader, queue_upload_requests
 
 
 class WorkflowEngine:
@@ -31,12 +28,8 @@ class WorkflowEngine:
     ):
         self.config_path = config_path
         self.config: RunConfig = ConfigLoader.load(self.config_path)
-        self.providers: Dict[str, List[Node]] = {}
-        self.provider_issues: Dict[str, List[ConversionIssue]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
-        self._staged_artifacts: tuple[ArtifactDraft, ...] = ()
-        self.issues: List[ConversionIssue] = []
         self.batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
         self.publisher = ArtifactPublisher()
 
@@ -73,7 +66,6 @@ class WorkflowEngine:
             self._local_rulesets = load_snippets(snippet_dir)
         else:
             self._local_rulesets = RuleSetStore()
-        self.rulesets = merge_stores(self._local_rulesets)
 
     def run(self) -> WorkflowResult:
         if self.dry_run:
@@ -81,10 +73,6 @@ class WorkflowEngine:
         else:
             logger.info("--- Starting SubIO v2 Workflow ---")
         self.batch_uploader.begin()
-        self._staged_artifacts = ()
-        self.providers.clear()
-        self.issues.clear()
-        self.provider_issues.clear()
         remote_loader = RunRemoteLoader()
         try:
             remote_rulesets = (
@@ -92,37 +80,36 @@ class WorkflowEngine:
                 if self.config.rulesets
                 else RuleSetStore()
             )
-            self.rulesets = merge_stores(self._local_rulesets, remote_rulesets)
+            rulesets = merge_stores(self._local_rulesets, remote_rulesets)
             provider_result = ProviderLoaderService(
                 self.config_path, self.global_age_secret_key
             ).load(self.config, remote_loader)
-            self.providers = provider_result.providers
-            self.provider_issues = provider_result.issues
             artifact_result = ArtifactGenerationService(
                 self.config,
-                self.providers,
-                self.provider_issues,
+                provider_result.providers,
+                provider_result.issues,
                 self.renderer,
-                self.rulesets,
-                self.batch_uploader,
+                rulesets,
                 self.global_age_public_key,
             ).generate()
-            self._staged_artifacts = artifact_result.drafts
-            self.issues.extend(artifact_result.issues)
-            generated = [draft.filename for draft in self._staged_artifacts]
+            queue_upload_requests(
+                artifact_result.upload_requests,
+                self.config.uploaders,
+                self.batch_uploader,
+            )
+            generated = [draft.filename for draft in artifact_result.drafts]
             queued_uploads = self.batch_uploader.pending_uploads()
-            self._commit_artifacts()
+            self._commit_artifacts(artifact_result.drafts)
             self.batch_uploader.flush()
         except BaseException:
-            self._staged_artifacts = ()
             self.batch_uploader.abort()
             raise
         logger.success("--- Finished ---")
         return WorkflowResult(
             generated=generated,
             uploaded=[] if self.dry_run else queued_uploads,
-            issues=list(self.issues),
+            issues=list(artifact_result.issues),
         )
 
-    def _commit_artifacts(self) -> None:
-        self.publisher.commit(self._staged_artifacts)
+    def _commit_artifacts(self, drafts: tuple[ArtifactDraft, ...]) -> None:
+        self.publisher.commit(drafts)

@@ -91,17 +91,16 @@ template = "custom.j2"
         lambda _emitter_type: CustomEmitter(),
     )
     engine = WorkflowEngine(str(config), dry_run=True)
-    engine.providers["source"] = [
-        DirectNode(name="direct", type=Protocol.DIRECT, udp=False)
-    ]
+    providers = {
+        "source": [DirectNode(name="direct", type=Protocol.DIRECT, udp=False)]
+    }
 
     result = ArtifactGenerationService(
         engine.config,
-        engine.providers,
-        engine.provider_issues,
+        providers,
+        {},
         engine.renderer,
-        engine.rulesets,
-        engine.batch_uploader,
+        engine._local_rulesets,
         engine.global_age_public_key,
     ).generate()
     engine.publisher.commit(result.drafts)

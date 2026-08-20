@@ -8,6 +8,7 @@ from typing import Any
 
 from subio_v2.errors import UploadError
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.artifacts import ArtifactUploadRequest
 from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
 
 _GIST_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -252,3 +253,19 @@ def upload(
             raise UploadError(f"Unsupported uploader type: {uploader.uploader_type!r}")
 
         batch_uploader.add(content, artifact_config, upload_item, uploader, username)
+
+
+def queue_upload_requests(
+    requests: Sequence[ArtifactUploadRequest],
+    uploader_configs: Sequence[UploaderConfig],
+    batch_uploader: GistBatchUploader,
+) -> None:
+    """Validate and queue uploads after all artifact drafts are complete."""
+    for request in requests:
+        upload(
+            request.content,
+            request.artifact_config,
+            uploader_configs,
+            batch_uploader,
+            request.username,
+        )

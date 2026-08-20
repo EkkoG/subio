@@ -36,11 +36,10 @@ def write(tmp_path: Path, name: str, content: str):
 def artifact_service(engine: WorkflowEngine) -> ArtifactGenerationService:
     return ArtifactGenerationService(
         engine.config,
-        engine.providers,
-        engine.provider_issues,
+        {},
+        {},
         engine.renderer,
-        engine.rulesets,
-        engine.batch_uploader,
+        engine._local_rulesets,
         engine.global_age_public_key,
     )
 
@@ -117,10 +116,10 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
         content_yaml, None, "clash", {}, None, {}, "out.yaml"
     )
     assert issues == []
-    service._stage(
+    first = service._stage(
         "out.yaml", rendered, ArtifactConfig(name="out.yaml", artifact_type="clash"), None
     )
-    eng.publisher.commit(tuple(service._drafts.values()))
+    eng.publisher.commit((first,))
     out1 = (tmp_path / "dist" / "out.yaml").read_text()
     # Should be YAML text containing proxies
     assert "proxies:" in out1 and "- name: n1" in out1
@@ -132,10 +131,10 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
         "rawtext", "tpl", "surge", {}, None, {}, "out.txt"
     )
     assert issues == []
-    service._stage(
+    second = service._stage(
         "out.txt", rendered, ArtifactConfig(name="out.txt", artifact_type="surge"), None
     )
-    eng.publisher.commit(tuple(service._drafts.values()))
+    eng.publisher.commit((second,))
     out2 = (tmp_path / "dist" / "out.txt").read_text()
     assert out2 == "rendered"
 
@@ -154,13 +153,13 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
 
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
-    service._stage(
+    draft = service._stage(
         "file-{user}.txt",
         "c",
         ArtifactConfig(name="file-{user}.txt", artifact_type="surge"),
         "alice",
     )
-    eng.publisher.commit(tuple(service._drafts.values()))
+    eng.publisher.commit((draft,))
     assert (tmp_path / "dist" / "file-alice.txt").exists()
 
 
@@ -174,7 +173,7 @@ def test_commit_artifacts_is_atomic_per_file_not_for_the_whole_batch(
     dist.mkdir()
     (dist / "first.txt").write_text("old-first")
     (dist / "second.txt").write_text("old-second")
-    engine._staged_artifacts = (
+    drafts = (
         ArtifactDraft("first.txt", "new-first"),
         ArtifactDraft("second.txt", "new-second"),
     )
@@ -191,7 +190,7 @@ def test_commit_artifacts_is_atomic_per_file_not_for_the_whole_batch(
     monkeypatch.setattr("subio_v2.workflow.engine.os.replace", fail_second_replace)
 
     with pytest.raises(ArtifactGenerationError, match="injected replace failure"):
-        engine._commit_artifacts()
+        engine._commit_artifacts(drafts)
 
     assert (dist / "first.txt").read_text() == "new-first"
     assert (dist / "second.txt").read_text() == "old-second"
@@ -546,7 +545,7 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ArtifactGenerationService.generate", generate
     )
-    monkeypatch.setattr(engine, "_commit_artifacts", lambda: None)
+    monkeypatch.setattr(engine, "_commit_artifacts", lambda drafts: None)
 
     def fail_flush():
         raise UploadError("injected upload failure")
@@ -900,7 +899,6 @@ def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
     assert exc_info.value.issues[0].artifact == "out.yaml"
     assert exc_info.value.issues[0].target == "mihomo"
     assert logged_issues == list(exc_info.value.issues)
-    assert engine._staged_artifacts == ()
     assert not (tmp_path / "dist").exists()
 
 

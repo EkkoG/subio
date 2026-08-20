@@ -16,7 +16,6 @@ from subio_v2.utils.logger import logger
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.transforms import filter_nodes
-from subio_v2.workflow.uploader import GistBatchUploader, upload
 
 
 @dataclass(frozen=True)
@@ -26,9 +25,17 @@ class ArtifactDraft:
 
 
 @dataclass(frozen=True)
+class ArtifactUploadRequest:
+    content: str
+    artifact_config: ArtifactConfig
+    username: str | None = None
+
+
+@dataclass(frozen=True)
 class ArtifactGenerationResult:
     drafts: tuple[ArtifactDraft, ...]
-    issues: list[ConversionIssue]
+    issues: tuple[ConversionIssue, ...] = ()
+    upload_requests: tuple[ArtifactUploadRequest, ...] = ()
 
 
 class ArtifactGenerationService:
@@ -39,7 +46,6 @@ class ArtifactGenerationService:
         provider_issues: dict[str, list[ConversionIssue]],
         renderer: TemplateRenderer,
         rulesets: RuleSetStore,
-        batch_uploader: GistBatchUploader,
         global_age_public_key: str = "",
     ):
         self.config = config
@@ -47,45 +53,67 @@ class ArtifactGenerationService:
         self.provider_issues = provider_issues
         self.renderer = renderer
         self.rulesets = rulesets
-        self.batch_uploader = batch_uploader
         self.global_age_public_key = global_age_public_key
-        self._drafts: dict[str, ArtifactDraft] = {}
-        self.issues: list[ConversionIssue] = []
-        self._upload_requests: list[tuple[str, ArtifactConfig, str | None]] = []
 
     def generate(self) -> ArtifactGenerationResult:
-        self._drafts.clear()
-        self.issues.clear()
-        self._upload_requests.clear()
+        drafts: list[ArtifactDraft] = []
+        issues: list[ConversionIssue] = []
+        upload_requests: list[ArtifactUploadRequest] = []
+        filenames: set[str] = set()
         global_filter = self.config.filters
         for artifact_config in self.config.artifacts:
             users = artifact_config.users
             single_user = artifact_config.user
             if users:
                 for username in users:
-                    self._generate_one(artifact_config, global_filter, username)
+                    result = self._generate_one(
+                        artifact_config, global_filter, username
+                    )
+                    self._collect_result(
+                        result, drafts, issues, upload_requests, filenames
+                    )
             else:
-                self._generate_one(
+                result = self._generate_one(
                     artifact_config, global_filter, single_user or None
                 )
-        for content, artifact_config, username in self._upload_requests:
-            upload(
-                content,
-                artifact_config,
-                self.config.uploaders,
-                self.batch_uploader,
-                username,
-            )
+                self._collect_result(
+                    result, drafts, issues, upload_requests, filenames
+                )
         return ArtifactGenerationResult(
-            tuple(self._drafts.values()), list(self.issues)
+            drafts=tuple(drafts),
+            issues=tuple(issues),
+            upload_requests=tuple(upload_requests),
         )
+
+    @staticmethod
+    def _collect_result(
+        result: tuple[
+            ArtifactDraft, tuple[ConversionIssue, ...], ArtifactUploadRequest | None
+        ],
+        drafts: list[ArtifactDraft],
+        issues: list[ConversionIssue],
+        upload_requests: list[ArtifactUploadRequest],
+        filenames: set[str],
+    ) -> None:
+        draft, artifact_issues, upload_request = result
+        if draft.filename in filenames:
+            raise ArtifactGenerationError(
+                f"Multiple artifacts would overwrite 'dist/{draft.filename}'"
+            )
+        filenames.add(draft.filename)
+        drafts.append(draft)
+        issues.extend(artifact_issues)
+        if upload_request is not None:
+            upload_requests.append(upload_request)
 
     def _generate_one(
         self,
         artifact_config: ArtifactConfig,
         global_filter,
         username: str | None,
-    ) -> None:
+    ) -> tuple[
+        ArtifactDraft, tuple[ConversionIssue, ...], ArtifactUploadRequest | None
+    ]:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
         nodes: list[Node] = []
@@ -146,7 +174,6 @@ class ArtifactGenerationService:
             name,
         )
         artifact_issues.extend(ruleset_issues)
-        self.issues.extend(artifact_issues)
         errors = [
             issue for issue in artifact_issues if issue.severity == IssueSeverity.ERROR
         ]
@@ -171,9 +198,13 @@ class ArtifactGenerationService:
                 "set allow_empty=true to permit this",
                 issues=artifact_issues,
             )
-        stored_content = self._stage(name, rendered_content, artifact_config, username)
-        if artifact_config.upload:
-            self._upload_requests.append((stored_content, artifact_config, username))
+        draft = self._stage(name, rendered_content, artifact_config, username)
+        upload_request = (
+            ArtifactUploadRequest(draft.content, artifact_config, username)
+            if artifact_config.upload
+            else None
+        )
+        return draft, tuple(artifact_issues), upload_request
 
     def _render_content(
         self,
@@ -222,7 +253,7 @@ class ArtifactGenerationService:
         content: str,
         artifact_config: ArtifactConfig,
         username: str | None,
-    ) -> str:
+    ) -> ArtifactDraft:
         final_content = content
         actual_filename = (
             filename.replace("{user}", username) if username else filename
@@ -248,9 +279,4 @@ class ArtifactGenerationService:
                 raise ArtifactGenerationError(
                     f"Failed to encrypt artifact '{actual_filename}': {exc}"
                 ) from exc
-        if actual_filename in self._drafts:
-            raise ArtifactGenerationError(
-                f"Multiple artifacts would overwrite 'dist/{actual_filename}'"
-            )
-        self._drafts[actual_filename] = ArtifactDraft(actual_filename, final_content)
-        return final_content
+        return ArtifactDraft(actual_filename, final_content)

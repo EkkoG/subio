@@ -376,11 +376,12 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 - `ConfigLoader` 读取 TOML/YAML/JSON/JSON5，`ConfigValidator` 在构造 runtime config 前完成语义验证；
 - `RunConfig` 暴露 typed `ProviderConfig`、`ArtifactConfig`、`UploaderConfig` records；
 - `ProviderLoaderService` 负责 provider IO、remote dedup、Age/UTF-8、parser 和 `workflow.transforms`；
-- `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、issue policy、template/ruleset、Age 和 upload staging；
+- `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、issue policy、template/ruleset、Age，并只返回
+  `ArtifactDraft` 与 `ArtifactUploadRequest`；不直接访问 uploader 或本地文件；
 - `ArtifactPublisher` 负责本地文件发布事务；
 - `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
-  artifact builder 返回 typed `ArtifactDraft`，所有 issue 在单一 artifact gate 决策后才进入 staging，
-  upload request 在完整生成循环后才入队。
+  artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，
+  完整生成成功后才由入口统一校验并入队 upload request。
 
 application service 只通过 `formats.get_parser()`、`formats.get_emitter()` 和窄结果类型访问 adapter，不导入具体
 Surge/Clash/link 实现。一次 run 的 loader、parser、emitter 和 uploader 状态不得泄漏到下一次运行。

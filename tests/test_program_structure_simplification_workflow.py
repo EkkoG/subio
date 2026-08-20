@@ -19,17 +19,18 @@ def test_provider_transforms_are_pure_functions_without_processor_abc():
 
 
 def test_artifact_builder_delays_upload_queue_until_after_generation_loop():
-    source = (
+    artifacts = (
         Path(__file__).parents[1] / "src/subio_v2/workflow/artifacts.py"
     ).read_text()
-    generate_body = source.split("    def generate", 1)[1].split(
-        "    def _generate_one", 1
-    )[0]
-    stage_body = source.split("    def _stage", 1)[1]
-    assert generate_body.index("for content, artifact_config") < generate_body.index(
-        "upload("
-    )
-    assert "upload(" not in stage_body
+    engine = (Path(__file__).parents[1] / "src/subio_v2/workflow/engine.py").read_text()
+    assert "class ArtifactUploadRequest" in artifacts
+    assert "upload_requests" in artifacts
+    assert "workflow.uploader" not in artifacts
+    assert "queue_upload_requests" in engine
+    assert "self.providers" not in engine
+    assert "self.provider_issues" not in engine
+    assert "self._staged_artifacts" not in engine
+    assert "self.issues" not in engine
 
 
 def test_workflow_uses_typed_artifact_drafts():
@@ -42,3 +43,4 @@ def test_workflow_uses_typed_artifact_drafts():
     assert "artifact_result.drafts" in engine
     assert "ArtifactDraft" in publication
     assert "staged_artifacts: dict" not in artifacts
+    assert "self._drafts" not in artifacts
