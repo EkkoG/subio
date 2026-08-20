@@ -16,21 +16,15 @@ class ClashEmitter(BaseEmitter):
         super().__init__()
 
     def emit_result(self, nodes: List[Node]) -> EmissionResult[Dict[str, Any]]:
-        checked_nodes, issues = self.emit_with_check(nodes)
+        issues = []
         emitted_nodes: list[Node] = []
         proxies: list[Dict[str, Any]] = []
-        for node in checked_nodes:
-            try:
-                proxy, dropped_fields = self._emit_node(node)
-            except Exception as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Failed to emit Clash proxy: {exc}",
-                    )
-                )
+        for node in nodes:
+            encoded = self._conversion.encode_node(node, self._emit_node)
+            issues.extend(encoded.issues)
+            if encoded.supported_node is None:
                 continue
+            proxy, dropped_fields = encoded.content
             if proxy is None:
                 issues.append(
                     self.issue_for_node(

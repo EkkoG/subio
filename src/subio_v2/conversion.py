@@ -85,6 +85,13 @@ ContentT = TypeVar("ContentT")
 
 
 @dataclass
+class TargetEncodingResult(Generic[ContentT]):
+    content: ContentT | None
+    supported_node: Node | None
+    issues: list[ConversionIssue] = field(default_factory=list)
+
+
+@dataclass
 class EmissionResult(Generic[ContentT]):
     content: ContentT
     supported_nodes: list[Node]

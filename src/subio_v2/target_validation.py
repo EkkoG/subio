@@ -5,6 +5,7 @@ from subio_v2.conversion import (
     ConversionIssue,
     IssueSeverity,
     TargetCheckResult,
+    TargetEncodingResult,
 )
 from subio_v2.dialect import dialect_context_for_platform, extension_semantic_fields
 from subio_v2.formats import common_policy_for_format, normalize_format
@@ -86,6 +87,24 @@ class TargetValidationService:
 
         self._check_common_target_fields(node, result)
         return result
+
+    def encode_node(self, node: Node, encoder: Callable[[Node], object]) -> TargetEncodingResult[object]:
+        selected, issues = self.select([node])
+        if not selected:
+            return TargetEncodingResult(content=None, supported_node=None, issues=issues)
+        try:
+            content = encoder(node)
+        except Exception as exc:
+            issues.append(
+                self.issue_for_node(
+                    node,
+                    IssueSeverity.ERROR,
+                    f"Failed to encode {self.platform} node: {exc}",
+                    stage="emit",
+                )
+            )
+            return TargetEncodingResult(content=None, supported_node=None, issues=issues)
+        return TargetEncodingResult(content=content, supported_node=node, issues=issues)
 
     def _check_common_target_fields(
         self, node: Node, result: TargetCheckResult

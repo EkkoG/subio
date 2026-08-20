@@ -4,7 +4,7 @@ from pathlib import Path
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.links import all_codecs
-from subio_v2.model.nodes import Protocol
+from subio_v2.model.nodes import Protocol, ShadowsocksNode
 from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.target_validation import TargetValidationService
 
@@ -42,3 +42,19 @@ def test_target_validation_no_longer_constructs_capability_snapshots():
         Path(__file__).parents[1] / "src/subio_v2/emitter/clash.py"
     ).read_text()
     assert "protocol_registry.target_codec" in clash_emitter
+
+
+def test_clash_target_validation_can_return_one_checked_encode_result():
+    node = ShadowsocksNode(
+        name="ss",
+        server="example.test",
+        port=8388,
+        cipher="aes-256-gcm",
+        password="password",
+    )
+    result = TargetValidationService("mihomo").encode_node(
+        node, lambda item: {"name": item.name}
+    )
+    assert result.supported_node is node
+    assert result.content == {"name": "ss"}
+    assert result.issues == []
