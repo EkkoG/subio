@@ -3,7 +3,7 @@ import base64
 from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Node
-from subio_v2.core.results import EmissionResult, IssueSeverity
+from subio_v2.core.results import EmissionFragments, EmissionResult, IssueSeverity
 
 
 class V2RayNEmitter(BaseEmitter):
@@ -39,17 +39,14 @@ class V2RayNEmitter(BaseEmitter):
             content=content,
             supported_nodes=emitted_nodes,
             issues=issues,
-            extras={
-                "list": plain,
-                "template_context": self.template_context(emitted_nodes),
-            },
+            fragments=EmissionFragments(plain_list=plain),
         )
 
     def emit_list(self, nodes: list[Node]) -> str:
         """Return plain list of links (for debugging or other formats)"""
         result = self.emit_result(nodes)
         self.log_issues(result.issues)
-        return result.extras["list"]
+        return result.fragments.plain_list or ""
 
     def _emit_node(self, node: Node) -> str | None:
         return link.build_url(node, target=self.platform)

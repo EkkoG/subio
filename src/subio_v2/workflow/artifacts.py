@@ -8,13 +8,14 @@ from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.catalog import get_emitter
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Node
-from subio_v2.core.results import ConversionIssue, IssueSeverity
+from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.template import TemplateRenderer
+from subio_v2.workflow.template_context import build_template_context
 from subio_v2.workflow.transforms import filter_nodes
 
 
@@ -158,19 +159,14 @@ class ArtifactGenerationService:
         artifact_issues.extend(
             replace(issue, artifact=name, user=username) for issue in emission.issues
         )
-        extra_context = emission.extras.get("template_context", {})
-        if not isinstance(extra_context, dict):
-            raise ArtifactGenerationError(
-                f"Emitter for artifact '{display_name}' returned an invalid "
-                "template context"
-            )
         rendered_content, ruleset_issues = self._render_content(
             emission.content,
             artifact_config.template,
             artifact_type,
             artifact_config.options,
             username,
-            extra_context,
+            emission.supported_nodes,
+            emission.fragments,
             name,
         )
         artifact_issues.extend(ruleset_issues)
@@ -213,7 +209,8 @@ class ArtifactGenerationService:
         artifact_type: str,
         artifact_options: dict[str, Any],
         username: str | None,
-        extra_context: dict[str, Any],
+        supported_nodes: list[Node] | tuple[Node, ...],
+        fragments: EmissionFragments,
         artifact_name: str,
     ) -> tuple[str, list[ConversionIssue]]:
         is_yaml_data = isinstance(content, dict)
@@ -223,15 +220,22 @@ class ArtifactGenerationService:
             else content
         )
         if template_path:
-            context = {
-                "proxies": raw_content,
-                "options": {
-                    **self.config.options,
-                    **artifact_options,
-                },
-                "user": username,
-                **extra_context,
-            }
+            context = build_template_context(
+                platform=artifact_type,
+                rendered=raw_content,
+                nodes=supported_nodes,
+                fragments=fragments,
+            )
+            context.update(
+                {
+                    "proxies": raw_content,
+                    "options": {
+                        **self.config.options,
+                        **artifact_options,
+                    },
+                    "user": username,
+                }
+            )
             render_result = self.renderer.render_result(
                 template_path, context, artifact_type, self.rulesets
             )

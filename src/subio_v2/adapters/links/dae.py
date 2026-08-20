@@ -13,7 +13,7 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Node
-from subio_v2.core.results import EmissionResult, IssueSeverity
+from subio_v2.core.results import EmissionFragments, EmissionResult, IssueSeverity
 
 
 class DaeEmitter(BaseEmitter):
@@ -83,15 +83,7 @@ class DaeEmitter(BaseEmitter):
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
             issues=issues,
-            extras={
-                "subscription": subscription,
-                "template_context": {
-                    "proxies_names": ", ".join(
-                        f"'{node.name}'" for node in emitted_nodes
-                    ),
-                    "subscription": subscription,
-                },
-            },
+            fragments=EmissionFragments(subscription=subscription),
         )
 
     def emit_subscription(self, nodes: list[Node]) -> str:
@@ -101,7 +93,7 @@ class DaeEmitter(BaseEmitter):
         if emit_errors:
             raise ValueError(emit_errors[0].message)
         self.log_issues(result.issues)
-        return result.extras["subscription"]
+        return result.fragments.subscription or ""
 
     @staticmethod
     def _build_indexes(

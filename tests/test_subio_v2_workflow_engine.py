@@ -8,7 +8,12 @@ import yaml
 from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.links.v2rayn import V2RayNEmitter
 from subio_v2.core.errors import ArtifactGenerationError, ConfigError, UploadError
-from subio_v2.core.results import ConversionIssue, IssueSeverity, WorkflowResult
+from subio_v2.core.results import (
+    ConversionIssue,
+    EmissionFragments,
+    IssueSeverity,
+    WorkflowResult,
+)
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.workflow.artifacts import (
     ArtifactDraft,
@@ -113,7 +118,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
     rendered, issues = service._render_content(
-        content_yaml, None, "clash", {}, None, {}, "out.yaml"
+        content_yaml, None, "clash", {}, None, [], EmissionFragments(), "out.yaml"
     )
     assert issues == []
     first = service._stage(
@@ -128,7 +133,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Text content with template: should use renderer result
     service = artifact_service(eng)
     rendered, issues = service._render_content(
-        "rawtext", "tpl", "surge", {}, None, {}, "out.txt"
+        "rawtext", "tpl", "surge", {}, None, [], EmissionFragments(), "out.txt"
     )
     assert issues == []
     second = service._stage(

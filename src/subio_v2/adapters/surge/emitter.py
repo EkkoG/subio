@@ -122,8 +122,6 @@ class SurgeEmitter(BaseEmitter):
             emitted_policy_name_set.add(node.name)
             emitted_attachments = merged_attachments
 
-        policy_names = [node.name for node in emitted_nodes]
-
         if emitted_attachments.keystore:
             lines.append("")
             lines.append("[Keystore]")
@@ -146,13 +144,6 @@ class SurgeEmitter(BaseEmitter):
             content="\n".join(lines),
             supported_nodes=emitted_nodes,
             issues=issues,
-            extras={
-                "template_context": {
-                    "proxies_names": (
-                        f"PROXY = select, {', '.join(policy_names)}"
-                    )
-                }
-            },
         )
 
     def _encode_protocol(

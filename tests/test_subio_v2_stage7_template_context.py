@@ -22,35 +22,51 @@ def _ss() -> ShadowsocksNode:
     )
 
 
-def test_builtin_emitters_provide_complete_template_context():
+def test_builtin_emitters_provide_bounded_template_fragments():
     node = _ss()
 
     clash = ClashEmitter().emit_result([node])
-    assert clash.extras["template_context"] == {"proxies_names": ["proxy"]}
+    assert clash.fragments.subscription is None
+    assert clash.fragments.plain_list is None
 
     surge = SurgeEmitter().emit_result([node])
-    assert surge.extras["template_context"] == {
-        "proxies_names": "PROXY = select, proxy"
-    }
     assert not hasattr(surge, "emitted_policy_names")
 
     dae = DaeEmitter().emit_result([node])
-    assert dae.extras["template_context"] == {
-        "proxies_names": "'proxy'",
-        "subscription": dae.extras["subscription"],
-    }
+    assert dae.fragments.subscription.startswith("ss://")
 
     v2rayn = V2RayNEmitter().emit_result([node])
-    assert v2rayn.extras["template_context"] == {"proxies_names": ["proxy"]}
-    assert "list" in v2rayn.extras
-    assert "list" not in v2rayn.extras["template_context"]
+    assert v2rayn.fragments.plain_list
 
 
-def test_workflow_accepts_new_emitter_template_context_without_platform_branch(
+def test_template_node_api_is_consistent_and_secret_safe(tmp_path):
+    (tmp_path / "nodes.j2").write_text(
+        "{{ nodes.names() | join(',') }}|{{ nodes.count() }}|"
+        "{{ nodes.exists() }}|{{ nodes.summaries is undefined }}"
+    )
+    # Use the public renderer without constructing a workflow or loading inputs.
+    from subio_v2.workflow.template import TemplateRenderer
+    from subio_v2.workflow.template_context import build_template_context
+
+    node = _ss()
+    fragments = ClashEmitter().emit_result([node]).fragments
+    context = build_template_context(
+        platform="mihomo",
+        rendered="- name: proxy",
+        nodes=[node],
+        fragments=fragments,
+    )
+    output = TemplateRenderer(str(tmp_path)).render("nodes.j2", context)
+    assert output == "proxy|1|True|True"
+    assert "secret" not in output
+
+
+def test_workflow_uses_bounded_template_context_without_platform_branch(
     tmp_path: Path, monkeypatch
 ):
     (tmp_path / "custom.j2").write_text(
-        "{{ proxies_names }}|{{ custom_value }}|{{ private is undefined }}"
+        "{{ nodes.names() | join(',') }}|{{ custom_value is undefined }}|"
+        "{{ private is undefined }}"
     )
     (tmp_path / "source.txt").write_text("unused")
     config = tmp_path / "config.toml"
@@ -76,13 +92,6 @@ template = "custom.j2"
             return EmissionResult(
                 content="payload",
                 supported_nodes=nodes,
-                extras={
-                    "private": "must-not-leak",
-                    "template_context": {
-                        "proxies_names": "CUSTOM",
-                        "custom_value": "context",
-                    },
-                },
             )
 
     monkeypatch.chdir(tmp_path)
@@ -105,4 +114,4 @@ template = "custom.j2"
     ).generate()
     engine.publisher.commit(result.drafts)
 
-    assert (tmp_path / "dist/out.txt").read_text() == "CUSTOM|context|True"
+    assert (tmp_path / "dist/out.txt").read_text() == "direct|True|True"

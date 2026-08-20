@@ -31,10 +31,6 @@ class BaseEmitter(ABC):
     def check_node(self, node: Node) -> TargetCheckResult:
         return self._conversion.check_node(node)
 
-    @staticmethod
-    def template_context(nodes: list[Node]) -> dict[str, Any]:
-        return {"proxies_names": [node.name for node in nodes]}
-
     def issue_for_node(
         self,
         node: Node,

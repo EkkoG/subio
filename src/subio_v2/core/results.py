@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from subio_v2.core.nodes import Node
 
@@ -91,12 +91,20 @@ class TargetEncodingResult(Generic[ContentT]):
     issues: list[ConversionIssue] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class EmissionFragments:
+    """Bounded non-node fragments that a target emitter may expose."""
+
+    subscription: str | None = None
+    plain_list: str | None = None
+
+
 @dataclass
 class EmissionResult(Generic[ContentT]):
     content: ContentT
     supported_nodes: list[Node]
     issues: list[ConversionIssue] = field(default_factory=list)
-    extras: dict[str, Any] = field(default_factory=dict)
+    fragments: EmissionFragments = field(default_factory=EmissionFragments)
 
     @property
     def errors(self) -> list[ConversionIssue]:
