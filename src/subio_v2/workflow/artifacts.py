@@ -10,12 +10,12 @@ from subio_v2.emitter.base import BaseEmitter
 from subio_v2.errors import ArtifactGenerationError
 from subio_v2.formats import get_emitter
 from subio_v2.model.nodes import Node
-from subio_v2.processor.common import FilterProcessor
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.template import TemplateRenderer
+from subio_v2.workflow.transforms import filter_nodes
 from subio_v2.workflow.uploader import GistBatchUploader, upload
 
 
@@ -47,12 +47,7 @@ class ArtifactGenerationService:
         self.issues: list[ConversionIssue] = []
 
     def generate(self) -> ArtifactGenerationResult:
-        global_filter = None
-        if self.config.filters is not None:
-            global_filter = FilterProcessor(
-                include=self.config.filters.include,
-                exclude=self.config.filters.exclude,
-            )
+        global_filter = self.config.filters
         for artifact_config in self.config.artifacts:
             users = artifact_config.users
             single_user = artifact_config.user
@@ -70,7 +65,7 @@ class ArtifactGenerationService:
     def _generate_one(
         self,
         artifact_config: ArtifactConfig,
-        global_filter: FilterProcessor | None,
+        global_filter,
         username: str | None,
     ) -> None:
         name = artifact_config.name
@@ -90,7 +85,7 @@ class ArtifactGenerationService:
                     f"Invalid user overrides for artifact '{name}': {exc}"
                 ) from exc
         if global_filter:
-            nodes = global_filter.process(nodes)
+            nodes = filter_nodes(nodes, global_filter)
 
         emitter = get_emitter(artifact_type)
         if emitter is None:

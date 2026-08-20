@@ -7,14 +7,10 @@ from subio_v2.crypto import age
 from subio_v2.errors import ProviderLoadError
 from subio_v2.formats import get_parser
 from subio_v2.model.nodes import Node
-from subio_v2.processor.common import (
-    DialerProxyProcessor,
-    FilterProcessor,
-    RenameProcessor,
-)
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.config import ProviderConfig, RunConfig
+from subio_v2.workflow.transforms import filter_nodes, rename_nodes, set_dialer_proxy
 
 
 @dataclass(frozen=True)
@@ -90,20 +86,13 @@ class ProviderLoaderService:
     ) -> list[Node]:
         rename = provider_config.rename
         if rename is not None:
-            nodes = RenameProcessor(
-                prefix=rename.add_prefix,
-                suffix=rename.suffix,
-                replace=[{"old": item.old, "new": item.new} for item in rename.replace],
-            ).process(nodes)
+            nodes = rename_nodes(nodes, rename)
         dialer_proxy = provider_config.dialer_proxy
         if dialer_proxy:
-            nodes = DialerProxyProcessor(dialer_proxy=str(dialer_proxy)).process(nodes)
+            nodes = set_dialer_proxy(nodes, str(dialer_proxy))
         filters = provider_config.filters
         if filters is not None:
-            nodes = FilterProcessor(
-                include=filters.include,
-                exclude=filters.exclude,
-            ).process(nodes)
+            nodes = filter_nodes(nodes, filters)
         return nodes
 
     def _fetch_content(
