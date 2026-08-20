@@ -50,6 +50,15 @@ def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
 
 class MasqueCodec(StructuredClashProtocolCodec):
     spec = SPEC
+    stash_input_aliases = {"connect-uri": "uri"}
+    stash_output_aliases = {"uri": "connect-uri"}
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        if node.transport == "h3":
+            data.setdefault("network", "h3")
+        return data, ()
     protocol = Protocol.MASQUE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"

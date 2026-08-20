@@ -18,6 +18,10 @@ SPEC = ProtocolSpec(
 
 class TrustTunnelCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
+        data.setdefault("udp", False)
+        return data
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"

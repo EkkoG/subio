@@ -55,3 +55,12 @@ def test_native_and_override_consumers_use_protocol_registry_for_specs():
     assert "protocol_registry.get_definition" in overrides
     assert "protocol_registry.get_definition" in schema
     assert "from subio_v2.protocols.definitions import get_definition" not in overrides
+
+
+def test_stash_protocol_specific_transforms_live_on_protocol_codecs():
+    stash = (
+        Path(__file__).parents[1] / "src/subio_v2/clash/stash.py"
+    ).read_text()
+    assert "\n_INPUT_ALIASES =" not in stash
+    for protocol in ("TUIC", "MIERU", "HYSTERIA", "HYSTERIA2", "SHADOWSOCKS"):
+        assert f"node.type == Protocol.{protocol}" not in stash

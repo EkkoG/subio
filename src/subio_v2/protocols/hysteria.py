@@ -25,6 +25,22 @@ SPEC = ProtocolSpec(
 
 class HysteriaCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        from subio_v2.clash.stash import _mbps_value
+
+        dropped: list[str] = []
+        for source, target in (("up", "up-speed"), ("down", "down-speed")):
+            if source not in data:
+                continue
+            value = _mbps_value(data.pop(source))
+            if target in data or value is None:
+                dropped.append(source)
+            else:
+                data[target] = value
+        return data, tuple(sorted(dropped))
     protocol = Protocol.HYSTERIA
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "hysteria"

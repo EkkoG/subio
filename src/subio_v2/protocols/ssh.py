@@ -19,6 +19,8 @@ SPEC = ProtocolSpec(
 
 class SSHCodec(StructuredClashProtocolCodec):
     spec = SPEC
+    stash_input_aliases = {"user": "username"}
+    stash_output_aliases = {"username": "user"}
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"

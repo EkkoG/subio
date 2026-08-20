@@ -38,6 +38,18 @@ def _encode_enum(value: Any) -> str:
 
 class MieruCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
+        if "transport" in data:
+            data["transport"] = str(data["transport"]).upper()
+        return data
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        if "transport" in data:
+            data["transport"] = str(data["transport"]).lower()
+        return data, ()
     protocol = Protocol.MIERU
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "mieru"

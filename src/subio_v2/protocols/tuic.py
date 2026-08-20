@@ -25,6 +25,28 @@ SPEC = ProtocolSpec(
 
 class TUICCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
+        if "version" not in data:
+            return data
+        try:
+            version = int(data.pop("version"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Stash TUIC version must be 4 or 5") from exc
+        if version not in {4, 5}:
+            raise ValueError("Stash TUIC version must be 4 or 5")
+        inferred = 5 if data.get("uuid") or data.get("password") else 4
+        if version != inferred:
+            raise ValueError(
+                f"Stash TUIC version {version} does not match its credentials"
+            )
+        return data
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        data["version"] = node.version or (5 if data.get("uuid") else 4)
+        return data, ()
     protocol = Protocol.TUIC
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tuic"

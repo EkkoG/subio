@@ -30,6 +30,27 @@ SPEC = ProtocolSpec(
 
 class ShadowsocksCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        options = data.get("plugin-opts")
+        if not isinstance(options, dict):
+            return data, ()
+        source_context = node.source_context
+        if source_context is not None and source_context.dialect == "stash":
+            return data, ()
+        from subio_v2.clash.stash import _PLUGIN_FIELDS
+
+        supported = _PLUGIN_FIELDS.get(str(data.get("plugin")), frozenset())
+        dropped: list[str] = []
+        for key in tuple(options):
+            if key not in supported:
+                options.pop(key)
+                dropped.append(f"plugin-opts.{key}")
+        if not options:
+            data.pop("plugin-opts", None)
+        return data, tuple(sorted(dropped))
     protocol = Protocol.SHADOWSOCKS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "ss"

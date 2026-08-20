@@ -30,6 +30,10 @@ SPEC = ProtocolSpec(
 
 class TrojanCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
+        data.setdefault("tls", True)
+        return data
     protocol = Protocol.TROJAN
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "trojan"

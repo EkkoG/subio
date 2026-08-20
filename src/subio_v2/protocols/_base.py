@@ -56,6 +56,8 @@ class ClashProtocolCodec(ABC):
     clash_dialects: frozenset[str] = frozenset({"mihomo"})
     target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
     dialect_fields: Mapping[str, frozenset[str]] = MappingProxyType({})
+    stash_input_aliases: Mapping[str, str] = MappingProxyType({})
+    stash_output_aliases: Mapping[str, str] = MappingProxyType({})
     spec: ProtocolSpec | None = None
 
     @property
@@ -80,6 +82,14 @@ class ClashProtocolCodec(ABC):
 
     def fields_for_dialect(self, dialect: str) -> frozenset[str]:
         return self.dialect_fields.get(dialect, frozenset())
+
+    def normalize_stash(self, data: dict[str, Any]) -> dict[str, Any]:
+        return data
+
+    def post_stash_emit(
+        self, data: dict[str, Any], node: Node
+    ) -> tuple[dict[str, Any], tuple[str, ...]]:
+        return data, ()
 
     @abstractmethod
     def parse_clash(
