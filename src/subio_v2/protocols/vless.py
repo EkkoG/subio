@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.nodes import Network, Node, Protocol, VlessNode
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (

@@ -1,4 +1,4 @@
-from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.core.nodes import (
     HttpNode,

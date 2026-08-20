@@ -2,10 +2,11 @@ import copy
 from typing import Any, Dict, List
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.clash.dialect import post_descriptor_emit
-from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.adapters.base import BaseEmitter
+from subio_v2.adapters.clash_family.dialect import post_descriptor_emit
+from subio_v2.adapters.clash_family.stash import post_stash_emit
 from subio_v2.core.nodes import Node, SourcePassthroughNode
+from subio_v2.core.results import EmissionResult, IssueSeverity
 
 
 class ClashEmitter(BaseEmitter):
@@ -104,3 +105,17 @@ class ClashEmitter(BaseEmitter):
         self, proxy: Dict[str, Any], node: Node
     ) -> tuple[Dict[str, Any], tuple[str, ...]]:
         return post_descriptor_emit(proxy, node, self.target_context, self.platform)
+
+
+class StashEmitter(ClashEmitter):
+    """Stash YAML emitter using the shared Clash-family document path."""
+
+    def __init__(self):
+        super().__init__(platform="stash")
+
+    def _post_descriptor_emit(
+        self, proxy: dict[str, Any], node: Node
+    ) -> tuple[dict[str, Any], tuple[str, ...]]:
+        output, dropped = super()._post_descriptor_emit(proxy, node)
+        output, stash_dropped = post_stash_emit(output, node)
+        return output, tuple(sorted({*dropped, *stash_dropped}))

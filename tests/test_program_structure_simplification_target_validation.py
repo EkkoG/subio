@@ -40,7 +40,7 @@ def test_target_validation_no_longer_constructs_capability_snapshots():
     assert not (root / "src/subio_v2/conversion_service.py").exists()
     assert "NodeConversionService" not in source
     clash_emitter = (
-        Path(__file__).parents[1] / "src/subio_v2/emitter/clash.py"
+        Path(__file__).parents[1] / "src/subio_v2/adapters/clash_family/emitter.py"
     ).read_text()
     assert "protocol_registry.target_codec" in clash_emitter
 

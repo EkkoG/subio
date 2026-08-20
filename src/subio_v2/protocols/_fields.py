@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from subio_v2.clash.helpers import (
+from subio_v2.adapters.clash_family.fields import (
     emit_smux,
     emit_tls,
     emit_transport,

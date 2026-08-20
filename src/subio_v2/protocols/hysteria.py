@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.nodes import HysteriaNode, Node, Protocol
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
@@ -29,7 +29,7 @@ class HysteriaCodec(StructuredClashProtocolCodec):
     def post_stash_emit(
         self, data: dict[str, object], node: Node
     ) -> tuple[dict[str, object], tuple[str, ...]]:
-        from subio_v2.clash.stash import _mbps_value
+        from subio_v2.adapters.clash_family.stash import _mbps_value
 
         dropped: list[str] = []
         for source, target in (("up", "up-speed"), ("down", "down-speed")):

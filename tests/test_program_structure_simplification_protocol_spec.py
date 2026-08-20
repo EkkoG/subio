@@ -59,7 +59,7 @@ def test_native_and_override_consumers_use_protocol_registry_for_specs():
 
 def test_stash_protocol_specific_transforms_live_on_protocol_codecs():
     stash = (
-        Path(__file__).parents[1] / "src/subio_v2/clash/stash.py"
+        Path(__file__).parents[1] / "src/subio_v2/adapters/clash_family/stash.py"
     ).read_text()
     assert "\n_INPUT_ALIASES =" not in stash
     for protocol in ("TUIC", "MIERU", "HYSTERIA", "HYSTERIA2", "SHADOWSOCKS"):

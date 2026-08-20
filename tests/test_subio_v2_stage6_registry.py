@@ -7,7 +7,7 @@ import subio_v2.protocols as registry
 from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
-from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.core.nodes import (
     DNSNode,
     GostRelayNode,
@@ -22,7 +22,7 @@ from subio_v2.core.nodes import (
     SudokuHTTPMaskSettings,
     SudokuNode,
 )
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 

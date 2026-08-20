@@ -4,12 +4,12 @@ from typing import Any, Dict
 import yaml
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.clash.dialect import pre_descriptor_normalize
-from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.core.dialect import DialectContext
 from subio_v2.adapters.catalog import normalize_format
+from subio_v2.adapters.clash_family.dialect import pre_descriptor_normalize
+from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import SourcePassthroughNode
 from subio_v2.core.records import NodeRecord
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 
 
 class ClashParser:
@@ -113,3 +113,10 @@ class ClashParser:
             )
         normalized = pre_descriptor_normalize(data, self.context)
         return desc.parse_clash(normalized, self.context)
+
+
+class StashParser(ClashParser):
+    """Stash YAML parser using the shared Clash-family document path."""
+
+    def __init__(self):
+        super().__init__(DialectContext("stash", "yaml"))

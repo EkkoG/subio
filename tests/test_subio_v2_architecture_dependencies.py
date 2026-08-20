@@ -90,13 +90,13 @@ def test_workflow_services_depend_on_registry_interfaces_not_concrete_adapters()
     artifact_imports = _imports(workflow_dir / "artifacts.py")
 
     concrete_prefixes = (
-        "subio_v2.parser.clash",
-        "subio_v2.parser.stash",
+        "subio_v2.adapters.clash_family.parser",
+        "subio_v2.adapters.clash_family.parser",
         "subio_v2.parser.subio",
         "subio_v2.parser.surge",
         "subio_v2.parser.v2rayn",
-        "subio_v2.emitter.clash",
-        "subio_v2.emitter.stash",
+        "subio_v2.adapters.clash_family.emitter",
+        "subio_v2.adapters.clash_family.emitter",
         "subio_v2.emitter.surge",
         "subio_v2.emitter.dae",
         "subio_v2.emitter.v2rayn",

@@ -1,6 +1,6 @@
 from subio_v2.core.dialect import DialectContext
-from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
+from subio_v2.adapters.clash_family.parser import ClashParser
 
 
 def _vmess(**extra):

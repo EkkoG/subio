@@ -69,7 +69,7 @@ Config / local snippet
 | `src/subio_v2/adapters/` | 格式 catalog、target validation、checked emitter 和各格式 family adapter |
 | `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
 | `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
-| `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
+| `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
 | `src/subio_v2/adapters/catalog.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
 | `src/subio_v2/protocols/values.py` | 不带 target 语义的共享协议值域常量 |
@@ -198,7 +198,7 @@ issue 只使用 `mihomo` 规范名称；不得在 target constraints、规则输
 
 `clash` 不得规范化为 `mihomo`。废弃状态只影响配置级提示和文档推荐，不得放宽原版 Clash 的
 协议、transport、cipher、feature 或规则能力。`ClashParser`、`ClashEmitter` 和
-`src/subio_v2/clash/` 是 Clash-family 共享实现名，不因公开平台命名而机械搬迁；模板文件名、
+`src/subio_v2/adapters/clash_family/` 是 Clash-family 共享实现名，不因公开平台命名而机械搬迁；模板文件名、
 artifact 文件名和上传文件名中的 `clash` 也不自动改写。
 
 `clash-meta` 不是废弃平台，也不改变转换结果；Workflow 只在 provider/artifact 配置级各提示

@@ -1,8 +1,8 @@
 from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
-from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.stash import StashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import StashEmitter
 from subio_v2.core.nodes import (
     JuicityNode,
     MieruMultiplexing,
@@ -10,8 +10,8 @@ from subio_v2.core.nodes import (
     MieruTransport,
     Protocol,
 )
-from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.stash import StashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.clash_family.parser import StashParser
 
 
 def test_stash_mieru_round_trips_and_converts_transport_value_domain():

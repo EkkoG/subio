@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.nodes import Node, Protocol, RejectNode
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import smux_group
 from subio_v2.protocols.spec import ProtocolSpec

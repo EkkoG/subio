@@ -4,8 +4,8 @@ import copy
 from typing import Any
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.core.dialect import DialectContext
 from subio_v2.adapters.catalog import common_policy_for_format
+from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node
 
 
@@ -14,7 +14,7 @@ def pre_descriptor_normalize(
 ) -> dict[str, Any]:
     """Hook for source-dialect key normalization before shared descriptors."""
     if context.dialect == "stash":
-        from subio_v2.clash.stash import normalize_stash_proxy
+        from subio_v2.adapters.clash_family.stash import normalize_stash_proxy
 
         return normalize_stash_proxy(data)
     return copy.deepcopy(data)

@@ -1,7 +1,7 @@
 import pytest
 
 from subio_v2.adapters.target import TargetValidationService as NodeConversionService
-from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.core.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
@@ -9,7 +9,7 @@ from subio_v2.core.nodes import (
     MieruTransport,
     Protocol,
 )
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.parser.surge import SurgeParser
 
 

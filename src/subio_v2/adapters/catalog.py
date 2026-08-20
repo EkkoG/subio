@@ -40,21 +40,21 @@ class FormatResolution:
 
 
 def _clash_parser(**_: Any) -> Any:
+    from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
-    from subio_v2.parser.clash import ClashParser
 
     return ClashParser(DialectContext("mihomo", "yaml"))
 
 
 def _clash_parser_for_clash(**_: Any) -> Any:
+    from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
-    from subio_v2.parser.clash import ClashParser
 
     return ClashParser(DialectContext("clash", "yaml"))
 
 
 def _stash_parser(**_: Any) -> Any:
-    from subio_v2.parser.stash import StashParser
+    from subio_v2.adapters.clash_family.parser import StashParser
 
     return StashParser()
 
@@ -83,19 +83,19 @@ def _v2rayn_parser(**_: Any) -> Any:
 
 
 def _clash_emitter() -> Any:
-    from subio_v2.emitter.clash import ClashEmitter
+    from subio_v2.adapters.clash_family.emitter import ClashEmitter
 
     return ClashEmitter(platform="mihomo")
 
 
 def _clash_emitter_for_clash() -> Any:
-    from subio_v2.emitter.clash import ClashEmitter
+    from subio_v2.adapters.clash_family.emitter import ClashEmitter
 
     return ClashEmitter(platform="clash")
 
 
 def _stash_emitter() -> Any:
-    from subio_v2.emitter.stash import StashEmitter
+    from subio_v2.adapters.clash_family.emitter import StashEmitter
 
     return StashEmitter()
 

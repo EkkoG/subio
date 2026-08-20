@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.nodes import Node, Protocol, SnellNode
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (

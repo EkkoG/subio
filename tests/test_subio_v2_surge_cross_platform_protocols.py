@@ -1,4 +1,4 @@
-from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.core.nodes import (
     DirectNode,
@@ -9,7 +9,7 @@ from subio_v2.core.nodes import (
     TailscaleNode,
     TrustTunnelNode,
 )
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.parser.surge import SurgeParser
 
 

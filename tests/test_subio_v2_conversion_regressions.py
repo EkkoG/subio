@@ -1,6 +1,6 @@
 from subio_v2 import links as link
 from subio_v2.core.results import IssueSeverity
-from subio_v2.emitter.clash import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
@@ -11,7 +11,7 @@ from subio_v2.core.nodes import (
     TrojanNode,
     VlessNode,
 )
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
 
 
 def _roundtrip(yaml_text: str) -> dict[str, dict]:

@@ -1,4 +1,4 @@
-from subio_v2.parser.clash import ClashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.core.nodes import Protocol, Network
 
 

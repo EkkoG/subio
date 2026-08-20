@@ -2,11 +2,11 @@
 
 import pytest
 
-from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.stash import StashEmitter
+from subio_v2.adapters.clash_family.emitter import ClashEmitter
+from subio_v2.adapters.clash_family.emitter import StashEmitter
 from subio_v2.core.dialect import DialectContext
-from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.stash import StashParser
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.clash_family.parser import StashParser
 from subio_v2.core.nodes import (
     DNSNode,
     DirectNode,

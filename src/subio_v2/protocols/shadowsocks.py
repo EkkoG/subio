@@ -3,8 +3,8 @@ from __future__ import annotations
 import base64
 import binascii
 
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
@@ -40,7 +40,7 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
         source_context = node.source_context
         if source_context is not None and source_context.dialect == "stash":
             return data, ()
-        from subio_v2.clash.stash import _PLUGIN_FIELDS
+        from subio_v2.adapters.clash_family.stash import _PLUGIN_FIELDS
 
         supported = _PLUGIN_FIELDS.get(str(data.get("plugin")), frozenset())
         dropped: list[str] = []
