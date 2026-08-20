@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Node, Protocol
+from subio_v2.model.nodes import Node
 
 _COMMON_INPUT_ALIASES = {"server-cert-fingerprint": "fingerprint"}
 _COMMON_OUTPUT_ALIASES = {"fingerprint": "server-cert-fingerprint"}
@@ -92,25 +92,11 @@ def post_stash_emit(
     for key in tuple(output):
         if key not in allowed:
             lossless_default = (
-                node.type == Protocol.TAILSCALE
-                and output[key] is False
-                and key
-                in {"udp", "accept-routes", "exit-node-allow-lan-access"}
-            ) or (
-                node.type == Protocol.MASQUE
-                and output[key] is False
-                and key in {"udp", "remote-dns-resolve"}
-            ) or (
-                node.type == Protocol.TRUSTTUNNEL
-                and key == "udp"
-                and output[key] is False
+                codec.stash_lossless_default(node, key, output[key])
+                if codec is not None
+                else False
             )
             output.pop(key)
-            if not lossless_default and not (
-                key == "udp"
-                and node.type
-                in {Protocol.SSH, Protocol.DIRECT, Protocol.MIERU, Protocol.JUICITY}
-                and node.udp
-            ):
+            if not lossless_default:
                 dropped.add(key)
     return output, tuple(sorted(dropped))

@@ -91,6 +91,11 @@ class ClashProtocolCodec(ABC):
     ) -> tuple[dict[str, Any], tuple[str, ...]]:
         return data, ()
 
+    def stash_lossless_default(
+        self, node: Node, key: str, value: object
+    ) -> bool:
+        return False
+
     @abstractmethod
     def parse_clash(
         self, data: Dict[str, Any], context: DialectContext | None = None

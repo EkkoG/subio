@@ -19,6 +19,9 @@ SPEC = ProtocolSpec(
 class TrustTunnelCodec(StructuredClashProtocolCodec):
     spec = SPEC
 
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return key == "udp" and value is False
+
     def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
         data.setdefault("udp", False)
         return data

@@ -39,6 +39,9 @@ def _encode_enum(value: Any) -> str:
 class MieruCodec(StructuredClashProtocolCodec):
     spec = SPEC
 
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return key == "udp" and node.udp
+
     def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
         if "transport" in data:
             data["transport"] = str(data["transport"]).upper()

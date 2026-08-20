@@ -22,6 +22,13 @@ SPEC = ProtocolSpec(
 
 class TailscaleCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return value is False and key in {
+            "udp",
+            "accept-routes",
+            "exit-node-allow-lan-access",
+        }
     protocol = Protocol.TAILSCALE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "tailscale"

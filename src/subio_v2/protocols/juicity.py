@@ -1,4 +1,4 @@
-from subio_v2.model.nodes import JuicityNode, Protocol
+from subio_v2.model.nodes import JuicityNode, Node, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, tls_group
@@ -15,6 +15,9 @@ SPEC = ProtocolSpec(
 
 class JuicityCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return key == "udp" and node.udp
     protocol = Protocol.JUICITY
     clash_type = "juicity"
     dialect_fields = {

@@ -21,6 +21,9 @@ class SSHCodec(StructuredClashProtocolCodec):
     spec = SPEC
     stash_input_aliases = {"user": "username"}
     stash_output_aliases = {"username": "user"}
+
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return key == "udp" and node.udp
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"

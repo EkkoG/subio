@@ -53,6 +53,9 @@ class MasqueCodec(StructuredClashProtocolCodec):
     stash_input_aliases = {"connect-uri": "uri"}
     stash_output_aliases = {"uri": "connect-uri"}
 
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return value is False and key in {"udp", "remote-dns-resolve"}
+
     def post_stash_emit(
         self, data: dict[str, object], node: Node
     ) -> tuple[dict[str, object], tuple[str, ...]]:

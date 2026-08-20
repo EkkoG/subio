@@ -19,6 +19,9 @@ SPEC = ProtocolSpec(
 
 class DirectCodec(StructuredClashProtocolCodec):
     spec = SPEC
+
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return key == "udp" and node.udp
     protocol = Protocol.DIRECT
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "direct"
