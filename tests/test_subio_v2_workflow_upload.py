@@ -4,22 +4,25 @@ from pathlib import Path
 import pytest
 
 from subio_v2.errors import UploadError
+from subio_v2.workflow.config import (
+    ArtifactConfig,
+    UploadConfig,
+    UploaderConfig,
+)
 from subio_v2.workflow.uploader import GistBatchUploader, upload
 
 
 def test_upload_queues_to_gist_and_flush(monkeypatch):
     batch = GistBatchUploader(dry_run=True, clean_gist=True)
-    artifact_conf = {
-        "name": "out.txt",
-        "upload": [{"to": "gist1", "file_name": "file-{user}.txt"}],
-    }
+    artifact_conf = ArtifactConfig(
+        name="out.txt",
+        artifact_type="v2rayn",
+        upload=(UploadConfig(target="gist1", file_name="file-{user}.txt"),),
+    )
     uploader_configs = [
-        {
-            "name": "gist1",
-            "type": "gist",
-            "id": "abc123",
-            "token": "ENV_FAKE",
-        }
+        UploaderConfig(
+            name="gist1", uploader_type="gist", id="abc123", token="ENV_FAKE"
+        )
     ]
 
     upload(
@@ -41,13 +44,23 @@ def test_upload_queues_to_gist_and_flush(monkeypatch):
 
 def test_uploader_begin_and_abort_discard_pending_files():
     batch = GistBatchUploader(dry_run=True)
-    uploader = {"name": "gist1", "id": "abc123", "token": ""}
-    batch.add("old", {"name": "old.txt"}, {}, uploader)
+    uploader = UploaderConfig(name="gist1", uploader_type="gist", id="abc123")
+    batch.add(
+        "old",
+        ArtifactConfig(name="old.txt", artifact_type="v2rayn"),
+        UploadConfig(target="gist1"),
+        uploader,
+    )
 
     batch.begin()
     assert batch.pending_uploads() == []
 
-    batch.add("new", {"name": "new.txt"}, {}, uploader)
+    batch.add(
+        "new",
+        ArtifactConfig(name="new.txt", artifact_type="v2rayn"),
+        UploadConfig(target="gist1"),
+        uploader,
+    )
     batch.abort()
     assert batch.pending_uploads() == []
 
@@ -55,14 +68,18 @@ def test_uploader_begin_and_abort_discard_pending_files():
 def test_real_upload_requires_environment_token(monkeypatch):
     monkeypatch.delenv("MISSING_GIST_TOKEN", raising=False)
     batch = GistBatchUploader()
-    artifact_conf = {"name": "out.txt", "upload": [{"to": "gist1"}]}
+    artifact_conf = ArtifactConfig(
+        name="out.txt",
+        artifact_type="v2rayn",
+        upload=(UploadConfig(target="gist1"),),
+    )
     uploader_configs = [
-        {
-            "name": "gist1",
-            "type": "gist",
-            "id": "abc123",
-            "token": "ENV_MISSING_GIST_TOKEN",
-        }
+        UploaderConfig(
+            name="gist1",
+            uploader_type="gist",
+            id="abc123",
+            token="ENV_MISSING_GIST_TOKEN",
+        )
     ]
 
     with pytest.raises(UploadError, match="MISSING_GIST_TOKEN"):
@@ -71,11 +88,14 @@ def test_real_upload_requires_environment_token(monkeypatch):
 
 def test_upload_rejects_path_traversal_filename():
     batch = GistBatchUploader(dry_run=True)
-    artifact_conf = {
-        "name": "out.txt",
-        "upload": [{"to": "gist1", "file_name": "../secret.txt"}],
-    }
-    uploader_configs = [{"name": "gist1", "type": "gist", "id": "abc123", "token": ""}]
+    artifact_conf = ArtifactConfig(
+        name="out.txt",
+        artifact_type="v2rayn",
+        upload=(UploadConfig(target="gist1", file_name="../secret.txt"),),
+    )
+    uploader_configs = [
+        UploaderConfig(name="gist1", uploader_type="gist", id="abc123")
+    ]
 
     with pytest.raises(UploadError, match="Invalid upload filename"):
         upload("content", artifact_conf, uploader_configs, batch)
@@ -87,14 +107,18 @@ def test_gist_token_is_not_put_in_git_argv(monkeypatch):
     batch = GistBatchUploader()
     upload(
         "content",
-        {"name": "out.txt", "upload": [{"to": "gist1"}]},
+        ArtifactConfig(
+            name="out.txt",
+            artifact_type="v2rayn",
+            upload=(UploadConfig(target="gist1"),),
+        ),
         [
-            {
-                "name": "gist1",
-                "type": "gist",
-                "id": "abc123",
-                "token": "ENV_TEST_GIST_TOKEN",
-            }
+            UploaderConfig(
+                name="gist1",
+                uploader_type="gist",
+                id="abc123",
+                token="ENV_TEST_GIST_TOKEN",
+            )
         ],
         batch,
     )

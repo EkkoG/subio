@@ -41,8 +41,8 @@ class WorkflowEngine:
         self.publisher = ArtifactPublisher()
 
         # Age encryption keys
-        self.global_age_secret_key = self.config.get("age_secret_key", "")
-        self.global_age_public_key = self.config.get("age_public_key", "")
+        self.global_age_secret_key = self.config.age_secret_key
+        self.global_age_public_key = self.config.age_public_key
 
         if self.global_age_secret_key:
             err = age.verify_secret_key(self.global_age_secret_key)
@@ -88,8 +88,8 @@ class WorkflowEngine:
         remote_loader = RunRemoteLoader()
         try:
             remote_rulesets = (
-                load_rulesets(self.config["ruleset"], loader=remote_loader)
-                if "ruleset" in self.config
+                load_rulesets(self.config.rulesets, loader=remote_loader)
+                if self.config.rulesets
                 else RuleSetStore()
             )
             self.rulesets = merge_stores(self._local_rulesets, remote_rulesets)

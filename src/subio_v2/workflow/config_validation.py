@@ -17,6 +17,23 @@ class ConfigValidator:
         cls._validate_options(config.get("options"), "Config options")
         cls._validate_filters(config.get("filters"), "Config filters")
 
+        rulesets = config.get("ruleset", [])
+        if not isinstance(rulesets, list):
+            raise ConfigError("Config section 'ruleset' must be a list")
+        for entry in rulesets:
+            if not isinstance(entry, dict):
+                raise ConfigError("Entries in 'ruleset' must be objects")
+            name = entry.get("name")
+            if not isinstance(name, str) or not name:
+                raise ConfigError("Every 'ruleset' entry must have a name")
+            url = entry.get("url")
+            if not isinstance(url, str) or not url:
+                raise ConfigError(f"Ruleset '{name}' must define a URL")
+            for key in ("type", "behavior", "format", "user_agent"):
+                value = entry.get(key)
+                if value is not None and not isinstance(value, str):
+                    raise ConfigError(f"Ruleset '{name}' {key} must be a string")
+
         for section in ("provider", "artifact", "uploader"):
             entries = config.get(section, [])
             if not isinstance(entries, list):
@@ -44,25 +61,37 @@ class ConfigValidator:
 
     @staticmethod
     def warn_platform_replacements(config: Mapping[str, Any]) -> None:
-        for section in ("provider", "artifact"):
-            for entry in config.get(section, []):
-                platform = entry.get("type")
-                resolution = (
-                    resolve_platform(platform) if isinstance(platform, str) else None
+        if hasattr(config, "providers") and hasattr(config, "artifacts"):
+            entries = [
+                ("Provider", item.name, item.provider_type)
+                for item in config.providers
+            ] + [
+                ("Artifact", item.name, item.artifact_type)
+                for item in config.artifacts
+            ]
+        else:
+            entries = [
+                (section.title(), entry["name"], entry.get("type"))
+                for section in ("provider", "artifact")
+                for entry in config.get(section, [])
+            ]
+
+        for section, name, platform in entries:
+            resolution = (
+                resolve_platform(platform) if isinstance(platform, str) else None
+            )
+            if resolution is None:
+                continue
+            if resolution.deprecated:
+                logger.warning(
+                    f"{section} {name!r} uses deprecated platform type {platform!r}; "
+                    f"use {resolution.replacement!r} for modern Mihomo configurations"
                 )
-                if resolution is None:
-                    continue
-                if resolution.deprecated:
-                    logger.warning(
-                        f"{section.title()} {entry['name']!r} uses deprecated "
-                        f"platform type {platform!r}; use {resolution.replacement!r} "
-                        "for modern Mihomo configurations"
-                    )
-                elif resolution.alias:
-                    logger.warning(
-                        f"{section.title()} {entry['name']!r} uses platform type "
-                        f"alias {platform!r}; use {resolution.replacement!r} instead"
-                    )
+            elif resolution.alias:
+                logger.warning(
+                    f"{section} {name!r} uses platform type alias {platform!r}; "
+                    f"use {resolution.replacement!r} instead"
+                )
 
     @staticmethod
     def _record_unique_name(
@@ -78,6 +107,9 @@ class ConfigValidator:
 
     @classmethod
     def _validate_provider(cls, entry: dict[str, Any], name: str) -> None:
+        provider_type = entry.get("type")
+        if not isinstance(provider_type, str) or not provider_type:
+            raise ConfigError(f"Provider '{name}' type must be a non-empty string")
         has_url = "url" in entry
         has_file = "file" in entry
         if has_url == has_file:
@@ -100,6 +132,7 @@ class ConfigValidator:
                 "for a remote URL source"
             )
         cls._validate_filters(entry.get("filters"), f"Provider '{name}' filters")
+        cls._validate_rename(entry.get("rename"), f"Provider '{name}' rename")
 
     @classmethod
     def _validate_artifact(
@@ -109,6 +142,12 @@ class ConfigValidator:
         position: int,
         outputs: dict[str, tuple[int, str | None]],
     ) -> None:
+        artifact_type = entry.get("type")
+        if not isinstance(artifact_type, str) or not artifact_type:
+            raise ConfigError(f"Artifact '{name}' type must be a non-empty string")
+        template = entry.get("template")
+        if template is not None and not isinstance(template, str):
+            raise ConfigError(f"Artifact '{name}' template must be a string")
         for key in ("allow_conversion_errors", "allow_empty"):
             if not isinstance(entry.get(key, False), bool):
                 raise ConfigError(f"Artifact '{name}' {key} must be a boolean")
@@ -166,6 +205,27 @@ class ConfigValidator:
             raise ConfigError(f"Uploader '{name}' token must be a string")
         if not isinstance(entry.get("clean", False), bool):
             raise ConfigError(f"Uploader '{name}' clean must be a boolean")
+
+    @staticmethod
+    def _validate_rename(value: Any, label: str) -> None:
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            raise ConfigError(f"{label} must be an object")
+        for key in ("add_prefix", "suffix"):
+            item = value.get(key, "")
+            if not isinstance(item, str):
+                raise ConfigError(f"{label} {key} must be a string")
+        replacements = value.get("replace", [])
+        if not isinstance(replacements, list):
+            raise ConfigError(f"{label} replace must be a list")
+        for item in replacements:
+            if not isinstance(item, dict):
+                raise ConfigError(f"{label} replace entries must be objects")
+            if not isinstance(item.get("old"), str) or not isinstance(
+                item.get("new"), str
+            ):
+                raise ConfigError(f"{label} replace entries need string old/new")
 
     @staticmethod
     def _validate_references(config: Mapping[str, Any]) -> None:

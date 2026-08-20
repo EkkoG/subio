@@ -48,14 +48,14 @@ class ArtifactGenerationService:
 
     def generate(self) -> ArtifactGenerationResult:
         global_filter = None
-        if self.config.get("filters"):
+        if self.config.filters is not None:
             global_filter = FilterProcessor(
-                include=self.config["filters"].get("include"),
-                exclude=self.config["filters"].get("exclude"),
+                include=self.config.filters.include,
+                exclude=self.config.filters.exclude,
             )
         for artifact_config in self.config.artifacts:
-            users = artifact_config.get("users", [])
-            single_user = artifact_config.get("user")
+            users = artifact_config.users
+            single_user = artifact_config.user
             if users:
                 for username in users:
                     self._generate_one(artifact_config, global_filter, username)
@@ -123,8 +123,8 @@ class ArtifactGenerationService:
             issue for issue in artifact_issues if issue.severity == IssueSeverity.ERROR
         ]
         allow_errors = bool(
-            self.config.get("allow_conversion_errors", False)
-            or artifact_config.get("allow_conversion_errors", False)
+            self.config.allow_conversion_errors
+            or artifact_config.allow_conversion_errors
         )
         if errors and not allow_errors:
             raise ArtifactGenerationError(
@@ -136,9 +136,7 @@ class ArtifactGenerationService:
                 f"Artifact '{display_name}' is continuing with {len(errors)} "
                 "conversion error(s) because allow_conversion_errors=true"
             )
-        if not emission.supported_nodes and not artifact_config.get(
-            "allow_empty", False
-        ):
+        if not emission.supported_nodes and not artifact_config.allow_empty:
             raise ArtifactGenerationError(
                 f"Artifact '{display_name}' has no emit-capable nodes; "
                 "set allow_empty=true to permit this",
@@ -153,9 +151,9 @@ class ArtifactGenerationService:
         self._stage(
             name,
             emission.content,
-            artifact_config.get("template"),
+            artifact_config.template,
             artifact_type,
-            artifact_config.get("options", {}),
+            artifact_config.options,
             artifact_config,
             username,
             extra_context,
@@ -182,7 +180,7 @@ class ArtifactGenerationService:
             context = {
                 "proxies": raw_content,
                 "options": {
-                    **self.config.get("options", {}),
+                    **self.config.options,
                     **artifact_options,
                 },
                 "user": username,
@@ -204,8 +202,8 @@ class ArtifactGenerationService:
                 if issue.severity == IssueSeverity.ERROR
             ]
             allow_errors = bool(
-                self.config.get("allow_conversion_errors", False)
-                or artifact_config.get("allow_conversion_errors", False)
+                self.config.allow_conversion_errors
+                or artifact_config.allow_conversion_errors
             )
             if errors and not allow_errors:
                 raise ArtifactGenerationError(
@@ -236,9 +234,7 @@ class ArtifactGenerationService:
             raise ArtifactGenerationError(
                 f"Invalid artifact filename: {actual_filename!r}"
             )
-        public_key = artifact_config.get(
-            "age_public_key", ""
-        ) or self.global_age_public_key
+        public_key = artifact_config.age_public_key or self.global_age_public_key
         if public_key:
             try:
                 final_content = age.encrypt_bytes(final_content, public_key).decode(
@@ -254,7 +250,7 @@ class ArtifactGenerationService:
                 f"Multiple artifacts would overwrite 'dist/{actual_filename}'"
             )
         self.staged_artifacts[actual_filename] = final_content
-        if artifact_config.get("upload"):
+        if artifact_config.upload:
             upload(
                 final_content,
                 artifact_config,

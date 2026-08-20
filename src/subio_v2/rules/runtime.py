@@ -36,6 +36,7 @@ from subio_v2.rules.parser import (
     validate_identifier,
 )
 from subio_v2.utils.logger import logger
+from subio_v2.rules.config import RuleSetConfig
 
 CLASH_PLATFORMS = frozenset({"clash", "mihomo", "stash"})
 LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
@@ -623,25 +624,36 @@ def load_remote_resource(
 
 
 def load_rulesets(
-    ruleset_configs: list[dict[str, Any]],
+    ruleset_configs: list[RuleSetConfig] | tuple[RuleSetConfig, ...] | list[dict[str, Any]],
     registry: RuleSetInputCodecRegistry = DEFAULT_RULESET_CODEC_REGISTRY,
     *,
     loader: RunRemoteLoader | None = None,
 ) -> RuleSetStore:
     store = RuleSetStore()
-    if not isinstance(ruleset_configs, list):
+    if not isinstance(ruleset_configs, (list, tuple)):
         raise ConfigError("Config section 'ruleset' must be a list")
 
     for config in ruleset_configs:
-        if not isinstance(config, dict):
-            raise ConfigError("Entries in 'ruleset' must be objects")
-        name = config.get("name")
-        url = config.get("url")
+        if isinstance(config, RuleSetConfig):
+            name = config.name
+            url = config.url
+            user_agent = config.user_agent
+            selection = RuleSetInputSelection(
+                dialect=config.dialect,
+                behavior=config.behavior,
+                format=config.format,
+            )
+        else:
+            if not isinstance(config, dict):
+                raise ConfigError("Entries in 'ruleset' must be objects")
+            name = config.get("name")
+            url = config.get("url")
+            user_agent = config.get("user_agent")
+            selection = RuleSetInputSelection.from_config(config)
         if not isinstance(name, str) or not name:
             raise ConfigError("Every remote ruleset must define a name")
         if not isinstance(url, str) or not url:
             raise ConfigError(f"Ruleset {name!r} must define a URL")
-        user_agent = config.get("user_agent")
         if user_agent is not None and not isinstance(user_agent, str):
             raise ConfigError(f"Ruleset {name!r} user_agent must be a string")
 
@@ -651,7 +663,6 @@ def load_rulesets(
         except ValueError as exc:
             raise ConfigError(str(exc)) from exc
 
-        selection = RuleSetInputSelection.from_config(config)
         codec = registry.get(selection)
         logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
         content = load_remote_resource(url, user_agent, loader=loader)

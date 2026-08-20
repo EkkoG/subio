@@ -4,6 +4,7 @@ import pytest
 
 from subio_v2.errors import ProviderLoadError
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.workflow.config import ProviderConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService
 
@@ -29,7 +30,7 @@ def test_fetch_content_file_relative_to_config_and_provider_dir(tmp_path, monkey
     service = ProviderLoaderService(str(cfg))
 
     # Case 1: file exists in config dir
-    conf = {"file": "nodes.json5"}
+    conf = ProviderConfig(name="file", provider_type="subio", file="nodes.json5")
     c1 = service._fetch_content(conf, RunRemoteLoader())
     assert b"a:1" in c1 or b"a: 1" in c1 or b'"a": 1' in c1
 
@@ -74,14 +75,20 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
 
     # Success path and user_agent header
     c = service._fetch_content(
-        {"url": "http://ok", "user_agent": "UA"}, RunRemoteLoader()
+        ProviderConfig(
+            name="remote", provider_type="mihomo", url="http://ok", user_agent="UA"
+        ),
+        RunRemoteLoader(),
     )
     assert c == b"hello"
     assert captured["headers"] == {"User-Agent": "UA"}
 
     # Failure path aborts instead of publishing a partial workflow.
     with pytest.raises(ProviderLoadError, match="Failed to fetch provider"):
-        service._fetch_content({"url": "http://fail"}, RunRemoteLoader())
+        service._fetch_content(
+            ProviderConfig(name="remote", provider_type="mihomo", url="http://fail"),
+            RunRemoteLoader(),
+        )
 
 
 def test_run_remote_loader_caches_by_url_and_headers_only_within_one_instance(
@@ -208,7 +215,10 @@ def test_provider_decode_accepts_utf8_bom_and_rejects_invalid_utf8(tmp_path):
     service = ProviderLoaderService(str(cfg))
 
     assert service._decode_content(
-        b"\xef\xbb\xbfproxies: []", {"name": "bom"}
+        b"\xef\xbb\xbfproxies: []",
+        ProviderConfig(name="bom", provider_type="mihomo"),
     ) == "proxies: []"
     with pytest.raises(ProviderLoadError, match="not valid UTF-8"):
-        service._decode_content(b"\xff", {"name": "invalid"})
+        service._decode_content(
+            b"\xff", ProviderConfig(name="invalid", provider_type="mihomo")
+        )

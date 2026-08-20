@@ -12,6 +12,7 @@ from subio_v2.parser.registry import get_parser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
+from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoadResult
 
@@ -296,17 +297,21 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
         if attempts == 1:
             engine.batch_uploader.add(
                 "old",
-                {"name": "old.txt"},
-                {"file_name": "old.txt"},
-                {"name": "gist", "id": "abc123", "token": "token"},
+                ArtifactConfig(name="old.txt", artifact_type="v2rayn"),
+                UploadConfig(target="gist", file_name="old.txt"),
+                UploaderConfig(
+                    name="gist", uploader_type="gist", id="abc123", token="token"
+                ),
             )
             raise ArtifactGenerationError("first run failed")
 
         engine.batch_uploader.add(
             "new",
-            {"name": "new.txt"},
-            {"file_name": "new.txt"},
-            {"name": "gist", "id": "abc123", "token": "token"},
+            ArtifactConfig(name="new.txt", artifact_type="v2rayn"),
+            UploadConfig(target="gist", file_name="new.txt"),
+            UploaderConfig(
+                name="gist", uploader_type="gist", id="abc123", token="token"
+            ),
         )
         return ArtifactGenerationResult({"new.txt": "new"}, [])
 

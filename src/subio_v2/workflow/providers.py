@@ -44,7 +44,7 @@ class ProviderLoaderService:
                     f"Processing provider: [bold cyan]{name}[/bold cyan] "
                     f"({provider_type})"
                 )
-                if provider_config.get("allow_unsafe_external", False):
+                if provider_config.allow_unsafe_external:
                     logger.warning(
                         f"Provider '{name}' enables remote Surge External passthrough; "
                         "the generated Surge configuration may contain program entries "
@@ -56,10 +56,8 @@ class ProviderLoaderService:
                 content = self._decode_content(content_bytes, provider_config)
                 parser = get_parser(
                     provider_type,
-                    source_kind="remote" if "url" in provider_config else "local",
-                    allow_unsafe_external=provider_config.get(
-                        "allow_unsafe_external", False
-                    ),
+                    source_kind="remote" if provider_config.url else "local",
+                    allow_unsafe_external=provider_config.allow_unsafe_external,
                 )
                 if parser is None:
                     raise ProviderLoadError(
@@ -90,33 +88,34 @@ class ProviderLoaderService:
     def _process_nodes(
         nodes: list[Node], provider_config: ProviderConfig
     ) -> list[Node]:
-        rename = provider_config.get("rename")
-        if isinstance(rename, dict):
+        rename = provider_config.rename
+        if rename is not None:
             nodes = RenameProcessor(
-                prefix=rename.get("add_prefix", ""),
-                replace=rename.get("replace", []),
+                prefix=rename.add_prefix,
+                suffix=rename.suffix,
+                replace=[{"old": item.old, "new": item.new} for item in rename.replace],
             ).process(nodes)
-        dialer_proxy = provider_config.get("dialer_proxy")
+        dialer_proxy = provider_config.dialer_proxy
         if dialer_proxy:
             nodes = DialerProxyProcessor(dialer_proxy=str(dialer_proxy)).process(nodes)
-        filters = provider_config.get("filters")
-        if isinstance(filters, dict):
+        filters = provider_config.filters
+        if filters is not None:
             nodes = FilterProcessor(
-                include=filters.get("include"),
-                exclude=filters.get("exclude"),
+                include=filters.include,
+                exclude=filters.exclude,
             ).process(nodes)
         return nodes
 
     def _fetch_content(
         self, config: ProviderConfig, remote_loader: RunRemoteLoader
     ) -> bytes:
-        provider_name = str(config.get("name", "unknown"))
-        if "url" in config:
+        provider_name = config.name
+        if config.url:
             headers = {}
-            if config.get("user_agent"):
-                headers["User-Agent"] = str(config["user_agent"])
+            if config.user_agent:
+                headers["User-Agent"] = config.user_agent
             try:
-                content = remote_loader.fetch(str(config["url"]), headers=headers)
+                content = remote_loader.fetch(config.url, headers=headers)
             except RemoteLoadError as exc:
                 cause = type(exc.__cause__).__name__ if exc.__cause__ else type(exc).__name__
                 raise ProviderLoadError(
@@ -128,11 +127,11 @@ class ProviderLoaderService:
                 f"(sha256:{digest})"
             )
             return content
-        if "file" not in config:
+        if not config.file:
             raise ProviderLoadError(
                 f"Provider '{provider_name}' must define either 'url' or 'file'"
             )
-        path = str(config["file"])
+        path = config.file
         config_dir = os.path.dirname(self.config_path)
         candidates = (os.path.join(config_dir, path), os.path.join(config_dir, "provider", path))
         for absolute_path in candidates:
@@ -152,10 +151,10 @@ class ProviderLoaderService:
     def _decode_content(
         self, content: bytes, config: ProviderConfig
     ) -> str:
-        provider_name = str(config.get("name", "unknown"))
+        provider_name = config.name
         secret_keys = [
             str(value)
-            for value in (config.get("age_secret_key"), self.global_age_secret_key)
+            for value in (config.age_secret_key, self.global_age_secret_key)
             if value
         ]
         if secret_keys:

@@ -3,11 +3,12 @@ import re
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from subio_v2.errors import UploadError
 from subio_v2.utils.logger import logger
+from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
 
 _GIST_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -47,30 +48,30 @@ class GistBatchUploader:
     def add(
         self,
         content: str,
-        artifact_config: Mapping[str, Any],
-        upload_item: Mapping[str, Any],
-        uploader: Mapping[str, Any],
+        artifact_config: ArtifactConfig,
+        upload_item: UploadConfig,
+        uploader: UploaderConfig,
         username: str | None = None,
     ) -> None:
-        token = uploader.get("token", "")
+        token = uploader.token
         if token.startswith("ENV_"):
             env_var = token[4:]
             token = os.getenv(env_var, "")
             if not token and not self.dry_run:
                 raise UploadError(
                     f"Environment variable {env_var} required by uploader "
-                    f"'{uploader.get('name', 'unknown')}' is not set"
+                    f"'{uploader.name}' is not set"
                 )
         elif not token and not self.dry_run:
             raise UploadError(
-                f"Token required by uploader '{uploader.get('name', 'unknown')}' is missing"
+                f"Token required by uploader '{uploader.name}' is missing"
             )
 
-        gist_id = uploader.get("id")
+        gist_id = uploader.id
         if not isinstance(gist_id, str) or not _GIST_ID_RE.fullmatch(gist_id):
             raise UploadError(f"Invalid Gist ID: {gist_id!r}")
 
-        file_name = upload_item.get("file_name") or artifact_config.get("name")
+        file_name = upload_item.file_name or artifact_config.name
         if username and isinstance(file_name, str):
             file_name = file_name.replace("{user}", username)
         if not isinstance(file_name, str) or not file_name:
@@ -81,7 +82,7 @@ class GistBatchUploader:
             raise UploadError(f"Invalid upload filename: {file_name}")
 
         if gist_id not in self._pending:
-            clean = self.clean_gist or bool(uploader.get("clean", False))
+            clean = self.clean_gist or uploader.clean
             self._pending[gist_id] = {"token": token, "files": {}, "clean": clean}
 
         pending = self._pending[gist_id]
@@ -228,26 +229,26 @@ class GistBatchUploader:
 
 def upload(
     content: str,
-    artifact_config: Mapping[str, Any],
-    uploader_configs: Sequence[Mapping[str, Any]],
+    artifact_config: ArtifactConfig,
+    uploader_configs: Sequence[UploaderConfig],
     batch_uploader: GistBatchUploader,
     username: str | None = None,
 ) -> None:
     """Validate upload references and queue an artifact in the run-local uploader."""
-    for upload_item in artifact_config.get("upload", []):
-        uploader_name = upload_item.get("to")
+    for upload_item in artifact_config.upload:
+        uploader_name = upload_item.target
         if not uploader_name:
             raise UploadError(
-                f"Upload target is missing in artifact {artifact_config.get('name')!r}"
+                f"Upload target is missing in artifact {artifact_config.name!r}"
             )
 
         uploader = next(
-            (item for item in uploader_configs if item.get("name") == uploader_name),
+            (item for item in uploader_configs if item.name == uploader_name),
             None,
         )
         if not uploader:
             raise UploadError(f"Uploader {uploader_name!r} is not configured")
-        if uploader.get("type") != "gist":
-            raise UploadError(f"Unsupported uploader type: {uploader.get('type')!r}")
+        if uploader.uploader_type != "gist":
+            raise UploadError(f"Unsupported uploader type: {uploader.uploader_type!r}")
 
         batch_uploader.add(content, artifact_config, upload_item, uploader, username)

@@ -18,6 +18,7 @@ from subio_v2.workflow.config import (
     ArtifactConfig,
     ProviderConfig,
     RunConfig,
+    UploadConfig,
     UploaderConfig,
 )
 from subio_v2.workflow.engine import WorkflowEngine
@@ -47,21 +48,21 @@ def test_load_config_formats(tmp_path, monkeypatch):
     # TOML
     toml_p = write(tmp_path, "cfg.toml", "a = 1")
     eng = WorkflowEngine(str(toml_p))
-    assert eng.config["a"] == 1
+    assert eng.config.extra["a"] == 1
     assert isinstance(eng.config, RunConfig)
     assert eng.config.providers == ()
     # JSON
     json_p = write(tmp_path, "cfg.json", '{"a":2}')
     eng = WorkflowEngine(str(json_p))
-    assert eng.config["a"] == 2
+    assert eng.config.extra["a"] == 2
     # JSON5
     json5_p = write(tmp_path, "cfg.json5", "// c\n{a: 3}")
     eng = WorkflowEngine(str(json5_p))
-    assert eng.config["a"] == 3
+    assert eng.config.extra["a"] == 3
     # YAML
     yaml_p = write(tmp_path, "cfg.yaml", "a: 4")
     eng = WorkflowEngine(str(yaml_p))
-    assert eng.config["a"] == 4
+    assert eng.config.extra["a"] == 4
 
 
 def test_run_config_exposes_typed_section_records(tmp_path):
@@ -112,7 +113,14 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
     service._stage(
-        "out.yaml", content_yaml, None, "clash", {}, {}, None, {}
+        "out.yaml",
+        content_yaml,
+        None,
+        "clash",
+        {},
+        ArtifactConfig(name="out.yaml", artifact_type="clash"),
+        None,
+        {},
     )
     eng.publisher.commit(service.staged_artifacts)
     out1 = (tmp_path / "dist" / "out.yaml").read_text()
@@ -123,7 +131,14 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Text content with template: should use renderer result
     service = artifact_service(eng)
     service._stage(
-        "out.txt", "rawtext", "tpl", "surge", {}, {}, None, {}
+        "out.txt",
+        "rawtext",
+        "tpl",
+        "surge",
+        {},
+        ArtifactConfig(name="out.txt", artifact_type="surge", template="tpl"),
+        None,
+        {},
     )
     eng.publisher.commit(service.staged_artifacts)
     out2 = (tmp_path / "dist" / "out.txt").read_text()
@@ -145,7 +160,14 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
     service._stage(
-        "file-{user}.txt", "c", None, "surge", {}, {}, "alice", {}
+        "file-{user}.txt",
+        "c",
+        None,
+        "surge",
+        {},
+        ArtifactConfig(name="file-{user}.txt", artifact_type="surge"),
+        "alice",
+        {},
     )
     eng.publisher.commit(service.staged_artifacts)
     assert (tmp_path / "dist" / "file-alice.txt").exists()
@@ -192,7 +214,16 @@ def test_write_artifact_rejects_path_traversal(tmp_path, monkeypatch):
     service = artifact_service(eng)
 
     with pytest.raises(ArtifactGenerationError, match="Invalid artifact filename"):
-        service._stage("../escape.txt", "secret", None, "surge", {}, {}, None, {})
+        service._stage(
+            "../escape.txt",
+            "secret",
+            None,
+            "surge",
+            {},
+            ArtifactConfig(name="../escape.txt", artifact_type="surge"),
+            None,
+            {},
+        )
 
     assert not (tmp_path / "escape.txt").exists()
 
@@ -515,9 +546,11 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     def generate(self):
         engine.batch_uploader.add(
             "content",
-            {"name": "out.txt"},
-            {},
-            {"name": "gist", "id": "abc123", "token": "token"},
+            ArtifactConfig(name="out.txt", artifact_type="v2rayn"),
+            UploadConfig(target="gist"),
+            UploaderConfig(
+                name="gist", uploader_type="gist", id="abc123", token="token"
+            ),
         )
         return ArtifactGenerationResult({"out.txt": "content"}, [])
 
