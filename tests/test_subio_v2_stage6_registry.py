@@ -4,10 +4,9 @@ from pathlib import Path
 import pytest
 
 import subio_v2.protocols as registry
-from tests.support_target_views import all_platform_capabilities
-
-PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.core.nodes import (
     DNSNode,
     GostRelayNode,
@@ -22,9 +21,10 @@ from subio_v2.core.nodes import (
     SudokuHTTPMaskSettings,
     SudokuNode,
 )
-from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.protocols._base import StructuredClashProtocolCodec
+from tests.support_target_views import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 SCHEMA_SNAPSHOT = (
     Path(__file__).parent / "fixtures/mihomo/schema/proxies-88d5239.json"

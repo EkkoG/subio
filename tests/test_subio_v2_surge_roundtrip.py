@@ -1,7 +1,7 @@
-from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.adapters.surge.emitter import SurgeEmitter
-from subio_v2.core.nodes import HttpVariant
 from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.target import TargetValidationService as NodeConversionService
+from subio_v2.core.nodes import HttpVariant
 
 
 def test_surge_anytls_round_trip_with_reuse_and_tls():

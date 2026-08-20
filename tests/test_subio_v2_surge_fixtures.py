@@ -3,7 +3,6 @@ from pathlib import Path
 from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.adapters.surge.parser import SurgeParser
 
-
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "surge" / "official"
 
 

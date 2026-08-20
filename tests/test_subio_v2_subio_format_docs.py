@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.core.nodes import Protocol
 from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
@@ -14,6 +13,7 @@ from subio_v2.adapters.subio.schema import (
     public_mapping_spec,
     public_user_override_fields,
 )
+from subio_v2.core.nodes import Protocol
 
 REPOSITORY_ROOT = Path(__file__).parents[1]
 FORMAT_DOC_PATH = REPOSITORY_ROOT / "docs" / "subio_node_format.md"

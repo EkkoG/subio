@@ -7,7 +7,6 @@ import pytest
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.links import codecs as link
-from tests.support_target_views import all_platform_capabilities
 from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.core.nodes import (
     AnyTLSNode,
@@ -27,6 +26,7 @@ from subio_v2.core.nodes import (
     VlessNode,
     VmessNode,
 )
+from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 

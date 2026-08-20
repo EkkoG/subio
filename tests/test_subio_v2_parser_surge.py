@@ -1,13 +1,13 @@
 import pytest
 
-from subio_v2.core.results import IssueSeverity
 from subio_v2.adapters.surge.emitter import SurgeEmitter
-from subio_v2.core.nodes import Protocol
 from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.adapters.surge.resources import (
     get_surge_node_attachments,
     peek_surge_node_attachments,
 )
+from subio_v2.core.nodes import Protocol
+from subio_v2.core.results import IssueSeverity
 
 
 def test_surge_parser_proxy_section_and_no_sections():
@@ -112,7 +112,7 @@ vmess3 = vmess, server.example.com, 443, username=4189e3cc-b796-4c5d-85b7-45977f
 
 def test_surge_emitter_preserves_obfs_host_for_tls_mode():
     """Surge allows obfs-host for both supported simple-obfs modes."""
-    from subio_v2.core.nodes import ShadowsocksNode, Protocol
+    from subio_v2.core.nodes import Protocol, ShadowsocksNode
 
     emitter = SurgeEmitter()
 
@@ -298,11 +298,11 @@ snell = snell, example.com, 443, psk=p, version=6, reuse=false, udp-port=8443, m
 def test_surge_emitter_ws_path_only_when_has_value():
     """Test that Surge emitter only outputs ws-path when it has a value"""
     from subio_v2.core.nodes import (
-        TrojanNode,
-        VmessNode,
+        Network,
         Protocol,
         TransportSettings,
-        Network,
+        TrojanNode,
+        VmessNode,
     )
 
     emitter = SurgeEmitter()
@@ -475,8 +475,9 @@ def test_surge_missing_referenced_keystore_entry_is_a_parse_error():
 
 def test_surge_emitter_ssh_auto_keystore_from_clash():
     """Test that Surge emitter auto-generates keystore ID for SSH nodes from clash-like platforms"""
-    from subio_v2.core.nodes import SSHNode, Protocol
     import base64
+
+    from subio_v2.core.nodes import Protocol, SSHNode
 
     # SSH node from clash-like platform (no keystore_id, but has private_key in raw format)
     # private_key is stored in raw format internally (without base64)
@@ -528,8 +529,9 @@ o1NTGjy9FnFZ7G0GRfXIfi8Rxrm6wF2CMHiSMAABFhNzYaHByc3h5QHR9PQ==
 
 def test_surge_emitter_ssh_base64_encoding():
     """Test that Surge emitter correctly encodes raw private_key to base64 for Surge Keystore"""
-    from subio_v2.core.nodes import SSHNode, Protocol
     import base64
+
+    from subio_v2.core.nodes import Protocol, SSHNode
 
     # private_key is stored in raw format internally (without base64)
     raw_key1 = """-----BEGIN OPENSSH PRIVATE KEY-----

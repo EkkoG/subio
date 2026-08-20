@@ -6,8 +6,8 @@ from typing import Any, Dict, Optional
 import jinja2
 import yaml
 
-from subio_v2.core.results import ConversionIssue
 from subio_v2.core.errors import TemplateRenderError
+from subio_v2.core.results import ConversionIssue
 from subio_v2.rules.runtime import RuleIssueCollector, RuleSetStore
 from subio_v2.workflow.filters import all_filters
 

@@ -6,10 +6,10 @@ import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping
 
-from subio_v2.core.results import ConversionIssue
+from subio_v2.adapters.catalog import normalize_format
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.errors import ConfigError
-from subio_v2.adapters.catalog import normalize_format
+from subio_v2.core.results import ConversionIssue
 from subio_v2.core.rule_model import (
     BoundRule,
     DefaultParameter,
@@ -20,6 +20,7 @@ from subio_v2.core.rule_model import (
     RuleComment,
     RuleRenderResult,
 )
+from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
@@ -33,7 +34,6 @@ from subio_v2.rules.parser import (
     parse_argument_names,
     validate_identifier,
 )
-from subio_v2.infrastructure.logging import logger
 
 
 @dataclass

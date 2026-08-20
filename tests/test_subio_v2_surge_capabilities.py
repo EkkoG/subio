@@ -1,7 +1,4 @@
-from tests.support_target_views import all_platform_capabilities
 from subio_v2.adapters.target import TargetValidationService as NodeConversionService
-
-PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.core.nodes import (
     Hysteria2Node,
     Protocol,
@@ -9,6 +6,9 @@ from subio_v2.core.nodes import (
     SnellNode,
     TUICNode,
 )
+from tests.support_target_views import all_platform_capabilities
+
+PLATFORM_CAPABILITIES = all_platform_capabilities()
 
 SURGE_SHADOWSOCKS_CIPHERS = {
     "2022-blake3-aes-128-gcm",

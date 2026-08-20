@@ -1,7 +1,9 @@
 import pytest
 
-from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.core.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
@@ -9,8 +11,6 @@ from subio_v2.core.nodes import (
     MieruTransport,
     Protocol,
 )
-from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.adapters.surge.parser import SurgeParser
 
 
 def test_mihomo_mieru_port_range_round_trip_uses_strong_ir():

@@ -6,13 +6,13 @@ from typing import get_type_hints
 import pytest
 
 import subio_v2.protocols as registry
-from tests.support_target_views import all_platform_capabilities
 from subio_v2.core.nodes import BaseNode, Protocol
 from subio_v2.protocols._base import ClashProtocolCodec
 from subio_v2.protocols.definitions import (
     TERMINAL_NATIVE_COMMON_EXCLUDED_FIELDS,
     TERMINAL_NATIVE_COMMON_FIELDS,
 )
+from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 

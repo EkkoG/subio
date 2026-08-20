@@ -1,13 +1,11 @@
 import pytest
 
-from tests.support_target_views import all_platform_capabilities
 from subio_v2.adapters.catalog import get_emitter, get_parser
+from subio_v2.adapters.clash_family.emitter import ClashEmitter, StashEmitter
+from subio_v2.adapters.clash_family.parser import ClashParser, StashParser
+from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
-from subio_v2.adapters.clash_family.emitter import ClashEmitter
-from subio_v2.adapters.clash_family.emitter import StashEmitter
-from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.adapters.clash_family.parser import StashParser
 
 STAGE9_PROTOCOLS = {
     "shadowsocks",

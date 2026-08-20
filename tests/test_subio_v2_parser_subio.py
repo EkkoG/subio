@@ -7,13 +7,7 @@ import pytest
 import yaml
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.core.nodes import (
-    Protocol,
-    ShadowsocksNode,
-    VlessNode,
-)
 from subio_v2.adapters.subio.parser import SubioParser
-from subio_v2.protocols.definitions import TERMINAL_NATIVE_COMMON_FIELDS
 from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
     PUBLIC_PROTOCOLS,
@@ -22,6 +16,12 @@ from subio_v2.adapters.subio.schema import (
     public_node_fields,
     public_user_override_fields,
 )
+from subio_v2.core.nodes import (
+    Protocol,
+    ShadowsocksNode,
+    VlessNode,
+)
+from subio_v2.protocols.definitions import TERMINAL_NATIVE_COMMON_FIELDS
 
 SCHEMA_PATH = Path(__file__).parents[1] / "schemas" / "subio-node-v2.schema.json"
 

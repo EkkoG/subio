@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.errors import ConfigError
+from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.core.rule_model import (
     BoundRule,
     DefaultParameter,

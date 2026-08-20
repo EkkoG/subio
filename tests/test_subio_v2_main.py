@@ -2,8 +2,8 @@ import sys
 
 # Import the module under test
 from subio_v2 import main as main_mod
-from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.core.errors import ArtifactGenerationError
+from subio_v2.core.results import ConversionIssue, IssueSeverity
 
 
 def test_find_default_config_priority(tmp_path, monkeypatch):

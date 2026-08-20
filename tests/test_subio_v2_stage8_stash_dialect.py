@@ -1,7 +1,6 @@
-from subio_v2.adapters.clash_family.emitter import ClashEmitter
-from subio_v2.adapters.clash_family.emitter import StashEmitter
-from subio_v2.core.nodes import HttpNode, Protocol, SSHNode, TLSSettings
+from subio_v2.adapters.clash_family.emitter import ClashEmitter, StashEmitter
 from subio_v2.adapters.clash_family.parser import StashParser
+from subio_v2.core.nodes import HttpNode, Protocol, SSHNode, TLSSettings
 
 
 def test_stash_parser_normalizes_common_and_protocol_aliases():
