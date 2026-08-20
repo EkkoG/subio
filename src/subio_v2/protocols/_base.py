@@ -17,6 +17,7 @@ from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import BaseNode, Node, Protocol
 from subio_v2.protocols._fields import ClashFieldSpec
 from subio_v2.protocols.definitions import ProtocolDefinition, get_definition
+from subio_v2.protocols.spec import ProtocolSpec
 
 
 @dataclass(frozen=True)
@@ -34,9 +35,12 @@ class ClashProtocolCodec(ABC):
     clash_dialects: frozenset[str] = frozenset({"mihomo"})
     target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
     dialect_fields: Mapping[str, frozenset[str]] = MappingProxyType({})
+    spec: ProtocolSpec | None = None
 
     @property
     def definition(self) -> ProtocolDefinition:
+        if self.spec is not None:
+            return self.spec
         definition = get_definition(self.protocol)
         if definition is None:
             raise ValueError(f"Protocol has no definition: {self.protocol!r}")

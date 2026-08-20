@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from subio_v2.model.nodes import (
     AnyTLSNode,
     BaseNode,
@@ -19,7 +17,6 @@ from subio_v2.model.nodes import (
     RejectNode,
     RematchNode,
     ShadowQUICNode,
-    ShadowsocksNode,
     ShadowsocksRNode,
     SnellNode,
     Socks5Node,
@@ -29,21 +26,11 @@ from subio_v2.model.nodes import (
     TrojanNode,
     TrustTunnelNode,
     TUICNode,
-    VlessNode,
-    VmessNode,
     WireguardNode,
 )
+from subio_v2.protocols.spec import ProtocolSpec
 
-
-@dataclass(frozen=True)
-class ProtocolDefinition:
-    protocol: Protocol
-    node_class: type[BaseNode]
-    requires_endpoint: bool = True
-    user_override_fields: frozenset[str] = frozenset()
-    terminal_native_user_override_fields: frozenset[str] = frozenset()
-    terminal_native_fields: frozenset[str] = frozenset()
-    terminal_native_excluded_fields: frozenset[str] = frozenset()
+ProtocolDefinition = ProtocolSpec
 
 
 TERMINAL_NATIVE_COMMON_FIELDS = frozenset(
@@ -101,7 +88,6 @@ _RUNTIME_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
     Protocol.REJECT: frozenset({"server", "port"}),
     Protocol.REMATCH: frozenset({"server", "port"}),
     Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
-    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
     Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
     Protocol.SNELL: frozenset({"server", "port", "psk"}),
     Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
@@ -120,8 +106,6 @@ _RUNTIME_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
     Protocol.TROJAN: frozenset({"server", "port", "password"}),
     Protocol.TRUSTTUNNEL: frozenset({"server", "port", "username", "password"}),
     Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
-    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
-    Protocol.VMESS: frozenset({"server", "port", "uuid", "alter_id", "cipher"}),
     Protocol.WIREGUARD: frozenset(
         {"server", "port", "private_key", "public_key", "preshared_key"}
     ),
@@ -151,7 +135,6 @@ _TERMINAL_NATIVE_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
     Protocol.REJECT: frozenset(),
     Protocol.REMATCH: frozenset(),
     Protocol.SHADOWQUIC: frozenset({"server", "port", "username", "password"}),
-    Protocol.SHADOWSOCKS: frozenset({"server", "port", "cipher", "password"}),
     Protocol.SHADOWSOCKSR: frozenset({"server", "port", "cipher", "password"}),
     Protocol.SNELL: frozenset({"server", "port", "psk"}),
     Protocol.SOCKS5: frozenset({"server", "port", "username", "password"}),
@@ -170,8 +153,6 @@ _TERMINAL_NATIVE_USER_OVERRIDE_FIELDS: dict[Protocol, frozenset[str]] = {
     Protocol.TROJAN: frozenset({"server", "port", "password"}),
     Protocol.TRUSTTUNNEL: frozenset({"server", "port", "username", "password"}),
     Protocol.TUIC: frozenset({"server", "port", "token", "uuid", "password"}),
-    Protocol.VLESS: frozenset({"server", "port", "uuid"}),
-    Protocol.VMESS: frozenset({"server", "port", "uuid", "alter_id", "cipher"}),
     Protocol.WIREGUARD: frozenset(
         {"server", "port", "private_key", "public_key", "preshared_key"}
     ),
@@ -315,9 +296,6 @@ _TERMINAL_NATIVE_FIELDS: dict[Protocol, frozenset[str]] = {
             "zero_rtt",
         }
     ),
-    Protocol.SHADOWSOCKS: frozenset(
-        {"cipher", "password", "plugin", "plugin_opts", "smux", "udp_port"}
-    ),
     Protocol.SHADOWSOCKSR: frozenset(
         {
             "cipher",
@@ -420,22 +398,6 @@ _TERMINAL_NATIVE_FIELDS: dict[Protocol, frozenset[str]] = {
     Protocol.TUIC: frozenset(
         {"hop_interval", "password", "ports", "smux", "tls", "token", "uuid", "version"}
     ),
-    Protocol.VLESS: frozenset(
-        {"flow", "packet_encoding", "smux", "tls", "transport", "uuid"}
-    ),
-    Protocol.VMESS: frozenset(
-        {
-            "alter_id",
-            "cipher",
-            "global_padding",
-            "packet_encoding",
-            "smux",
-            "tls",
-            "transport",
-            "uuid",
-            "vmess_aead",
-        }
-    ),
     Protocol.WIREGUARD: frozenset(
         {
             "allowed_ips",
@@ -486,10 +448,7 @@ def _definition(
 
 
 _DEFINITIONS = (
-    _definition(Protocol.SHADOWSOCKS, ShadowsocksNode),
     _definition(Protocol.SHADOWSOCKSR, ShadowsocksRNode),
-    _definition(Protocol.VMESS, VmessNode),
-    _definition(Protocol.VLESS, VlessNode),
     _definition(Protocol.TROJAN, TrojanNode),
     _definition(Protocol.SOCKS5, Socks5Node),
     _definition(Protocol.HTTP, HttpNode),

@@ -19,9 +19,21 @@ from subio_v2.protocols._fields import (
     tls_group,
     transport_group,
 )
+from subio_v2.protocols.spec import ProtocolSpec
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.VLESS,
+    node_class=VlessNode,
+    user_override_fields=frozenset({"server", "port", "uuid"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "uuid"}),
+    terminal_native_fields=frozenset(
+        {"flow", "packet_encoding", "smux", "tls", "transport", "uuid"}
+    ),
+)
 
 
 class VlessCodec(StructuredClashProtocolCodec):
+    spec = SPEC
     protocol = Protocol.VLESS
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "vless"

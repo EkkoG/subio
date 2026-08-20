@@ -35,12 +35,18 @@ from subio_v2.protocols import (
 from subio_v2.protocols._base import ClashProtocolCodec
 from subio_v2.protocols.definitions import (
     ProtocolDefinition,
-    all_definitions,
-    get_definition,
 )
+from subio_v2.protocols.definitions import (
+    all_definitions as legacy_all_definitions,
+)
+from subio_v2.protocols.definitions import (
+    get_definition as legacy_get_definition,
+)
+from subio_v2.protocols.spec import ProtocolSpec
 
 __all__ = [
     "ProtocolDefinition",
+    "ProtocolSpec",
     "all",
     "all_definitions",
     "by_clash_type",
@@ -90,7 +96,7 @@ def register(codec: ClashProtocolCodec) -> None:
     existing_type = _clash_type_index.get(codec.clash_type)
     if existing_type is not None and existing_type is not codec:
         raise ValueError(f"Clash type already registered: {codec.clash_type}")
-    if get_definition(codec.protocol) is None:
+    if codec.spec is None and legacy_get_definition(codec.protocol) is None:
         raise ValueError(f"Protocol has no definition: {codec.protocol!r}")
     _registry[codec.protocol] = codec
     if not codec.dynamic_clash_type:
@@ -103,6 +109,21 @@ for _codec in _CODECS:
 
 def get(protocol: Protocol) -> ClashProtocolCodec | None:
     return _registry.get(protocol)
+
+
+def get_definition(protocol: Protocol) -> ProtocolSpec | None:
+    codec = _registry.get(protocol)
+    if codec is not None and codec.spec is not None:
+        return codec.spec
+    return legacy_get_definition(protocol)
+
+
+def all_definitions() -> tuple[ProtocolSpec, ...]:
+    definitions = {item.protocol: item for item in legacy_all_definitions()}
+    for codec in _registry.values():
+        if codec.spec is not None:
+            definitions[codec.protocol] = codec.spec
+    return tuple(definitions.values())
 
 
 def by_clash_type(clash_type: str) -> ClashProtocolCodec | None:

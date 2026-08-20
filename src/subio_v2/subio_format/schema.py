@@ -8,6 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Mapping, Union, get_args, get_origin, get_type_hints
 
+import subio_v2.protocols as protocol_registry
 from subio_v2.model.nodes import (
     BaseNode,
     Network,
@@ -24,11 +25,10 @@ from subio_v2.model.nodes import (
     WireguardNode,
     WireguardPeer,
 )
-from subio_v2.protocols.definitions import (
-    TERMINAL_NATIVE_COMMON_FIELDS,
-    all_definitions,
-    get_definition,
-)
+from subio_v2.protocols.definitions import TERMINAL_NATIVE_COMMON_FIELDS
+
+all_definitions = protocol_registry.all_definitions
+get_definition = protocol_registry.get_definition
 
 SUBIO_FORMAT_VERSION = 2
 

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import copy
 
+import subio_v2.protocols as protocol_registry
 from subio_v2.model.nodes import Node, SourcePassthroughNode
-from subio_v2.protocols.definitions import get_definition
 
 _OPAQUE_USER_OVERRIDE_FIELDS = frozenset({"server", "port"})
 
 
 def user_override_fields(node: Node) -> frozenset[str]:
-    definition = get_definition(node.type)
+    definition = protocol_registry.get_definition(node.type)
     if definition is not None:
         return definition.user_override_fields
     if isinstance(node, SourcePassthroughNode):
