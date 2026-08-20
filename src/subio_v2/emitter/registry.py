@@ -1,4 +1,5 @@
-from typing import Callable, Dict
+from collections.abc import Callable
+from types import MappingProxyType
 
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.clash import ClashEmitter
@@ -8,9 +9,8 @@ from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.platforms import normalize_platform
 
-
-class EmitterRegistry:
-    _factories: Dict[str, Callable[[], BaseEmitter]] = {
+_CONSTRUCTORS = MappingProxyType(
+    {
         "clash": lambda: ClashEmitter(platform="clash"),
         "mihomo": lambda: ClashEmitter(platform="mihomo"),
         "stash": StashEmitter,
@@ -18,8 +18,11 @@ class EmitterRegistry:
         "v2rayn": V2RayNEmitter,
         "dae": DaeEmitter,
     }
+)
 
-    @classmethod
-    def get_emitter(cls, emitter_type: str) -> BaseEmitter | None:
-        factory = cls._factories.get(normalize_platform(emitter_type))
-        return factory() if factory else None
+
+def get_emitter(emitter_type: str) -> BaseEmitter | None:
+    constructor: Callable[[], BaseEmitter] | None = _CONSTRUCTORS.get(
+        normalize_platform(emitter_type)
+    )
+    return constructor() if constructor else None

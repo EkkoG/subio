@@ -1245,7 +1245,7 @@ proxies:
 
     monkeypatch.setattr(emitter, "check_node", counted_check)
     monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.EmitterRegistry.get_emitter", lambda _: emitter
+        "subio_v2.workflow.artifacts.get_emitter", lambda _: emitter
     )
 
     result = WorkflowEngine(str(cfg), dry_run=True).run()

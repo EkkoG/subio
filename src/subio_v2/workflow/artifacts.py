@@ -7,7 +7,7 @@ import yaml
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.crypto import age
 from subio_v2.emitter.base import BaseEmitter
-from subio_v2.emitter.registry import EmitterRegistry
+from subio_v2.emitter.registry import get_emitter
 from subio_v2.errors import ArtifactGenerationError
 from subio_v2.model.nodes import Node
 from subio_v2.processor.common import FilterProcessor
@@ -92,7 +92,7 @@ class ArtifactGenerationService:
         if global_filter:
             nodes = global_filter.process(nodes)
 
-        emitter = EmitterRegistry.get_emitter(artifact_type)
+        emitter = get_emitter(artifact_type)
         if emitter is None:
             raise ArtifactGenerationError(
                 f"Unsupported artifact type '{artifact_type}' for artifact '{name}'"

@@ -1,5 +1,5 @@
 from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.registry import ParserRegistry
+from subio_v2.parser.registry import get_parser
 from subio_v2.parser.stash import StashParser
 from subio_v2.parser.subio import SubioParser
 from subio_v2.parser.surge import SurgeParser
@@ -8,13 +8,13 @@ from subio_v2.surge.resources import get_surge_node_attachments
 
 
 def test_parser_registry_returns_fresh_mapped_instances():
-    clash = ParserRegistry.get_parser("clash")
-    mihomo = ParserRegistry.get_parser("mihomo")
-    clash_meta = ParserRegistry.get_parser("clash-meta")
-    stash = ParserRegistry.get_parser("stash")
-    v2 = ParserRegistry.get_parser("v2rayn")
-    surge = ParserRegistry.get_parser("surge")
-    subio = ParserRegistry.get_parser("subio")
+    clash = get_parser("clash")
+    mihomo = get_parser("mihomo")
+    clash_meta = get_parser("clash-meta")
+    stash = get_parser("stash")
+    v2 = get_parser("v2rayn")
+    surge = get_parser("surge")
+    subio = get_parser("subio")
 
     assert isinstance(clash, ClashParser)
     assert isinstance(mihomo, ClashParser)
@@ -22,11 +22,11 @@ def test_parser_registry_returns_fresh_mapped_instances():
     assert mihomo.context.dialect == clash_meta.context.dialect == "mihomo"
     assert len({id(clash), id(mihomo), id(clash_meta)}) == 3
     assert isinstance(stash, StashParser)
-    assert ParserRegistry.get_parser("clash") is not clash
+    assert get_parser("clash") is not clash
     assert isinstance(v2, V2RayNParser)
     assert isinstance(surge, SurgeParser)
     assert isinstance(subio, SubioParser)
-    assert ParserRegistry.get_parser("unknown") is None
+    assert get_parser("unknown") is None
 
 
 def test_surge_parsers_from_registry_keep_keystores_isolated():
@@ -43,8 +43,8 @@ b = ssh, b.example.com, 22, username=root, private-key=shared
 shared = type = openssh-private-key, base64 = S0VZLUI=
 """
 
-    parser_a = ParserRegistry.get_parser("surge")
-    parser_b = ParserRegistry.get_parser("surge")
+    parser_a = get_parser("surge")
+    parser_b = get_parser("surge")
     assert isinstance(parser_a, SurgeParser)
     assert isinstance(parser_b, SurgeParser)
 
@@ -60,7 +60,7 @@ shared = type = openssh-private-key, base64 = S0VZLUI=
 
 
 def test_surge_registry_owns_source_trust_options():
-    parser = ParserRegistry.get_parser(
+    parser = get_parser(
         "surge", source_kind="remote", allow_unsafe_external=True
     )
 

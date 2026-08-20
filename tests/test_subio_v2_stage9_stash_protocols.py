@@ -4,10 +4,10 @@ from subio_v2.capabilities.definitions import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.registry import EmitterRegistry
+from subio_v2.emitter.registry import get_emitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.registry import ParserRegistry
+from subio_v2.parser.registry import get_parser
 from subio_v2.parser.stash import StashParser
 
 STAGE9_PROTOCOLS = {
@@ -217,8 +217,8 @@ def _stash_nodes():
 
 
 def test_stage9_atomically_exposes_stash_parser_emitter_and_capabilities():
-    assert isinstance(ParserRegistry.get_parser("stash"), StashParser)
-    assert isinstance(EmitterRegistry.get_emitter("stash"), StashEmitter)
+    assert isinstance(get_parser("stash"), StashParser)
+    assert isinstance(get_emitter("stash"), StashEmitter)
     assert STAGE9_PROTOCOLS <= PLATFORM_CAPABILITIES["stash"]["protocols"]
 
 

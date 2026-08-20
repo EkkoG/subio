@@ -3,12 +3,12 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.registry import EmitterRegistry
+from subio_v2.emitter.registry import get_emitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError
 from subio_v2.model.nodes import RejectMode, RejectNode
 from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.registry import ParserRegistry
+from subio_v2.parser.registry import get_parser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
@@ -145,8 +145,8 @@ def test_stash_domain_mrs_reuses_normal_rule_ir(monkeypatch):
 
 
 def test_mihomo_unknown_extra_is_not_emitted_to_stash():
-    parser = ParserRegistry.get_parser("clash-meta")
-    emitter = EmitterRegistry.get_emitter("stash")
+    parser = get_parser("clash-meta")
+    emitter = get_emitter("stash")
     assert parser is not None
     assert emitter is not None
 

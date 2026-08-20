@@ -3,7 +3,7 @@ import pytest
 from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.emitter.registry import EmitterRegistry
+from subio_v2.emitter.registry import get_emitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
@@ -11,24 +11,24 @@ from subio_v2.model.nodes import Protocol, VlessNode
 
 
 def test_emitter_registry_returns_fresh_platform_specific_instances():
-    clash = EmitterRegistry.get_emitter("clash")
-    mihomo = EmitterRegistry.get_emitter("mihomo")
-    clash_meta = EmitterRegistry.get_emitter("clash-meta")
-    stash = EmitterRegistry.get_emitter("stash")
-    surge = EmitterRegistry.get_emitter("surge")
-    v2 = EmitterRegistry.get_emitter("v2rayn")
-    dae = EmitterRegistry.get_emitter("dae")
+    clash = get_emitter("clash")
+    mihomo = get_emitter("mihomo")
+    clash_meta = get_emitter("clash-meta")
+    stash = get_emitter("stash")
+    surge = get_emitter("surge")
+    v2 = get_emitter("v2rayn")
+    dae = get_emitter("dae")
 
     assert isinstance(clash, ClashEmitter) and clash.platform == "clash"
     assert isinstance(mihomo, ClashEmitter) and mihomo.platform == "mihomo"
     assert isinstance(clash_meta, ClashEmitter) and clash_meta.platform == "mihomo"
     assert isinstance(stash, StashEmitter) and stash.platform == "stash"
     assert len({id(clash), id(mihomo), id(clash_meta), id(stash)}) == 4
-    assert EmitterRegistry.get_emitter("clash") is not clash
+    assert get_emitter("clash") is not clash
     assert isinstance(surge, SurgeEmitter)
     assert isinstance(v2, V2RayNEmitter)
     assert isinstance(dae, DaeEmitter)
-    assert EmitterRegistry.get_emitter("unknown") is None
+    assert get_emitter("unknown") is None
 
 
 def test_clash_family_emitters_apply_their_own_capabilities():
@@ -40,9 +40,9 @@ def test_clash_family_emitters_apply_their_own_capabilities():
         uuid="00000000-0000-0000-0000-000000000001",
     )
 
-    clash = EmitterRegistry.get_emitter("clash")
-    mihomo = EmitterRegistry.get_emitter("mihomo")
-    stash = EmitterRegistry.get_emitter("stash")
+    clash = get_emitter("clash")
+    mihomo = get_emitter("mihomo")
+    stash = get_emitter("stash")
     assert isinstance(clash, ClashEmitter)
     assert isinstance(mihomo, ClashEmitter)
     assert isinstance(stash, StashEmitter)
@@ -66,8 +66,8 @@ def test_mihomo_alias_emits_identical_results_with_canonical_issue_targets():
         uuid="00000000-0000-0000-0000-000000000001",
     )
 
-    canonical = EmitterRegistry.get_emitter("mihomo")
-    alias = EmitterRegistry.get_emitter("clash-meta")
+    canonical = get_emitter("mihomo")
+    alias = get_emitter("clash-meta")
     assert isinstance(canonical, ClashEmitter)
     assert isinstance(alias, ClashEmitter)
 

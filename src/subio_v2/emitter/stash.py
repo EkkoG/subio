@@ -8,7 +8,7 @@ from subio_v2.model.nodes import Node
 
 
 class StashEmitter(ClashEmitter):
-    """Internal Stash YAML emitter; exposed through EmitterRegistry in stage 9."""
+    """Internal Stash YAML emitter exposed through the emitter registry."""
 
     def __init__(self):
         super().__init__(platform="stash")

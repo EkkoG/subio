@@ -6,7 +6,7 @@ from subio_v2.conversion import ConversionIssue
 from subio_v2.crypto import age
 from subio_v2.errors import ProviderLoadError
 from subio_v2.model.nodes import Node
-from subio_v2.parser.registry import ParserRegistry
+from subio_v2.parser.registry import get_parser
 from subio_v2.processor.common import (
     DialerProxyProcessor,
     FilterProcessor,
@@ -54,7 +54,7 @@ class ProviderLoaderService:
                 if not content_bytes:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
                 content = self._decode_content(content_bytes, provider_config)
-                parser = ParserRegistry.get_parser(
+                parser = get_parser(
                     provider_type,
                     source_kind="remote" if "url" in provider_config else "local",
                     allow_unsafe_external=provider_config.get(
