@@ -191,8 +191,17 @@ def render_report(report: dict[str, Any], output_format: str) -> str:
     if report.get("error"):
         lines.append(f"error: {report['error']}")
     for provider in report["providers"]:
+        remote = provider.get("remote")
+        remote_suffix = ""
+        if remote is not None:
+            remote_suffix = f", remote={remote['state']}"
         lines.append(
             f"provider {provider['name']}: {provider['node_count']} nodes"
+            f"{remote_suffix}"
+        )
+    for ruleset in report.get("rulesets", []):
+        lines.append(
+            f"ruleset {ruleset['name']}: remote={ruleset['state']}"
         )
     for artifact in report["artifacts"]:
         lines.append(

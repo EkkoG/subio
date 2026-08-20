@@ -1,6 +1,7 @@
 import json
 import sys
 
+from subio_v2.infrastructure.remote import RemoteFetchResult, RemoteMetadata
 from subio_v2.main import main
 
 
@@ -108,3 +109,65 @@ def test_check_compare_dist_reports_manifest_orphans(tmp_path, monkeypatch, caps
 
     report = json.loads(capsys.readouterr().out)
     assert report["orphan_files"] == ["old.yaml"]
+
+
+def test_check_json_reports_stale_ruleset_from_real_prepare_path(
+    tmp_path, monkeypatch, capsys
+):
+    (tmp_path / "nodes.yaml").write_text(
+        "proxies:\n  - {name: direct, type: direct}\n"
+    )
+    (tmp_path / "template").mkdir()
+    (tmp_path / "template" / "out.j2").write_text(
+        '{{ remote_rules("DIRECT") }}'
+    )
+    config = tmp_path / "config.toml"
+    config.write_text(
+        """
+[[provider]]
+name = "source"
+type = "mihomo"
+file = "nodes.yaml"
+
+[[ruleset]]
+name = "rules"
+url = "https://example.test/rules"
+
+[[artifact]]
+name = "out.yaml"
+type = "mihomo"
+providers = ["source"]
+template = "out.j2"
+""".strip()
+    )
+
+    def stale_fetch(loader, url, *, headers=None):
+        loader.last_result = RemoteFetchResult(
+            b"DOMAIN,example.com",
+            RemoteMetadata(state="stale"),
+        )
+        return b"DOMAIN,example.com"
+
+    monkeypatch.setattr("subio_v2.infrastructure.remote.RunRemoteLoader.fetch", stale_fetch)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["subio", "check", str(config), "--format", "json"],
+    )
+
+    assert main() == 0
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["rulesets"] == [
+        {
+            "name": "rules",
+            "state": "stale",
+            "etag": False,
+            "last_modified": False,
+            "content_length": None,
+        }
+    ]
+    assert [issue["code"] for issue in report["issues"]] == [
+        "remote.stale-cache"
+    ]

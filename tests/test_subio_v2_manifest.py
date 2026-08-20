@@ -174,7 +174,9 @@ def test_clean_dist_keeps_unrestored_temp_when_rollback_fails(tmp_path, monkeypa
         apply_manifest(str(config), (summary("new.yaml"),), dist_dir=dist, clean=True)
 
     assert not old.exists()
-    assert list(dist.glob(".subio-clean-*.tmp"))
+    temporary_files = list(dist.glob(".subio-clean-*.tmp"))
+    assert temporary_files
+    assert "old.yaml" in temporary_files[0].name
 
 
 def test_workflow_writes_manifest_only_when_requested(tmp_path, monkeypatch):

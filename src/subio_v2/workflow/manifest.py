@@ -154,7 +154,9 @@ def apply_manifest(
             if not target.exists():
                 continue
             fd, temporary_name = tempfile.mkstemp(
-                prefix=".subio-clean-", suffix=".tmp", dir=dist_dir
+                prefix=f".subio-clean-{filename}-",
+                suffix=".tmp",
+                dir=dist_dir,
             )
             os.close(fd)
             temporary = Path(temporary_name)

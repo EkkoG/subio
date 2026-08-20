@@ -7,7 +7,7 @@ from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.runtime import load_remote_resource
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.providers import ProviderLoadResult
-from subio_v2.workflow.report import build_report
+from subio_v2.workflow.report import build_report, render_report
 
 
 class Response:
@@ -196,3 +196,4 @@ def test_stale_ruleset_metadata_is_visible_in_report():
     assert [issue["code"] for issue in report["issues"]] == [
         "remote.stale-cache"
     ]
+    assert "ruleset rules: remote=stale" in render_report(report, "text")
