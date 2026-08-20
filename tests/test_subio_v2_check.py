@@ -64,3 +64,20 @@ def test_check_text_reports_dist_comparison(tmp_path, monkeypatch, capsys):
     output = capsys.readouterr().out
     assert "artifact out.yaml:" in output
     assert "changed" in output
+
+
+def test_check_json_missing_config_is_still_machine_readable(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["subio", "check", "missing.toml", "--format", "json"],
+    )
+
+    assert main() == 1
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "error"
+    assert report["error"] == "Config file not found"

@@ -73,52 +73,54 @@ def _write_report(report: dict, output_format: str, output: str | None) -> None:
 
 
 def _run_check(args) -> int:
-    config_path = _resolve_config_path(args.config)
-    if config_path is None:
-        return 1
     quiet = args.report_format == "json" and args.output is None
     context = logger.silenced() if quiet else nullcontext()
     with context:
-        try:
-            engine = WorkflowEngine(config_path, dry_run=True)
-            preparation = engine.prepare()
-            report = build_report(
-                preparation.provider_result,
-                preparation.artifact_result,
-                dist_dir=Path("dist") if args.compare_dist else None,
-            )
-        except WorkflowError as exc:
-            report = build_report(
-                fatal_error=str(exc),
-                extra_issues=tuple(getattr(exc, "issues", ())),
-            )
+        config_path = _resolve_config_path(args.config)
+        if config_path is None:
+            report = build_report(fatal_error="Config file not found")
+        else:
+            try:
+                engine = WorkflowEngine(config_path, dry_run=True)
+                preparation = engine.prepare()
+                report = build_report(
+                    preparation.provider_result,
+                    preparation.artifact_result,
+                    dist_dir=Path("dist") if args.compare_dist else None,
+                )
+            except WorkflowError as exc:
+                report = build_report(
+                    fatal_error=str(exc),
+                    extra_issues=tuple(getattr(exc, "issues", ())),
+                )
     _write_report(report, args.report_format, args.output)
     return 1 if report["status"] == "error" else 0
 
 
 def _run_inspect(args) -> int:
-    config_path = _resolve_config_path(args.config)
-    if config_path is None:
-        return 1
     quiet = args.report_format == "json" and args.output is None
     context = logger.silenced() if quiet else nullcontext()
     with context:
-        try:
-            engine = WorkflowEngine(config_path, dry_run=True)
-            if args.inspect_command == "providers":
-                provider_result = engine.load_providers()
-                report = build_report(provider_result)
-            else:
-                preparation = engine.prepare()
+        config_path = _resolve_config_path(args.config)
+        if config_path is None:
+            report = build_report(fatal_error="Config file not found")
+        else:
+            try:
+                engine = WorkflowEngine(config_path, dry_run=True)
+                if args.inspect_command == "providers":
+                    provider_result = engine.load_providers()
+                    report = build_report(provider_result)
+                else:
+                    preparation = engine.prepare()
+                    report = build_report(
+                        preparation.provider_result,
+                        preparation.artifact_result,
+                    )
+            except WorkflowError as exc:
                 report = build_report(
-                    preparation.provider_result,
-                    preparation.artifact_result,
+                    fatal_error=str(exc),
+                    extra_issues=tuple(getattr(exc, "issues", ())),
                 )
-        except WorkflowError as exc:
-            report = build_report(
-                fatal_error=str(exc),
-                extra_issues=tuple(getattr(exc, "issues", ())),
-            )
     _write_report(report, args.report_format, args.output)
     return 1 if report["status"] == "error" else 0
 
