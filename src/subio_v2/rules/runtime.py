@@ -23,7 +23,7 @@ from subio_v2.model.rules import (
     RuleExpression,
     RuleRenderResult,
 )
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
@@ -173,7 +173,7 @@ class RuleSetRenderer:
         platform: str,
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
-        platform = normalize_platform(platform)
+        platform = normalize_format(platform)
         if platform not in PLATFORM_RULES:
             raise ValueError(f"Unknown ruleset target platform: {platform}")
         target_context = dialect_context_for_platform(platform)

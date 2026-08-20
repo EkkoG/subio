@@ -3,10 +3,10 @@ import pytest
 from subio_v2.conversion_service import NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.emitter.registry import get_emitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
+from subio_v2.formats import get_emitter
 from subio_v2.model.nodes import Protocol, VlessNode
 
 

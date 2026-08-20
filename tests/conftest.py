@@ -52,6 +52,7 @@ CONTRACT_TEST_MODULES = {
     "test_subio_v2_workflow_upload.py": "publication",
     "test_program_structure_simplification_contract.py": "structure-contract",
     "test_program_structure_simplification_config.py": "structure-config",
+    "test_program_structure_simplification_formats.py": "structure-formats",
 }
 
 

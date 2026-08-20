@@ -9,7 +9,7 @@ from subio_v2.conversion import (
 )
 from subio_v2.conversion_service import NodeConversionService
 from subio_v2.model.nodes import Node
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 from subio_v2.utils.logger import logger
 
 
@@ -19,7 +19,7 @@ class BaseEmitter(ABC):
     platform: str = ""
 
     def __init__(self):
-        self.platform = normalize_platform(self.platform)
+        self.platform = normalize_format(self.platform)
         self._conversion = NodeConversionService(self.platform)
         self.target_context = self._conversion.target_context
 

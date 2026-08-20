@@ -10,14 +10,14 @@ from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import SourcePassthroughNode
 from subio_v2.model.records import NodeRecord
 from subio_v2.parser.base import BaseParser
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 
 
 class ClashParser(BaseParser):
     def __init__(self, context: DialectContext | None = None):
         context = context or DialectContext("mihomo", "yaml")
         self.context = DialectContext(
-            normalize_platform(context.dialect), context.format
+            normalize_format(context.dialect), context.format
         )
 
     def parse_result(self, content: Any) -> ParseResult:

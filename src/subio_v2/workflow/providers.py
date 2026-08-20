@@ -5,8 +5,8 @@ from dataclasses import dataclass, replace
 from subio_v2.conversion import ConversionIssue
 from subio_v2.crypto import age
 from subio_v2.errors import ProviderLoadError
+from subio_v2.formats import get_parser
 from subio_v2.model.nodes import Node
-from subio_v2.parser.registry import get_parser
 from subio_v2.processor.common import (
     DialerProxyProcessor,
     FilterProcessor,

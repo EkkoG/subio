@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from subio_v2.errors import ConfigError
-from subio_v2.platforms import resolve_platform
+from subio_v2.formats import resolve_format
 from subio_v2.utils.logger import logger
 
 
@@ -78,7 +78,7 @@ class ConfigValidator:
 
         for section, name, platform in entries:
             resolution = (
-                resolve_platform(platform) if isinstance(platform, str) else None
+                resolve_format(platform) if isinstance(platform, str) else None
             )
             if resolution is None:
                 continue

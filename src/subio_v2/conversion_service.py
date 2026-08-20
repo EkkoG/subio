@@ -16,13 +16,13 @@ from subio_v2.model.nodes import (
     SurgePolicyOptions,
     VmessNode,
 )
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 from subio_v2.validation import validate_node
 
 
 class NodeConversionService:
     def __init__(self, platform: str):
-        self.platform = normalize_platform(platform)
+        self.platform = normalize_format(platform)
         self.target_context = dialect_context_for_platform(self.platform)
         self.capabilities = get_platform_capabilities(self.platform)
         if not self.capabilities:

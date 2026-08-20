@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ _PLATFORM_DIALECTS = {
 
 
 def dialect_context_for_platform(platform: str) -> DialectContext:
-    platform = normalize_platform(platform)
+    platform = normalize_format(platform)
     dialect = _PLATFORM_DIALECTS.get(platform, platform)
     format_name = "yaml" if platform in {"mihomo", "clash", "stash"} else "text"
     return DialectContext(dialect=dialect, format=format_name)

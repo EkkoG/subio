@@ -3,12 +3,11 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.registry import get_emitter
+from subio_v2.formats import get_emitter, get_parser
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError
 from subio_v2.model.nodes import RejectMode, RejectNode
 from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.registry import get_parser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
 from subio_v2.workflow.artifacts import ArtifactGenerationResult

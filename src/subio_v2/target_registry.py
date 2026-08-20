@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 
 
 @dataclass(frozen=True)
@@ -60,7 +60,7 @@ _TARGET_COMMON_POLICIES = {
 
 
 def protocols_for_target(platform: str) -> frozenset[str]:
-    provider = _TARGET_PROTOCOL_PROVIDERS.get(normalize_platform(platform))
+    provider = _TARGET_PROTOCOL_PROVIDERS.get(normalize_format(platform))
     return provider() if provider else frozenset()
 
 
@@ -69,4 +69,4 @@ def target_platforms() -> frozenset[str]:
 
 
 def common_policy_for_target(platform: str) -> TargetCommonPolicy | None:
-    return _TARGET_COMMON_POLICIES.get(normalize_platform(platform))
+    return _TARGET_COMMON_POLICIES.get(normalize_format(platform))

@@ -7,8 +7,8 @@ import yaml
 from subio_v2.conversion import ConversionIssue, IssueSeverity
 from subio_v2.crypto import age
 from subio_v2.emitter.base import BaseEmitter
-from subio_v2.emitter.registry import get_emitter
 from subio_v2.errors import ArtifactGenerationError
+from subio_v2.formats import get_emitter
 from subio_v2.model.nodes import Node
 from subio_v2.processor.common import FilterProcessor
 from subio_v2.protocols.user_overrides import get_nodes_for_user

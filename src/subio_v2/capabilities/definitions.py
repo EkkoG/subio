@@ -1,6 +1,6 @@
 """共享值域常量和由 target codec 注册派生的 capability 查询。"""
 
-from subio_v2.platforms import normalize_platform
+from subio_v2.formats import normalize_format
 from subio_v2.target_registry import (
     common_policy_for_target,
     protocols_for_target,
@@ -92,7 +92,7 @@ def get_platform_capabilities(platform: str) -> dict[str, object] | None:
     import subio_v2.protocols as protocol_registry
     from subio_v2.model.nodes import Protocol
 
-    platform = normalize_platform(platform)
+    platform = normalize_format(platform)
     common_policy = common_policy_for_target(platform)
     protocols = protocols_for_target(platform)
     if common_policy is None:

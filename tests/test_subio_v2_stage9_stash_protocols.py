@@ -1,13 +1,12 @@
 import pytest
 
 from subio_v2.capabilities.definitions import all_platform_capabilities
+from subio_v2.formats import get_emitter, get_parser
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.emitter.registry import get_emitter
 from subio_v2.emitter.stash import StashEmitter
 from subio_v2.parser.clash import ClashParser
-from subio_v2.parser.registry import get_parser
 from subio_v2.parser.stash import StashParser
 
 STAGE9_PROTOCOLS = {
