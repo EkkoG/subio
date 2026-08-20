@@ -1,5 +1,5 @@
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
-from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.core.nodes import (
     DirectNode,
     MasqueMode,
@@ -10,7 +10,7 @@ from subio_v2.core.nodes import (
     TrustTunnelNode,
 )
 from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.parser.surge import SurgeParser
+from subio_v2.adapters.surge.parser import SurgeParser
 
 
 def test_surge_tailscale_common_fields_emit_to_mihomo():

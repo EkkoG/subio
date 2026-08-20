@@ -5,7 +5,7 @@ from __future__ import annotations
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import all_formats, common_policy_for_format, normalize_format
 from subio_v2.links import all_codecs as all_link_codecs
-from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
+from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 
 
 def _protocol_codecs(target: str):

@@ -62,7 +62,7 @@ def _stash_parser(**_: Any) -> Any:
 def _surge_parser(
     *, source_kind: str = "unknown", allow_unsafe_external: bool = False, **_: Any
 ) -> Any:
-    from subio_v2.parser.surge import SurgeParser
+    from subio_v2.adapters.surge.parser import SurgeParser
 
     return SurgeParser(
         source_kind=source_kind,
@@ -101,7 +101,7 @@ def _stash_emitter() -> Any:
 
 
 def _surge_emitter() -> Any:
-    from subio_v2.emitter.surge import SurgeEmitter
+    from subio_v2.adapters.surge.emitter import SurgeEmitter
 
     return SurgeEmitter()
 

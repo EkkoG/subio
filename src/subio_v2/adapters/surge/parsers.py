@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from subio_v2.adapters.surge.syntax import SurgeProxyRecord
 from subio_v2.core.nodes import (
     AnyTLSNode,
     HttpNode,
@@ -19,7 +20,6 @@ from subio_v2.core.nodes import (
     TUICNode,
     VmessNode,
 )
-from subio_v2.surge.syntax import SurgeProxyRecord
 
 
 @dataclass(frozen=True)

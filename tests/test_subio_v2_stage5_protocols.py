@@ -10,7 +10,7 @@ from subio_v2.core.nodes import (
     Protocol,
 )
 from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.parser.surge import SurgeParser
+from subio_v2.adapters.surge.parser import SurgeParser
 
 
 def test_mihomo_mieru_port_range_round_trip_uses_strong_ir():

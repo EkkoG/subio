@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.core.errors import ArtifactGenerationError, ConfigError
 from subio_v2.core.nodes import (
     DirectNode,
@@ -12,7 +12,7 @@ from subio_v2.core.nodes import (
     SourcePassthroughNode,
     TrustTunnelNode,
 )
-from subio_v2.parser.surge import SurgeParser
+from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.workflow.engine import WorkflowEngine
 
 

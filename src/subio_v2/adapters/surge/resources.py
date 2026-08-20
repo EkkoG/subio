@@ -4,7 +4,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
-from subio_v2.surge.syntax import SurgeParameters
+from subio_v2.adapters.surge.syntax import SurgeParameters
 
 
 @dataclass

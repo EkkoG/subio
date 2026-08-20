@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
+from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.core.dialect import (
     dialect_context_for_platform,
     extension_semantic_fields,
@@ -20,7 +21,6 @@ from subio_v2.core.results import (
 )
 from subio_v2.core.validation import validate_node
 from subio_v2.links import all_codecs as all_link_codecs
-from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
 
 
 def _protocol_codecs_for_target(platform: str) -> dict:

@@ -6,8 +6,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
 
-from subio_v2.core.nodes import Protocol
-from subio_v2.surge.emitters import (
+from subio_v2.adapters.surge.emitters import (
     emit_anytls,
     emit_direct,
     emit_http,
@@ -25,7 +24,7 @@ from subio_v2.surge.emitters import (
     emit_vmess,
     emit_wireguard,
 )
-from subio_v2.surge.parsers import (
+from subio_v2.adapters.surge.parsers import (
     parse_anytls,
     parse_http,
     parse_hysteria2,
@@ -37,6 +36,7 @@ from subio_v2.surge.parsers import (
     parse_tuic,
     parse_vmess,
 )
+from subio_v2.core.nodes import Protocol
 
 DEFAULT_SURGE_TARGET = "latest"
 

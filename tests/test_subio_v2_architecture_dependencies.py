@@ -24,7 +24,7 @@ FORBIDDEN_IMPORTS = (
     "subio_v2.emitter",
     "subio_v2.parser",
     "subio_v2.subio_format",
-    "subio_v2.surge",
+    "subio_v2.adapters.surge",
     "subio_v2.workflow",
 )
 
@@ -93,14 +93,14 @@ def test_workflow_services_depend_on_registry_interfaces_not_concrete_adapters()
         "subio_v2.adapters.clash_family.parser",
         "subio_v2.adapters.clash_family.parser",
         "subio_v2.parser.subio",
-        "subio_v2.parser.surge",
+        "subio_v2.adapters.surge.parser",
         "subio_v2.parser.v2rayn",
         "subio_v2.adapters.clash_family.emitter",
         "subio_v2.adapters.clash_family.emitter",
-        "subio_v2.emitter.surge",
+        "subio_v2.adapters.surge.emitter",
         "subio_v2.emitter.dae",
         "subio_v2.emitter.v2rayn",
-        "subio_v2.surge",
+        "subio_v2.adapters.surge",
         "subio_v2.links",
     )
 

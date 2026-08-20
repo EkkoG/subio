@@ -23,7 +23,7 @@ from subio_v2.core.nodes import (
     SudokuNode,
 )
 from subio_v2.adapters.clash_family.parser import ClashParser
-from subio_v2.parser.surge import SurgeParser
+from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 
 SCHEMA_SNAPSHOT = (

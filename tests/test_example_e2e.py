@@ -12,7 +12,7 @@ import toml
 import yaml
 
 from subio_v2.infrastructure import age
-from subio_v2.parser.surge import SurgeParser
+from subio_v2.adapters.surge.parser import SurgeParser
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = REPO_ROOT / "example"

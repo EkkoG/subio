@@ -4,7 +4,29 @@ import copy
 import re
 from typing import Any
 
-from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.adapters.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    SURGE_BUILTIN_ALIAS_TYPES,
+    SURGE_COMMON_PARAMETERS,
+    SURGE_MULTI_VALUE_PARAMETERS,
+    SURGE_PROTOCOL_PARAMETERS,
+    SurgeUdpBehavior,
+    get_surge_codec,
+)
+from subio_v2.adapters.surge.parsers import (
+    SurgeProtocolParseContext,
+)
+from subio_v2.adapters.surge.resources import (
+    SurgeKeystoreEntry,
+    SurgeNamedSection,
+    get_surge_node_attachments,
+)
+from subio_v2.adapters.surge.syntax import (
+    SurgeProxyRecord,
+    parse_parameter_list,
+    parse_proxy_line,
+    split_comma_separated,
+)
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import (
     DirectNode,
@@ -25,29 +47,7 @@ from subio_v2.core.nodes import (
     WireguardPeer,
 )
 from subio_v2.core.records import NodeRecord
-from subio_v2.surge.codecs import (
-    DEFAULT_SURGE_TARGET,
-    SURGE_BUILTIN_ALIAS_TYPES,
-    SURGE_COMMON_PARAMETERS,
-    SURGE_MULTI_VALUE_PARAMETERS,
-    SURGE_PROTOCOL_PARAMETERS,
-    SurgeUdpBehavior,
-    get_surge_codec,
-)
-from subio_v2.surge.parsers import (
-    SurgeProtocolParseContext,
-)
-from subio_v2.surge.resources import (
-    SurgeKeystoreEntry,
-    SurgeNamedSection,
-    get_surge_node_attachments,
-)
-from subio_v2.surge.syntax import (
-    SurgeProxyRecord,
-    parse_parameter_list,
-    parse_proxy_line,
-    split_comma_separated,
-)
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.infrastructure.logging import logger
 
 _PREDEFINED_BUILTIN_NAMES = {

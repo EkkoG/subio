@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 
 from tests.support_target_views import all_platform_capabilities
-from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.core.nodes import Protocol
-from subio_v2.parser.surge import SurgeParser
-from subio_v2.surge.codecs import (
+from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_CODEC_BY_KEYWORD,
     SURGE_CODEC_SPECS,
@@ -17,7 +17,7 @@ from subio_v2.surge.codecs import (
     SurgePolicyKind,
     SurgeUdpBehavior,
 )
-from subio_v2.surge.syntax import parse_proxy_line
+from subio_v2.adapters.surge.syntax import parse_proxy_line
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "surge" / "official"

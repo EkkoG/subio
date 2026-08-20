@@ -1,6 +1,6 @@
 """Shared Surge syntax primitives."""
 
-from subio_v2.surge.syntax import (
+from subio_v2.adapters.surge.syntax import (
     SurgeParameter,
     SurgeParameters,
     SurgeProxyRecord,

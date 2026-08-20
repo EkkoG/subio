@@ -3,8 +3,24 @@ import copy
 import hashlib
 from typing import Any, List
 
-from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.adapters.base import BaseEmitter
+from subio_v2.adapters.surge.codecs import (
+    DEFAULT_SURGE_TARGET,
+    get_surge_protocol_codec,
+)
+from subio_v2.adapters.surge.resources import (
+    SurgeKeystoreEntry,
+    SurgeNamedSection,
+    SurgeNodeAttachments,
+    peek_surge_node_attachments,
+)
+from subio_v2.adapters.surge.syntax import (
+    SurgeParameter,
+    SurgeParameters,
+    SurgeProxyRecord,
+    serialize_parameter_list,
+    serialize_proxy_line,
+)
 from subio_v2.core.nodes import (
     Node,
     ShadowsocksNode,
@@ -15,23 +31,7 @@ from subio_v2.core.nodes import (
     VmessNode,
     WireguardNode,
 )
-from subio_v2.surge.codecs import (
-    DEFAULT_SURGE_TARGET,
-    get_surge_protocol_codec,
-)
-from subio_v2.surge.resources import (
-    SurgeKeystoreEntry,
-    SurgeNamedSection,
-    SurgeNodeAttachments,
-    peek_surge_node_attachments,
-)
-from subio_v2.surge.syntax import (
-    SurgeParameter,
-    SurgeParameters,
-    SurgeProxyRecord,
-    serialize_parameter_list,
-    serialize_proxy_line,
-)
+from subio_v2.core.results import EmissionResult, IssueSeverity
 
 
 class _SurgeEmissionError(ValueError):

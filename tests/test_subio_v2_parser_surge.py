@@ -1,10 +1,10 @@
 import pytest
 
 from subio_v2.core.results import IssueSeverity
-from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.core.nodes import Protocol
-from subio_v2.parser.surge import SurgeParser
-from subio_v2.surge.resources import (
+from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.surge.resources import (
     get_surge_node_attachments,
     peek_surge_node_attachments,
 )

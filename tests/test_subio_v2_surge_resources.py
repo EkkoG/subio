@@ -1,5 +1,5 @@
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
-from subio_v2.emitter.surge import SurgeEmitter
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.core.nodes import (
     HttpNode,
     DirectNode,
@@ -10,15 +10,15 @@ from subio_v2.core.nodes import (
     TLSSettings,
     WireguardNode,
 )
-from subio_v2.parser.surge import SurgeParser
-from subio_v2.surge.resources import (
+from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
     SurgeNodeAttachments,
     get_surge_node_attachments,
     peek_surge_node_attachments,
 )
-from subio_v2.surge.syntax import parse_parameter_list
+from subio_v2.adapters.surge.syntax import parse_parameter_list
 
 
 def keystore_entry(config: str) -> SurgeKeystoreEntry:

@@ -70,7 +70,7 @@ Config / local snippet
 | `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
 | `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
 | `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
-| `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
+| `src/subio_v2/adapters/surge/` | Surge document adapter、词法、codec 规格、安全门禁和节点附件 |
 | `src/subio_v2/adapters/catalog.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
 | `src/subio_v2/protocols/values.py` | 不带 target 语义的共享协议值域常量 |
 | `src/subio_v2/adapters/target.py` | 从实际 target codec 派生支持并返回 checked encode result |
@@ -118,7 +118,7 @@ Emitter 私有兼容字段。
 
 ### 3.3 节点附件
 
-Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
+Surge 节点附件定义在 `src/subio_v2/adapters/surge/resources.py`。约束如下：
 
 1. Parser 的 Keystore/section catalog 只在一次输入解析期间存在；
 2. 只复制当前节点实际引用的条目；
@@ -274,8 +274,8 @@ schema 元数据机械复制进 IR。
 ### 5.1 语法与 codec
 
 Surge 代理行不能使用普通 `split(",")`。值可以包含逗号、等号、引号和重复参数。
-`src/subio_v2/surge/syntax.py` 负责 tokenizer/serializer，
-`src/subio_v2/surge/codecs.py` 负责 keyword、协议、参数集合、UDP 行为、parser/emitter callable 和
+`src/subio_v2/adapters/surge/syntax.py` 负责 tokenizer/serializer，
+`src/subio_v2/adapters/surge/codecs.py` 负责 keyword、协议、参数集合、UDP 行为、parser/emitter callable 和
 Surge target constraints 的唯一 executable codec。
 
 新增或修改 Surge 协议时：

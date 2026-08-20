@@ -6,7 +6,7 @@ import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.target import TargetValidationService
 from subio_v2.core.nodes import Protocol, ShadowsocksNode
 from subio_v2.links import all_codecs
-from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
+from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 
 
 def test_target_validation_protocols_derive_from_actual_target_codecs():
