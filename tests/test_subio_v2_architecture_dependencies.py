@@ -84,6 +84,45 @@ def test_rules_package_does_not_depend_on_workflow_or_node_models():
     assert violations == {}
 
 
+def test_workflow_services_depend_on_registry_interfaces_not_concrete_adapters():
+    workflow_dir = REPO_ROOT / "src" / "subio_v2" / "workflow"
+    engine_imports = _imports(workflow_dir / "engine.py")
+    provider_imports = _imports(workflow_dir / "providers.py")
+    artifact_imports = _imports(workflow_dir / "artifacts.py")
+
+    concrete_prefixes = (
+        "subio_v2.parser.clash",
+        "subio_v2.parser.stash",
+        "subio_v2.parser.subio",
+        "subio_v2.parser.surge",
+        "subio_v2.parser.v2rayn",
+        "subio_v2.emitter.clash",
+        "subio_v2.emitter.stash",
+        "subio_v2.emitter.surge",
+        "subio_v2.emitter.dae",
+        "subio_v2.emitter.v2rayn",
+        "subio_v2.surge",
+        "subio_v2.links",
+    )
+
+    assert not {
+        module
+        for module in engine_imports
+        if module.startswith(
+            ("subio_v2.parser", "subio_v2.emitter", "subio_v2.processor")
+        )
+        or module.startswith(concrete_prefixes)
+    }
+    assert not {
+        module for module in provider_imports if module.startswith(concrete_prefixes)
+    }
+    assert not {
+        module for module in artifact_imports if module.startswith(concrete_prefixes)
+    }
+    assert "subio_v2.parser.registry" in provider_imports
+    assert "subio_v2.emitter.registry" in artifact_imports
+
+
 def test_obsolete_internal_authorities_are_absent():
     obsolete_paths = (
         "src/subio_v2/parser/factory.py",
