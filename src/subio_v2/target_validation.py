@@ -88,8 +88,13 @@ class TargetValidationService:
         self._check_common_target_fields(node, result)
         return result
 
-    def encode_node(self, node: Node, encoder: Callable[[Node], object]) -> TargetEncodingResult[object]:
-        selected, issues = self.select([node])
+    def encode_node(
+        self,
+        node: Node,
+        encoder: Callable[[Node], object],
+        check_node: Callable[[Node], TargetCheckResult] | None = None,
+    ) -> TargetEncodingResult[object]:
+        selected, issues = self.select([node], check_node)
         if not selected:
             return TargetEncodingResult(content=None, supported_node=None, issues=issues)
         try:

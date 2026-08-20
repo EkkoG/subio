@@ -10,22 +10,16 @@ class V2RayNEmitter(BaseEmitter):
     platform = "v2rayn"
 
     def emit_result(self, nodes: list[Node]) -> EmissionResult[str]:
-        checked_nodes, issues = self.emit_with_check(nodes)
+        issues = []
 
         lines: list[str] = []
         emitted_nodes: list[Node] = []
-        for node in checked_nodes:
-            try:
-                line = self._emit_node(node)
-            except Exception as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Failed to build v2rayN link: {exc}",
-                    )
-                )
+        for node in nodes:
+            encoded = self.encode_node(node, self._emit_node)
+            issues.extend(encoded.issues)
+            if encoded.supported_node is None:
                 continue
+            line = encoded.content
             if line is None:
                 issues.append(
                     self.issue_for_node(

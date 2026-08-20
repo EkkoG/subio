@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
 
 from subio_v2.conversion import (
@@ -60,6 +61,11 @@ class BaseEmitter(ABC):
     ) -> tuple[list[Node], list[ConversionIssue]]:
         """Run target checks exactly once and return normalized issues."""
         return self._conversion.select(nodes, self.check_node)
+
+    def encode_node(
+        self, node: Node, encoder: Callable[[Node], object]
+    ):
+        return self._conversion.encode_node(node, encoder, self.check_node)
 
     @staticmethod
     def log_issues(issues: list[ConversionIssue]) -> None:

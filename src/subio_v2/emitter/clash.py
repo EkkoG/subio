@@ -20,7 +20,7 @@ class ClashEmitter(BaseEmitter):
         emitted_nodes: list[Node] = []
         proxies: list[Dict[str, Any]] = []
         for node in nodes:
-            encoded = self._conversion.encode_node(node, self._emit_node)
+            encoded = self.encode_node(node, self._emit_node)
             issues.extend(encoded.issues)
             if encoded.supported_node is None:
                 continue

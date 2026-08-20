@@ -20,12 +20,12 @@ class DaeEmitter(BaseEmitter):
     platform = "dae"
 
     def emit_result(self, nodes: list[Node]) -> EmissionResult[str]:
-        checked_nodes, issues = self.emit_with_check(nodes)
+        issues = []
         node_by_name: dict[str, Node] = {}
         url_by_id: dict[int, str] = {}
         candidate_nodes: list[Node] = []
 
-        for node in checked_nodes:
+        for node in nodes:
             if node.name in node_by_name:
                 issues.append(
                     self.issue_for_node(
@@ -36,17 +36,13 @@ class DaeEmitter(BaseEmitter):
                     )
                 )
                 continue
-            try:
-                url = link.build_url(node, target=self.platform)
-            except Exception as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Unable to build dae link: {exc}",
-                    )
-                )
+            encoded = self.encode_node(
+                node, lambda item: link.build_url(item, target=self.platform)
+            )
+            issues.extend(encoded.issues)
+            if encoded.supported_node is None:
                 continue
+            url = encoded.content
             if not url:
                 issues.append(
                     self.issue_for_node(
