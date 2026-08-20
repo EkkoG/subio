@@ -25,7 +25,6 @@ from subio_v2.model.nodes import (
     WireguardPeer,
 )
 from subio_v2.model.records import NodeRecord
-from subio_v2.parser.base import BaseParser
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_BUILTIN_ALIAS_TYPES,
@@ -67,7 +66,7 @@ _NAMED_SECTION_RE = re.compile(r"^\[([^\]\s]+)\s+([^\]]+)\]$")
 _SOURCE_KINDS = {"unknown", "local", "remote"}
 
 
-class SurgeParser(BaseParser):
+class SurgeParser:
     def __init__(
         self,
         *,

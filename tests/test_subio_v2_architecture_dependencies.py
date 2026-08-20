@@ -137,6 +137,7 @@ def test_obsolete_internal_authorities_are_absent():
         "src/subio_v2/target_registry.py",
         "src/subio_v2/conversion_service.py",
         "src/subio_v2/emitter/link.py",
+        "src/subio_v2/parser/base.py",
     )
     assert all(not (REPO_ROOT / path).exists() for path in obsolete_paths)
 
@@ -178,6 +179,7 @@ def test_obsolete_internal_authorities_are_absent():
         "def _parts_",
         "elif p_type",
         "_raise_legacy_emit_error",
+        "BaseParser",
     ):
         assert symbol not in production
 

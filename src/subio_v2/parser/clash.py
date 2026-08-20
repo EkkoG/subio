@@ -7,13 +7,12 @@ import subio_v2.protocols as protocol_registry
 from subio_v2.clash.dialect import pre_descriptor_normalize
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
+from subio_v2.formats import normalize_format
 from subio_v2.model.nodes import SourcePassthroughNode
 from subio_v2.model.records import NodeRecord
-from subio_v2.parser.base import BaseParser
-from subio_v2.formats import normalize_format
 
 
-class ClashParser(BaseParser):
+class ClashParser:
     def __init__(self, context: DialectContext | None = None):
         context = context or DialectContext("mihomo", "yaml")
         self.context = DialectContext(

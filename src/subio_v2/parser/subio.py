@@ -6,11 +6,10 @@ import toml
 import yaml
 
 from subio_v2.conversion import ParseResult
-from subio_v2.parser.base import BaseParser
 from subio_v2.subio_format.codec import SubioNodeCodec
 
 
-class SubioParser(BaseParser):
+class SubioParser:
     """
     Subio 格式解析器
 

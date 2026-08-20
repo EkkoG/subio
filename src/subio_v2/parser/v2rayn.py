@@ -6,10 +6,9 @@ from subio_v2 import links
 from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.dialect import DialectContext
 from subio_v2.model.nodes import Node
-from subio_v2.parser.base import BaseParser
 
 
-class V2RayNParser(BaseParser):
+class V2RayNParser:
     def parse_result(self, content: Any) -> ParseResult:
         if not isinstance(content, str):
             raise ValueError("Invalid content type for V2RayNParser")  # noqa: TRY004
