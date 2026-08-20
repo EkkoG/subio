@@ -8,6 +8,7 @@ from typing import Any
 
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionFragments
+from subio_v2.workflow.selectors import SelectorEngine
 
 
 @dataclass(frozen=True)
@@ -29,18 +30,91 @@ class TemplateNodeSet:
     _summaries: tuple[TemplateNodeSummary, ...]
     _platform: str
     _fragments: EmissionFragments
+    _selector_engine: SelectorEngine
 
     def render(self) -> str:
         return self._rendered
 
-    def names(self) -> list[str]:
-        return [summary.name for summary in self._summaries]
+    def _selected(
+        self,
+        selector: str | None = None,
+        *,
+        include: str | None = None,
+        exclude: str | None = None,
+        protocols: Sequence[str] | None = None,
+        providers: Sequence[str] | None = None,
+    ) -> list[TemplateNodeSummary]:
+        return self._selector_engine.select(
+            self._summaries,
+            selector,
+            include=include,
+            exclude=exclude,
+            protocols=protocols,
+            providers=providers,
+        )
 
-    def count(self) -> int:
-        return len(self._summaries)
+    def names(
+        self,
+        selector: str | None = None,
+        *,
+        include: str | None = None,
+        exclude: str | None = None,
+        protocols: Sequence[str] | None = None,
+        providers: Sequence[str] | None = None,
+        prepend: Sequence[str] | None = None,
+        fallback: Sequence[str] | None = None,
+    ) -> list[str]:
+        summaries = self._selected(
+            selector,
+            include=include,
+            exclude=exclude,
+            protocols=protocols,
+            providers=providers,
+        )
+        names = [summary.name for summary in summaries]
+        if not names and fallback is not None:
+            return list(fallback)
+        if prepend:
+            return [*prepend, *names]
+        return names
 
-    def exists(self) -> bool:
-        return bool(self._summaries)
+    def count(
+        self,
+        selector: str | None = None,
+        *,
+        include: str | None = None,
+        exclude: str | None = None,
+        protocols: Sequence[str] | None = None,
+        providers: Sequence[str] | None = None,
+    ) -> int:
+        return len(
+            self._selected(
+                selector,
+                include=include,
+                exclude=exclude,
+                protocols=protocols,
+                providers=providers,
+            )
+        )
+
+    def exists(
+        self,
+        selector: str | None = None,
+        *,
+        include: str | None = None,
+        exclude: str | None = None,
+        protocols: Sequence[str] | None = None,
+        providers: Sequence[str] | None = None,
+    ) -> bool:
+        return bool(
+            self._selected(
+                selector,
+                include=include,
+                exclude=exclude,
+                protocols=protocols,
+                providers=providers,
+            )
+        )
 
     def legacy_names(self) -> list[str] | str:
         names = self.names()
@@ -57,6 +131,7 @@ def build_template_context(
     rendered: str,
     nodes: Sequence[Node],
     fragments: EmissionFragments,
+    selector_engine: SelectorEngine,
 ) -> dict[str, Any]:
     """Build legacy variables and the new node API in one place."""
 
@@ -70,7 +145,9 @@ def build_template_context(
         )
         for node in nodes
     )
-    node_set = TemplateNodeSet(rendered, summaries, platform, fragments)
+    node_set = TemplateNodeSet(
+        rendered, summaries, platform, fragments, selector_engine
+    )
     context: dict[str, Any] = {
         "nodes": node_set,
         "proxies": rendered,

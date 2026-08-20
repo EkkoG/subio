@@ -47,6 +47,7 @@ def test_template_node_api_is_consistent_and_secret_safe(tmp_path):
     # Use the public renderer without constructing a workflow or loading inputs.
     from subio_v2.workflow.template import TemplateRenderer
     from subio_v2.workflow.template_context import build_template_context
+    from subio_v2.workflow.selectors import SelectorEngine
 
     node = _ss()
     fragments = ClashEmitter().emit_result([node]).fragments
@@ -55,6 +56,7 @@ def test_template_node_api_is_consistent_and_secret_safe(tmp_path):
         rendered="- name: proxy",
         nodes=[node],
         fragments=fragments,
+        selector_engine=SelectorEngine(),
     )
     output = TemplateRenderer(str(tmp_path)).render("nodes.j2", context)
     assert output == "proxy|1|True|True"

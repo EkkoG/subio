@@ -16,6 +16,7 @@ class ConfigValidator:
             raise ConfigError("'allow_conversion_errors' must be a boolean")
         cls._validate_options(config.get("options"), "Config options")
         cls._validate_filters(config.get("filters"), "Config filters")
+        cls._validate_selectors(config.get("selectors"))
 
         rulesets = config.get("ruleset", [])
         if not isinstance(rulesets, list):
@@ -151,6 +152,16 @@ class ConfigValidator:
         for key in ("allow_conversion_errors", "allow_empty"):
             if not isinstance(entry.get(key, False), bool):
                 raise ConfigError(f"Artifact '{name}' {key} must be a boolean")
+        selector = entry.get("selector")
+        if selector is not None and (
+            not isinstance(selector, str) or not selector
+        ):
+            raise ConfigError(f"Artifact '{name}' selector must be a non-empty string")
+        duplicate_policy = entry.get("on_duplicate_name", "error")
+        if duplicate_policy not in {"error", "keep_first"}:
+            raise ConfigError(
+                f"Artifact '{name}' on_duplicate_name must be 'error' or 'keep_first'"
+            )
         providers = entry.get("providers", [])
         if not isinstance(providers, list) or any(
             not isinstance(provider, str) or not provider for provider in providers
@@ -231,7 +242,14 @@ class ConfigValidator:
     def _validate_references(config: Mapping[str, Any]) -> None:
         provider_names = {item["name"] for item in config.get("provider", [])}
         uploader_names = {item["name"] for item in config.get("uploader", [])}
+        selector_names = set(config.get("selectors", {}))
         for artifact in config.get("artifact", []):
+            selector = artifact.get("selector")
+            if selector is not None and selector not in selector_names:
+                raise ConfigError(
+                    f"Artifact '{artifact['name']}' references missing selector: "
+                    f"{selector}"
+                )
             missing = [
                 name
                 for name in artifact.get("providers", [])
@@ -273,6 +291,87 @@ class ConfigValidator:
                     re.compile(pattern)
                 except re.error as exc:
                     raise ConfigError(f"{label} {key} is not a valid regex") from exc
+
+    @classmethod
+    def _validate_selectors(cls, value: Any) -> None:
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            raise ConfigError("Config section 'selectors' must be an object")
+        selector_names = set(value)
+        for name, selector in value.items():
+            if not isinstance(name, str) or not name:
+                raise ConfigError("Selector names must be non-empty strings")
+            if not isinstance(selector, dict):
+                raise ConfigError(f"Selector '{name}' must be an object")
+            for key in (
+                "name_regex",
+                "exclude_name_regex",
+                "protocols",
+                "providers",
+                "all_of",
+                "any_of",
+                "not",
+                "sort_by",
+            ):
+                item = selector.get(key)
+                if item is not None and not isinstance(item, (str, list)):
+                    raise ConfigError(
+                        f"Selector '{name}' {key} must be a string or list"
+                    )
+                if isinstance(item, list) and any(
+                    not isinstance(entry, str) or not entry for entry in item
+                ):
+                    raise ConfigError(
+                        f"Selector '{name}' {key} must contain non-empty strings"
+                    )
+            for key in ("name_regex", "exclude_name_regex"):
+                patterns = selector.get(key, [])
+                if isinstance(patterns, str):
+                    patterns = [patterns]
+                for pattern in patterns:
+                    try:
+                        re.compile(pattern)
+                    except re.error as exc:
+                        raise ConfigError(
+                            f"Selector '{name}' {key} contains an invalid regex"
+                        ) from exc
+            limit = selector.get("limit")
+            if limit is not None and (
+                not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0
+            ):
+                raise ConfigError(
+                    f"Selector '{name}' limit must be a positive integer"
+                )
+            if not isinstance(selector.get("match_original_name", False), bool):
+                raise ConfigError(
+                    f"Selector '{name}' match_original_name must be a boolean"
+                )
+            for ref_key in ("all_of", "any_of", "not"):
+                refs = selector.get(ref_key, [])
+                if isinstance(refs, str):
+                    refs = [refs]
+                missing = sorted(set(refs) - selector_names)
+                if missing:
+                    raise ConfigError(
+                        f"Selector '{name}' references unknown selector(s): "
+                        + ", ".join(missing)
+                    )
+
+        def visit(name: str, stack: tuple[str, ...]) -> None:
+            if name in stack:
+                cycle = " -> ".join((*stack, name))
+                raise ConfigError(f"Selector reference cycle: {cycle}")
+            selector = value[name]
+            for ref_key in ("all_of", "any_of", "not"):
+                refs = selector.get(ref_key, [])
+                if isinstance(refs, str):
+                    refs = [refs]
+                for ref in refs:
+                    visit(ref, (*stack, name))
+
+        for name in value:
+            visit(name, ())
 
     @staticmethod
     def _validate_artifact_users(entry: dict[str, Any], name: str) -> None:

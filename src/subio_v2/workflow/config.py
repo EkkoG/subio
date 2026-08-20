@@ -13,6 +13,7 @@ import yaml
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.rules.config import RuleSetConfig
+from subio_v2.workflow.selectors import SelectorSpec
 
 
 def _freeze_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
@@ -105,6 +106,8 @@ class ArtifactConfig:
     allow_empty: bool = False
     age_public_key: str | None = None
     upload: tuple[UploadConfig, ...] = ()
+    selector: str | None = None
+    on_duplicate_name: str = "error"
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ArtifactConfig:
@@ -126,6 +129,8 @@ class ArtifactConfig:
                 )
                 for item in value.get("upload", ())
             ),
+            selector=value.get("selector"),
+            on_duplicate_name=value.get("on_duplicate_name", "error"),
         )
 
 
@@ -154,6 +159,7 @@ class RunConfig:
     artifacts: tuple[ArtifactConfig, ...]
     uploaders: tuple[UploaderConfig, ...]
     rulesets: tuple[RuleSetConfig, ...]
+    selectors: Mapping[str, SelectorSpec]
     options: Mapping[str, Any]
     filters: FilterConfig | None
     allow_conversion_errors: bool
@@ -170,6 +176,7 @@ class RunConfig:
             "artifact",
             "uploader",
             "ruleset",
+            "selectors",
             "options",
             "filters",
             "allow_conversion_errors",
@@ -200,6 +207,12 @@ class RunConfig:
                     user_agent=item.get("user_agent"),
                 )
                 for item in copied.get("ruleset", ())
+            ),
+            selectors=MappingProxyType(
+                {
+                    name: SelectorSpec.from_mapping(value)
+                    for name, value in copied.get("selectors", {}).items()
+                }
             ),
             options=_freeze_mapping(copied.get("options")),
             filters=FilterConfig.from_mapping(copied.get("filters")),

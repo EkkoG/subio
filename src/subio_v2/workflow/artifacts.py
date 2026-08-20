@@ -5,7 +5,11 @@ from typing import Any
 import yaml
 
 from subio_v2.adapters.base import BaseEmitter
-from subio_v2.adapters.catalog import get_emitter
+from subio_v2.adapters.catalog import (
+    common_policy_for_format,
+    get_emitter,
+    normalize_format,
+)
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
@@ -14,6 +18,7 @@ from subio_v2.infrastructure.logging import logger
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
+from subio_v2.workflow.selectors import SelectorEngine, resolve_duplicate_names
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.template_context import build_template_context
 from subio_v2.workflow.transforms import filter_nodes
@@ -55,6 +60,7 @@ class ArtifactGenerationService:
         self.renderer = renderer
         self.rulesets = rulesets
         self.global_age_public_key = global_age_public_key
+        self.selector_engine = SelectorEngine(config.selectors)
 
     def generate(self) -> ArtifactGenerationResult:
         drafts: list[ArtifactDraft] = []
@@ -133,13 +139,29 @@ class ArtifactGenerationService:
                 ) from exc
         if global_filter:
             nodes = filter_nodes(nodes, global_filter)
+        if artifact_config.selector:
+            nodes = self.selector_engine.select(nodes, artifact_config.selector)
+
+        display_name = f"{name} (user: {username})" if username else name
+        nodes, preflight_issues = self._preflight_nodes(
+            nodes,
+            artifact_config.artifact_type,
+            artifact_config.on_duplicate_name,
+            name,
+            username,
+            check_dialer_relations=bool(artifact_config.selector),
+        )
+        if any(issue.severity == IssueSeverity.ERROR for issue in preflight_issues):
+            raise ArtifactGenerationError(
+                f"Artifact '{display_name}' failed node preflight",
+                issues=preflight_issues,
+            )
 
         emitter = get_emitter(artifact_type)
         if emitter is None:
             raise ArtifactGenerationError(
                 f"Unsupported artifact type '{artifact_type}' for artifact '{name}'"
             )
-        display_name = f"{name} (user: {username})" if username else name
         logger.info(
             f"Generating artifact: [bold cyan]{display_name}[/bold cyan] "
             f"({artifact_type}) - {len(nodes)} nodes"
@@ -156,6 +178,7 @@ class ArtifactGenerationService:
             for provider_name in artifact_config.providers
             for issue in self.provider_issues.get(provider_name, [])
         ]
+        artifact_issues.extend(preflight_issues)
         artifact_issues.extend(
             replace(issue, artifact=name, user=username) for issue in emission.issues
         )
@@ -225,6 +248,7 @@ class ArtifactGenerationService:
                 rendered=raw_content,
                 nodes=supported_nodes,
                 fragments=fragments,
+                selector_engine=self.selector_engine,
             )
             context.update(
                 {
@@ -250,6 +274,65 @@ class ArtifactGenerationService:
         else:
             final_content = raw_content
         return final_content, []
+
+    @staticmethod
+    def _preflight_nodes(
+        nodes: list[Node],
+        artifact_type: str,
+        duplicate_policy: str,
+        artifact_name: str,
+        username: str | None,
+        check_dialer_relations: bool,
+    ) -> tuple[list[Node], list[ConversionIssue]]:
+        selected, duplicates = resolve_duplicate_names(nodes, duplicate_policy)
+        target = normalize_format(artifact_type)
+        issues: list[ConversionIssue] = []
+        severity = (
+            IssueSeverity.ERROR
+            if duplicate_policy == "error"
+            else IssueSeverity.WARNING
+        )
+        for name in duplicates:
+            issues.append(
+                ConversionIssue(
+                    severity=severity,
+                    node=name,
+                    protocol=None,
+                    source=None,
+                    target=target,
+                    field="name",
+                    message=f"Duplicate node name in artifact: {name}",
+                    stage="selection",
+                    code="conversion.duplicate-node-name",
+                    artifact=artifact_name,
+                    user=username,
+                )
+            )
+
+        policy = common_policy_for_format(artifact_type)
+        if check_dialer_relations and policy is not None and policy.dialer_proxy:
+            names = {node.name for node in selected}
+            for node in selected:
+                if node.dialer_proxy and node.dialer_proxy not in names:
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=node.name,
+                            protocol=node.type.value,
+                            source=node.source_provider,
+                            target=target,
+                            field="dialer_proxy",
+                            message=(
+                                f"Dialer proxy '{node.dialer_proxy}' is not present "
+                                "in the selected nodes"
+                            ),
+                            stage="selection",
+                            code="conversion.missing-dialer-proxy",
+                            artifact=artifact_name,
+                            user=username,
+                        )
+                    )
+        return selected, issues
 
     def _stage(
         self,

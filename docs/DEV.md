@@ -110,10 +110,10 @@ Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 codec 输出�
 这些数据不是通用语义。Emitter 只能消费属于自己目标方言的扩展；跨方言未消费内容必须
 产生 `conversion.unconsumed-source-field`，不能直接合并进目标配置。
 
-`ParseResult` 只承载节点和解析问题，`EmissionResult` 只承载输出、成功节点、问题和模板上下文；
-不提供通用文档资源旁路。`EmissionResult.emitted_policy_names` 已删除；成功生成的节点名称以
-`supported_nodes` 为准，平台模板数据只能放在 `extras["template_context"]`，Workflow 不读取
-Emitter 私有兼容字段。
+`ParseResult` 只承载节点和解析问题，`EmissionResult` 只承载输出、成功节点、问题和有界的
+`EmissionFragments`。不提供通用文档资源旁路。`EmissionResult.emitted_policy_names` 已删除；
+成功生成的节点名称以 `supported_nodes` 为准，模板上下文由 workflow-owned
+`TemplateContextBuilder` 统一构造，不读取 emitter 私有字典。
 
 ### 3.3 节点附件
 
@@ -374,8 +374,12 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 - `ConfigLoader` 读取 TOML/YAML/JSON/JSON5，`ConfigValidator` 在构造 runtime config 前完成语义验证；
 - `RunConfig` 暴露 typed `ProviderConfig`、`ArtifactConfig`、`UploaderConfig` records；
 - `ProviderLoaderService` 负责 provider IO、remote dedup、Age/UTF-8、parser 和 `workflow.transforms`；
-- `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、issue policy、template/ruleset、Age，并只返回
+- `SelectorEngine` 是 Artifact 选择和模板节点查询的唯一选择语义权威；命名 Selector 只访问安全节点摘要，
+  不执行用户代码，也不暴露凭据或原始 source extension；
+- `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、Selector、issue policy、template/ruleset、Age，并只返回
   `ArtifactDraft` 与 `ArtifactUploadRequest`；不直接访问 uploader 或本地文件；
+- `TemplateContextBuilder` 负责统一提供 `nodes.render()`、`nodes.names()`、`nodes.count()` 和 `nodes.exists()`，
+  旧 `proxies`、`proxies_names`、`subscription` 和 `filter.*` 仅作为兼容模板入口；
 - `ArtifactPublisher` 负责本地文件发布事务；
 - `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
   artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，
