@@ -1,18 +1,21 @@
 import os
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 
 from subio_v2.errors import ArtifactGenerationError
+from subio_v2.workflow.artifacts import ArtifactDraft
 
 
 class ArtifactPublisher:
-    def commit(self, staged_artifacts: dict[str, str]) -> None:
+    def commit(self, drafts: Iterable[ArtifactDraft]) -> None:
         dist_dir = Path("dist").resolve()
         dist_dir.mkdir(parents=True, exist_ok=True)
         prepared: list[tuple[str, Path]] = []
 
         try:
-            for filename, content in staged_artifacts.items():
+            for draft in drafts:
+                filename, content = draft.filename, draft.content
                 target = dist_dir / filename
                 if target.parent != dist_dir:
                     raise ArtifactGenerationError(
@@ -38,7 +41,6 @@ class ArtifactPublisher:
             for temp_name, target in prepared:
                 os.replace(temp_name, target)
             prepared.clear()
-            staged_artifacts.clear()
         except ArtifactGenerationError:
             raise
         except Exception as exc:

@@ -11,6 +11,7 @@ from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.remote import RunRemoteLoader
 from subio_v2.workflow.artifacts import (
+    ArtifactDraft,
     ArtifactGenerationResult,
     ArtifactGenerationService,
 )
@@ -119,7 +120,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     service._stage(
         "out.yaml", rendered, ArtifactConfig(name="out.yaml", artifact_type="clash"), None
     )
-    eng.publisher.commit(service.staged_artifacts)
+    eng.publisher.commit(tuple(service._drafts.values()))
     out1 = (tmp_path / "dist" / "out.yaml").read_text()
     # Should be YAML text containing proxies
     assert "proxies:" in out1 and "- name: n1" in out1
@@ -134,7 +135,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     service._stage(
         "out.txt", rendered, ArtifactConfig(name="out.txt", artifact_type="surge"), None
     )
-    eng.publisher.commit(service.staged_artifacts)
+    eng.publisher.commit(tuple(service._drafts.values()))
     out2 = (tmp_path / "dist" / "out.txt").read_text()
     assert out2 == "rendered"
 
@@ -159,7 +160,7 @@ def test_write_artifact_user_filename_replacement(tmp_path, monkeypatch):
         ArtifactConfig(name="file-{user}.txt", artifact_type="surge"),
         "alice",
     )
-    eng.publisher.commit(service.staged_artifacts)
+    eng.publisher.commit(tuple(service._drafts.values()))
     assert (tmp_path / "dist" / "file-alice.txt").exists()
 
 
@@ -173,10 +174,10 @@ def test_commit_artifacts_is_atomic_per_file_not_for_the_whole_batch(
     dist.mkdir()
     (dist / "first.txt").write_text("old-first")
     (dist / "second.txt").write_text("old-second")
-    engine._staged_artifacts = {
-        "first.txt": "new-first",
-        "second.txt": "new-second",
-    }
+    engine._staged_artifacts = (
+        ArtifactDraft("first.txt", "new-first"),
+        ArtifactDraft("second.txt", "new-second"),
+    )
     real_replace = os.replace
     replacements = 0
 
@@ -538,7 +539,9 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
                 name="gist", uploader_type="gist", id="abc123", token="token"
             ),
         )
-        return ArtifactGenerationResult({"out.txt": "content"}, [])
+        return ArtifactGenerationResult(
+            (ArtifactDraft("out.txt", "content"),), []
+        )
 
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ArtifactGenerationService.generate", generate
@@ -897,7 +900,7 @@ def test_ruleset_errors_abort_before_artifact_staging(tmp_path, monkeypatch):
     assert exc_info.value.issues[0].artifact == "out.yaml"
     assert exc_info.value.issues[0].target == "mihomo"
     assert logged_issues == list(exc_info.value.issues)
-    assert engine._staged_artifacts == {}
+    assert engine._staged_artifacts == ()
     assert not (tmp_path / "dist").exists()
 
 

@@ -20,8 +20,14 @@ from subio_v2.workflow.uploader import GistBatchUploader, upload
 
 
 @dataclass(frozen=True)
+class ArtifactDraft:
+    filename: str
+    content: str
+
+
+@dataclass(frozen=True)
 class ArtifactGenerationResult:
-    staged_artifacts: dict[str, str]
+    drafts: tuple[ArtifactDraft, ...]
     issues: list[ConversionIssue]
 
 
@@ -43,12 +49,12 @@ class ArtifactGenerationService:
         self.rulesets = rulesets
         self.batch_uploader = batch_uploader
         self.global_age_public_key = global_age_public_key
-        self.staged_artifacts: dict[str, str] = {}
+        self._drafts: dict[str, ArtifactDraft] = {}
         self.issues: list[ConversionIssue] = []
         self._upload_requests: list[tuple[str, ArtifactConfig, str | None]] = []
 
     def generate(self) -> ArtifactGenerationResult:
-        self.staged_artifacts.clear()
+        self._drafts.clear()
         self.issues.clear()
         self._upload_requests.clear()
         global_filter = self.config.filters
@@ -71,7 +77,7 @@ class ArtifactGenerationService:
                 username,
             )
         return ArtifactGenerationResult(
-            dict(self.staged_artifacts), list(self.issues)
+            tuple(self._drafts.values()), list(self.issues)
         )
 
     def _generate_one(
@@ -242,9 +248,9 @@ class ArtifactGenerationService:
                 raise ArtifactGenerationError(
                     f"Failed to encrypt artifact '{actual_filename}': {exc}"
                 ) from exc
-        if actual_filename in self.staged_artifacts:
+        if actual_filename in self._drafts:
             raise ArtifactGenerationError(
                 f"Multiple artifacts would overwrite 'dist/{actual_filename}'"
             )
-        self.staged_artifacts[actual_filename] = final_content
+        self._drafts[actual_filename] = ArtifactDraft(actual_filename, final_content)
         return final_content

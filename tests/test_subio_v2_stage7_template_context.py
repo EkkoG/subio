@@ -104,6 +104,6 @@ template = "custom.j2"
         engine.batch_uploader,
         engine.global_age_public_key,
     ).generate()
-    engine.publisher.commit(result.staged_artifacts)
+    engine.publisher.commit(result.drafts)
 
     assert (tmp_path / "dist/out.txt").read_text() == "CUSTOM|context|True"

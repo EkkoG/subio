@@ -16,7 +16,7 @@ from subio_v2.rules.runtime import (
     merge_stores,
 )
 from subio_v2.utils.logger import logger
-from subio_v2.workflow.artifacts import ArtifactGenerationService
+from subio_v2.workflow.artifacts import ArtifactDraft, ArtifactGenerationService
 from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.providers import ProviderLoaderService
@@ -35,7 +35,7 @@ class WorkflowEngine:
         self.provider_issues: Dict[str, List[ConversionIssue]] = {}
         self.dry_run = dry_run
         self.clean_gist = clean_gist
-        self._staged_artifacts: Dict[str, str] = {}
+        self._staged_artifacts: tuple[ArtifactDraft, ...] = ()
         self.issues: List[ConversionIssue] = []
         self.batch_uploader = GistBatchUploader(dry_run=dry_run, clean_gist=clean_gist)
         self.publisher = ArtifactPublisher()
@@ -81,7 +81,7 @@ class WorkflowEngine:
         else:
             logger.info("--- Starting SubIO v2 Workflow ---")
         self.batch_uploader.begin()
-        self._staged_artifacts.clear()
+        self._staged_artifacts = ()
         self.providers.clear()
         self.issues.clear()
         self.provider_issues.clear()
@@ -107,14 +107,14 @@ class WorkflowEngine:
                 self.batch_uploader,
                 self.global_age_public_key,
             ).generate()
-            self._staged_artifacts = artifact_result.staged_artifacts
+            self._staged_artifacts = artifact_result.drafts
             self.issues.extend(artifact_result.issues)
-            generated = list(self._staged_artifacts)
+            generated = [draft.filename for draft in self._staged_artifacts]
             queued_uploads = self.batch_uploader.pending_uploads()
             self._commit_artifacts()
             self.batch_uploader.flush()
         except BaseException:
-            self._staged_artifacts.clear()
+            self._staged_artifacts = ()
             self.batch_uploader.abort()
             raise
         logger.success("--- Finished ---")

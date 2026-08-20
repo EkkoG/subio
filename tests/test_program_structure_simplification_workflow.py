@@ -30,3 +30,15 @@ def test_artifact_builder_delays_upload_queue_until_after_generation_loop():
         "upload("
     )
     assert "upload(" not in stage_body
+
+
+def test_workflow_uses_typed_artifact_drafts():
+    root = Path(__file__).parents[1] / "src/subio_v2/workflow"
+    artifacts = (root / "artifacts.py").read_text()
+    engine = (root / "engine.py").read_text()
+    publication = (root / "publication.py").read_text()
+    assert "class ArtifactDraft" in artifacts
+    assert "drafts: tuple[ArtifactDraft" in artifacts
+    assert "artifact_result.drafts" in engine
+    assert "ArtifactDraft" in publication
+    assert "staged_artifacts: dict" not in artifacts

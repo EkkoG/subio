@@ -3,14 +3,14 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.formats import get_emitter, get_parser
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.errors import ArtifactGenerationError, ConfigError
+from subio_v2.formats import get_emitter, get_parser
 from subio_v2.model.nodes import RejectMode, RejectNode
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.rules.runtime import load_rulesets, load_snippets
-from subio_v2.workflow.artifacts import ArtifactGenerationResult
+from subio_v2.workflow.artifacts import ArtifactDraft, ArtifactGenerationResult
 from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoadResult
@@ -312,7 +312,7 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
                 name="gist", uploader_type="gist", id="abc123", token="token"
             ),
         )
-        return ArtifactGenerationResult({"new.txt": "new"}, [])
+        return ArtifactGenerationResult((ArtifactDraft("new.txt", "new"),), [])
 
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ArtifactGenerationService.generate", generate
