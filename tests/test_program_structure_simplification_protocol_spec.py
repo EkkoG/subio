@@ -64,3 +64,13 @@ def test_stash_protocol_specific_transforms_live_on_protocol_codecs():
     assert "\n_INPUT_ALIASES =" not in stash
     for protocol in ("TUIC", "MIERU", "HYSTERIA", "HYSTERIA2", "SHADOWSOCKS"):
         assert f"node.type == Protocol.{protocol}" not in stash
+
+
+def test_native_contract_uses_v2_wording_without_legacy_decoder_paths():
+    root = Path(__file__).parents[1]
+    codec = (root / "src/subio_v2/subio_format/codec.py").read_text()
+    schema = (root / "src/subio_v2/subio_format/schema.py").read_text()
+    docs = (root / "docs/subio_node_format.md").read_text()
+    assert "SubIO v1" not in codec
+    assert "node v1 schema" not in schema
+    assert "version = 2" in docs

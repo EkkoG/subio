@@ -443,7 +443,7 @@ def write_json_schema(path: str | Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate the SubIO node v1 schema")
+    parser = argparse.ArgumentParser(description="Generate the SubIO node v2 schema")
     parser.add_argument("path", help="Output JSON schema path")
     args = parser.parse_args()
     write_json_schema(args.path)

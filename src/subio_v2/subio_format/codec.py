@@ -61,7 +61,7 @@ class SubioNodeCodec:
             field = unknown_top_level[0]
             return self.fatal_result(
                 "parse.subio.unknown-field",
-                f"Unknown SubIO v1 top-level field '{field}'",
+                f"Unknown SubIO v2 top-level field '{field}'",
                 field=field,
             )
         version = data.get("version")
@@ -134,7 +134,7 @@ class SubioNodeCodec:
             return None, [
                 self._issue(
                     "parse.subio.unknown-field",
-                    f"Unknown SubIO v1 field '{field}'",
+                    f"Unknown SubIO v2 field '{field}'",
                     field=f"{path}.{field}",
                     node=name,
                     protocol=protocol.value,
@@ -316,13 +316,13 @@ class SubioNodeCodec:
         decoded: dict[str, Any] = {}
         for key, item in value.items():
             if not isinstance(key, str):
-                raise _FieldError(path, "SubIO v1 object keys must be strings")
+                raise _FieldError(path, "SubIO v2 object keys must be strings")
             field_spec = spec.fields.get(key)
             if field_spec is None:
                 if spec.additional_value_type is None:
                     raise _FieldError(
                         f"{path}.{key}",
-                        f"Unknown SubIO v1 field '{key}'",
+                        f"Unknown SubIO v2 field '{key}'",
                         code="parse.subio.unknown-field",
                     )
                 decoded[key] = self._decode_value(
@@ -350,7 +350,7 @@ class SubioNodeCodec:
 
     def _decode_value(self, value: Any, expected: Any, path: str) -> Any:
         if value is None:
-            raise _FieldError(path, "SubIO v1 optional fields must be omitted, not null")
+            raise _FieldError(path, "SubIO v2 optional fields must be omitted, not null")
         if expected is Any:
             return self._decode_json_value(value, path)
 
@@ -421,7 +421,7 @@ class SubioNodeCodec:
             field = unknown[0]
             raise _FieldError(
                 f"{path}.{field}",
-                f"Unknown SubIO v1 field '{field}'",
+                f"Unknown SubIO v2 field '{field}'",
                 code="parse.subio.unknown-field",
             )
 
@@ -453,7 +453,7 @@ class SubioNodeCodec:
 
     def _decode_json_value(self, value: Any, path: str) -> Any:
         if value is None:
-            raise _FieldError(path, "SubIO v1 values must not be null")
+            raise _FieldError(path, "SubIO v2 values must not be null")
         if isinstance(value, (str, bool)) or type(value) in {int, float}:
             return value
         if isinstance(value, list):
@@ -465,7 +465,7 @@ class SubioNodeCodec:
             decoded: dict[str, Any] = {}
             for key, item in value.items():
                 if not isinstance(key, str):
-                    raise _FieldError(path, "SubIO v1 object keys must be strings")
+                    raise _FieldError(path, "SubIO v2 object keys must be strings")
                 decoded[key] = self._decode_json_value(item, f"{path}.{key}")
             return decoded
         raise _FieldError(path, f"Field '{path}' must contain JSON-compatible values")
