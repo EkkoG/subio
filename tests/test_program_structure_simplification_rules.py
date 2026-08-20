@@ -13,6 +13,9 @@ def test_rule_dialect_specs_own_shared_output_rule_sets():
     assert MIHOMO_CLASSICAL_PARSER.spec.output_rules
     assert STASH_CLASSICAL_PARSER.spec.output_rules
     assert SURGE_CLASSICAL_PARSER.spec.output_rules
+    assert "src" in MIHOMO_CLASSICAL_PARSER.spec.output_options
+    assert "no-track" in STASH_CLASSICAL_PARSER.spec.output_options
+    assert "extended-matching" in SURGE_CLASSICAL_PARSER.spec.output_options
     assert "SCRIPT" not in STASH_CLASSICAL_PARSER.spec.output_rules
     assert "SCRIPT" not in SURGE_CLASSICAL_PARSER.spec.output_rules
 

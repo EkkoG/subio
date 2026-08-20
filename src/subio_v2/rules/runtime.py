@@ -49,6 +49,8 @@ _CLASH_OUTPUT_RULES = frozenset(
 _DAE_OUTPUT_RULES = frozenset(
     {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "IP-CIDR", "IP-CIDR6", "MATCH"}
 )
+_CLASH_OUTPUT_OPTIONS = frozenset({"no-resolve"})
+_DAE_OUTPUT_OPTIONS = frozenset({"no-resolve"})
 _OUTPUT_RULE_TARGETS = frozenset({"mihomo", "clash", "stash", "surge", "dae"})
 
 
@@ -64,6 +66,25 @@ def _output_rules_for_target(platform: str) -> frozenset[str]:
     if platform == "dae":
         return _DAE_OUTPUT_RULES
     return frozenset()
+
+
+def _output_spec_for_target(platform: str):
+    return {
+        "mihomo": MIHOMO_CLASSICAL_PARSER.spec,
+        "stash": STASH_CLASSICAL_PARSER.spec,
+        "surge": SURGE_CLASSICAL_PARSER.spec,
+    }.get(platform)
+
+
+def _output_options_for_target(platform: str) -> tuple[frozenset[str], tuple[str, ...]]:
+    if platform == "clash":
+        return _CLASH_OUTPUT_OPTIONS, ()
+    if platform == "dae":
+        return _DAE_OUTPUT_OPTIONS, ()
+    spec = _output_spec_for_target(platform)
+    if spec is None:
+        return frozenset(), ()
+    return spec.output_options, spec.output_option_prefixes
 
 
 @dataclass
@@ -317,29 +338,11 @@ class RuleSetRenderer:
         platform: str,
         options: tuple[str, ...],
     ) -> ConversionIssue | None:
+        allowed, prefixes = _output_options_for_target(platform)
         for option in options:
-            if option == "src" and platform != "mihomo":
-                return self._issue(
-                    source,
-                    expression,
-                    platform,
-                    "ruleset.unsupported-target-option",
-                    f"Rule option {option!r} cannot be rendered for {platform}",
-                )
-            if option == "no-track" and platform != "stash":
-                return self._issue(
-                    source,
-                    expression,
-                    platform,
-                    "ruleset.unsupported-target-option",
-                    f"Rule option {option!r} cannot be rendered for {platform}",
-                )
-            if (
-                option in {"extended-matching", "requires-resolve"}
-                or option.startswith(
-                    ("notification-text=", "notification-interval=", "always-capture=")
-                )
-            ) and platform != "surge":
+            if option in allowed or option.startswith(prefixes):
+                continue
+            if option:
                 return self._issue(
                     source,
                     expression,
