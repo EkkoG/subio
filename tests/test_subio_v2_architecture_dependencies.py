@@ -59,6 +59,28 @@ def test_domain_does_not_depend_on_application_or_infrastructure():
     assert violations == {}
 
 
+def test_top_level_directory_boundaries_are_explicit():
+    root = REPO_ROOT / "src" / "subio_v2"
+    actual = {
+        path.name
+        for path in root.iterdir()
+        if path.is_dir() and path.name != "__pycache__"
+    }
+    assert actual == {
+        "adapters",
+        "core",
+        "infrastructure",
+        "protocols",
+        "rules",
+        "workflow",
+    }
+    assert {
+        path.name
+        for path in (root / "adapters").iterdir()
+        if path.is_dir() and path.name != "__pycache__"
+    } == {"clash_family", "links", "subio", "surge"}
+
+
 def test_node_and_rules_models_do_not_import_each_other():
     nodes_imports = _imports(REPO_ROOT / "src" / "subio_v2" / "core" / "nodes.py")
     rules_imports = _imports(REPO_ROOT / "src" / "subio_v2" / "core" / "rule_model.py")
@@ -124,6 +146,22 @@ def test_workflow_services_depend_on_registry_interfaces_not_concrete_adapters()
 
 def test_obsolete_internal_authorities_are_absent():
     obsolete_paths = (
+        "src/subio_v2/model",
+        "src/subio_v2/conversion.py",
+        "src/subio_v2/errors.py",
+        "src/subio_v2/dialect.py",
+        "src/subio_v2/validation.py",
+        "src/subio_v2/crypto",
+        "src/subio_v2/remote.py",
+        "src/subio_v2/utils",
+        "src/subio_v2/formats.py",
+        "src/subio_v2/target_validation.py",
+        "src/subio_v2/clash",
+        "src/subio_v2/surge",
+        "src/subio_v2/links",
+        "src/subio_v2/subio_format",
+        "src/subio_v2/parser",
+        "src/subio_v2/emitter",
         "src/subio_v2/parser/factory.py",
         "src/subio_v2/emitter/factory.py",
         "src/subio_v2/workflow/ruleset.py",
