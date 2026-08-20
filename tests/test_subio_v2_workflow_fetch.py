@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from subio_v2.core.errors import ProviderLoadError
-from subio_v2.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.workflow.config import ProviderConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService
@@ -70,7 +70,7 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
             return Resp()
 
     monkeypatch.setattr(
-        "subio_v2.remote.requests.Session", lambda: FakeSession()
+        "subio_v2.infrastructure.remote.requests.Session", lambda: FakeSession()
     )
 
     # Success path and user_agent header
@@ -117,7 +117,7 @@ def test_run_remote_loader_caches_by_url_and_headers_only_within_one_instance(
             return Resp()
 
     monkeypatch.setattr(
-        "subio_v2.remote.requests.Session", lambda: FakeSession()
+        "subio_v2.infrastructure.remote.requests.Session", lambda: FakeSession()
     )
 
     first_run = RunRemoteLoader()
@@ -147,7 +147,7 @@ def test_run_remote_loader_sanitizes_transport_errors(monkeypatch):
             raise RuntimeError(f"secret URL: {url}")
 
     monkeypatch.setattr(
-        "subio_v2.remote.requests.Session", lambda: FakeSession()
+        "subio_v2.infrastructure.remote.requests.Session", lambda: FakeSession()
     )
 
     with pytest.raises(RemoteLoadError) as exc_info:

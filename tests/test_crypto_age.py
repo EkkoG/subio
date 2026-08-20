@@ -5,8 +5,9 @@ used by mihomo, ensuring cross-tool compatibility.
 """
 
 import pytest
-from subio_v2.crypto import age
 from pyrage.pyrage import DecryptError
+
+from subio_v2.infrastructure import age
 
 
 class TestKeyGeneration:

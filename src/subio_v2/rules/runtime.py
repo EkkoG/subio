@@ -20,7 +20,7 @@ from subio_v2.core.rule_model import (
     RuleComment,
     RuleRenderResult,
 )
-from subio_v2.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.rules.codecs import (
     DEFAULT_RULESET_CODEC_REGISTRY,
     RuleSetInputCodecCatalog,
@@ -33,7 +33,7 @@ from subio_v2.rules.parser import (
     parse_argument_names,
     validate_identifier,
 )
-from subio_v2.utils.logger import logger
+from subio_v2.infrastructure.logging import logger
 
 
 @dataclass

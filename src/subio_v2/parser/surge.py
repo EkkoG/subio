@@ -48,7 +48,7 @@ from subio_v2.surge.syntax import (
     parse_proxy_line,
     split_comma_separated,
 )
-from subio_v2.utils.logger import logger
+from subio_v2.infrastructure.logging import logger
 
 _PREDEFINED_BUILTIN_NAMES = {
     "DIRECT",

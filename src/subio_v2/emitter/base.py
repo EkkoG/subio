@@ -11,7 +11,7 @@ from subio_v2.core.results import (
 from subio_v2.formats import normalize_format
 from subio_v2.core.nodes import Node
 from subio_v2.target_validation import TargetValidationService
-from subio_v2.utils.logger import logger
+from subio_v2.infrastructure.logging import logger
 
 
 class BaseEmitter(ABC):

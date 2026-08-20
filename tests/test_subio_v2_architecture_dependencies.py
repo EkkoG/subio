@@ -20,12 +20,11 @@ FORBIDDEN_IMPORTS = (
     "urllib",
     "subio_v2.capabilities",
     "subio_v2.clash",
-    "subio_v2.crypto",
+    "subio_v2.infrastructure",
     "subio_v2.emitter",
     "subio_v2.parser",
     "subio_v2.subio_format",
     "subio_v2.surge",
-    "subio_v2.utils.logger",
     "subio_v2.workflow",
 )
 

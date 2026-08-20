@@ -11,7 +11,7 @@ from pathlib import Path
 import toml
 import yaml
 
-from subio_v2.crypto import age
+from subio_v2.infrastructure import age
 from subio_v2.parser.surge import SurgeParser
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

@@ -65,6 +65,7 @@ Config / local snippet
 | 路径 | 职责 |
 |---|---|
 | `src/subio_v2/core/` | 跨平台节点语义、共享设置、结构化结果和目标无关校验 |
+| `src/subio_v2/infrastructure/` | Age、remote loader 和日志等低层外部副作用 |
 | `src/subio_v2/parser/` | 将来源格式解析成节点和结构化问题 |
 | `src/subio_v2/subio_format/` | 版本化原生 SubIO 节点 schema 与 object-to-Node codec |
 | `src/subio_v2/emitter/` | 将最终节点生成目标格式 |
