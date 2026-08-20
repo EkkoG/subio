@@ -60,7 +60,7 @@ def build_report(
 ) -> dict[str, Any]:
     provider_result = provider_result or ProviderLoadResult({}, {})
     artifact_result = artifact_result or ArtifactGenerationResult(())
-    issues = [*extra_issues, *artifact_result.issues]
+    issues = list(dict.fromkeys([*extra_issues, *artifact_result.issues]))
     providers: list[dict[str, Any]] = []
     for name, nodes in provider_result.providers.items():
         provider_issues = list(provider_result.issues.get(name, ()))
@@ -72,7 +72,21 @@ def build_report(
                 "issue_codes": sorted({issue.code for issue in provider_issues}),
             }
         )
-        issues.extend(provider_issues)
+        for issue in provider_issues:
+            if issue not in issues:
+                issues.append(issue)
+
+        metadata = provider_result.metadata.get(name)
+        if metadata is not None:
+            providers[-1]["remote"] = {
+                "state": metadata.state,
+                "etag": bool(metadata.etag),
+                "last_modified": bool(metadata.last_modified),
+                "content_length": metadata.content_length,
+                "subscription_user_info": dict(
+                    metadata.subscription_user_info or {}
+                ),
+            }
 
     artifacts = [
         {

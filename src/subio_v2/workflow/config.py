@@ -154,12 +154,27 @@ class UploaderConfig:
 
 
 @dataclass(frozen=True)
+class RemoteCacheConfig:
+    enabled: bool = False
+    ttl_seconds: int = 21600
+    stale_if_error: bool = False
+
+
+@dataclass(frozen=True)
+class RemoteConfig:
+    timeout_seconds: int = 10
+    max_bytes: int = 16 * 1024 * 1024
+    cache: RemoteCacheConfig = RemoteCacheConfig()
+
+
+@dataclass(frozen=True)
 class RunConfig:
     providers: tuple[ProviderConfig, ...]
     artifacts: tuple[ArtifactConfig, ...]
     uploaders: tuple[UploaderConfig, ...]
     rulesets: tuple[RuleSetConfig, ...]
     selectors: Mapping[str, SelectorSpec]
+    remote: RemoteConfig
     options: Mapping[str, Any]
     filters: FilterConfig | None
     allow_conversion_errors: bool
@@ -171,12 +186,15 @@ class RunConfig:
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> RunConfig:
         copied = dict(data)
+        remote_value = copied.get("remote") or {}
+        cache_value = remote_value.get("cache") or {}
         known = {
             "provider",
             "artifact",
             "uploader",
             "ruleset",
             "selectors",
+            "remote",
             "options",
             "filters",
             "allow_conversion_errors",
@@ -213,6 +231,15 @@ class RunConfig:
                     name: SelectorSpec.from_mapping(value)
                     for name, value in copied.get("selectors", {}).items()
                 }
+            ),
+            remote=RemoteConfig(
+                timeout_seconds=remote_value.get("timeout_seconds", 10),
+                max_bytes=remote_value.get("max_bytes", 16 * 1024 * 1024),
+                cache=RemoteCacheConfig(
+                    enabled=cache_value.get("enabled", False),
+                    ttl_seconds=cache_value.get("ttl_seconds", 21600),
+                    stale_if_error=cache_value.get("stale_if_error", False),
+                ),
             ),
             options=_freeze_mapping(copied.get("options")),
             filters=FilterConfig.from_mapping(copied.get("filters")),

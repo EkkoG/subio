@@ -17,6 +17,7 @@ class ConfigValidator:
         cls._validate_options(config.get("options"), "Config options")
         cls._validate_filters(config.get("filters"), "Config filters")
         cls._validate_selectors(config.get("selectors"))
+        cls._validate_remote(config.get("remote"))
 
         rulesets = config.get("ruleset", [])
         if not isinstance(rulesets, list):
@@ -372,6 +373,29 @@ class ConfigValidator:
 
         for name in value:
             visit(name, ())
+
+    @staticmethod
+    def _validate_remote(value: Any) -> None:
+        if value is None:
+            return
+        if not isinstance(value, dict):
+            raise ConfigError("Config section 'remote' must be an object")
+        timeout = value.get("timeout_seconds", 10)
+        max_bytes = value.get("max_bytes", 16 * 1024 * 1024)
+        if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout <= 0:
+            raise ConfigError("remote timeout_seconds must be a positive integer")
+        if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes <= 0:
+            raise ConfigError("remote max_bytes must be a positive integer")
+        cache = value.get("cache", {})
+        if not isinstance(cache, dict):
+            raise ConfigError("remote cache must be an object")
+        if not isinstance(cache.get("enabled", False), bool):
+            raise ConfigError("remote cache enabled must be a boolean")
+        ttl = cache.get("ttl_seconds", 21600)
+        if not isinstance(ttl, int) or isinstance(ttl, bool) or ttl <= 0:
+            raise ConfigError("remote cache ttl_seconds must be a positive integer")
+        if not isinstance(cache.get("stale_if_error", False), bool):
+            raise ConfigError("remote cache stale_if_error must be a boolean")
 
     @staticmethod
     def _validate_artifact_users(entry: dict[str, Any], name: str) -> None:

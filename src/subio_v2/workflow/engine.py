@@ -109,7 +109,7 @@ class WorkflowEngine:
     def prepare(self) -> WorkflowPreparation:
         """Run all pure/load/generate stages without writing or uploading."""
 
-        remote_loader = RunRemoteLoader()
+        remote_loader = self._remote_loader()
         remote_rulesets = (
             load_rulesets(self.config.rulesets, loader=remote_loader)
             if self.config.rulesets
@@ -134,7 +134,16 @@ class WorkflowEngine:
 
         return ProviderLoaderService(
             self.config_path, self.global_age_secret_key
-        ).load(self.config, RunRemoteLoader())
+        ).load(self.config, self._remote_loader())
+
+    def _remote_loader(self) -> RunRemoteLoader:
+        return RunRemoteLoader(
+            timeout=self.config.remote.timeout_seconds,
+            max_bytes=self.config.remote.max_bytes,
+            cache_enabled=self.config.remote.cache.enabled,
+            cache_ttl=self.config.remote.cache.ttl_seconds,
+            stale_if_error=self.config.remote.cache.stale_if_error,
+        )
 
     def _commit_artifacts(self, drafts: tuple[ArtifactDraft, ...]) -> None:
         self.publisher.commit(drafts)

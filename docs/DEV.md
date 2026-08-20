@@ -382,6 +382,10 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
   旧 `proxies`、`proxies_names`、`subscription` 和 `filter.*` 仅作为兼容模板入口；
 - `WorkflowEngine.prepare()` 负责完整加载、解析、选择、目标检查和模板渲染，但不写文件、不上传；
   `subio check` 和 `subio inspect` 只消费该准备结果，`convert` 才进入现有本地写入和 Gist 队列；
+- `RunRemoteLoader` 在一次 run 内复用 HTTP Session，并以 `max_bytes` 限制响应大小；跨 run 磁盘缓存默认关闭，
+  显式开启后使用用户私有目录、hash 文件名和 `0600` 文件权限，默认不使用 stale 内容；
+- Provider 的 ETag、Last-Modified、响应长度和 Subscription-UserInfo 只形成结构化 inspect/report 元数据，
+  不进入模板、不转发原始响应，也不转发下游请求信息；
 - `ArtifactPublisher` 负责本地文件发布事务；
 - `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界；
   artifact builder 返回 typed draft/result，所有 issue 在单一 artifact gate 决策后才进入 staging，

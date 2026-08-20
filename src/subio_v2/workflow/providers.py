@@ -1,6 +1,6 @@
 import hashlib
 import os
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from subio_v2.adapters.catalog import get_parser
 from subio_v2.core.errors import ProviderLoadError
@@ -8,7 +8,11 @@ from subio_v2.core.nodes import Node
 from subio_v2.core.results import ConversionIssue
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
-from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
+from subio_v2.infrastructure.remote import (
+    RemoteLoadError,
+    RemoteMetadata,
+    RunRemoteLoader,
+)
 from subio_v2.workflow.config import ProviderConfig, RunConfig
 from subio_v2.workflow.transforms import filter_nodes, rename_nodes, set_dialer_proxy
 
@@ -17,6 +21,7 @@ from subio_v2.workflow.transforms import filter_nodes, rename_nodes, set_dialer_
 class ProviderLoadResult:
     providers: dict[str, list[Node]]
     issues: dict[str, list[ConversionIssue]]
+    metadata: dict[str, RemoteMetadata] = field(default_factory=dict)
 
 
 class ProviderLoaderService:
@@ -29,6 +34,7 @@ class ProviderLoaderService:
     ) -> ProviderLoadResult:
         providers: dict[str, list[Node]] = {}
         provider_issues: dict[str, list[ConversionIssue]] = {}
+        provider_metadata: dict[str, RemoteMetadata] = {}
         with logger.status("[bold green]Loading providers...") as status:
             for provider_config in config.providers:
                 name = provider_config.name
@@ -47,6 +53,8 @@ class ProviderLoaderService:
                         "supplied by that remote provider"
                     )
                 content_bytes = self._fetch_content(provider_config, remote_loader)
+                if provider_config.url and remote_loader.last_result is not None:
+                    provider_metadata[name] = remote_loader.last_result.metadata
                 if not content_bytes:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
                 content = self._decode_content(content_bytes, provider_config)
@@ -78,7 +86,7 @@ class ProviderLoaderService:
                     f"[bold]{len(nodes)}[/bold] nodes"
                 )
                 providers[name] = nodes
-        return ProviderLoadResult(providers, provider_issues)
+        return ProviderLoadResult(providers, provider_issues, provider_metadata)
 
     @staticmethod
     def _process_nodes(
