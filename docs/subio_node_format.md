@@ -1065,7 +1065,7 @@ server_name = "juicity.example.com"
 ```
 <!-- /subio-example -->
 
-TLS 默认启用。当前协议 descriptor 来自 Stash 节点格式；输出到其他平台时按 capability 处理。
+TLS 默认启用。当前协议 codec 来自 Stash 节点格式；输出到其他平台时按 target codec 约束处理。
 
 <!-- protocol-fields:juicity -->
 | 字段 | 类型 | 省略时 | 说明 |

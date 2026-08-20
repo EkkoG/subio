@@ -51,18 +51,18 @@ class UndefinedClashProtocolCodec(ClashProtocolCodec):
 
 
 def test_registry_is_bidirectionally_unique():
-    descriptors = list(registry.all())
-    protocols = [descriptor.protocol for descriptor in descriptors]
-    clash_types = [descriptor.clash_type for descriptor in descriptors]
+    codecs = list(registry.all())
+    protocols = [codec.protocol for codec in codecs]
+    clash_types = [codec.clash_type for codec in codecs]
 
     assert len(protocols) == len(set(protocols))
     assert len(clash_types) == len(set(clash_types))
-    for descriptor in descriptors:
-        assert registry.get(descriptor.protocol) is descriptor
-        if descriptor.dynamic_clash_type:
-            assert registry.by_clash_type(descriptor.clash_type) is None
+    for codec in codecs:
+        assert registry.get(codec.protocol) is codec
+        if codec.dynamic_clash_type:
+            assert registry.by_clash_type(codec.clash_type) is None
         else:
-            assert registry.by_clash_type(descriptor.clash_type) is descriptor
+            assert registry.by_clash_type(codec.clash_type) is codec
 
 
 def test_protocol_definitions_are_complete_and_authoritative():
@@ -76,12 +76,12 @@ def test_protocol_definitions_are_complete_and_authoritative():
     assert all(issubclass(definition.node_class, BaseNode) for definition in definitions)
     assert registry.get_definition(Protocol.SOURCE_PASSTHROUGH) is None
 
-    for descriptor in registry.all():
-        definition = registry.get_definition(descriptor.protocol)
+    for codec in registry.all():
+        definition = registry.get_definition(codec.protocol)
         assert definition is not None
-        assert descriptor.definition is definition
-        assert descriptor.node_class is definition.node_class
-        assert descriptor.requires_endpoint is definition.requires_endpoint
+        assert codec.definition is definition
+        assert codec.node_class is definition.node_class
+        assert codec.requires_endpoint is definition.requires_endpoint
 
 
 def test_user_override_policy_preserves_previous_runtime_behavior():
@@ -137,9 +137,9 @@ def test_terminal_native_field_policy_classifies_every_model_field():
 
 def test_mihomo_capabilities_match_registered_protocols():
     registered = {
-        descriptor.protocol.value
-        for descriptor in registry.all()
-        if descriptor.supports_dialect("mihomo")
+        codec.protocol.value
+        for codec in registry.all()
+        if codec.supports_dialect("mihomo")
     }
     assert registered == PLATFORM_CAPABILITIES["mihomo"]["protocols"]
 

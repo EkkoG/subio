@@ -31,8 +31,8 @@ class SpecCodec(StructuredClashProtocolCodec):
 
 
 def test_field_spec_derives_alias_handling_extra_and_emit_policies():
-    descriptor = SpecCodec()
-    node = descriptor.parse_clash(
+    codec = SpecCodec()
+    node = codec.parse_clash(
         {
             "name": "spec",
             "type": "spec",
@@ -49,7 +49,7 @@ def test_field_spec_derives_alias_handling_extra_and_emit_policies():
     assert node.canonical == "from-alias"
     assert node.extra == {"future-field": False}
 
-    emitted = descriptor.emit_clash(node)
+    emitted = codec.emit_clash(node)
     assert emitted["canonical"] == "from-alias"
     assert "legacy" not in emitted
     assert emitted["always"] == ""
@@ -58,7 +58,7 @@ def test_field_spec_derives_alias_handling_extra_and_emit_policies():
     assert emitted["future-field"] is False
 
 
-def test_migrated_descriptors_roundtrip_fields_and_unknown_extensions():
+def test_migrated_codecs_roundtrip_fields_and_unknown_extensions():
     nodes = ClashParser().parse_result(
         """
 proxies:
@@ -100,18 +100,18 @@ proxies:
     assert emitted["ssh-fields"]["host-key-algorithms"] == ["ssh-ed25519"]
 
 
-def test_structured_descriptor_specs_reference_real_unique_node_fields():
-    for descriptor in registry.all():
-        if not isinstance(descriptor, StructuredClashProtocolCodec):
+def test_structured_codec_specs_reference_real_unique_node_fields():
+    for codec in registry.all():
+        if not isinstance(codec, StructuredClashProtocolCodec):
             continue
-        node_fields = {item.name for item in fields(descriptor.node_class)}
+        node_fields = {item.name for item in fields(codec.node_class)}
         consumed: set[str] = set()
-        for field_spec in descriptor.fields:
+        for field_spec in codec.fields:
             assert field_spec.node_attrs <= node_fields
             assert field_spec.required_attrs <= field_spec.node_attrs
             assert not consumed.intersection(field_spec.consumed_keys)
             consumed.update(field_spec.consumed_keys)
-        assert descriptor.consumed_keys == frozenset(consumed)
+        assert codec.consumed_keys == frozenset(consumed)
 
 
 def test_stash_codecs_own_their_output_field_contracts():
@@ -128,7 +128,7 @@ def test_stash_codecs_own_their_output_field_contracts():
     )
 
 
-def test_structured_descriptor_rejects_wrong_node_type():
+def test_structured_codec_rejects_wrong_node_type():
     node = ShadowsocksNode(
         name="ss",
         type=Protocol.SHADOWSOCKS,

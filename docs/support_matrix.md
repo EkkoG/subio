@@ -35,7 +35,8 @@ capability 和 emitter 能生成目标格式；同名协议的具体 method、tr
 - SubIO v2 可直接构造当前 27 种公开具体 Node IR，不调用 Mihomo parser；`source-passthrough`、
   Surge External 和运行期来源/保真字段不属于该格式，完整契约见 `docs/subio_node_format.md`；
 - Stash capability 当前为 20 种协议；Stash-only 的 Juicity 不会伪装成 Mihomo 强类型协议；
-- 固定 schema 基线中的 26 种 Mihomo type 均使用强类型 IR 和结构化 descriptor；`dns` 只表示
+- 固定 schema 基线中的 Mihomo type 均使用强类型 IR 和结构化 codec；实际数量由 schema fixture
+  与 codec registry 不变量核对，不维护独立手写计数；`dns` 只表示
   内部 DNS 模块出站，不扩展为 DNS section 转换；
 - Mieru 是 Mihomo/Stash 共享强类型协议，但 Stash 仅接受其官方 TCP profile；
 - Tailscale、MASQUE、TrustTunnel 按 selection/profile/transport/auth 分型，不因协议同名而互转；

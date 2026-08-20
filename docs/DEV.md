@@ -11,6 +11,10 @@ SubIO v2 只转换两类内容：
 1. 代理节点；
 2. Mihomo、Stash、Surge 官方定义的可独立分享规则集。
 
+协议和字段实现必须基于当前工作区、本文、support matrix、官方资料和可复现测试独立完成；不得
+对照、复制、cherry-pick 或反向推断其他分支的实现。缺少官方资料的平台只维持现有 serializer
+与 contract 已证明的能力，不从其他平台的同名字段推导支持。
+
 SubIO 不是完整配置文件中转器。策略组、DNS、MITM、脚本、通用 section、客户端运行状态
 等内容，不应为了“无损转换”进入通用 IR 或 workflow。
 
@@ -35,8 +39,8 @@ Config
   -> Parser
   -> Node IR
   -> Processor (filter / rename / override / relation checks)
-  -> CapabilityChecker
-  -> Emitter
+  -> NodeConversionService (domain + target codec validation)
+  -> Target Emitter
   -> Artifact
   -> Uploader
 ```
@@ -64,15 +68,16 @@ Config / local snippet
 | `src/subio_v2/parser/` | 将来源格式解析成节点和结构化问题 |
 | `src/subio_v2/subio_format/` | 版本化原生 SubIO 节点 schema 与 object-to-Node codec |
 | `src/subio_v2/emitter/` | 将最终节点生成目标格式 |
-| `src/subio_v2/protocols/` | Clash/Mihomo 协议 descriptor 注册表 |
+| `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
+| `src/subio_v2/links/` | v2rayN/dae 逐协议双向或输出 link codec |
 | `src/subio_v2/clash/` | Clash-family 共享字段与嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/surge/` | Surge 词法、codec 规格、安全门禁和节点附件 |
-| `src/subio_v2/capabilities/` | 当前 serializer 能表达的平台能力 |
+| `src/subio_v2/capabilities/` | 共享值域常量和从 target codec 聚合的只读能力快照 |
 | `src/subio_v2/rules/` | 可分享规则集 grammar、codec、IR runtime 和 renderer |
 | `src/subio_v2/workflow/` | typed config、provider/artifact 编排、模板和发布事务 |
 | `vendor/meta-json-schema/` | Mihomo 字段参考；仅本地依赖，不提交 |
 
-`ParserRegistry` 和 `EmitterRegistry` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
+`get_parser()` 和 `get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
 跨 provider、artifact 或两次运行共享。
 
 ## 3. IR 与扩展字段
@@ -93,12 +98,12 @@ Config / local snippet
 ### 3.2 同方言保真数据
 
 - `BaseNode.source_context` 是节点及其未建模字段的唯一来源方言；
-- `BaseNode.extra` 当前用于 Clash/Mihomo descriptor 未建模字段的同方言往返；
+- `BaseNode.extra` 当前用于 Clash-family codec 未建模字段的同方言往返；
 - `TransportSettings.extra` 保存 `ws-opts`、`grpc-opts` 等嵌套块中的未建模字段；
 - `SourcePassthroughNode.raw` 只保存真正未知 YAML type 或 Surge External 的完整来源记录；
 - `BaseNode.source_extensions[<dialect>]` 保存来源方言专属字段和节点附件。
 
-Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 descriptor 输出后再经过
+Clash-family 输入先经过 `pre_descriptor_normalize()`，共享 codec 输出后再经过
 `post_descriptor_emit()`。未知字段只有来源和目标 dialect 相同时才能合并；跨方言未消费字段必须
 产生 `conversion.unconsumed-source-field`，不能依赖 capability 日志后仍写入结果。
 
@@ -131,7 +136,7 @@ Surge 节点附件定义在 `src/subio_v2/surge/resources.py`。约束如下：
 
 - RuleSet input codec 负责最先定义并使用该契约；
 - Node Parser/Emitter、现有规则 renderer 和 extension 消费检查随后接入同一契约；
-- 通用 hook 只规定 normalizer、descriptor 和 emitter 的调用位置；
+- 通用 hook 只规定 normalizer、codec 和 emitter 的调用位置；
 - Stash 等平台的具体字段映射只在对应 parser/emitter 方言模块实现；
 - 新工作不得重新设计已经验收的 RuleSet codec 接口。
 
@@ -152,7 +157,7 @@ Mihomo alias。`src/subio_v2/subio_format/schema.py` 是公开字段 allowlist �
 schema 生成命令，并由测试证明快照、协议注册表和 runtime 字段一致。
 
 JSON Schema 只描述结构、允许字段、基础类型和 enum，不为组合校验建立复杂 conditional 生成器。
-required、范围和协议组合以 `validate_node()` 及 descriptor validation 为准；用户文档必须明确这
+required、范围和协议组合以 `validate_node()` 及 codec validation 为准；用户文档必须明确这
 两层职责，不能把 schema 单独描述为完整语义验证器。
 
 公开格式只包含 concrete Node、公开 dataclass 嵌套设置和受限 mapping。Reality、ECH、Brutal、
@@ -162,10 +167,10 @@ AmneziaWG、Shadowsocks plugin、Snell obfs 与 header mapping 的 native key/ty
 `original_name`、`extra`、`source_extensions`、`transport.extra`、`SourcePassthroughNode` 和 Surge
 External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Tailscale
 `interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
-descriptor；codec 从现有协议注册表取得 Node class，但不能借用 Clash 字段规格。
+codec；native codec 从 `ProtocolDefinition` 取得 Node class，但不能借用 Clash 字段规格。
 
-目标无关语义由 `src/subio_v2/validation.py` 校验，CapabilityChecker 复用同一结果后再检查目标
-平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
+目标无关语义由 `src/subio_v2/validation.py` 校验，`NodeConversionService` 随后调用目标 codec
+约束检查平台差异。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
 native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明确列出，并且必须仍是 Node
 模型与通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，
 必须明确选择加入 terminal native policy 或排除，并更新 schema、用户文档和注册表不变量测试。
@@ -186,7 +191,7 @@ native override 字段由逐协议 `ProtocolDefinition.user_override_fields` 明
 | `clash` | 已废弃但仍支持 | 原版 Clash YAML，保持独立 capability 和规则范围 |
 
 所有 parser、emitter、capability 和规则 renderer 的公开入口必须先通过
-`src/subio_v2/platforms.py` 规范化。内部注册表、descriptor 分支、`DialectContext` 和结构化
+`src/subio_v2/platforms.py` 规范化。内部 codec registry、`DialectContext` 和结构化
 issue 只使用 `mihomo` 规范名称；不得在 target registry/constraints、`PLATFORM_RULES` 或业务代码中
 新增独立 `clash-meta` authority，也不得增加散落的 `platform == "clash-meta"` 分支。
 
@@ -196,7 +201,7 @@ issue 只使用 `mihomo` 规范名称；不得在 target registry/constraints、
 artifact 文件名和上传文件名中的 `clash` 也不自动改写。
 
 `clash-meta` 不是废弃平台，也不改变转换结果；Workflow 只在 provider/artifact 配置级各提示
-一次改用 `mihomo`。Registry、Parser、Emitter、CapabilityChecker 和逐节点转换不得重复提示。
+一次改用 `mihomo`。Parser、Emitter、target codec 和逐节点转换不得重复提示。
 
 ### 4.2 Schema 基线
 
@@ -227,22 +232,22 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 需要核对更新时再 fetch 最新提交，并在审计记录与 fixture 中显式记录新 hash。`vendor/` 不进入
 主仓库提交。
 
-### 4.3 Descriptor 注册表
+### 4.3 Clash codec 注册表
 
 `ClashParser` 和 `ClashEmitter` 通过 `src/subio_v2/protocols/` 分发：
 
-- 强类型协议继承 `StructuredProtocolDescriptor`；
+- 强类型协议继承 `StructuredClashProtocolCodec`；
 - `ClashFieldSpec` 同时驱动 consumed keys、parse、emit 和 required 校验；
-- 特殊语义使用 descriptor hook 或 `check()`，不要在 Parser/Emitter 重建协议分支；
-- 固定 schema 中的全部已知 type 都使用结构化 descriptor，即使当前只有 Mihomo 能输出；
-- 未来未知 type 不进入 descriptor 注册表，由 Parser 创建 `SourcePassthroughNode`，且只能回到
+- 特殊语义使用 codec hook 或 `check()`，不要在 document Parser/Emitter 重建协议分支；
+- 固定 schema 中的全部已知 type 都使用结构化 codec，即使当前只有 Mihomo 能输出；
+- 未来未知 type 不进入 codec 注册表，由 Parser 创建 `SourcePassthroughNode`，且只能回到
   `source_context` 所记录的规范来源平台。
 
 `consumed_keys` 只能包含已经写入 IR、并能从同一规格重新生成的字段。未强类型化字段应留给
 `extra`，否则会出现“解析时消费、生成时丢失”。
 
-Capability 表只记录 checker 或 serializer 实际读取的协议集合、值域和 feature flag；
-不用 `features` 罗列客户端的理论能力或文档标签。协议的组合条件与对应 descriptor 共置。
+目标支持由注册 codec 派生；共享 capability 查询只聚合 codec 的值域和 feature flag，
+不用 `features` 罗列客户端的理论能力或文档标签。协议的组合条件与对应 codec 共置。
 
 未知 transport 和非 active transport option block 必须完整保留，不能降级为 TCP，也不能
 因为提取了一个子字段而删除整个嵌套配置。
@@ -274,12 +279,16 @@ Surge 代理行不能使用普通 `split(",")`。值可以包含逗号、等号�
 新增或修改 Surge 协议时：
 
 1. 先更新 `SurgeCodecSpec`；
-2. 再实现 Parser/Emitter 语义；
-3. 更新 capability 和官方离线 fixture；
+2. 在 `surge/parsers.py` 和 `surge/emitters.py` 实现对应 callable；
+3. 在协议自身 Clash codec 中更新需要的 target constraints，并更新官方离线 fixture；
 4. 运行 `tests/test_subio_v2_surge_codec_invariants.py`。
 
 Codec 注册表用于共享规格和不变量，不要求把所有 Parser/Emitter 逻辑改写成元编程框架。
 除非能消除已知错误，不为“纯注册表”进行大规模重写。
+
+分享链接位于 `src/subio_v2/links/`。每种协议拥有独立 `LinkCodec`；支持输入的 codec 同时声明
+scheme parser，dae/v2rayN 输出能力由 codec target registration 派生。不要在 document parser、
+dae emitter 或 v2rayN emitter 中新增 scheme/protocol 分支。
 
 ### 5.2 UDP 与跨平台协议
 
@@ -303,8 +312,8 @@ provider 默认忽略，只有显式设置 `allow_unsafe_external = true` 才允
 
 Stash 属于 Clash-family，但不是 Mihomo 字段的无差别子集。它需要独立方言上下文：
 
-- `ParserRegistry` 提供 Stash parser，调用方不应把 Stash 输入当作普通 Clash；
-- 输入归一化必须发生在 descriptor 前，并记录原始方言；
+- `get_parser("stash")` 提供 Stash parser，调用方不应把 Stash 输入当作普通 Clash；
+- 输入归一化必须发生在 codec 前，并记录原始方言；
 - Emitter 只生成 Stash 官方字段和值域；
 - Mihomo `extra` 不得直接泄漏到 Stash；
 - Stash 专属未知字段只在 Stash -> Stash 往返时保留；
@@ -358,6 +367,18 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
 
 ### 7.2 Workflow
+
+运行期责任边界如下：
+
+- `ConfigLoader` 读取 TOML/YAML/JSON/JSON5，`ConfigValidator` 在构造 runtime config 前完成语义验证；
+- `RunConfig` 暴露 typed `ProviderConfig`、`ArtifactConfig`、`UploaderConfig` records；
+- `ProviderLoaderService` 负责 provider IO、remote dedup、Age/UTF-8、parser 和 provider processors；
+- `ArtifactGenerationService` 负责 emitter、用户覆盖、filter、issue policy、template/ruleset、Age 和 upload staging；
+- `ArtifactPublisher` 负责本地文件发布事务；
+- `WorkflowEngine` 是薄 run service，只规定 ruleset/provider/artifact/publish/upload 的顺序和失败边界。
+
+application service 只通过 `get_parser()`、`get_emitter()` 和窄结果类型访问 adapter，不导入具体
+Surge/Clash/link 实现。一次 run 的 loader、parser、emitter 和 uploader 状态不得泄漏到下一次运行。
 
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并
 阻止部分发布。

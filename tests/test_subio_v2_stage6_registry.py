@@ -33,19 +33,19 @@ SCHEMA_SNAPSHOT = (
 
 def test_mihomo_schema_types_have_explicit_registry_strategies():
     snapshot = json.loads(SCHEMA_SNAPSHOT.read_text())
-    descriptors = list(registry.all())
+    codecs = list(registry.all())
     known_types = {
-        descriptor.clash_type
-        for descriptor in descriptors
-        if not descriptor.dynamic_clash_type
-        and descriptor.supports_dialect("mihomo")
+        codec.clash_type
+        for codec in codecs
+        if not codec.dynamic_clash_type
+        and codec.supports_dialect("mihomo")
     }
 
     assert known_types == set(snapshot["proxy_types"])
     assert len(known_types) == 26
     assert all(
-        isinstance(descriptor, StructuredClashProtocolCodec)
-        for descriptor in descriptors
+        isinstance(codec, StructuredClashProtocolCodec)
+        for codec in codecs
     )
     assert registry.get(Protocol.MIERU).node_class is MieruNode
     assert registry.get(Protocol.REJECT).node_class is RejectNode
@@ -55,9 +55,9 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
     assert registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
     assert registry.get(Protocol.SUDOKU).node_class is SudokuNode
     registered_protocols = {
-        descriptor.protocol.value
-        for descriptor in descriptors
-        if descriptor.supports_dialect("mihomo")
+        codec.protocol.value
+        for codec in codecs
+        if codec.supports_dialect("mihomo")
     }
     assert PLATFORM_CAPABILITIES["mihomo"]["protocols"] == registered_protocols
 
