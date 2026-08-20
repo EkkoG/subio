@@ -5,7 +5,7 @@ import struct
 
 import zstandard
 
-from subio_v2.errors import ConfigError
+from subio_v2.core.errors import ConfigError
 
 MRS_MAGIC = b"MRS\x01"
 MRS_BEHAVIOR = {"domain": 0, "ipcidr": 1}

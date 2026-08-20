@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.errors import UploadError
+from subio_v2.core.errors import UploadError
 from subio_v2.workflow.config import (
     ArtifactConfig,
     UploadConfig,

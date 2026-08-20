@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 from subio_v2.workflow.config import FilterConfig, RenameConfig
 
 

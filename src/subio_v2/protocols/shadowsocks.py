@@ -3,8 +3,8 @@ from __future__ import annotations
 import base64
 import binascii
 
-from subio_v2.conversion import IssueDraft, IssueSeverity
-from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
+from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group

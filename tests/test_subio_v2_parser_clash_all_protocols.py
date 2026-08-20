@@ -4,10 +4,10 @@ import pytest
 
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
-from subio_v2.dialect import DialectContext
+from subio_v2.core.dialect import DialectContext
 from subio_v2.parser.clash import ClashParser
 from subio_v2.parser.stash import StashParser
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     DNSNode,
     DirectNode,
     GostRelayNode,

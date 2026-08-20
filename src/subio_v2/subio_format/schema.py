@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping, Union, get_args, get_origin, get_type_hints
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     BaseNode,
     Network,
     Protocol,

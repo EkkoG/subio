@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from subio_v2.conversion import ConversionIssue
-from subio_v2.dialect import DialectContext
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.results import ConversionIssue
 
 
 @dataclass(frozen=True)

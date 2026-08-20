@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from subio_v2.conversion import ConversionIssue, IssueSeverity, WorkflowResult
+from subio_v2.core.results import ConversionIssue, IssueSeverity, WorkflowResult
 from subio_v2.emitter.base import BaseEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
-from subio_v2.errors import ArtifactGenerationError, ConfigError, UploadError
+from subio_v2.core.errors import ArtifactGenerationError, ConfigError, UploadError
 from subio_v2.remote import RunRemoteLoader
 from subio_v2.workflow.artifacts import (
     ArtifactDraft,

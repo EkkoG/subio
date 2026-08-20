@@ -8,7 +8,7 @@ from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     DNSNode,
     GostRelayNode,
     MieruNode,

@@ -3,9 +3,9 @@ import copy
 import hashlib
 from typing import Any, List
 
-from subio_v2.conversion import EmissionResult, IssueSeverity
+from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     Node,
     ShadowsocksNode,
     Socks5Node,

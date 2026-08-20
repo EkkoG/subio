@@ -7,7 +7,7 @@ from subio_v2.emitter.stash import StashEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
 from subio_v2.formats import get_emitter
-from subio_v2.model.nodes import Protocol, VlessNode
+from subio_v2.core.nodes import Protocol, VlessNode
 
 
 def test_emitter_registry_returns_fresh_platform_specific_instances():

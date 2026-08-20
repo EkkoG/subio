@@ -2,11 +2,11 @@ import hashlib
 import os
 from dataclasses import dataclass, replace
 
-from subio_v2.conversion import ConversionIssue
+from subio_v2.core.results import ConversionIssue
 from subio_v2.crypto import age
-from subio_v2.errors import ProviderLoadError
+from subio_v2.core.errors import ProviderLoadError
 from subio_v2.formats import get_parser
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.config import ProviderConfig, RunConfig

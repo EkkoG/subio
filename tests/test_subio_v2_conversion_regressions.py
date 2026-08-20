@@ -1,10 +1,10 @@
 from subio_v2 import links as link
-from subio_v2.conversion import IssueSeverity
+from subio_v2.core.results import IssueSeverity
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.dae import DaeEmitter
 from subio_v2.emitter.surge import SurgeEmitter
 from subio_v2.emitter.v2rayn import V2RayNEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     Network,
     Protocol,
     TransportSettings,

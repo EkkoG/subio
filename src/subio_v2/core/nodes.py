@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from subio_v2.model.records import NodeRecord
+from subio_v2.core.records import NodeRecord
 
 if TYPE_CHECKING:
-    from subio_v2.dialect import DialectContext
+    from subio_v2.core.dialect import DialectContext
 
 
 class Protocol(StrEnum):

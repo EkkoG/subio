@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     AnyTLSNode,
     HttpNode,
     HttpVariant,

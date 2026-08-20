@@ -3,9 +3,9 @@ import urllib.parse
 from typing import Any
 
 from subio_v2 import links
-from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import Node
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import Node
 
 
 class V2RayNParser:

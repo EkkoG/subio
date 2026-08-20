@@ -14,7 +14,7 @@ from subio_v2.clash.helpers import (
     parse_tls,
     parse_transport,
 )
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 
 
 class EmitPolicy(StrEnum):

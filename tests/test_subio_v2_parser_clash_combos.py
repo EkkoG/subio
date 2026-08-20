@@ -1,5 +1,5 @@
 from subio_v2.parser.clash import ClashParser
-from subio_v2.model.nodes import Protocol, Network
+from subio_v2.core.nodes import Protocol, Network
 
 
 CERT_SHA256 = ":".join(["AA"] * 32)

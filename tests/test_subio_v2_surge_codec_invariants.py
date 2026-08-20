@@ -4,7 +4,7 @@ import pytest
 
 from tests.support_target_views import all_platform_capabilities
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 from subio_v2.parser.surge import SurgeParser
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,

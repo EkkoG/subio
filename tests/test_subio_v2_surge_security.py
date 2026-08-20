@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.errors import ArtifactGenerationError, ConfigError
-from subio_v2.model.nodes import (
+from subio_v2.core.errors import ArtifactGenerationError, ConfigError
+from subio_v2.core.nodes import (
     DirectNode,
     MasqueNode,
     Protocol,

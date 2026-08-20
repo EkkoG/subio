@@ -6,7 +6,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
 
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 from subio_v2.surge.emitters import (
     emit_anytls,
     emit_direct,

@@ -3,9 +3,9 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict
 
-from subio_v2.conversion import IssueDraft, IssueSeverity
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import (
+from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
     MieruNode,

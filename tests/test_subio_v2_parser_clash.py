@@ -1,6 +1,6 @@
 import pytest
 from subio_v2.parser.clash import ClashParser
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 
 
 def test_clash_parser_basic_nodes_yaml_string():

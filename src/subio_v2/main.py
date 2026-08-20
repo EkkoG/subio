@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from subio_v2.crypto import age
-from subio_v2.errors import WorkflowError
+from subio_v2.core.errors import WorkflowError
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.engine import WorkflowEngine
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import zstandard
 
-from subio_v2.errors import ConfigError
+from subio_v2.core.errors import ConfigError
 from subio_v2.rules import mrs
 
 

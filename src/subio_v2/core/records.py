@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from subio_v2.dialect import DialectContext
+from subio_v2.core.dialect import DialectContext
 
 
 @dataclass

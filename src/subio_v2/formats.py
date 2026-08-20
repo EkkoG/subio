@@ -40,14 +40,14 @@ class FormatResolution:
 
 
 def _clash_parser(**_: Any) -> Any:
-    from subio_v2.dialect import DialectContext
+    from subio_v2.core.dialect import DialectContext
     from subio_v2.parser.clash import ClashParser
 
     return ClashParser(DialectContext("mihomo", "yaml"))
 
 
 def _clash_parser_for_clash(**_: Any) -> Any:
-    from subio_v2.dialect import DialectContext
+    from subio_v2.core.dialect import DialectContext
     from subio_v2.parser.clash import ClashParser
 
     return ClashParser(DialectContext("clash", "yaml"))

@@ -2,7 +2,7 @@ from tests.support_target_views import all_platform_capabilities
 from subio_v2.target_validation import TargetValidationService as NodeConversionService
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     Hysteria2Node,
     Protocol,
     ShadowsocksNode,

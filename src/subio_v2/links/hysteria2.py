@@ -1,7 +1,7 @@
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import Hysteria2Node, Node, Protocol
+from subio_v2.core.nodes import Hysteria2Node, Node, Protocol
 
 
 def build(node: Node) -> str:

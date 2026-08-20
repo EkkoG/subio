@@ -3,7 +3,7 @@ import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 
-from subio_v2.errors import ArtifactGenerationError
+from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.workflow.artifacts import ArtifactDraft
 
 

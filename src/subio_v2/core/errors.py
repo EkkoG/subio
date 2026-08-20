@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from subio_v2.conversion import ConversionIssue
+from subio_v2.core.results import ConversionIssue
 
 
 class WorkflowError(Exception):

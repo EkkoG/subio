@@ -4,9 +4,9 @@ import copy
 import re
 from typing import Any
 
-from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import (
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import (
     DirectNode,
     MasqueMode,
     MasqueNode,
@@ -24,7 +24,7 @@ from subio_v2.model.nodes import (
     WireguardNode,
     WireguardPeer,
 )
-from subio_v2.model.records import NodeRecord
+from subio_v2.core.records import NodeRecord
 from subio_v2.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     SURGE_BUILTIN_ALIAS_TYPES,

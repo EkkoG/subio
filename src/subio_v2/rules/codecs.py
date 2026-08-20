@@ -8,9 +8,9 @@ from typing import Protocol
 
 import yaml
 
-from subio_v2.dialect import DialectContext
-from subio_v2.errors import ConfigError
-from subio_v2.model.rules import (
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.errors import ConfigError
+from subio_v2.core.rule_model import (
     HeadlessRuleSet,
     LogicalExpression,
     Predicate,

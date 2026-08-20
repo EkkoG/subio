@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
-from subio_v2.model.nodes import Node, Protocol
+from subio_v2.core.nodes import Node, Protocol
 
 LinkParser = Callable[[str], Node | None]
 

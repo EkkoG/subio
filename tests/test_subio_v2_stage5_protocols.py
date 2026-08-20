@@ -2,7 +2,7 @@ import pytest
 
 from subio_v2.target_validation import TargetValidationService as NodeConversionService
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     MieruHandshakeMode,
     MieruMultiplexing,
     MieruNode,

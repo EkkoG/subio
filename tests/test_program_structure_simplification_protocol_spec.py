@@ -4,7 +4,7 @@ from dataclasses import fields
 from pathlib import Path
 
 import subio_v2.protocols as registry
-from subio_v2.model.nodes import Protocol, ShadowsocksNode, VlessNode, VmessNode
+from subio_v2.core.nodes import Protocol, ShadowsocksNode, VlessNode, VmessNode
 from subio_v2.protocols.shadowsocks import SPEC as SHADOWSOCKS_SPEC
 from subio_v2.protocols.vless import SPEC as VLESS_SPEC
 from subio_v2.protocols.vmess import SPEC as VMESS_SPEC
@@ -39,7 +39,7 @@ def test_concrete_nodes_have_protocol_defaults_without_type_argument():
     assert ShadowsocksNode(name="ss").type is Protocol.SHADOWSOCKS
     assert VlessNode(name="vless").type is Protocol.VLESS
     assert VmessNode(name="vmess").type is Protocol.VMESS
-    source = (Path(__file__).parents[1] / "src/subio_v2/model/nodes.py").read_text()
+    source = (Path(__file__).parents[1] / "src/subio_v2/core/nodes.py").read_text()
     assert "self.type != Protocol." not in source
 
 

@@ -1,7 +1,7 @@
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import HttpNode, Node, Protocol
+from subio_v2.core.nodes import HttpNode, Node, Protocol
 
 
 def build(node: Node) -> str:

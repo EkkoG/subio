@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from subio_v2.model.nodes import GostRelayNode, Protocol
+from subio_v2.core.nodes import GostRelayNode, Protocol
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,

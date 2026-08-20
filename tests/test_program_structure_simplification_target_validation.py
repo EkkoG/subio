@@ -4,7 +4,7 @@ from pathlib import Path
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.links import all_codecs
-from subio_v2.model.nodes import Protocol, ShadowsocksNode
+from subio_v2.core.nodes import Protocol, ShadowsocksNode
 from subio_v2.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.target_validation import TargetValidationService
 

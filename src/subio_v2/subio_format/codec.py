@@ -8,9 +8,9 @@ from functools import lru_cache
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import Node, Protocol
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import Node, Protocol
 from subio_v2.protocols.user_overrides import clone_node_for_user
 from subio_v2.subio_format.schema import (
     PUBLIC_MAPPING_SPECS,
@@ -23,7 +23,7 @@ from subio_v2.subio_format.schema import (
     public_node_fields,
     public_user_override_fields,
 )
-from subio_v2.validation import validate_node
+from subio_v2.core.validation import validate_node
 
 
 class _FieldError(ValueError):

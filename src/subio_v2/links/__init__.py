@@ -12,7 +12,7 @@ from subio_v2.links import (
     vmess,
 )
 from subio_v2.links._base import LinkCodec
-from subio_v2.model.nodes import Node, Protocol
+from subio_v2.core.nodes import Node, Protocol
 
 _CODECS = (
     shadowsocks.CODEC,

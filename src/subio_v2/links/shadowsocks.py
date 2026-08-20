@@ -2,7 +2,7 @@ import base64
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import Node, Protocol, ShadowsocksNode
+from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 
 
 def build(node: Node) -> str:

@@ -4,7 +4,7 @@ from typing import Any
 
 from subio_v2.clash.stash import post_stash_emit
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 
 
 class StashEmitter(ClashEmitter):

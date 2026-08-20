@@ -2,7 +2,7 @@ from dataclasses import fields
 
 import pytest
 
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     BaseNode,
     Node,
     Protocol,
@@ -10,7 +10,7 @@ from subio_v2.model.nodes import (
     SourcePassthroughNode,
     SSHNode,
 )
-from subio_v2.model.records import NodeRecord
+from subio_v2.core.records import NodeRecord
 from subio_v2.protocols.user_overrides import (
     clone_node_for_user,
     get_nodes_for_user,

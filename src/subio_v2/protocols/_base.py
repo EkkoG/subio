@@ -12,9 +12,9 @@ from subio_v2.clash.helpers import (
     merge_extra,
     parse_base_fields,
 )
-from subio_v2.conversion import IssueDraft
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import BaseNode, Node, Protocol
+from subio_v2.core.results import IssueDraft
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import BaseNode, Node, Protocol
 from subio_v2.protocols._fields import ClashFieldSpec
 from subio_v2.protocols.spec import ProtocolSpec
 

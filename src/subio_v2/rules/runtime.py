@@ -6,11 +6,11 @@ import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping
 
-from subio_v2.conversion import ConversionIssue
-from subio_v2.dialect import DialectContext
-from subio_v2.errors import ConfigError
+from subio_v2.core.results import ConversionIssue
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.errors import ConfigError
 from subio_v2.formats import normalize_format
-from subio_v2.model.rules import (
+from subio_v2.core.rule_model import (
     BoundRule,
     DefaultParameter,
     HeadlessRuleSet,

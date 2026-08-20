@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Node, SourcePassthroughNode
+from subio_v2.core.nodes import Node, SourcePassthroughNode
 
 _OPAQUE_USER_OVERRIDE_FIELDS = frozenset({"server", "port"})
 

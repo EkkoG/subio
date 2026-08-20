@@ -1,7 +1,7 @@
 import urllib.parse
 
 from subio_v2.links._base import LinkCodec, quote_name
-from subio_v2.model.nodes import Node, Protocol, Socks5Node
+from subio_v2.core.nodes import Node, Protocol, Socks5Node
 
 
 def build(node: Node) -> str | None:

@@ -1,6 +1,6 @@
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
-from subio_v2.model.nodes import HttpNode, Protocol, SSHNode, TLSSettings
+from subio_v2.core.nodes import HttpNode, Protocol, SSHNode, TLSSettings
 from subio_v2.parser.stash import StashParser
 
 

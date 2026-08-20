@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.errors import ProviderLoadError
+from subio_v2.core.errors import ProviderLoadError
 from subio_v2.remote import RemoteLoadError, RunRemoteLoader
 from subio_v2.workflow.config import ProviderConfig
 from subio_v2.workflow.engine import WorkflowEngine

@@ -4,7 +4,7 @@ import pytest
 
 import subio_v2.protocols as registry
 from subio_v2.emitter.clash import ClashEmitter
-from subio_v2.model.nodes import BaseNode, Protocol, ShadowsocksNode
+from subio_v2.core.nodes import BaseNode, Protocol, ShadowsocksNode
 from subio_v2.parser.clash import ClashParser
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field

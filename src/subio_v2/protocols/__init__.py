@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 from subio_v2.protocols import (
     anytls,
     direct,

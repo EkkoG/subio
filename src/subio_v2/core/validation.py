@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Node, RejectMode, RejectNode
+from subio_v2.core.nodes import Node, RejectMode, RejectNode
 from subio_v2.protocols._base import NodeValidationError
 
 

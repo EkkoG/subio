@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 from subio_v2.surge.codecs import SURGE_CODEC_SPECS, SURGE_PROTOCOL_CODECS
 
 

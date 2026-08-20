@@ -5,7 +5,7 @@ import urllib.parse
 import pytest
 
 from subio_v2 import links as link
-from subio_v2.model.nodes import Network, Protocol
+from subio_v2.core.nodes import Network, Protocol
 from subio_v2.parser.v2rayn import V2RayNParser
 
 

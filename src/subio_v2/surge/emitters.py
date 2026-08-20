@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     AnyTLSNode,
     DirectNode,
     HttpNode,

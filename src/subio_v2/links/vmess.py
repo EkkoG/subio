@@ -2,7 +2,7 @@ import base64
 import json
 
 from subio_v2.links._base import LinkCodec
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     Network,
     Node,
     Protocol,

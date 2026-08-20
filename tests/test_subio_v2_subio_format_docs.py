@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Protocol
+from subio_v2.core.nodes import Protocol
 from subio_v2.parser.subio import SubioParser
 from subio_v2.subio_format.schema import (
     PUBLIC_NESTED_FIELDS,

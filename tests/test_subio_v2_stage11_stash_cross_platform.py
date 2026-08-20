@@ -3,14 +3,14 @@ import pytest
 from tests.support_target_views import all_platform_capabilities
 from subio_v2.emitter.clash import ClashEmitter
 from subio_v2.emitter.stash import StashEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     MasqueMode,
     MasqueNode,
     Protocol,
     TailscaleNode,
     TrustTunnelNode,
 )
-from subio_v2.model.records import NodeRecord
+from subio_v2.core.records import NodeRecord
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 from subio_v2.parser.clash import ClashParser

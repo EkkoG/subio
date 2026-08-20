@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from subio_v2.model.nodes import BaseNode, Protocol
+from subio_v2.core.nodes import BaseNode, Protocol
 
 
 @dataclass(frozen=True)

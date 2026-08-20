@@ -6,7 +6,7 @@ import tempfile
 from collections.abc import Sequence
 from typing import Any
 
-from subio_v2.errors import UploadError
+from subio_v2.core.errors import UploadError
 from subio_v2.utils.logger import logger
 from subio_v2.workflow.artifacts import ArtifactUploadRequest
 from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig

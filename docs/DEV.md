@@ -64,7 +64,7 @@ Config / local snippet
 
 | 路径 | 职责 |
 |---|---|
-| `src/subio_v2/model/` | 跨平台节点语义和共享设置 |
+| `src/subio_v2/core/` | 跨平台节点语义、共享设置、结构化结果和目标无关校验 |
 | `src/subio_v2/parser/` | 将来源格式解析成节点和结构化问题 |
 | `src/subio_v2/subio_format/` | 版本化原生 SubIO 节点 schema 与 object-to-Node codec |
 | `src/subio_v2/emitter/` | 将最终节点生成目标格式 |
@@ -171,7 +171,7 @@ External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Ta
 `interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
 codec；native codec 从 `ProtocolSpec` 取得 Node class，但不能借用 Clash 字段规格。
 
-目标无关语义由 `src/subio_v2/validation.py` 校验，`TargetValidationService.encode_node()` 随后调用实际
+目标无关语义由 `src/subio_v2/core/validation.py` 校验，`TargetValidationService.encode_node()` 随后调用实际
 target codec 完成支持、约束检查和编码。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
 native override 字段由逐协议 `ProtocolSpec.user_override_fields` 明确列出，并且必须仍是 Node
 模型与通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，

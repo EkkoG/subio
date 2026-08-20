@@ -5,11 +5,11 @@ import yaml
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.clash.dialect import pre_descriptor_normalize
-from subio_v2.conversion import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.dialect import DialectContext
+from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
+from subio_v2.core.dialect import DialectContext
 from subio_v2.formats import normalize_format
-from subio_v2.model.nodes import SourcePassthroughNode
-from subio_v2.model.records import NodeRecord
+from subio_v2.core.nodes import SourcePassthroughNode
+from subio_v2.core.records import NodeRecord
 
 
 class ClashParser:

@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from subio_v2.dialect import DialectContext
-from subio_v2.model.rules import (
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.rule_model import (
     BoundRule,
     DefaultParameter,
     ParameterizedRuleSet,

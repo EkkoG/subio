@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 
 
 class IssueSeverity(StrEnum):

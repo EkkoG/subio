@@ -1,4 +1,4 @@
-from subio_v2.model.nodes import Protocol, ShadowsocksNode
+from subio_v2.core.nodes import Protocol, ShadowsocksNode
 from subio_v2.workflow.config import FilterConfig, RenameConfig, RenameRule
 from subio_v2.workflow.transforms import filter_nodes, rename_nodes
 

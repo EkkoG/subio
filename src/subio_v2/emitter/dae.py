@@ -11,9 +11,9 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 
 
 from subio_v2 import links as link
-from subio_v2.conversion import EmissionResult, IssueSeverity
+from subio_v2.core.results import EmissionResult, IssueSeverity
 from subio_v2.emitter.base import BaseEmitter
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 
 
 class DaeEmitter(BaseEmitter):

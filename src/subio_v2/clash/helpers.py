@@ -5,8 +5,8 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict, Optional, Set
 
-from subio_v2.dialect import DialectContext
-from subio_v2.model.nodes import (
+from subio_v2.core.dialect import DialectContext
+from subio_v2.core.nodes import (
     Network,
     SmuxSettings,
     TLSSettings,

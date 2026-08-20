@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.model.nodes import Node
+from subio_v2.core.nodes import Node
 
 _COMMON_INPUT_ALIASES = {"server-cert-fingerprint": "fingerprint"}
 _COMMON_OUTPUT_ALIASES = {"fingerprint": "server-cert-fingerprint"}

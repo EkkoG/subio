@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping, MutableMapping
 
-from subio_v2.model.nodes import Node, Protocol, ShadowQUICNode, TLSSettings
+from subio_v2.core.nodes import Node, Protocol, ShadowQUICNode, TLSSettings
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,

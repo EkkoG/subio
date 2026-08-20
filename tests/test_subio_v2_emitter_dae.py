@@ -6,7 +6,7 @@ import pytest
 
 from subio_v2 import links as link
 from subio_v2.emitter.dae import DaeEmitter
-from subio_v2.model.nodes import (
+from subio_v2.core.nodes import (
     AnyTLSNode,
     HttpNode,
     Hysteria2Node,

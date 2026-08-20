@@ -1,4 +1,4 @@
-from subio_v2.dialect import DialectContext
+from subio_v2.core.dialect import DialectContext
 from subio_v2.parser.clash import ClashParser
 
 

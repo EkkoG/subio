@@ -1,6 +1,6 @@
 from subio_v2.target_validation import TargetValidationService as NodeConversionService
 from subio_v2.emitter.surge import SurgeEmitter
-from subio_v2.model.nodes import HttpVariant
+from subio_v2.core.nodes import HttpVariant
 from subio_v2.parser.surge import SurgeParser
 
 
