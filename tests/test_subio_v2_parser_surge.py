@@ -281,18 +281,18 @@ def test_surge_snell_versioned_fields_round_trip():
     nodes = SurgeParser().parse_result(
         """
 [Proxy]
-snell = snell, example.com, 443, psk=p, version=6, reuse=false, udp-port=8443, mode=quic
+snell = snell, example.com, 443, psk=p, version=6, reuse=false, udp-port=8443, mode=unshaped
 """
     ).nodes
 
     node = nodes[0]
     assert node.reuse is False
     assert node.udp_port == 8443
-    assert node.mode == "quic"
+    assert node.mode == "unshaped"
     output = SurgeEmitter().emit_result(nodes).content
     assert "reuse=false" in output
     assert "udp-port=8443" in output
-    assert "mode=quic" in output
+    assert "mode=unshaped" in output
 
 
 def test_surge_emitter_ws_path_only_when_has_value():

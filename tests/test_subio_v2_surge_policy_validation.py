@@ -9,7 +9,9 @@ from subio_v2.core.nodes import (
     HttpNode,
     Protocol,
     ShadowTLSSettings,
+    ShadowsocksNode,
     SurgePolicyOptions,
+    TrustTunnelNode,
     WireguardNode,
     VmessNode,
 )
@@ -55,6 +57,8 @@ def test_surge_ip_version_rejects_unknown_value():
     [
         "allow-other-interface=maybe",
         "hybrid=maybe",
+        "ecn=maybe",
+        "block-quic=maybe",
         "tos=999",
         "test-timeout=0",
         "test-udp=",
@@ -68,6 +72,77 @@ def test_surge_common_parameters_are_strictly_rejected(parameter):
 
     assert result.nodes == []
     assert result.issues[0].severity.value == "error"
+    assert result.issues[0].code == "parse.protocol-parameter"
+
+
+@pytest.mark.parametrize(
+    "parameter",
+    [
+        "hybrid=auto",
+        "hybrid=on",
+        "hybrid=off",
+        "hybrid=true",
+        "hybrid=false",
+        "ecn=auto",
+        "ecn=on",
+        "ecn=off",
+        "ecn=true",
+        "ecn=false",
+        "block-quic=auto",
+        "block-quic=on",
+        "block-quic=off",
+    ],
+)
+def test_surge_common_enum_parameters_accept_official_values(parameter):
+    result = SurgeParser().parse_result(
+        f"node = https, example.com, 443, {parameter}"
+    )
+
+    assert result.issues == []
+
+
+@pytest.mark.parametrize("value", ["000255", "0x000000ff"])
+def test_surge_tos_accepts_leading_zero_representations(value):
+    result = SurgeParser().parse_result(
+        f"node = https, example.com, 443, tos={value}"
+    )
+
+    assert result.issues == []
+
+
+def test_surge_typed_common_options_accept_official_domains():
+    node = HttpNode(
+        name="typed",
+        type=Protocol.HTTP,
+        server="example.com",
+        port=443,
+        surge_options=SurgePolicyOptions(
+            hybrid="true",
+            ecn="false",
+            block_quic="auto",
+            tos="0x000000ff",
+            test_udp="probe.example@198.51.100.1",
+        ),
+    )
+
+    assert TargetValidationService("surge").check_node(node).supported
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "probe.example",
+        "probe.example@2001:db8::1",
+        "probe.example@198.51.100.1@198.51.100.2",
+        "probe.example@256.51.100.1",
+    ],
+)
+def test_surge_test_udp_requires_hostname_and_ipv4(value):
+    result = SurgeParser().parse_result(
+        f"node = https, example.com, 443, test-udp={value}"
+    )
+
+    assert result.nodes == []
     assert result.issues[0].code == "parse.protocol-parameter"
 
 
@@ -116,6 +191,21 @@ def test_surge_target_checks_common_applicability_and_shadow_tls_protocols():
     )
     assert TargetValidationService("surge").check_node(http).supported
 
+    trust = TrustTunnelNode(
+        name="trust",
+        type=Protocol.TRUSTTUNNEL,
+        server="example.com",
+        port=443,
+        udp=False,
+        username="user",
+        password="password",
+        shadow_tls=ShadowTLSSettings(password="secret"),
+    )
+    assert TargetValidationService("surge").check_node(trust).supported
+
+    trust.quic = True
+    assert not TargetValidationService("surge").check_node(trust).supported
+
 
 def test_http_headers_use_official_semicolon_syntax_without_duplicate_output():
     result = SurgeParser().parse_result(
@@ -155,6 +245,60 @@ def test_obfs_uri_round_trips_as_typed_surge_field(keyword):
     assert "obfs-uri=https://obfs.example/path" in output.content
 
 
+@pytest.mark.parametrize("keyword", ["ss", "snell"])
+def test_obfs_uri_accepts_relative_safe_value(keyword):
+    if keyword == "ss":
+        line = (
+            "proxy = ss, example.com, 8388, encrypt-method=aes-256-gcm, "
+            "password=p, obfs=http, obfs-uri=/obfs/path"
+        )
+    else:
+        line = (
+            "proxy = snell, example.com, 443, psk=p, version=5, obfs=http, "
+            "obfs-uri=/obfs/path"
+        )
+
+    result = SurgeParser().parse_result(line)
+    assert result.issues == []
+    assert result.nodes[0].obfs_uri == "/obfs/path"
+
+
+@pytest.mark.parametrize("keyword", ["ss", "snell"])
+def test_obfs_uri_rejects_tls_obfs_mode(keyword):
+    if keyword == "ss":
+        line = (
+            "proxy = ss, example.com, 8388, encrypt-method=aes-256-gcm, "
+            "password=p, obfs=tls, obfs-uri=/obfs/path"
+        )
+    else:
+        line = (
+            "proxy = snell, example.com, 443, psk=p, version=5, obfs=tls, "
+            "obfs-uri=/obfs/path"
+        )
+
+    result = SurgeParser().parse_result(line)
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.protocol-parameter"
+
+
+def test_surge_typed_obfs_uri_requires_http_mode():
+    node = ShadowsocksNode(
+        name="ss",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="aes-256-gcm",
+        password="p",
+        plugin="obfs",
+        plugin_opts={"mode": "http", "host": "example.com"},
+        obfs_uri="/obfs/path",
+    )
+
+    assert TargetValidationService("surge").check_node(node).supported
+    node.plugin_opts["mode"] = "tls"
+    assert not TargetValidationService("surge").check_node(node).supported
+
+
 def test_surge_only_fields_produce_cross_target_diagnostics():
     http = SurgeParser().parse_result(
         'proxy = https, example.com, 443, headers="User-Agent:SubIO", always-use-connect=true'
@@ -184,9 +328,15 @@ def test_vmess_cipher_and_snell_value_domains_are_strict():
     assert invalid_snell.issues[0].code == "parse.protocol-parameter"
 
     valid_snell = SurgeParser().parse_result(
-        "snell = snell, example.com, 443, psk=p, version=6, udp-port=8443, mode=quic"
+        "snell = snell, example.com, 443, psk=p, version=6, udp-port=8443, mode=unshaped"
     )
     assert valid_snell.issues == []
+
+    invalid_snell_mode = SurgeParser().parse_result(
+        "snell = snell, example.com, 443, psk=p, version=6, mode=quic"
+    )
+    assert invalid_snell_mode.nodes == []
+    assert invalid_snell_mode.issues[0].code == "parse.protocol-parameter"
 
 
 def test_mihomo_vmess_auto_uses_surges_default_cipher_on_output():
@@ -216,3 +366,17 @@ def test_shadow_tls_rejects_inapplicable_surge_protocols(line):
     result = SurgeParser().parse_result(line)
     assert result.nodes == []
     assert result.issues[0].code == "parse.protocol-parameter"
+
+
+def test_shadow_tls_allows_trust_tunnel_h2_but_rejects_h3_raw():
+    h2 = SurgeParser().parse_result(
+        "trust = trust-tunnel, example.com, 443, username=u, password=p, shadow-tls-password=s"
+    )
+    assert h2.issues == []
+    assert h2.nodes[0].shadow_tls.enabled
+
+    h3 = SurgeParser().parse_result(
+        "trust = trust-tunnel, example.com, 443, username=u, password=p, h3=true, shadow-tls-password=s"
+    )
+    assert h3.nodes == []
+    assert h3.issues[0].code == "parse.protocol-parameter"

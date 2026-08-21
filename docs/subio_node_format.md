@@ -1452,7 +1452,7 @@ version = 3
 <!-- /subio-example -->
 
 Snell version 接受 `1..6`；平台支持范围不同。`udp_port` 仅适用于 v3 及以上且当前主要由 Surge 表达；
-`mode` 只用于 v6。`obfs_opts` 的严格字段见 4.6；简单模式也可以只写 `obfs` 与 `obfs_host`。
+`mode` 只用于 v6，Surge 取值为 `default`、`unshaped` 或 `unsafe-raw`。`obfs_opts` 的严格字段见 4.6；简单模式也可以只写 `obfs` 与 `obfs_host`。
 
 <!-- protocol-fields:snell -->
 | 字段 | 类型 | 省略时 | 说明 |
@@ -1461,7 +1461,7 @@ Snell version 接受 `1..6`；平台支持范围不同。`udp_port` 仅适用于
 | `version` | integer enum | `null`（按默认版本策略处理） | `1` 到 `6` |
 | `reuse` | boolean | `null` | 连接复用开关；只在部分版本生效 |
 | `udp_port` | integer | `null` | 独立 UDP 端口 |
-| `mode` | string | `null` | Snell v6 mode |
+| `mode` | string | `null` | Snell v6 mode：`default`、`unshaped`、`unsafe-raw` |
 | `obfs` | string | `null` | 简单 obfs mode |
 | `obfs_host` | string | `null` | 简单 obfs host |
 | `obfs_uri` | string | `null` | Surge obfs URI；需要同时设置 `obfs` |

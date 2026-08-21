@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from urllib.parse import urlsplit
 
 from subio_v2.core.nodes import (
     GENERIC_IP_VERSION_VALUES,
@@ -13,6 +12,7 @@ from subio_v2.core.nodes import (
     Protocol,
     ShadowsocksNode,
     SnellNode,
+    TrustTunnelNode,
 )
 from subio_v2.core.results import IssueDraft, IssueSeverity
 
@@ -48,13 +48,13 @@ SURGE_BOOLEAN_PARAMETERS = frozenset(
     }
 )
 SURGE_ENUM_PARAMETERS: Mapping[str, frozenset[str]] = {
-    "hybrid": frozenset({"auto", "on", "off"}),
-    "ecn": frozenset({"on", "off"}),
-    "block-quic": frozenset({"on", "off"}),
+    "hybrid": frozenset({"auto", "on", "off", "true", "false"}),
+    "ecn": frozenset({"auto", "on", "off", "true", "false"}),
+    "block-quic": frozenset({"auto", "on", "off"}),
 }
 SURGE_VMESS_CIPHERS = frozenset({"aes-128-gcm", "chacha20-ietf-poly1305"})
 SURGE_SNELL_VERSIONS = frozenset(range(1, 7))
-SURGE_SNELL_MODES = frozenset({"quic"})
+SURGE_SNELL_MODES = frozenset({"default", "unshaped", "unsafe-raw"})
 SURGE_SHADOW_TLS_PROTOCOLS = frozenset(
     {
         Protocol.SHADOWSOCKS,
@@ -65,10 +65,14 @@ SURGE_SHADOW_TLS_PROTOCOLS = frozenset(
         Protocol.ANYTLS,
         Protocol.SNELL,
         Protocol.SSH,
+        Protocol.TRUSTTUNNEL,
     }
 )
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-_TOS_RE = re.compile(r"^(?:0[xX][0-9a-fA-F]{1,2}|(?:0|[1-9][0-9]{0,2}))$")
+_TOS_RE = re.compile(r"^(?:0[xX][0-9a-fA-F]+|[0-9]+)$")
+_TEST_UDP_RE = re.compile(
+    r"^(?P<hostname>[^@\s,:]+)@(?P<address>[0-9]{1,3}(?:\.[0-9]{1,3}){3})$"
+)
 
 
 def parse_surge_ip_version(value: str | None) -> str | None:
@@ -112,7 +116,7 @@ def _strict_int(value: str, key: str, *, minimum: int | None = None) -> int:
 
 
 def _validate_tos(value: str) -> None:
-    if not _TOS_RE.fullmatch(value):
+    if not isinstance(value, str) or not _TOS_RE.fullmatch(value):
         raise ValueError("tos must be a decimal or hexadecimal value from 0 to 255")
     parsed = int(value, 0) if value.lower().startswith("0x") else int(value)
     if not 0 <= parsed <= 255:
@@ -120,18 +124,25 @@ def _validate_tos(value: str) -> None:
 
 
 def _validate_test_udp(value: str) -> None:
-    if not value or any(char in value for char in ",\r\n"):
-        raise ValueError("test-udp must not be empty or contain commas/newlines")
-    if "@" in value:
-        host, address = value.split("@", 1)
-        if not host or not address or "@" in address:
-            raise ValueError("test-udp must use host or host@address syntax")
+    if not isinstance(value, str):
+        raise ValueError("test-udp must use hostname@IPv4 syntax")
+    match = _TEST_UDP_RE.fullmatch(value)
+    if not match:
+        raise ValueError("test-udp must use hostname@IPv4 syntax")
+    if any(int(octet) > 255 for octet in match.group("address").split(".")):
+        raise ValueError("test-udp must use a valid IPv4 address")
 
 
-def _validate_uri(value: str, key: str) -> None:
-    parsed = urlsplit(value)
-    if not parsed.scheme or not parsed.netloc:
-        raise ValueError(f"{key} must be an absolute URI")
+def _validate_obfs_uri(value: str, key: str, obfs: str | None) -> None:
+    if (
+        not isinstance(value, str)
+        or not value
+        or value != value.strip()
+        or any(ord(char) < 0x20 or ord(char) == 0x7F for char in value)
+    ):
+        raise ValueError(f"{key} must be a non-empty safe string")
+    if obfs != "http":
+        raise ValueError(f"{key} is only supported when obfs=http")
 
 
 def _validate_fingerprint(value: str, key: str) -> None:
@@ -148,6 +159,7 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
         "h2-connect": "http",
         "socks5-tls": "socks5",
         "tuic-v5": "tuic",
+        "trust-tunnel": Protocol.TRUSTTUNNEL.value,
     }.get(p_type, p_type)
     for key in SURGE_BOOLEAN_PARAMETERS:
         if key in values:
@@ -187,10 +199,16 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
             raise ValueError("shadow-tls-version must be 2 or 3")
         if version == 3 and not values.get("shadow-tls-sni"):
             raise ValueError("shadow-tls-version 3 requires shadow-tls-sni")
-        if protocol_for_common not in {
+        shadow_tls_allowed = protocol_for_common in {
             protocol.value for protocol in SURGE_SHADOW_TLS_PROTOCOLS
-        }:
-            raise ValueError(f"Shadow TLS is not supported for Surge {p_type}")
+        }
+        if p_type == "trust-tunnel" and values.get("h3") == "true":
+            shadow_tls_allowed = False
+        if not shadow_tls_allowed:
+            message = f"Shadow TLS is not supported for Surge {p_type}"
+            if p_type == "trust-tunnel":
+                message += " with h3=true"
+            raise ValueError(message)
 
     if p_type in {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}:
         if "no-error-alert" in values:
@@ -226,11 +244,14 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
             if version != 6:
                 raise ValueError("Snell mode is only supported by version 6")
             if values["mode"] not in SURGE_SNELL_MODES:
-                raise ValueError("Snell mode must be quic")
+                raise ValueError(
+                    "Snell mode must be one of "
+                    + ", ".join(sorted(SURGE_SNELL_MODES))
+                )
         if "obfs-uri" in values:
-            _validate_uri(values["obfs-uri"], "obfs-uri")
-            if not values.get("obfs"):
-                raise ValueError("obfs-uri requires obfs")
+            _validate_obfs_uri(
+                values["obfs-uri"], "obfs-uri", values.get("obfs")
+            )
 
     if p_type == "ss":
         if "udp-port" in values:
@@ -238,9 +259,9 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
             if udp_port > 65535:
                 raise ValueError("udp-port must be between 1 and 65535")
         if "obfs-uri" in values:
-            _validate_uri(values["obfs-uri"], "obfs-uri")
-            if not values.get("obfs"):
-                raise ValueError("obfs-uri requires obfs")
+            _validate_obfs_uri(
+                values["obfs-uri"], "obfs-uri", values.get("obfs")
+            )
 
 
 def _error(message: str, field: str) -> IssueDraft:
@@ -325,7 +346,10 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
 
     shadow = node.shadow_tls
     if shadow.enabled:
-        if node.type not in SURGE_SHADOW_TLS_PROTOCOLS:
+        shadow_tls_allowed = node.type in SURGE_SHADOW_TLS_PROTOCOLS
+        if isinstance(node, TrustTunnelNode) and node.quic:
+            shadow_tls_allowed = False
+        if not shadow_tls_allowed:
             errors.append(_error(f"Shadow TLS is not supported for Surge {node.type.value}", "shadow_tls"))
         if shadow.version not in {2, 3}:
             errors.append(_error("Shadow TLS version must be 2 or 3", "shadow_tls.version"))
@@ -335,7 +359,12 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
     if isinstance(node, HttpNode):
         _check_bool(node.always_use_connect, "always_use_connect", errors)
     if isinstance(node, ShadowsocksNode):
-        _validate_node_obfs_uri(node.obfs_uri, node.plugin, errors)
+        obfs_mode = None
+        if node.plugin == "obfs" and isinstance(node.plugin_opts, Mapping):
+            obfs_mode = node.plugin_opts.get("mode")
+        elif node.plugin:
+            obfs_mode = node.plugin
+        _validate_node_obfs_uri(node.obfs_uri, obfs_mode, errors)
     if isinstance(node, SnellNode):
         version = node.version or 1
         if node.version is not None and node.version not in SURGE_SNELL_VERSIONS:
@@ -351,7 +380,13 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
             if version != 6:
                 errors.append(_error("Snell mode is only supported by version 6", "mode"))
             elif node.mode not in SURGE_SNELL_MODES:
-                errors.append(_error("Snell mode must be quic", "mode"))
+                errors.append(
+                    _error(
+                        "Snell mode must be one of "
+                        + ", ".join(sorted(SURGE_SNELL_MODES)),
+                        "mode",
+                    )
+                )
         _validate_node_obfs_uri(node.obfs_uri, node.obfs, errors)
     return errors
 
@@ -365,8 +400,6 @@ def _validate_node_obfs_uri(
         errors.append(_error("obfs_uri must be a string", "obfs_uri"))
         return
     try:
-        _validate_uri(value, "obfs-uri")
+        _validate_obfs_uri(value, "obfs-uri", obfs)
     except ValueError as exc:
         errors.append(_error(str(exc), "obfs_uri"))
-    if not obfs:
-        errors.append(_error("obfs_uri requires obfs", "obfs_uri"))
