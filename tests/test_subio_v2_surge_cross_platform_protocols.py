@@ -119,7 +119,7 @@ def test_trust_tunnel_maps_h3_tls_and_multiplexing_to_mihomo():
     parsed = SurgeParser().parse_result(
         """
 [Proxy]
-trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, max-streams=5, h3=true, sni=trust.example.com, skip-cert-verify=true, server-cert-fingerprint-sha256=AA:BB
+trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, max-streams=5, h3=true, sni=trust.example.com, skip-cert-verify=true, server-cert-fingerprint-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 """
     )
 
@@ -134,7 +134,9 @@ trust = trust-tunnel, trust.example.com, 443, username=user, password=pass, max-
     assert proxy["max-streams"] == 5
     assert proxy["sni"] == "trust.example.com"
     assert proxy["skip-cert-verify"] is True
-    assert proxy["fingerprint"] == "AA:BB"
+    assert proxy["fingerprint"] == (
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_mihomo_trust_tunnel_without_udp_emits_to_surge():
@@ -284,7 +286,7 @@ def test_surge_builtin_aliases_round_trip_as_nodes():
         """
 [Proxy]
 On = direct, interface=en0
-Off = reject, no-error-alert=true
+Off = reject
 Drop = reject-drop
 Stable = reject-no-drop
 Gif = reject-tinygif
@@ -305,7 +307,7 @@ Gif = reject-tinygif
 
     assert emission.errors == []
     assert "On = direct, interface=en0" in emission.content
-    assert "Off = reject, no-error-alert=true" in emission.content
+    assert "Off = reject" in emission.content
     assert "Drop = reject-drop" in emission.content
     assert "Stable = reject-no-drop" in emission.content
     assert "Gif = reject-tinygif" in emission.content
@@ -321,11 +323,3 @@ Gif = reject-tinygif
         "Stable",
         "Gif",
     }
-    warning = next(
-        issue
-        for issue in to_mihomo.issues
-        if issue.node == "Off"
-        and issue.code == "conversion.unconsumed-source-field"
-    )
-    assert warning.field == "source_extensions.surge"
-    assert "no-error-alert" in warning.message

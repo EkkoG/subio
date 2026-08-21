@@ -97,6 +97,11 @@ class TargetValidationService:
                 protocol_capabilities = dict(
                     descriptor.constraints_for_target(self.platform)
                 )
+            if self.platform == "surge" and isinstance(node, VmessNode):
+                # Mihomo's auto cipher is Surge's default aes-128-gcm when emitted.
+                protocol_capabilities["ciphers"] = set(
+                    protocol_capabilities.get("ciphers", set())
+                ) | {"auto"}
             for warning in descriptor.check(node, protocol_capabilities, self.platform):
                 result.warnings.append(warning)
                 if warning.severity == IssueSeverity.ERROR:

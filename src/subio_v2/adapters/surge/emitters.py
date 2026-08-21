@@ -64,7 +64,7 @@ def emit_vmess(node: Node, _: dict[int, str]) -> list[str]:
     parts = ["vmess", _server_str(node), str(node.port), f"username={node.uuid}"]
     if node.vmess_aead:
         parts.append("vmess-aead=true")
-    if node.cipher and node.cipher != "aes-128-gcm":
+    if node.cipher and node.cipher not in {"aes-128-gcm", "auto"}:
         parts.append(f"encrypt-method={node.cipher}")
     if node.transport.network == Network.WS:
         parts.append("ws=true")

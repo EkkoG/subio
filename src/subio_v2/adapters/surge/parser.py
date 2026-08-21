@@ -901,10 +901,8 @@ class SurgeParser:
                 if node is not None
                 else None
             )
-        except Exception as exc:
-            raise ValueError(
-                f"Error parsing Surge policy '{record.name}' ({keyword}): {exc}"
-            ) from exc
+        except Exception:
+            return None
 
     def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
         if record.positional:

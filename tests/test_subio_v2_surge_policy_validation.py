@@ -11,6 +11,7 @@ from subio_v2.core.nodes import (
     ShadowTLSSettings,
     SurgePolicyOptions,
     WireguardNode,
+    VmessNode,
 )
 
 
@@ -186,6 +187,22 @@ def test_vmess_cipher_and_snell_value_domains_are_strict():
         "snell = snell, example.com, 443, psk=p, version=6, udp-port=8443, mode=quic"
     )
     assert valid_snell.issues == []
+
+
+def test_mihomo_vmess_auto_uses_surges_default_cipher_on_output():
+    node = VmessNode(
+        name="vmess",
+        type=Protocol.VMESS,
+        server="example.com",
+        port=443,
+        uuid="u",
+        cipher="auto",
+    )
+
+    assert TargetValidationService("surge").check_node(node).supported
+    output = SurgeEmitter().emit_result([node])
+    assert output.errors == []
+    assert "encrypt-method" not in output.content
 
 
 @pytest.mark.parametrize(

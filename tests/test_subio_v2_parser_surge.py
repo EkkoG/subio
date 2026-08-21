@@ -60,7 +60,7 @@ wg = wireguard, section-name, 0
 
     assert [node.name for node in result.nodes] == ["good"]
     assert [(issue.code, issue.severity) for issue in result.issues] == [
-        ("parse.resource", IssueSeverity.ERROR),
+        ("parse.line", IssueSeverity.ERROR),
         ("parse.resource", IssueSeverity.ERROR),
     ]
     assert result.issues[0].node == "bad"
