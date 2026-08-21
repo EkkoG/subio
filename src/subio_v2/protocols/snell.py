@@ -20,7 +20,21 @@ SPEC = ProtocolSpec(
     node_class=SnellNode,
     user_override_fields=frozenset({"server", "port", "psk"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "psk"}),
-    terminal_native_fields=frozenset({"mode", "obfs", "obfs_host", "obfs_opts", "psk", "reuse", "smux", "tls", "udp_port", "version"}),
+    terminal_native_fields=frozenset(
+        {
+            "mode",
+            "obfs",
+            "obfs_host",
+            "obfs_opts",
+            "obfs_uri",
+            "psk",
+            "reuse",
+            "smux",
+            "tls",
+            "udp_port",
+            "version",
+        }
+    ),
 )
 
 

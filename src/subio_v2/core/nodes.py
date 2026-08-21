@@ -10,6 +10,11 @@ if TYPE_CHECKING:
     from subio_v2.core.dialect import DialectContext
 
 
+GENERIC_IP_VERSION_VALUES = frozenset(
+    {"dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"}
+)
+
+
 class Protocol(StrEnum):
     SHADOWSOCKS = "shadowsocks"
     SHADOWSOCKSR = "shadowsocksr"
@@ -233,6 +238,7 @@ class ShadowsocksNode(BaseNode):
     udp_port: Optional[int] = None
     plugin: Optional[str] = None
     plugin_opts: Optional[Dict[str, Any]] = None
+    obfs_uri: Optional[str] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
 @dataclass
@@ -291,6 +297,7 @@ class HttpNode(BaseNode):
     password: Optional[str] = field(default=None, repr=False)
     headers: Optional[Dict[str, str]] = None
     variant: HttpVariant = HttpVariant.AUTO
+    always_use_connect: Optional[bool] = None
     max_streams: Optional[int] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
 
@@ -572,6 +579,7 @@ class SnellNode(BaseNode):
     mode: Optional[str] = None
     obfs: Optional[str] = None  # http, tls (legacy)
     obfs_host: Optional[str] = None
+    obfs_uri: Optional[str] = None
     obfs_opts: Optional[Dict[str, Any]] = None
     tls: TLSSettings = field(default_factory=TLSSettings)
     smux: SmuxSettings = field(default_factory=SmuxSettings)

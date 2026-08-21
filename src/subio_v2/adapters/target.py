@@ -4,6 +4,7 @@ import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
+from subio_v2.adapters.surge.validation import validate_surge_node
 from subio_v2.core.dialect import (
     dialect_context_for_platform,
     extension_semantic_fields,
@@ -54,6 +55,12 @@ class TargetValidationService:
             descriptor=protocol_registry.get(node.type),
         ):
             result.add_error(error.message, field=error.field)
+
+        if self.platform == "surge":
+            for issue in validate_surge_node(node):
+                result.warnings.append(issue)
+                if issue.severity == IssueSeverity.ERROR:
+                    result.supported = False
 
         if result.has_errors():
             return result

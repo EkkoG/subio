@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Set
 
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import (
+    GENERIC_IP_VERSION_VALUES,
     Network,
     SmuxSettings,
     TLSSettings,
@@ -41,6 +42,10 @@ def parse_port(data: Dict[str, Any]) -> int:
 
 def parse_base_fields(data: Dict[str, Any]) -> Dict[str, Any]:
     ip_version = data.get("ip-version", "dual")
+    if ip_version not in GENERIC_IP_VERSION_VALUES:
+        raise ValueError(
+            "ip-version must be one of dual, ipv4, ipv6, ipv4-prefer, ipv6-prefer"
+        )
     if ip_version == "dual":
         ip_version = None
     return {

@@ -147,6 +147,7 @@ SURGE_CODEC_SPECS = (
             "udp-port",
             "obfs",
             "obfs-host",
+            "obfs-uri",
         ),
         constraints={"ciphers": {
             "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm",
@@ -172,7 +173,10 @@ SURGE_CODEC_SPECS = (
             "ws-path",
             "ws-headers",
         ),
-        constraints={"ciphers": {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"}, "transports": {"tcp", "ws"}},
+        constraints={
+            "ciphers": {"aes-128-gcm", "chacha20-ietf-poly1305"},
+            "transports": {"tcp", "ws"},
+        },
     ),
     _spec(
         "trojan",
@@ -207,7 +211,7 @@ SURGE_CODEC_SPECS = (
         udp=SurgeUdpBehavior.UNSUPPORTED,
         parser=parse_http,
         emitter=emit_http,
-        consumed=("username", "password"),
+        consumed=("username", "password", "headers", "always-use-connect"),
         constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
     _spec(
@@ -216,7 +220,7 @@ SURGE_CODEC_SPECS = (
         udp=SurgeUdpBehavior.UNSUPPORTED,
         parser=parse_http,
         emitter=emit_http,
-        consumed=("username", "password"),
+        consumed=("username", "password", "headers", "always-use-connect"),
         constraints={"features": {"tls", "h2-connect", "connect-udp"}},
     ),
     _spec(
@@ -266,6 +270,7 @@ SURGE_CODEC_SPECS = (
             "mode",
             "obfs",
             "obfs-host",
+            "obfs-uri",
         ),
         constraints={
             "obfs_modes": {"http", "tls"},

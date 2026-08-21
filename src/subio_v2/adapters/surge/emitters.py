@@ -54,6 +54,8 @@ def emit_shadowsocks(node: Node, _: dict[int, str]) -> list[str]:
         host = node.plugin_opts.get("host", "") if node.plugin_opts else ""
         if host:
             parts.append(f"obfs-host={host}")
+        if node.obfs_uri:
+            parts.append(f"obfs-uri={node.obfs_uri}")
     return parts
 
 
@@ -123,8 +125,13 @@ def emit_http(node: Node, _: dict[int, str]) -> list[str]:
     if node.password:
         parts.append(f"password={node.password}")
     if node.headers:
-        headers = "|".join(f"{key}:{value}" for key, value in node.headers.items())
+        separator = ";" if node.variant in {HttpVariant.HTTP, HttpVariant.HTTPS} else "|"
+        headers = separator.join(
+            f"{key}:{value}" for key, value in node.headers.items()
+        )
         parts.append(f"headers={headers}")
+    if node.always_use_connect is not None:
+        parts.append(f"always-use-connect={str(node.always_use_connect).lower()}")
     if node.max_streams is not None:
         parts.append(f"max-streams={node.max_streams}")
     if node.variant == HttpVariant.H2_CONNECT and node.udp:
@@ -224,6 +231,8 @@ def emit_snell(node: Node, _: dict[int, str]) -> list[str]:
         parts.append(f"obfs={node.obfs}")
     if node.obfs_host:
         parts.append(f"obfs-host={node.obfs_host}")
+    if node.obfs_uri:
+        parts.append(f"obfs-uri={node.obfs_uri}")
     return parts
 
 

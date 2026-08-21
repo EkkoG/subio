@@ -23,7 +23,15 @@ SPEC = ProtocolSpec(
         {"server", "port", "cipher", "password"}
     ),
     terminal_native_fields=frozenset(
-        {"cipher", "password", "plugin", "plugin_opts", "smux", "udp_port"}
+        {
+            "cipher",
+            "obfs_uri",
+            "password",
+            "plugin",
+            "plugin_opts",
+            "smux",
+            "udp_port",
+        }
     ),
 )
 

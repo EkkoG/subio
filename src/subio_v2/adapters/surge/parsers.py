@@ -20,6 +20,7 @@ from subio_v2.core.nodes import (
     TUICNode,
     VmessNode,
 )
+from subio_v2.adapters.surge.validation import _strict_bool
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ class SurgeProtocolParseContext:
 
     def get_bool(self, key: str, default: bool = False) -> bool:
         value = self.values.get(key)
-        return default if value is None else value.lower() == "true"
+        return default if value is None else _strict_bool(value, key)
 
     def get_int(self, key: str) -> int | None:
         value = self.values.get(key)
@@ -53,9 +54,9 @@ class SurgeProtocolParseContext:
         sni = values.get("sni")
         alpn = values.get("alpn")
         return TLSSettings(
-            enabled=enabled or values.get("tls") == "true",
+            enabled=enabled or self.get_bool("tls", False),
             server_name=None if sni == "off" else sni,
-            skip_cert_verify=values.get("skip-cert-verify") == "true",
+            skip_cert_verify=self.get_bool("skip-cert-verify", False),
             alpn=(
                 [item.strip() for item in alpn.split(",")]
                 if alpn and "," in alpn
@@ -82,9 +83,9 @@ class SurgeProtocolParseContext:
 SurgeProtocolParser = Callable[[SurgeProtocolParseContext], Node | None]
 
 
-def _parse_headers(value: str) -> dict[str, str]:
+def _parse_headers(value: str, *, separator: str = "|") -> dict[str, str]:
     headers: dict[str, str] = {}
-    for item in value.split("|"):
+    for item in value.split(separator):
         if ":" not in item:
             continue
         key, header_value = item.split(":", 1)
@@ -96,7 +97,11 @@ def parse_shadowsocks(context: SurgeProtocolParseContext) -> Node:
     values = context.values
     plugin = "obfs" if values.get("obfs") else None
     plugin_opts = (
-        {"mode": values["obfs"], "host": values.get("obfs-host", "")}
+        {
+            "mode": values["obfs"],
+            "host": values.get("obfs-host", ""),
+            **({"uri": values["obfs-uri"]} if values.get("obfs-uri") else {}),
+        }
         if plugin
         else None
     )
@@ -111,6 +116,7 @@ def parse_shadowsocks(context: SurgeProtocolParseContext) -> Node:
         plugin=plugin,
         plugin_opts=plugin_opts,
         udp=context.get_bool("udp-relay", False),
+        obfs_uri=values.get("obfs-uri"),
     )
 
 
@@ -176,7 +182,19 @@ def parse_http(context: SurgeProtocolParseContext) -> Node:
         port=context.port,
         username=username,
         password=password,
-        headers=_parse_headers(values["headers"]) if values.get("headers") else None,
+        headers=(
+            _parse_headers(
+                values["headers"],
+                separator=";" if context.keyword in {"http", "https"} else "|",
+            )
+            if values.get("headers")
+            else None
+        ),
+        always_use_connect=(
+            context.get_bool("always-use-connect")
+            if values.get("always-use-connect") is not None
+            else None
+        ),
         variant=HttpVariant(context.keyword),
         max_streams=context.get_int("max-streams"),
         tls=context.build_tls(enabled=context.keyword in {"https", "h2-connect"}),
@@ -245,6 +263,7 @@ def parse_snell(context: SurgeProtocolParseContext) -> Node:
         mode=values.get("mode"),
         obfs=values.get("obfs"),
         obfs_host=values.get("obfs-host"),
+        obfs_uri=values.get("obfs-uri"),
         tls=TLSSettings(enabled=False),
         udp=bool(version and version >= 3),
     )

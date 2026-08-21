@@ -27,6 +27,10 @@ from subio_v2.adapters.surge.syntax import (
     parse_proxy_line,
     split_comma_separated,
 )
+from subio_v2.adapters.surge.validation import (
+    parse_surge_ip_version,
+    validate_surge_parameters,
+)
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import (
     DirectNode,
@@ -168,6 +172,36 @@ class SurgeParser:
                     )
                     continue
                 name, protocol = record.name, record.type.lower()
+                if name.upper() in _PREDEFINED_BUILTIN_NAMES:
+                    if name.upper() == "DIRECT":
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.INFO,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target=None,
+                                field=f"lines[{index}]",
+                                message="Surge ignores attempts to redefine DIRECT",
+                                stage="parse",
+                                code="parse.ignored-built-in-redefinition",
+                            )
+                        )
+                    else:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target=None,
+                                field=f"lines[{index}]",
+                                message=f"Surge built-in policy name '{name}' cannot be redefined",
+                                stage="parse",
+                                code="parse.invalid-built-in-redefinition",
+                            )
+                        )
+                    continue
                 codec = get_surge_codec(protocol)
                 if (
                     codec
@@ -195,6 +229,24 @@ class SurgeParser:
                         )
                     )
                     continue
+                if protocol != "external":
+                    try:
+                        validate_surge_parameters(record.parameters.last_values, protocol)
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target=None,
+                                field=f"lines[{index}]",
+                                message=f"Invalid Surge policy parameter: {exc}",
+                                stage="parse",
+                                code="parse.protocol-parameter",
+                            )
+                        )
+                        continue
                 if protocol == "wireguard":
                     try:
                         node = self._parse_wireguard(record, named_sections)
@@ -292,21 +344,10 @@ class SurgeParser:
                     retain_node(node, index)
                     continue
                 if protocol in SURGE_BUILTIN_ALIAS_TYPES:
-                    if name == "DIRECT":
-                        issues.append(
-                            ConversionIssue(
-                                severity=IssueSeverity.INFO,
-                                node=name,
-                                protocol=protocol,
-                                source=None,
-                                target=None,
-                                field=f"lines[{index}]",
-                                message="Surge ignores attempts to redefine DIRECT",
-                                stage="parse",
-                                code="parse.ignored-built-in-redefinition",
-                            )
-                        )
-                    elif name.upper() in _PREDEFINED_BUILTIN_NAMES:
+                    try:
+                        node = self._parse_builtin_alias(record)
+                        retain_node(node, index)
+                    except (TypeError, ValueError) as exc:
                         issues.append(
                             ConversionIssue(
                                 severity=IssueSeverity.ERROR,
@@ -315,30 +356,11 @@ class SurgeParser:
                                 source=None,
                                 target=None,
                                 field=f"lines[{index}]",
-                                message=f"Surge built-in policy name '{name}' cannot be redefined",
+                                message=f"Failed to parse Surge alias: {exc}",
                                 stage="parse",
-                                code="parse.invalid-built-in-redefinition",
+                                code="parse.line",
                             )
                         )
-                    else:
-                        try:
-                            node = self._parse_builtin_alias(record)
-                            retain_node(node, index)
-                        except (TypeError, ValueError) as exc:
-                            issues.append(
-                                ConversionIssue(
-                                    severity=IssueSeverity.ERROR,
-                                    node=name,
-                                    protocol=protocol,
-                                    source=None,
-                                    target=None,
-                                    field=f"lines[{index}]",
-                                    message=f"Failed to parse Surge alias: {exc}",
-                                    stage="parse",
-                                    code="parse.line",
-                                )
-                            )
-                            continue
                     continue
                 try:
                     node = self._parse_line(line)
@@ -828,7 +850,17 @@ class SurgeParser:
             port=None,
             udp=values.get("udp-relay") == "true",
             tfo=values.get("tfo") == "true",
-            ip_version=values.get("ip-version"),
+            ip_version=(
+                parse_surge_ip_version(values.get("ip-version"))
+                if values.get("ip-version") in {
+                    "dual",
+                    "v4-only",
+                    "v6-only",
+                    "prefer-v4",
+                    "prefer-v6",
+                }
+                else values.get("ip-version")
+            ),
             dialer_proxy=values.get("underlying-proxy"),
             interface_name=values.get("interface"),
             surge_options=SurgePolicyOptions(
@@ -871,10 +903,9 @@ class SurgeParser:
                 else None
             )
         except Exception as exc:
-            logger.warning(
+            raise ValueError(
                 f"Error parsing Surge policy '{record.name}' ({keyword}): {exc}"
-            )
-            return None
+            ) from exc
 
     def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
         if record.positional:
@@ -919,13 +950,15 @@ class SurgeParser:
     ) -> Node:
         kv_args = record.parameters.last_values
 
+        validate_surge_parameters(kv_args, p_type)
+
         def get_bool(key: str, default: bool = False) -> bool:
             value = kv_args.get(key)
-            return default if value is None else value.lower() == "true"
+            return default if value is None else value == "true"
 
         def get_optional_bool(key: str) -> bool | None:
             value = kv_args.get(key)
-            return None if value is None else value.lower() == "true"
+            return None if value is None else value == "true"
 
         def get_int(key: str) -> int | None:
             value = kv_args.get(key)
@@ -933,7 +966,7 @@ class SurgeParser:
 
         node.dialer_proxy = kv_args.get("underlying-proxy")
         node.tfo = get_bool("tfo")
-        node.ip_version = kv_args.get("ip-version")
+        node.ip_version = parse_surge_ip_version(kv_args.get("ip-version"))
         node.interface_name = kv_args.get("interface")
         node.surge_options = SurgePolicyOptions(
             allow_other_interface=get_optional_bool("allow-other-interface"),

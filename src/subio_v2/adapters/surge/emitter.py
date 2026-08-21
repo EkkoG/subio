@@ -21,6 +21,7 @@ from subio_v2.adapters.surge.syntax import (
     serialize_parameter_list,
     serialize_proxy_line,
 )
+from subio_v2.adapters.surge.validation import emit_surge_ip_version
 from subio_v2.core.nodes import (
     Node,
     ShadowsocksNode,
@@ -322,7 +323,12 @@ class SurgeEmitter(BaseEmitter):
 
         record_change("udp-relay", node.udp, bool_value("udp-relay"))
         record_change("tfo", node.tfo, bool_value("tfo"))
-        record_change("ip-version", node.ip_version, values.get("ip-version"))
+        if node.ip_version is not None or "ip-version" in values:
+            try:
+                emitted_ip_version = emit_surge_ip_version(node.ip_version)
+            except ValueError:
+                emitted_ip_version = node.ip_version
+            record_change("ip-version", emitted_ip_version, values.get("ip-version"))
         record_change(
             "underlying-proxy", node.dialer_proxy, values.get("underlying-proxy")
         )
@@ -646,7 +652,7 @@ class SurgeEmitter(BaseEmitter):
             and node.ip_version
             and node.ip_version != "dual"
         ):
-            config_parts.append(f"ip-version={node.ip_version}")
+            config_parts.append(f"ip-version={emit_surge_ip_version(node.ip_version)}")
 
         if hasattr(node, "dialer_proxy") and node.dialer_proxy:
             config_parts.append(f"underlying-proxy={node.dialer_proxy}")

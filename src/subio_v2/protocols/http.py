@@ -14,7 +14,17 @@ SPEC = ProtocolSpec(
     terminal_native_user_override_fields=frozenset(
         {"server", "port", "username", "password"}
     ),
-    terminal_native_fields=frozenset({"headers", "max_streams", "password", "tls", "username", "variant"}),
+    terminal_native_fields=frozenset(
+        {
+            "always_use_connect",
+            "headers",
+            "max_streams",
+            "password",
+            "tls",
+            "username",
+            "variant",
+        }
+    ),
 )
 
 

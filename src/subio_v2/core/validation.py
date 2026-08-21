@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol as TypingProtocol
 
-from subio_v2.core.nodes import Node, RejectMode, RejectNode
+from subio_v2.core.nodes import (
+    GENERIC_IP_VERSION_VALUES,
+    Node,
+    RejectMode,
+    RejectNode,
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +38,13 @@ def validate_node(
         errors.append(NodeValidationError("name", "Node name is required"))
     if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
         errors.append(NodeValidationError("mode", "Reject mode is invalid"))
+    if node.ip_version is not None and node.ip_version not in GENERIC_IP_VERSION_VALUES:
+        errors.append(
+            NodeValidationError(
+                "ip_version",
+                "IP version must be one of dual, ipv4, ipv6, ipv4-prefer, ipv6-prefer",
+            )
+        )
 
     if definition is not None and definition.requires_endpoint:
         if not node.server:
