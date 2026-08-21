@@ -1,10 +1,14 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
-from subio_v2.adapters.surge.validation import validate_surge_node
+from subio_v2.adapters.surge.validation import (
+    SURGE_RESERVED_POLICY_NAMES,
+    validate_surge_node,
+    validate_surge_parameters,
+)
 from subio_v2.core.dialect import (
     dialect_context_for_platform,
     extension_semantic_fields,
@@ -52,6 +56,16 @@ class TargetValidationService:
 
     def check_node(self, node: Node) -> TargetCheckResult:
         result = TargetCheckResult(supported=True)
+        if (
+            self.platform == "surge"
+            and isinstance(node.name, str)
+            and node.name in SURGE_RESERVED_POLICY_NAMES
+        ):
+            result.add_error(
+                f"Surge built-in policy name '{node.name}' cannot be used for a node",
+                field="name",
+                code="conversion.reserved-policy-name",
+            )
         for error in validate_node(
             node,
             definition=protocol_registry.get_definition(node.type),
@@ -64,6 +78,14 @@ class TargetValidationService:
                 result.warnings.append(issue)
                 if issue.severity == IssueSeverity.ERROR:
                     result.supported = False
+
+            if isinstance(node, SourcePassthroughNode):
+                self._check_surge_source_passthrough(node, result)
+
+        # Opaque source records have no target codec. Same-dialect callers still
+        # need their typed common fields and known raw policy parameters checked.
+        if isinstance(node, SourcePassthroughNode):
+            return result
 
         if result.has_errors():
             return result
@@ -109,6 +131,25 @@ class TargetValidationService:
 
         self._check_common_target_fields(node, result)
         return result
+
+    @staticmethod
+    def _check_surge_source_passthrough(
+        node: SourcePassthroughNode, result: TargetCheckResult
+    ) -> None:
+        source_context = node.source_context
+        if source_context is None or source_context.dialect != "surge":
+            return
+        parameters = getattr(getattr(node.raw, "parameters", None), "last_values", None)
+        if not isinstance(parameters, Mapping):
+            return
+        try:
+            validate_surge_parameters(parameters, node.original_type or "external")
+        except (TypeError, ValueError) as exc:
+            result.add_error(
+                f"Invalid Surge policy parameter: {exc}",
+                field="parameters",
+                code="conversion.invalid-value",
+            )
 
     def encode_node(
         self,
@@ -243,7 +284,21 @@ class TargetValidationService:
                     node.source_context.dialect if node.source_context else None
                 )
                 if source_dialect == self.target_context.dialect:
-                    supported_nodes.append(node)
+                    result = check(node)
+                    for warning in result.warnings:
+                        issues.append(
+                            self.issue_for_node(
+                                node,
+                                warning.severity,
+                                warning.message,
+                                field=warning.field,
+                                suggestion=warning.suggestion,
+                                stage="capability",
+                                code=warning.code,
+                            )
+                        )
+                    if result.supported:
+                        supported_nodes.append(node)
                 else:
                     issues.append(
                         self.issue_for_node(

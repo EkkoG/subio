@@ -28,6 +28,7 @@ from subio_v2.adapters.surge.syntax import (
     split_comma_separated,
 )
 from subio_v2.adapters.surge.validation import (
+    SURGE_RESERVED_POLICY_NAMES,
     parse_surge_ip_version,
     validate_surge_parameters,
 )
@@ -53,17 +54,7 @@ from subio_v2.core.nodes import (
 from subio_v2.core.records import NodeRecord
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 
-_PREDEFINED_BUILTIN_NAMES = {
-    "DIRECT",
-    "REJECT",
-    "REJECT-DROP",
-    "REJECT-NO-DROP",
-    "REJECT-TINYGIF",
-    "CELLULAR",
-    "CELLULAR-ONLY",
-    "HYBRID",
-    "NO-HYBRID",
-}
+_PREDEFINED_BUILTIN_NAMES = SURGE_RESERVED_POLICY_NAMES
 _NAMED_SECTION_KINDS = {"wireguard", "tailscale"}
 _NAMED_SECTION_RE = re.compile(r"^\[([^\]\s]+)\s+([^\]]+)\]$")
 _SOURCE_KINDS = {"unknown", "local", "remote"}
@@ -228,24 +219,23 @@ class SurgeParser:
                         )
                     )
                     continue
-                if protocol != "external":
-                    try:
-                        validate_surge_parameters(record.parameters.last_values, protocol)
-                    except (TypeError, ValueError) as exc:
-                        issues.append(
-                            ConversionIssue(
-                                severity=IssueSeverity.ERROR,
-                                node=name,
-                                protocol=protocol,
-                                source=None,
-                                target=None,
-                                field=f"lines[{index}]",
-                                message=f"Invalid Surge policy parameter: {exc}",
-                                stage="parse",
-                                code="parse.protocol-parameter",
-                            )
+                try:
+                    validate_surge_parameters(record.parameters.last_values, protocol)
+                except (TypeError, ValueError) as exc:
+                    issues.append(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=name,
+                            protocol=protocol,
+                            source=None,
+                            target=None,
+                            field=f"lines[{index}]",
+                            message=f"Invalid Surge policy parameter: {exc}",
+                            stage="parse",
+                            code="parse.protocol-parameter",
                         )
-                        continue
+                    )
+                    continue
                 if protocol == "wireguard":
                     try:
                         node = self._parse_wireguard(record, named_sections)
@@ -849,17 +839,7 @@ class SurgeParser:
             port=None,
             udp=values.get("udp-relay") == "true",
             tfo=values.get("tfo") == "true",
-            ip_version=(
-                parse_surge_ip_version(values.get("ip-version"))
-                if values.get("ip-version") in {
-                    "dual",
-                    "v4-only",
-                    "v6-only",
-                    "prefer-v4",
-                    "prefer-v6",
-                }
-                else values.get("ip-version")
-            ),
+            ip_version=parse_surge_ip_version(values.get("ip-version")),
             dialer_proxy=values.get("underlying-proxy"),
             interface_name=values.get("interface"),
             surge_options=SurgePolicyOptions(

@@ -4,6 +4,7 @@ import pytest
 
 from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.adapters.surge.parser import SurgeParser
+from subio_v2.adapters.surge.syntax import parse_proxy_line
 from subio_v2.core.errors import ArtifactGenerationError, ConfigError
 from subio_v2.core.nodes import (
     DirectNode,
@@ -134,7 +135,7 @@ def test_allowed_external_preserves_repeated_parameters(
     [
         "safe = external, local-port=1080",
         "safe = external, exec=/bin/true, local-port=invalid",
-        "safe = external, exec=/bin/true, local-port=1080, udp-relay=invalid",
+        "safe = external, exec=/bin/true, local-port=1080, future=invalid",
     ],
 )
 def test_external_is_opaque_and_does_not_require_semantic_validation(line):
@@ -146,6 +147,37 @@ def test_external_is_opaque_and_does_not_require_semantic_validation(line):
     assert len(emission.supported_nodes) == 1
     assert emission.errors == []
     assert emission.content == line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "safe = external, allow-other-interface=maybe",
+        "safe = external, ip-version=prefer-v7",
+        "safe = external, test-udp=probe.example@not-an-ip",
+        "safe = external, udp-relay=invalid",
+    ],
+)
+def test_external_validates_known_common_parameters(line):
+    parsed = SurgeParser(source_kind="local").parse_result(line)
+
+    assert parsed.nodes == []
+    assert parsed.issues[0].code == "parse.protocol-parameter"
+
+
+def test_same_dialect_external_target_validation_rechecks_raw_parameters():
+    parsed = SurgeParser(source_kind="local").parse_result(
+        "safe = external, local-port=1080"
+    )
+    node = parsed.nodes[0]
+    node.raw = parse_proxy_line(
+        "safe = external, local-port=1080, allow-other-interface=maybe"
+    )
+
+    emission = SurgeEmitter().emit_result([node])
+
+    assert emission.supported_nodes == []
+    assert emission.errors[0].field == "parameters"
 
 
 def test_capability_rejects_mutated_invalid_reject_mode():

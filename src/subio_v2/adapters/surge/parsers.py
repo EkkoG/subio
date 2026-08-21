@@ -100,7 +100,6 @@ def parse_shadowsocks(context: SurgeProtocolParseContext) -> Node:
         {
             "mode": values["obfs"],
             "host": values.get("obfs-host", ""),
-            **({"uri": values["obfs-uri"]} if values.get("obfs-uri") else {}),
         }
         if plugin
         else None
@@ -185,7 +184,11 @@ def parse_http(context: SurgeProtocolParseContext) -> Node:
         headers=(
             _parse_headers(
                 values["headers"],
-                separator=";" if context.keyword in {"http", "https"} else "|",
+                separator=(
+                    ";"
+                    if context.keyword in {"http", "https", "h2-connect"}
+                    else "|"
+                ),
             )
             if values.get("headers")
             else None

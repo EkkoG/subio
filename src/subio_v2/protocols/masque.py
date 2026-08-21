@@ -205,6 +205,16 @@ class MasqueCodec(StructuredClashProtocolCodec):
                 )
             )
 
+        if platform != "stash" and node.dialer_proxy and node.ports:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message="MASQUE port hopping cannot be combined with underlying-proxy",
+                    field="ports",
+                    code="conversion.unsupported-field-combination",
+                )
+            )
+
         if platform == "stash":
             for field, value in (
                 ("remote_dns_resolve", node.remote_dns_resolve),

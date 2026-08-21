@@ -30,7 +30,7 @@ def test_surge_h2_connect_round_trip_and_capability_boundary():
     node = SurgeParser().parse_result(
         """
 [Proxy]
-h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:SubIO|X-Test:a=b", max-streams=8, udp-relay=true
+h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:SubIO;X-Test:a=b", max-streams=8, udp-relay=true
 """
     ).nodes[0]
 
@@ -44,7 +44,7 @@ h2 = h2-connect, example.com, 443, username=u, password=p, headers="User-Agent:S
 
     output = SurgeEmitter().emit_result([node]).content
     assert "h2 = h2-connect" in output
-    assert "headers=User-Agent:SubIO|X-Test:a=b" in output
+    assert "headers=User-Agent:SubIO;X-Test:a=b" in output
     assert "max-streams=8" in output
     assert "udp-relay=true" in output
 

@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from subio_v2.core.nodes import (
     GENERIC_IP_VERSION_VALUES,
     HttpNode,
+    HttpVariant,
     Node,
     Protocol,
     ShadowsocksNode,
@@ -66,6 +67,19 @@ SURGE_SHADOW_TLS_PROTOCOLS = frozenset(
         Protocol.SNELL,
         Protocol.SSH,
         Protocol.TRUSTTUNNEL,
+    }
+)
+SURGE_RESERVED_POLICY_NAMES = frozenset(
+    {
+        "DIRECT",
+        "REJECT",
+        "REJECT-DROP",
+        "REJECT-NO-DROP",
+        "REJECT-TINYGIF",
+        "CELLULAR",
+        "CELLULAR-ONLY",
+        "HYBRID",
+        "NO-HYBRID",
     }
 )
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -164,6 +178,9 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
     for key in SURGE_BOOLEAN_PARAMETERS:
         if key in values:
             _strict_bool(values[key], key)
+
+    if "always-use-connect" in values and p_type not in {"http", "https"}:
+        raise ValueError("always-use-connect is only supported by Surge http/https")
 
     if "ip-version" in values:
         parse_surge_ip_version(values["ip-version"])
@@ -358,7 +375,23 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
 
     if isinstance(node, HttpNode):
         _check_bool(node.always_use_connect, "always_use_connect", errors)
+        if (
+            node.variant == HttpVariant.H2_CONNECT
+            and node.always_use_connect is not None
+        ):
+            errors.append(
+                _error(
+                    "always_use_connect is only supported by Surge http/https",
+                    "always_use_connect",
+                )
+            )
     if isinstance(node, ShadowsocksNode):
+        if node.udp_port is not None and (
+            not isinstance(node.udp_port, int)
+            or isinstance(node.udp_port, bool)
+            or not 1 <= node.udp_port <= 65535
+        ):
+            errors.append(_error("udp_port must be between 1 and 65535", "udp_port"))
         obfs_mode = None
         if node.plugin == "obfs" and isinstance(node.plugin_opts, Mapping):
             obfs_mode = node.plugin_opts.get("mode")

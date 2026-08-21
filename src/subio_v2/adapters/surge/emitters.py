@@ -125,7 +125,12 @@ def emit_http(node: Node, _: dict[int, str]) -> list[str]:
     if node.password:
         parts.append(f"password={node.password}")
     if node.headers:
-        separator = ";" if node.variant in {HttpVariant.HTTP, HttpVariant.HTTPS} else "|"
+        separator = (
+            ";"
+            if node.variant
+            in {HttpVariant.HTTP, HttpVariant.HTTPS, HttpVariant.H2_CONNECT}
+            else "|"
+        )
         headers = separator.join(
             f"{key}:{value}" for key, value in node.headers.items()
         )

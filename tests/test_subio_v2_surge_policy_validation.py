@@ -7,6 +7,8 @@ from subio_v2.adapters.target import TargetValidationService
 from subio_v2.core.nodes import (
     DirectNode,
     HttpNode,
+    HttpVariant,
+    MasqueNode,
     Protocol,
     ShadowTLSSettings,
     ShadowsocksNode,
@@ -158,6 +160,58 @@ def test_builtin_policy_names_are_reserved_even_with_non_alias_rhs():
     ]
 
 
+@pytest.mark.parametrize("name", ["DIRECT", "CELLULAR"])
+def test_surge_typed_nodes_cannot_use_builtin_policy_names(name):
+    node = DirectNode(name=name, type=Protocol.DIRECT)
+
+    result = TargetValidationService("surge").check_node(node)
+
+    assert not result.supported
+    assert any(
+        issue.code == "conversion.reserved-policy-name" and issue.field == "name"
+        for issue in result.warnings
+    )
+
+
+def test_surge_typed_lowercase_policy_name_remains_usable():
+    node = DirectNode(name="direct", type=Protocol.DIRECT)
+
+    assert TargetValidationService("surge").check_node(node).supported
+
+
+@pytest.mark.parametrize("udp_port", [0, -1, 65536, True])
+def test_surge_typed_shadowsocks_udp_port_is_bounded(udp_port):
+    node = ShadowsocksNode(
+        name="ss",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        password="p",
+        udp_port=udp_port,
+    )
+
+    result = TargetValidationService("surge").check_node(node)
+
+    assert not result.supported
+    assert any(issue.field == "udp_port" for issue in result.warnings)
+
+
+def test_surge_typed_masque_rejects_port_hopping_with_underlying_proxy():
+    node = MasqueNode(
+        name="masque",
+        type=Protocol.MASQUE,
+        server="example.com",
+        port=443,
+        ports="1000-2000",
+        dialer_proxy="upstream",
+    )
+
+    result = TargetValidationService("surge").check_node(node)
+
+    assert not result.supported
+    assert any(issue.field == "ports" for issue in result.warnings)
+
+
 def test_surge_target_checks_common_applicability_and_shadow_tls_protocols():
     direct = DirectNode(
         name="direct",
@@ -222,6 +276,44 @@ def test_http_headers_use_official_semicolon_syntax_without_duplicate_output():
     assert emission.content.count("headers=") == 1
     assert "headers=User-Agent:SubIO;X-Test:a=b" in emission.content
     assert "always-use-connect=true" in emission.content
+
+
+def test_h2_connect_headers_use_semicolon_syntax_without_duplicate_output():
+    result = SurgeParser().parse_result(
+        'proxy = h2-connect, example.com, 443, headers="One:1;Two:2"'
+    )
+
+    assert result.issues == []
+    node = result.nodes[0]
+    assert node.headers == {"One": "1", "Two": "2"}
+
+    emission = SurgeEmitter().emit_result(result.nodes)
+
+    assert emission.errors == []
+    assert emission.content.count("headers=") == 1
+    assert "headers=One:1;Two:2" in emission.content
+
+
+def test_h2_connect_rejects_always_use_connect():
+    result = SurgeParser().parse_result(
+        "proxy = h2-connect, example.com, 443, always-use-connect=true"
+    )
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.protocol-parameter"
+    assert "only supported by Surge http/https" in result.issues[0].message
+
+    node = HttpNode(
+        name="h2",
+        type=Protocol.HTTP,
+        server="example.com",
+        port=443,
+        variant=HttpVariant.H2_CONNECT,
+        always_use_connect=True,
+    )
+    check = TargetValidationService("surge").check_node(node)
+    assert not check.supported
+    assert any(issue.field == "always_use_connect" for issue in check.warnings)
 
 
 @pytest.mark.parametrize("keyword", ["ss", "snell"])
@@ -312,6 +404,7 @@ def test_surge_only_fields_produce_cross_target_diagnostics():
     ).nodes[0]
     result = ClashEmitter().emit_result([ss])
     assert any(issue.field == "obfs_uri" for issue in result.issues)
+    assert "uri" not in result.content["proxies"][0].get("plugin-opts", {})
 
 
 def test_vmess_cipher_and_snell_value_domains_are_strict():
