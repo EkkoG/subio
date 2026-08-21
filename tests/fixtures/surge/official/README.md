@@ -1,8 +1,9 @@
 # Surge official proxy fixtures
 
-Sources were reviewed on 2026-08-15:
+Sources were reviewed on 2026-08-21:
 
 - https://manual.nssurge.com/policies/overview.html
+- https://manual.nssurge.com/policies/reject.html
 - https://manual.nssurge.com/policies/parameters.html
 - https://manual.nssurge.com/policies/tls.html
 - https://manual.nssurge.com/policies/udp.html

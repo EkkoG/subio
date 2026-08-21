@@ -10,7 +10,10 @@ from subio_v2.core.dialect import (
     extension_semantic_fields,
 )
 from subio_v2.core.nodes import (
+    HttpNode,
     Node,
+    ShadowsocksNode,
+    SnellNode,
     SourcePassthroughNode,
     SurgePolicyOptions,
     VmessNode,
@@ -142,6 +145,10 @@ class TargetValidationService:
                 unsupported_fields.append("shadow_tls")
             if isinstance(node, VmessNode) and node.vmess_aead:
                 unsupported_fields.append("vmess_aead")
+            if isinstance(node, HttpNode) and node.always_use_connect is not None:
+                unsupported_fields.append("always_use_connect")
+            if isinstance(node, (ShadowsocksNode, SnellNode)) and node.obfs_uri:
+                unsupported_fields.append("obfs_uri")
         if self.platform not in {"mihomo", "clash", "stash", "surge"}:
             if node.interface_name:
                 unsupported_fields.append("interface_name")

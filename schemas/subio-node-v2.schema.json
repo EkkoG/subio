@@ -1001,6 +1001,9 @@
           {
             "additionalProperties": false,
             "properties": {
+              "always_use_connect": {
+                "type": "boolean"
+              },
               "dialer_proxy": {
                 "type": "string"
               },
@@ -2365,6 +2368,9 @@
               "name": {
                 "type": "string"
               },
+              "obfs_uri": {
+                "type": "string"
+              },
               "password": {
                 "type": "string"
               },
@@ -2623,6 +2629,9 @@
               },
               "obfs_opts": {
                 "$ref": "#/$defs/SnellObfsOptions"
+              },
+              "obfs_uri": {
+                "type": "string"
               },
               "port": {
                 "type": "integer"

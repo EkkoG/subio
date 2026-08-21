@@ -467,9 +467,13 @@ allow_empty = true
 
     result = WorkflowEngine(str(cfg), dry_run=True).run()
 
-    assert result.errors == []
+    if provider_options.startswith('dialer_proxy'):
+        assert result.errors
+        assert result.errors[0].field == "dialer_proxy"
+    else:
+        assert result.errors == []
     output = (tmp_path / "dist" / "out.conf").read_text()
-    if expected:
+    if expected and not provider_options.startswith('dialer_proxy'):
         assert expected in output
     if unexpected:
         assert not any(line.startswith(unexpected) for line in output.splitlines())

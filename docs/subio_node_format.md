@@ -959,6 +959,7 @@ server_name = "proxy.example.com"
 | `password` | string | `null` | Basic/代理认证密码 |
 | `headers` | object<string,string> | `null` | 额外 HTTP header |
 | `variant` | string enum | `auto` | `auto`、`http`、`https`、`h2-connect` |
+| `always_use_connect` | boolean | `null` | Surge HTTP/HTTPS 是否始终使用 CONNECT |
 | `max_streams` | integer | `null` | H2 CONNECT 最大流数 |
 | `tls` | object | 禁用 | TLS 设置；`https` 通常同时启用 |
 <!-- /protocol-fields -->
@@ -1385,6 +1386,7 @@ headers = { User-Agent = "SubIO" }
 | `cipher` | string | `chacha20-ietf-poly1305` | cipher 名；必须被目标支持 |
 | `password` | string | 空字符串 | 除 `cipher = "none"` 外必填 |
 | `udp_port` | integer | `null` | 独立 UDP 端口 |
+| `obfs_uri` | string | `null` | Surge obfs URI；需要同时设置 `plugin = "obfs"` |
 | `plugin` | string enum | `null` | 见 4.6 的七种 plugin |
 | `plugin_opts` | object | `null` | 严格 plugin 参数对象 |
 | `smux` | object | 禁用 | sing-mux 设置 |
@@ -1462,6 +1464,7 @@ Snell version 接受 `1..6`；平台支持范围不同。`udp_port` 仅适用于
 | `mode` | string | `null` | Snell v6 mode |
 | `obfs` | string | `null` | 简单 obfs mode |
 | `obfs_host` | string | `null` | 简单 obfs host |
+| `obfs_uri` | string | `null` | Surge obfs URI；需要同时设置 `obfs` |
 | `obfs_opts` | object | `null` | 严格 obfs 对象 |
 | `tls` | object | 禁用 | 解析/目标共享的 TLS 设置 |
 | `smux` | object | 禁用 | sing-mux 设置 |

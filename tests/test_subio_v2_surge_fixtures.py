@@ -29,6 +29,21 @@ def test_official_basic_proxy_fixture_is_parseable():
     assert len(SurgeParser().parse_result(output).nodes) == 10
 
 
+def test_surge_proxy_groups_remain_outside_node_ir():
+    result = SurgeParser().parse_result(
+        """
+[Proxy]
+On = direct
+
+[Proxy Group]
+Auto = url-test, On, url=https://example.com/ping
+"""
+    )
+
+    assert result.issues == []
+    assert [node.name for node in result.nodes] == ["On"]
+
+
 def test_official_quoted_alpn_regression_baseline():
     node = SurgeParser().parse_result(
         '[Proxy]\ntuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2"'

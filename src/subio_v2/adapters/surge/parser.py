@@ -52,7 +52,6 @@ from subio_v2.core.nodes import (
 )
 from subio_v2.core.records import NodeRecord
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
-from subio_v2.infrastructure.logging import logger
 
 _PREDEFINED_BUILTIN_NAMES = {
     "DIRECT",

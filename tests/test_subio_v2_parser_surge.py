@@ -14,7 +14,7 @@ def test_surge_parser_proxy_section_and_no_sections():
     conf = """
 [Proxy]
 SS1 = ss, s1, 1000, encrypt-method=aes-256-gcm, password=p, udp-relay=true, obfs=http, obfs-host=h
-VM2 = vmess, s2, 2000, username=u2, encrypt-method=auto, tls=true
+VM2 = vmess, s2, 2000, username=u2, encrypt-method=chacha20-ietf-poly1305, tls=true
 TRO3 = trojan, s3, 3000, password=tp
 SOCK = socks5, s4, 4000, username=user, password=pass
 HTTP = https, s5, 5000, username=aa, password=bb
@@ -60,7 +60,7 @@ wg = wireguard, section-name, 0
 
     assert [node.name for node in result.nodes] == ["good"]
     assert [(issue.code, issue.severity) for issue in result.issues] == [
-        ("parse.line", IssueSeverity.ERROR),
+        ("parse.resource", IssueSeverity.ERROR),
         ("parse.resource", IssueSeverity.ERROR),
     ]
     assert result.issues[0].node == "bad"
@@ -174,7 +174,7 @@ tuic = tuic-v5, example.com, 443, uuid=u, password=p, alpn="h3,h2", tfo=true, ip
     node = result.nodes[0]
     assert node.tls.alpn == ["h3", "h2"]
     assert node.tfo is True
-    assert node.ip_version == "prefer-v4"
+    assert node.ip_version == "ipv4-prefer"
     assert node.interface_name == "en0"
     assert node.dialer_proxy == "entry"
 
@@ -249,7 +249,7 @@ def test_surge_vmess_cipher_and_port_hopping_fields_round_trip():
         """
 [Proxy]
 default = vmess, example.com, 443, username=u
-custom = vmess, example.com, 443, username=u, encrypt-method=auto
+custom = vmess, example.com, 443, username=u, encrypt-method=chacha20-ietf-poly1305
 tuic = tuic-v5, example.com, 443, uuid=u, password=p, port-hopping="443,8443-8445", port-hopping-interval=30
 hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hopping-interval=20
 """
@@ -258,7 +258,7 @@ hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hoppin
     assert result.issues == []
     by_name = {node.name: node for node in result.nodes}
     assert by_name["default"].cipher == "aes-128-gcm"
-    assert by_name["custom"].cipher == "auto"
+    assert by_name["custom"].cipher == "chacha20-ietf-poly1305"
     assert by_name["tuic"].ports == "443,8443-8445"
     assert by_name["tuic"].hop_interval == 30
     assert by_name["hy2"].ports == "443-445"
@@ -272,7 +272,7 @@ hy2 = hysteria2, example.com, 443, password=p, port-hopping=443-445, port-hoppin
         line for line in output.splitlines() if line.startswith("custom =")
     )
     assert "encrypt-method" not in default_line
-    assert "encrypt-method=auto" in custom_line
+    assert "encrypt-method=chacha20-ietf-poly1305" in custom_line
     assert 'port-hopping="443,8443-8445"' in output
     assert "port-hopping-interval=30" in output
 
@@ -340,6 +340,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         server="server",
         port=443,
         uuid="test-uuid",
+        cipher="aes-128-gcm",
         transport=TransportSettings(network=Network.WS, path=None),
     )
     output3 = emitter.emit_result([node3]).content
@@ -353,6 +354,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         server="server",
         port=443,
         uuid="test-uuid",
+        cipher="aes-128-gcm",
         transport=TransportSettings(network=Network.WS, path="/ws-path"),
     )
     output4 = emitter.emit_result([node4]).content

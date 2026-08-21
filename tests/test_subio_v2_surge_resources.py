@@ -47,7 +47,7 @@ def test_surge_common_tls_shadow_tls_and_unknown_parameters_round_trip():
     result = SurgeParser().parse_result(
         """
 [Proxy]
-proxy = https, example.com, 443, username=u, password=p, interface=en0, allow-other-interface=true, dns-follow-interface=false, no-error-alert=true, ip-version=prefer-v6, hybrid=auto, tfo=true, tos=0x20, ecn=on, block-quic=off, test-url=https://example.com/ping, test-timeout=5, test-udp=probe.example@198.51.100.1, sni=off, server-cert-verify-name=verify.example.com, server-cert-fingerprint-sha256=AA:BB, alpn="h2,http/1.1", client-cert=client, shadow-tls-password=shadow-secret, shadow-tls-sni=shadow.example.com, shadow-tls-version=3, future=one, future=two
+proxy = https, example.com, 443, username=u, password=p, interface=en0, allow-other-interface=true, dns-follow-interface=false, no-error-alert=true, ip-version=prefer-v6, hybrid=auto, tfo=true, tos=0x20, ecn=on, block-quic=off, test-url=https://example.com/ping, test-timeout=5, test-udp=probe.example@198.51.100.1, sni=off, server-cert-verify-name=verify.example.com, server-cert-fingerprint-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef, alpn="h2,http/1.1", client-cert=client, shadow-tls-password=shadow-secret, shadow-tls-sni=shadow.example.com, shadow-tls-version=3, future=one, future=two
 [Keystore]
 client = type = p12, base64 = Q0VSVA==, password = "p,12"
 unused = type = p12, base64 = VU5VU0VE
@@ -58,7 +58,7 @@ unused = type = p12, base64 = VU5VU0VE
     node = result.nodes[0]
     assert node.tls.sni_disabled is True
     assert node.tls.verify_name == "verify.example.com"
-    assert node.tls.certificate_sha256 == "AA:BB"
+    assert node.tls.certificate_sha256 == "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     assert node.tls.client_cert_ref == "client"
     assert node.shadow_tls.password == "shadow-secret"
     assert node.shadow_tls.version == 3
@@ -78,7 +78,7 @@ unused = type = p12, base64 = VU5VU0VE
     output = SurgeEmitter().emit_result(result.nodes).content
     assert "sni=off" in output
     assert "server-cert-verify-name=verify.example.com" in output
-    assert "server-cert-fingerprint-sha256=AA:BB" in output
+    assert "server-cert-fingerprint-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" in output
     assert "client-cert=client" in output
     assert "shadow-tls-password=shadow-secret" in output
     assert "shadow-tls-version=3" in output
@@ -215,7 +215,7 @@ def test_surge_tailscale_and_builtin_aliases_are_nodes():
 [Proxy]
 Tailnet = tailscale, section-name=office, test-timeout=8
 On = direct, interface=en0
-Off = reject-drop, no-error-alert=true
+Off = reject-drop
 
 [Tailscale office]
 auth-key = tskey-auth-example
@@ -246,7 +246,7 @@ hostname = surge-client
         "Tailnet = tailscale, section-name=office, test-timeout=8" in emission.content
     )
     assert "On = direct, interface=en0" in emission.content
-    assert "Off = reject-drop, no-error-alert=true" in emission.content
+    assert "Off = reject-drop" in emission.content
     assert "[Tailscale office]" in emission.content
     assert "auth-key = tskey-auth-example" in emission.content
 

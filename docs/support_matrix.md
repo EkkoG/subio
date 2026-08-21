@@ -104,6 +104,14 @@ conversion issue，并在未显式放行时阻止发布。
 | `clash` | 原版 Clash 的有限规则子集；不继承 Mihomo 新规则 |
 | `dae` | 现有 domain/IP/fallback 模板片段子集 |
 
+### 3.1 Surge Policy Groups 边界
+
+SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、`fallback`、
+`load-balance`、`smart` 和 `subnet` 组，以及 `policy-path`、`include-*` 和组级
+`underlying-proxy`，继续由目标模板维护；SubIO 不解析组成员、策略选择或循环语义。
+节点自身的 `underlying-proxy` 可以引用模板中已有的静态组名，但 SubIO 不校验该组是否存在、
+成员是否有效或是否形成循环。
+
 ## 4. 兼容性
 
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；
