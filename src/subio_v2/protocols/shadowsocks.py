@@ -127,16 +127,21 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
             elif node.cipher.startswith("2022-blake3-aes-"):
                 expected = 16 if "128" in node.cipher else 32
                 try:
-                    decoded = base64.b64decode(node.password, validate=True)
+                    decoded_keys = [
+                        base64.b64decode(key, validate=True)
+                        for key in node.password.split(":")
+                    ]
                 except (binascii.Error, ValueError):
-                    decoded = b""
-                if len(decoded) != expected:
+                    decoded_keys = []
+                if not decoded_keys or any(
+                    len(decoded) != expected for decoded in decoded_keys
+                ):
                     warnings.append(
                         IssueDraft(
                             severity=IssueSeverity.ERROR,
                             message=(
-                                f"{node.cipher} requires a base64 key encoding "
-                                f"{expected} bytes"
+                                f"{node.cipher} requires each colon-separated "
+                                f"base64 key to encode {expected} bytes"
                             ),
                             field="password",
                         )

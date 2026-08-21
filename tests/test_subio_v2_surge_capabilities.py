@@ -1,3 +1,5 @@
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.surge.emitter import SurgeEmitter
 from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.core.nodes import (
     Hysteria2Node,
@@ -133,6 +135,10 @@ def test_surge_declares_underlying_proxy_and_hysteria2_obfs():
 
 def test_surge_shadowsocks_conditional_password_rules():
     checker = NodeConversionService("surge")
+    key_128 = "MDEyMzQ1Njc4OWFiY2RlZg=="
+    user_key_128 = "ZmVkY2JhOTg3NjU0MzIxMA=="
+    key_256 = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+    user_key_256 = "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA="
     none_cipher = ShadowsocksNode(
         name="none",
         type=Protocol.SHADOWSOCKS,
@@ -147,7 +153,23 @@ def test_surge_shadowsocks_conditional_password_rules():
         server="example.com",
         port=8388,
         cipher="2022-blake3-aes-128-gcm",
-        password="MDEyMzQ1Njc4OWFiY2RlZg==",
+        password=key_128,
+    )
+    valid_multi_user_2022 = ShadowsocksNode(
+        name="2022-multi-user",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="2022-blake3-aes-128-gcm",
+        password=f"{key_128}:{user_key_128}",
+    )
+    valid_multi_user_2022_256 = ShadowsocksNode(
+        name="2022-multi-user-256",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="2022-blake3-aes-256-gcm",
+        password=f"{key_256}:{user_key_256}",
     )
     invalid_2022 = ShadowsocksNode(
         name="bad-2022",
@@ -157,10 +179,57 @@ def test_surge_shadowsocks_conditional_password_rules():
         cipher="2022-blake3-aes-256-gcm",
         password="short",
     )
+    invalid_multi_user_2022 = ShadowsocksNode(
+        name="bad-2022-multi-user",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="2022-blake3-aes-128-gcm",
+        password=f"{key_128}:short",
+    )
+    empty_identity_2022 = ShadowsocksNode(
+        name="bad-2022-empty-identity",
+        type=Protocol.SHADOWSOCKS,
+        server="example.com",
+        port=8388,
+        cipher="2022-blake3-aes-128-gcm",
+        password=f"{key_128}:",
+    )
 
     assert checker.check_node(none_cipher).supported
     assert checker.check_node(valid_2022).supported
+    assert checker.check_node(valid_multi_user_2022).supported
+    assert checker.check_node(valid_multi_user_2022_256).supported
     assert not checker.check_node(invalid_2022).supported
+    assert not checker.check_node(invalid_multi_user_2022).supported
+    assert not checker.check_node(empty_identity_2022).supported
+
+
+def test_mihomo_ss2022_identity_chain_is_preserved_for_surge():
+    password = (
+        "MDEyMzQ1Njc4OWFiY2RlZg==:"
+        "ZmVkY2JhOTg3NjU0MzIxMA==:"
+        "YWJjZGVmMDEyMzQ1Njc4OQ=="
+    )
+    result = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "ss2022-chain",
+                    "type": "ss",
+                    "server": "example.com",
+                    "port": 8388,
+                    "cipher": "2022-blake3-aes-128-gcm",
+                    "password": password,
+                }
+            ]
+        }
+    )
+
+    assert result.issues == []
+    emission = SurgeEmitter().emit_result(result.nodes)
+    assert emission.errors == []
+    assert f"password={password}" in emission.content
 
 
 def test_surge_port_hopping_rejects_underlying_proxy():
