@@ -10,6 +10,7 @@ from subio_v2.core.nodes import (
     HttpVariant,
     MasqueNode,
     Protocol,
+    RejectNode,
     ShadowTLSSettings,
     ShadowsocksNode,
     SurgePolicyOptions,
@@ -173,10 +174,17 @@ def test_surge_typed_nodes_cannot_use_builtin_policy_names(name):
     )
 
 
-def test_surge_typed_lowercase_policy_name_remains_usable():
+def test_surge_typed_lowercase_reserved_policy_name_is_rejected_before_emit():
     node = DirectNode(name="direct", type=Protocol.DIRECT)
 
-    assert TargetValidationService("surge").check_node(node).supported
+    check = TargetValidationService("surge").check_node(node)
+    assert not check.supported
+    assert any(issue.code == "conversion.reserved-policy-name" for issue in check.warnings)
+
+    emission = SurgeEmitter().emit_result([node])
+    assert emission.supported_nodes == []
+    assert emission.content == ""
+    assert emission.errors[0].code == "conversion.reserved-policy-name"
 
 
 @pytest.mark.parametrize("udp_port", [0, -1, 65536, True])
@@ -214,16 +222,17 @@ def test_surge_typed_masque_rejects_port_hopping_with_underlying_proxy():
 
 def test_surge_target_checks_common_applicability_and_shadow_tls_protocols():
     direct = DirectNode(
-        name="direct",
+        name="local-direct",
         type=Protocol.DIRECT,
         dialer_proxy="upstream",
-        surge_options=SurgePolicyOptions(no_error_alert=True),
+        surge_options=SurgePolicyOptions(no_error_alert=True, ecn="on"),
     )
     direct_result = TargetValidationService("surge").check_node(direct)
     assert not direct_result.supported
     assert {issue.field for issue in direct_result.warnings} >= {
         "dialer_proxy",
         "surge_options.no_error_alert",
+        "surge_options.ecn",
     }
 
     wireguard = WireguardNode(
@@ -259,6 +268,30 @@ def test_surge_target_checks_common_applicability_and_shadow_tls_protocols():
 
     trust.quic = True
     assert not TargetValidationService("surge").check_node(trust).supported
+
+
+@pytest.mark.parametrize("protocol", ["direct", "reject", "reject-drop"])
+def test_surge_raw_aliases_reject_ecn(protocol):
+    result = SurgeParser().parse_result(f"local = {protocol}, ecn=on")
+
+    assert result.nodes == []
+    assert result.issues[0].code == "parse.protocol-parameter"
+    assert "ecn is only supported by proxy policies" in result.issues[0].message
+
+
+@pytest.mark.parametrize("node_type", [Protocol.DIRECT, Protocol.REJECT])
+def test_surge_typed_aliases_reject_ecn(node_type):
+    node = (
+        DirectNode(name="local-direct", type=node_type)
+        if node_type == Protocol.DIRECT
+        else RejectNode(name="local-reject", type=node_type)
+    )
+    node.surge_options = SurgePolicyOptions(ecn="on")
+
+    result = TargetValidationService("surge").check_node(node)
+
+    assert not result.supported
+    assert any(issue.field == "surge_options.ecn" for issue in result.warnings)
 
 
 def test_http_headers_use_official_semicolon_syntax_without_duplicate_output():

@@ -133,12 +133,10 @@ def test_allowed_external_preserves_repeated_parameters(
 @pytest.mark.parametrize(
     "line",
     [
-        "safe = external, local-port=1080",
-        "safe = external, exec=/bin/true, local-port=invalid",
         "safe = external, exec=/bin/true, local-port=1080, future=invalid",
     ],
 )
-def test_external_is_opaque_and_does_not_require_semantic_validation(line):
+def test_external_preserves_valid_launch_parameters_and_unknown_fields(line):
     parsed = SurgeParser(source_kind="local").parse_result(line)
 
     emission = SurgeEmitter().emit_result(parsed.nodes)
@@ -147,6 +145,31 @@ def test_external_is_opaque_and_does_not_require_semantic_validation(line):
     assert len(emission.supported_nodes) == 1
     assert emission.errors == []
     assert emission.content == line
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("safe = external, local-port=1080", "requires a non-empty exec"),
+        ("safe = external, exec=, local-port=1080", "requires a non-empty exec"),
+        ('safe = external, exec=" ", local-port=1080', "requires a non-empty exec"),
+        ("safe = external, exec=/bin/true", "requires a local-port"),
+        ("safe = external, exec=/bin/true, local-port=0", "between 1 and 65535"),
+        ("safe = external, exec=/bin/true, local-port=65536", "between 1 and 65535"),
+        ("safe = external, exec=/bin/true, local-port=invalid", "must be an integer"),
+        (
+            'safe = external, exec="/secret/program", local-port=invalid',
+            "must be an integer",
+        ),
+    ],
+)
+def test_external_requires_valid_launch_parameters(line, message):
+    parsed = SurgeParser(source_kind="local").parse_result(line)
+
+    assert parsed.nodes == []
+    assert parsed.issues[0].code == "parse.protocol-parameter"
+    assert message in parsed.issues[0].message
+    assert "/secret/program" not in parsed.issues[0].message
 
 
 @pytest.mark.parametrize(
@@ -167,11 +190,11 @@ def test_external_validates_known_common_parameters(line):
 
 def test_same_dialect_external_target_validation_rechecks_raw_parameters():
     parsed = SurgeParser(source_kind="local").parse_result(
-        "safe = external, local-port=1080"
+        "safe = external, exec=/bin/true, local-port=1080"
     )
     node = parsed.nodes[0]
     node.raw = parse_proxy_line(
-        "safe = external, local-port=1080, allow-other-interface=maybe"
+        "safe = external, exec=/bin/true"
     )
 
     emission = SurgeEmitter().emit_result([node])
@@ -248,7 +271,9 @@ def test_remote_external_opt_in_warns_once_and_allows_passthrough(
     warnings: list[str] = []
     monkeypatch.setattr(
         "subio_v2.workflow.providers.ProviderLoaderService._fetch_content",
-        lambda self, conf, loader: b"remote = external, local-port=invalid",
+        lambda self, conf, loader: (
+            b"remote = external, exec=/usr/bin/true, local-port=1080"
+        ),
     )
     monkeypatch.setattr("subio_v2.workflow.engine.logger.warning", warnings.append)
     monkeypatch.chdir(tmp_path)
@@ -256,7 +281,7 @@ def test_remote_external_opt_in_warns_once_and_allows_passthrough(
     result = WorkflowEngine(str(cfg), dry_run=True).run()
 
     assert result.issues == []
-    assert "remote = external, local-port=invalid" in (
+    assert "remote = external, exec=/usr/bin/true, local-port=1080" in (
         tmp_path / "dist" / "out.conf"
     ).read_text()
     assert len([message for message in warnings if "remote Surge External" in message]) == 1

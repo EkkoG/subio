@@ -59,7 +59,7 @@ class TargetValidationService:
         if (
             self.platform == "surge"
             and isinstance(node.name, str)
-            and node.name in SURGE_RESERVED_POLICY_NAMES
+            and node.name.upper() in SURGE_RESERVED_POLICY_NAMES
         ):
             result.add_error(
                 f"Surge built-in policy name '{node.name}' cannot be used for a node",

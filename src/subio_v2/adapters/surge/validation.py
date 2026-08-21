@@ -164,6 +164,18 @@ def _validate_fingerprint(value: str, key: str) -> None:
         raise ValueError(f"{key} must contain exactly 64 hexadecimal characters")
 
 
+def _validate_external_parameters(values: Mapping[str, str]) -> None:
+    exec_value = values.get("exec")
+    if not isinstance(exec_value, str) or not exec_value.strip():
+        raise ValueError("External policy requires a non-empty exec parameter")
+    local_port = values.get("local-port")
+    if local_port is None:
+        raise ValueError("External policy requires a local-port parameter")
+    port = _strict_int(local_port, "local-port")
+    if not 1 <= port <= 65535:
+        raise ValueError("local-port must be between 1 and 65535")
+
+
 def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
     """Validate raw Surge key/value parameters before constructing a node."""
 
@@ -230,10 +242,15 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
     if p_type in {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}:
         if "no-error-alert" in values:
             raise ValueError("no-error-alert is only supported by proxy policies")
+        if "ecn" in values:
+            raise ValueError("ecn is only supported by proxy policies")
         if "underlying-proxy" in values:
             raise ValueError("underlying-proxy is only supported by proxy policies")
     if p_type in {"wireguard", "tailscale"} and "interface" in values:
         raise ValueError(f"interface is not supported by Surge {p_type}")
+
+    if p_type == "external":
+        _validate_external_parameters(values)
 
     if p_type == "vmess" and "encrypt-method" in values:
         if values["encrypt-method"] not in SURGE_VMESS_CIPHERS:
@@ -358,6 +375,8 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
     if node.type in {Protocol.DIRECT, Protocol.REJECT}:
         if options.no_error_alert is not None:
             errors.append(_error("no-error-alert is only supported by proxy policies", "surge_options.no_error_alert"))
+        if options.ecn is not None:
+            errors.append(_error("ecn is only supported by proxy policies", "surge_options.ecn"))
         if node.dialer_proxy:
             errors.append(_error("underlying-proxy is only supported by proxy policies", "dialer_proxy"))
 

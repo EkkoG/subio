@@ -219,23 +219,26 @@ class SurgeParser:
                         )
                     )
                     continue
-                try:
-                    validate_surge_parameters(record.parameters.last_values, protocol)
-                except (TypeError, ValueError) as exc:
-                    issues.append(
-                        ConversionIssue(
-                            severity=IssueSeverity.ERROR,
-                            node=name,
-                            protocol=protocol,
-                            source=None,
-                            target=None,
-                            field=f"lines[{index}]",
-                            message=f"Invalid Surge policy parameter: {exc}",
-                            stage="parse",
-                            code="parse.protocol-parameter",
+                if protocol != "external":
+                    try:
+                        validate_surge_parameters(
+                            record.parameters.last_values, protocol
                         )
-                    )
-                    continue
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target=None,
+                                field=f"lines[{index}]",
+                                message=f"Invalid Surge policy parameter: {exc}",
+                                stage="parse",
+                                code="parse.protocol-parameter",
+                            )
+                        )
+                        continue
                 if protocol == "wireguard":
                     try:
                         node = self._parse_wireguard(record, named_sections)
@@ -326,6 +329,25 @@ class SurgeParser:
                                 message=message,
                                 stage="security",
                                 code="security.remote-external-blocked",
+                            )
+                        )
+                        continue
+                    try:
+                        validate_surge_parameters(
+                            record.parameters.last_values, protocol
+                        )
+                    except (TypeError, ValueError) as exc:
+                        issues.append(
+                            ConversionIssue(
+                                severity=IssueSeverity.ERROR,
+                                node=name,
+                                protocol=protocol,
+                                source=None,
+                                target=None,
+                                field=f"lines[{index}]",
+                                message=f"Invalid Surge policy parameter: {exc}",
+                                stage="parse",
+                                code="parse.protocol-parameter",
                             )
                         )
                         continue

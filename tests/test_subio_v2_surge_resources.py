@@ -351,11 +351,13 @@ def test_surge_emitter_does_not_leak_attachments_between_calls():
     )
 
     first = emitter.emit_result([ssh]).content
-    second = emitter.emit_result([DirectNode(name="direct", type=Protocol.DIRECT)]).content
+    second = emitter.emit_result(
+        [DirectNode(name="local-direct", type=Protocol.DIRECT)]
+    ).content
 
     assert "[Keystore]" in first
     assert "[Keystore]" not in second
-    assert second == "direct = direct"
+    assert second == "local-direct = direct"
 
 
 def test_capability_failed_node_does_not_emit_its_attachment():
