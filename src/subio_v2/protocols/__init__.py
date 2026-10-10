@@ -14,10 +14,12 @@ from subio_v2.protocols import (
     juicity,
     masque,
     mieru,
+    naive,
     openvpn,
     reject,
     rematch,
     shadowquic,
+    shadowtls,
     shadowsocks,
     shadowsocksr,
     snell,
@@ -60,10 +62,12 @@ _CODECS: tuple[ClashProtocolCodec, ...] = (
     juicity.CODEC,
     masque.CODEC,
     mieru.CODEC,
+    naive.CODEC,
     openvpn.CODEC,
     reject.CODEC,
     rematch.CODEC,
     shadowquic.CODEC,
+    shadowtls.CODEC,
     shadowsocks.CODEC,
     shadowsocksr.CODEC,
     snell.CODEC,
@@ -128,9 +132,7 @@ def target_codecs_for(target: str) -> dict[Protocol, ClashTargetCodec]:
 
 
 def all_definitions() -> tuple[ProtocolSpec, ...]:
-    return tuple(
-        codec.spec for codec in _registry.values() if codec.spec is not None
-    )
+    return tuple(codec.spec for codec in _registry.values() if codec.spec is not None)
 
 
 def by_clash_type(clash_type: str) -> ClashProtocolCodec | None:

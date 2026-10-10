@@ -1,6 +1,7 @@
 from subio_v2.adapters.catalog import get_parser
 from subio_v2.adapters.clash_family.parser import ClashParser, StashParser
 from subio_v2.adapters.links.parser import V2RayNParser
+from subio_v2.adapters.singbox.parser import SingBoxParser
 from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.adapters.surge.resources import get_surge_node_attachments
@@ -14,6 +15,7 @@ def test_parser_registry_returns_fresh_mapped_instances():
     v2 = get_parser("v2rayn")
     surge = get_parser("surge")
     subio = get_parser("subio")
+    singbox = get_parser("sing-box")
 
     assert isinstance(clash, ClashParser)
     assert isinstance(mihomo, ClashParser)
@@ -25,6 +27,7 @@ def test_parser_registry_returns_fresh_mapped_instances():
     assert isinstance(v2, V2RayNParser)
     assert isinstance(surge, SurgeParser)
     assert isinstance(subio, SubioParser)
+    assert isinstance(singbox, SingBoxParser)
     assert get_parser("unknown") is None
 
 
@@ -59,9 +62,7 @@ shared = type = openssh-private-key, base64 = S0VZLUI=
 
 
 def test_surge_registry_owns_source_trust_options():
-    parser = get_parser(
-        "surge", source_kind="remote", allow_unsafe_external=True
-    )
+    parser = get_parser("surge", source_kind="remote", allow_unsafe_external=True)
 
     assert isinstance(parser, SurgeParser)
     assert parser.source_kind == "remote"

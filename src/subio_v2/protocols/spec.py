@@ -14,3 +14,4 @@ class ProtocolSpec:
     terminal_native_user_override_fields: frozenset[str] = frozenset()
     terminal_native_fields: frozenset[str] = frozenset()
     terminal_native_excluded_fields: frozenset[str] = frozenset()
+    native_public: bool = True

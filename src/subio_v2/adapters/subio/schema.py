@@ -242,7 +242,9 @@ PUBLIC_NESTED_FIELDS: dict[type, frozenset[str]] = {
     WireguardPeer: frozenset(field.name for field in fields(WireguardPeer)),
 }
 
-PUBLIC_PROTOCOLS = frozenset(definition.protocol for definition in all_definitions())
+PUBLIC_PROTOCOLS = frozenset(
+    definition.protocol for definition in all_definitions() if definition.native_public
+)
 
 
 def public_node_fields(protocol: Protocol) -> frozenset[str]:

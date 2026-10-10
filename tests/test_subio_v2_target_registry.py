@@ -3,6 +3,7 @@ import pytest
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import all_formats, common_policy_for_format
 from subio_v2.adapters.links import codecs as links
+from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.links.codecs import (
     protocols_for_target as link_protocols_for_target,
 )
@@ -26,9 +27,7 @@ def test_target_registry_owns_platform_common_policy():
         assert policy is not None
         assert capabilities["global_features"] == policy.as_feature_map()
 
-    assert common_policy_for_format("clash-meta") == common_policy_for_format(
-        "mihomo"
-    )
+    assert common_policy_for_format("clash-meta") == common_policy_for_format("mihomo")
     assert common_policy_for_format("unknown") is None
 
 
@@ -46,6 +45,12 @@ def test_surge_target_matches_serializer_codec_registry():
     assert protocols_for_target("surge") == frozenset(SURGE_NODE_PROTOCOLS)
 
 
+def test_singbox_target_matches_outbound_codec_registry():
+    assert protocols_for_target("sing-box") == frozenset(
+        protocol.value for protocol in SINGBOX_OUTBOUND_CODECS
+    )
+
+
 def test_target_registry_normalizes_public_aliases():
     assert protocols_for_target("clash-meta") == protocols_for_target("mihomo")
     assert protocols_for_target("unknown") == frozenset()
@@ -58,8 +63,4 @@ def test_link_targets_derive_from_registered_builders():
 
 def test_link_input_schemes_are_owned_by_bidirectional_codecs():
     assert links.input_schemes() == {"ss", "vmess", "vless", "trojan"}
-    assert all(
-        codec.parse is not None
-        for codec in links.all_codecs()
-        if codec.schemes
-    )
+    assert all(codec.parse is not None for codec in links.all_codecs() if codec.schemes)

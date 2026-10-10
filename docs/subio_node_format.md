@@ -43,6 +43,9 @@ age_secret_key = "AGE-SECRET-KEY-1..."
 没有 `override` 或 `relation` 选项。节点内的 `users` 是 artifact 用户白名单与凭据覆盖，不是 provider
 配置项。SubIO 原生格式目前只有输入 codec，没有 `artifact.type = "subio"`。
 
+sing-box 来源的 `naive` 与独立 `shadowtls` 使用强类型运行时节点，但当前不属于 SubIO v2
+原生公开 schema；它们只能从已支持的外部格式进入转换流程，不能写入 `provider.type = "subio"`。
+
 ## 2. 顶层结构与序列化
 
 最小 TOML 文件：

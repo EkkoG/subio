@@ -43,9 +43,11 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
 
     assert known_types == set(snapshot["proxy_types"])
     assert len(known_types) == 26
+    clash_codecs = [codec for codec in codecs if not codec.dynamic_clash_type]
+    assert len(clash_codecs) == 27
     assert all(
         isinstance(codec, StructuredClashProtocolCodec)
-        for codec in codecs
+        for codec in clash_codecs
     )
     assert registry.get(Protocol.MIERU).node_class is MieruNode
     assert registry.get(Protocol.REJECT).node_class is RejectNode

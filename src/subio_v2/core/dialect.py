@@ -22,6 +22,8 @@ class DialectContext:
             not isinstance(self.format, str) or not self.format
         ):
             raise ValueError("Dialect format must be a non-empty string")
+
+
 _PLATFORM_DIALECTS = {
     "mihomo": "mihomo",
     "clash": "clash",
@@ -29,13 +31,19 @@ _PLATFORM_DIALECTS = {
     "surge": "surge",
     "dae": "dae",
     "v2rayn": "v2rayn",
+    "sing-box": "sing-box",
 }
 
 
 def dialect_context_for_platform(platform: str) -> DialectContext:
     platform = normalize_dialect_name(platform)
     dialect = _PLATFORM_DIALECTS.get(platform, platform)
-    format_name = "yaml" if platform in {"mihomo", "clash", "stash"} else "text"
+    if platform in {"mihomo", "clash", "stash"}:
+        format_name = "yaml"
+    elif platform == "sing-box":
+        format_name = "json"
+    else:
+        format_name = "text"
     return DialectContext(dialect=dialect, format=format_name)
 
 

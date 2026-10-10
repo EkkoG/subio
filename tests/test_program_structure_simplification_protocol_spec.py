@@ -30,9 +30,23 @@ def test_representative_protocol_specs_are_local_and_authoritative():
 
 def test_all_protocol_codecs_have_local_specs():
     codecs = tuple(registry.all())
-    assert len(codecs) == 27
+    assert len(codecs) == 29
     assert all(codec.spec is not None for codec in codecs)
-    assert len(registry.all_definitions()) == 27
+    assert len(registry.all_definitions()) == 29
+
+    clash_codecs = tuple(codec for codec in codecs if not codec.dynamic_clash_type)
+    assert len(clash_codecs) == 27
+
+    runtime_only = tuple(codec for codec in codecs if codec.dynamic_clash_type)
+    assert {codec.protocol for codec in runtime_only} == {
+        Protocol.NAIVE,
+        Protocol.SHADOWTLS,
+    }
+    assert all(codec.clash_dialects == frozenset() for codec in runtime_only)
+    assert all(
+        codec.spec is not None and not codec.spec.native_public
+        for codec in runtime_only
+    )
 
 
 def test_concrete_nodes_have_protocol_defaults_without_type_argument():
@@ -44,7 +58,9 @@ def test_concrete_nodes_have_protocol_defaults_without_type_argument():
 
 
 def test_protocols_are_removed_from_central_definition_tables():
-    definitions = (Path(__file__).parents[1] / "src/subio_v2/protocols/definitions.py").read_text()
+    definitions = (
+        Path(__file__).parents[1] / "src/subio_v2/protocols/definitions.py"
+    ).read_text()
     assert "Protocol." not in definitions
 
 

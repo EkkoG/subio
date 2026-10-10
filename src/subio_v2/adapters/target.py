@@ -3,6 +3,7 @@ from collections.abc import Callable, Mapping
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
+from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.adapters.surge.validation import (
     SURGE_RESERVED_POLICY_NAMES,
@@ -42,6 +43,8 @@ def _protocol_codecs_for_target(platform: str) -> dict:
             for codec in all_link_codecs()
             if platform in codec.targets
         }
+    if platform == "sing-box":
+        return dict(SINGBOX_OUTBOUND_CODECS)
     return {}
 
 
@@ -103,7 +106,7 @@ class TargetValidationService:
             return result
 
         descriptor = protocol_registry.get(node.type)
-        if self.platform in {"mihomo", "clash", "stash"}:
+        if self.platform in {"mihomo", "clash", "stash", "sing-box"}:
             for warning in target_codec.check(node):
                 result.warnings.append(warning)
                 if warning.severity == IssueSeverity.ERROR:
@@ -159,7 +162,9 @@ class TargetValidationService:
     ) -> TargetEncodingResult[object]:
         selected, issues = self.select([node], check_node)
         if not selected:
-            return TargetEncodingResult(content=None, supported_node=None, issues=issues)
+            return TargetEncodingResult(
+                content=None, supported_node=None, issues=issues
+            )
         try:
             content = encoder(node)
         except Exception as exc:
@@ -175,7 +180,9 @@ class TargetValidationService:
                     stage="emit",
                 )
             )
-            return TargetEncodingResult(content=None, supported_node=None, issues=issues)
+            return TargetEncodingResult(
+                content=None, supported_node=None, issues=issues
+            )
         return TargetEncodingResult(content=content, supported_node=node, issues=issues)
 
     def _check_common_target_fields(
@@ -195,12 +202,13 @@ class TargetValidationService:
                 unsupported_fields.append("always_use_connect")
             if isinstance(node, (ShadowsocksNode, SnellNode)) and node.obfs_uri:
                 unsupported_fields.append("obfs_uri")
-        if self.platform not in {"mihomo", "clash", "stash", "surge"}:
+        if self.platform not in {"mihomo", "clash", "stash", "surge", "sing-box"}:
             if node.interface_name:
                 unsupported_fields.append("interface_name")
+        if self.platform not in {"mihomo", "clash", "stash", "surge"}:
             if node.users:
                 unsupported_fields.append("users")
-        if self.platform not in {"mihomo", "clash", "stash"} and (
+        if self.platform not in {"mihomo", "clash", "stash", "sing-box"} and (
             node.routing_mark is not None
         ):
             unsupported_fields.append("routing_mark")

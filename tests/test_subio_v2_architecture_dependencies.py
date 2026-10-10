@@ -7,9 +7,7 @@ DOMAIN_FILES = (
     REPO_ROOT / "src" / "subio_v2" / "protocols" / "definitions.py",
     REPO_ROOT / "src" / "subio_v2" / "protocols" / "user_overrides.py",
 )
-RULES_FILES = tuple(
-    sorted((REPO_ROOT / "src" / "subio_v2" / "rules").glob("*.py"))
-)
+RULES_FILES = tuple(sorted((REPO_ROOT / "src" / "subio_v2" / "rules").glob("*.py")))
 
 FORBIDDEN_IMPORTS = (
     "os",
@@ -78,7 +76,7 @@ def test_top_level_directory_boundaries_are_explicit():
         path.name
         for path in (root / "adapters").iterdir()
         if path.is_dir() and path.name != "__pycache__"
-    } == {"clash_family", "links", "subio", "surge"}
+    } == {"clash_family", "links", "singbox", "subio", "surge"}
 
 
 def test_node_and_rules_models_do_not_import_each_other():

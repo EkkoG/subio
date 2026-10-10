@@ -624,7 +624,11 @@ proxies:
 
 
 def test_subio_public_field_contract_covers_every_concrete_protocol():
-    registered = {descriptor.protocol for descriptor in protocol_registry.all()}
+    registered = {
+        descriptor.protocol
+        for descriptor in protocol_registry.all()
+        if descriptor.definition.native_public
+    }
     assert PUBLIC_PROTOCOLS == registered
     assert Protocol.SOURCE_PASSTHROUGH not in PUBLIC_PROTOCOLS
 
