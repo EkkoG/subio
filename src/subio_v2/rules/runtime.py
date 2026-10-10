@@ -39,6 +39,7 @@ from subio_v2.rules.parser import (
     parse_argument_names,
     validate_identifier,
 )
+from subio_v2.rules.singbox import SINGBOX_ROUTE_RULE_SERIALIZER
 
 
 @dataclass
@@ -64,6 +65,11 @@ class RuleSetRenderer:
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
         platform = normalize_format(platform)
+        if platform == "sing-box":
+            return SINGBOX_ROUTE_RULE_SERIALIZER.render(
+                ruleset,
+                lambda entry: self._resolve_policy(entry, ruleset, arguments),
+            )
         output_dialect = get_rule_output_dialect(platform)
         if output_dialect is None:
             raise ValueError(f"Unknown ruleset target platform: {platform}")

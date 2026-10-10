@@ -51,6 +51,12 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
   `allow_unsafe_external = true` 才允许同平台透传；任何来源都不能输出到其他平台；
 - 同方言未知安全字段可保真，跨方言未消费字段产生结构化 issue，不直接泄漏到目标。
 
+`artifact.type = "sing-box"` 不指定模板时输出上述节点 JSON；指定 JSON Jinja `template` 时可调用
+`nodes.outbounds()`、`nodes.endpoints()`，并组合可分享规则集生成完整客户端 JSON。模板负责完整配置
+中的其他部分；这不是完整 sing-box 配置导入、全量配置 IR 或无损往返能力。路由规则只输出能够
+精确表示的 sing-box client matcher，并使用 sing-box `route` action；不支持的 matcher/option 会产生
+conversion issue，默认阻止产物发布。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |

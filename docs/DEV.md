@@ -59,6 +59,10 @@ Config / local snippet
 两条主线共享方言上下文、结构化 issue、模板和发布边界，但不共享 Node IR 与 RuleSet IR，
 也不扩展为完整平台配置 AST。
 
+`artifact.type = "sing-box"` 可使用 JSON Jinja 模板：模板组合节点 emitter 的 `outbounds`、
+`endpoints` 片段和规则 renderer 生成的 sing-box client route-rule 数组，其他客户端配置由用户模板
+维护。该能力不改变 provider 仅解析节点的边界，也不引入完整 sing-box 配置 IR。
+
 主要目录：
 
 | 路径 | 职责 |
@@ -373,6 +377,8 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 issue gate 在 staging 和发布前执行，除非显式设置 `allow_conversion_errors = true`。无可输出规则时
 默认失败，`allow_empty = true` 才允许输出空 `rules`。Go/RE2 正则导入使用保守子集，允许拒绝部分
 Go 引擎本身可接受、但项目尚未证明与 Python 检查等价的表达式。
+完整客户端 JSON 模板中的规则集 callable 输出 route-rule 对象数组，并将 policy 参数解析为 outbound tag；
+它与独立 Source ruleset artifact 是不同输出边界。
 
 “输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
 不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
@@ -423,6 +429,7 @@ age key、密码或私钥。
 ```bash
 uv run subio convert example/config.toml --dry-run
 uv run subio convert example/config.singbox-ruleset.toml --dry-run
+uv run subio convert example/config.singbox-nodes.toml --dry-run
 ```
 
 再运行目标测试，例如 Clash：

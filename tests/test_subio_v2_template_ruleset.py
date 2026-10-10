@@ -1,4 +1,5 @@
 import io
+import json
 import os
 
 import pytest
@@ -8,6 +9,7 @@ from subio_v2.core.errors import TemplateRenderError
 from subio_v2.core.rule_model import (
     BoundRule,
     DefaultParameter,
+    LogicalExpression,
     ParameterizedRuleSet,
     Predicate,
     RuleComment,
@@ -157,6 +159,67 @@ def test_ruleset_render_surge_transformations():
     assert "FINAL,DIRECT" in surge_rules
     assert "DEST-PORT,80,DIRECT" in surge_rules
     assert "IP-CIDR,1.1.1.0/24,DIRECT,no-resolve" in surge_rules
+
+
+def test_singbox_ruleset_callable_renders_client_route_rule_json(tmp_path):
+    (tmp_path / "rules.json.j2").write_text(
+        '{"route":{"rules":{{ rs1("proxy") }}}}'
+    )
+    ruleset = make_ruleset(
+        "rs1",
+        [
+            RuleComment("# ignored in JSON"),
+            bound("DOMAIN-SUFFIX", "example.test"),
+            BoundRule(
+                LogicalExpression(
+                    "AND",
+                    (
+                        Predicate("DOMAIN-KEYWORD", "video"),
+                        Predicate("DST-PORT", "443"),
+                    ),
+                ),
+                DefaultParameter(),
+            ),
+            bound("MATCH"),
+        ],
+    )
+    store = RuleSetStore()
+    store.register("rs1", ruleset)
+
+    rendered = TemplateRenderer(str(tmp_path)).render(
+        "rules.json.j2", {}, artifact_type="sing-box", rulesets=store
+    )
+
+    rules = json.loads(rendered)["route"]["rules"]
+    assert rules == [
+        {
+            "domain_suffix": "example.test",
+            "action": "route",
+            "outbound": "proxy",
+        },
+        {
+            "type": "logical",
+            "mode": "and",
+            "rules": [{"domain_keyword": "video"}, {"port": 443}],
+            "action": "route",
+            "outbound": "proxy",
+        },
+        {"action": "route", "outbound": "proxy"},
+    ]
+
+
+def test_singbox_ruleset_callable_keeps_unsupported_rules_fail_closed():
+    ruleset = make_ruleset(
+        "rs1",
+        [bound("IP-CIDR", "192.0.2.0/24", ("no-resolve",))],
+    )
+
+    result = ruleset.render_result("sing-box", "proxy")
+
+    assert json.loads(result.content) == []
+    assert [issue.code for issue in result.issues] == [
+        "ruleset.unsupported-target-option"
+    ]
 
 
 def test_template_render_result_collects_ruleset_issues(tmp_path):

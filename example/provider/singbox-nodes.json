@@ -1,0 +1,73 @@
+{
+  "outbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "hk-iplc-ss",
+      "server": "hk.example.test",
+      "server_port": 8388,
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "example-password"
+    },
+    {
+      "type": "vless",
+      "tag": "hk-vless-reality",
+      "server": "hk-reality.example.test",
+      "server_port": 443,
+      "uuid": "00000000-0000-0000-0000-000000000001",
+      "tls": {
+        "enabled": true,
+        "server_name": "cdn.example.test",
+        "alpn": ["h2"]
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "jp-hysteria2",
+      "server": "jp.example.test",
+      "server_port": 443,
+      "password": "example-password",
+      "tls": { "enabled": true, "server_name": "jp.example.test" }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "sg-iplc-ss",
+      "server": "sg.example.test",
+      "server_port": 8388,
+      "method": "aes-256-gcm",
+      "password": "example-password"
+    },
+    {
+      "type": "direct",
+      "tag": "direct-home"
+    },
+    {
+      "type": "block",
+      "tag": "block-ad"
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "disabled-test",
+      "server": "disabled.example.test",
+      "server_port": 8388,
+      "method": "aes-256-gcm",
+      "password": "example-password"
+    }
+  ],
+  "endpoints": [
+    {
+      "type": "wireguard",
+      "tag": "wireguard-us",
+      "detour": "direct-home",
+      "address": ["10.0.0.2/32"],
+      "private_key": "example-private-key",
+      "peers": [
+        {
+          "address": "us.example.test",
+          "port": 51820,
+          "public_key": "example-peer-key",
+          "allowed_ips": ["0.0.0.0/0"]
+        }
+      ]
+    }
+  ]
+}

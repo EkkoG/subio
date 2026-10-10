@@ -99,6 +99,7 @@ def test_singbox_artifact_config_is_typed_and_supports_json_templates(tmp_path, 
         """
 {
   "log": {"level": "info"},
+  "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}],
   "outbounds": {{ nodes.outbounds() }},
   "endpoints": {{ nodes.endpoints() }},
   "route": {"final": "edge"}
@@ -119,6 +120,7 @@ def test_singbox_artifact_config_is_typed_and_supports_json_templates(tmp_path, 
     assert content["log"] == {"level": "info"}
     assert [item["tag"] for item in content["outbounds"]] == ["edge"]
     assert [item["tag"] for item in content["endpoints"]] == ["vpn"]
+    assert content["inbounds"][0]["type"] == "mixed"
     assert content["route"]["final"] == "edge"
 
 
@@ -137,6 +139,91 @@ def test_singbox_template_must_render_a_json_object_before_publish(
     with pytest.raises(TemplateRenderError, match="sing-box template"):
         WorkflowEngine(str(config_path), dry_run=True).run()
 
+    assert not (tmp_path / "dist").exists()
+
+
+def test_singbox_template_can_combine_nodes_and_converted_rules(
+    tmp_path, monkeypatch
+):
+    _write(tmp_path / "nodes.yaml", _mixed_nodes())
+    snippets = tmp_path / "snippet"
+    snippets.mkdir()
+    _write(
+        snippets / "route_rules",
+        """
+edge, fallback
+DOMAIN-SUFFIX,example.test,{{ edge }}
+DST-PORT,443,{{ fallback }}
+MATCH,{{ fallback }}
+""",
+    )
+    _write(
+        tmp_path / "client.json.j2",
+        """
+{
+  "log": {"level": "info"},
+  "outbounds": {{ nodes.outbounds() }},
+  "endpoints": {{ nodes.endpoints() }},
+  "route": {
+    "rules": {{ route_rules("edge", "edge") }},
+    "final": "edge"
+  }
+}
+""",
+    )
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(config_path), dry_run=True).run()
+
+    assert result.errors == []
+    content = json.loads((tmp_path / "dist/client.json").read_text())
+    assert [item["tag"] for item in content["outbounds"]] == ["edge"]
+    assert [item["tag"] for item in content["endpoints"]] == ["vpn"]
+    assert content["route"]["rules"] == [
+        {
+            "domain_suffix": "example.test",
+            "action": "route",
+            "outbound": "edge",
+        },
+        {"port": 443, "action": "route", "outbound": "edge"},
+        {"action": "route", "outbound": "edge"},
+    ]
+
+
+def test_singbox_template_blocks_publish_for_unsupported_converted_rule(
+    tmp_path, monkeypatch
+):
+    _write(tmp_path / "nodes.yaml", _mixed_nodes())
+    snippets = tmp_path / "snippet"
+    snippets.mkdir()
+    _write(
+        snippets / "route_rules",
+        """
+proxy
+IP-CIDR,192.0.2.0/24,{{ proxy }},no-resolve
+""",
+    )
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, '
+        '"route": {"rules": {{ route_rules("edge") }}}}',
+    )
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ArtifactGenerationError) as exc_info:
+        WorkflowEngine(str(config_path), dry_run=True).run()
+
+    assert [issue.code for issue in exc_info.value.issues] == [
+        "ruleset.unsupported-target-option"
+    ]
     assert not (tmp_path / "dist").exists()
 
 

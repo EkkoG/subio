@@ -1,0 +1,35 @@
+{% set names = nodes.names() %}
+{% set hk = filter.hk_filter(names) %}
+{% set tw = filter.tw_filter(names) %}
+{% set sg = filter.sg_filter(names) %}
+{% set jp = filter.jp_filter(names) %}
+{% set kr = filter.kr_filter(names) %}
+{% set us = filter.us_filter(names) %}
+{% set regex_nodes = filter.regex_filter(names, 'iplc') %}
+{% set no_legacy = filter.exclude(names, 'legacy') %}
+{% set union_nodes = filter.union(filter.hk_filter, filter.jp_filter)(names) %}
+{% set intersect_nodes = filter.intersect(filter.keyword('hk'), filter.regex('iplc'))(names) %}
+{% set chained_nodes = filter.chain(filter.regex('^(hk|jp|sg)-'), filter.excluding('legacy'))(names) %}
+{% set compat_nodes = filter.combine(names, filter.hk_filter, filter.jp_filter) %}
+{% set node_count = nodes.count() %}
+{% set asia_count = nodes.count('asia') %}
+{% set secure_exists = nodes.exists('secure') %}
+{% set provider_count = nodes.count(providers=['singbox-nodes']) %}
+{% set hk_exists = nodes.exists(include='hk') %}
+{
+  "log": { "level": "info" },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 2080
+    }
+  ],
+  "outbounds": {{ nodes.outbounds() }},
+  "endpoints": {{ nodes.endpoints() }},
+  "route": {
+    "rules": {{ singbox_rules("hk-iplc-ss", "direct-home") }},
+    "final": "direct-home"
+  }
+}

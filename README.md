@@ -102,8 +102,10 @@ password = "secret"
 文件名中的 `clash` 只是用户自定义文本，不会自动重命名。
 
 `provider.type = "sing-box"` 读取 sing-box JSON 中当前 codec 支持的 `outbounds` 和 `endpoints`；
-`artifact.type = "sing-box"` 输出同样的节点 JSON 结构。它们只转换节点，不把完整 sing-box 客户端
-配置建模为通用 IR。
+`artifact.type = "sing-box"` 不指定模板时输出节点 JSON 结构；指定 JSON Jinja `template` 时，
+`nodes.outbounds()`、`nodes.endpoints()` 和规则集 callable 可组合为完整客户端配置。完整配置中
+未转换的部分由模板维护，SubIO 不导入完整配置或建立通用客户端配置 IR。可运行的节点加规则示例见
+[config.singbox-nodes.toml](./example/config.singbox-nodes.toml)。
 
 具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
 

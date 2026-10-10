@@ -1,0 +1,25 @@
+log_level = "INFO"
+
+[filters]
+exclude = "^disabled-"
+
+[[provider]]
+name = "singbox-nodes"
+type = "sing-box"
+file = "provider/singbox-nodes.json"
+[provider.filters]
+include = "^(hk|jp|sg|us|wireguard|direct|block)-"
+exclude = "-legacy$"
+
+[selectors]
+asia = { any_of = ["hk-nodes", "jp-nodes", "sg-nodes"], sort_by = ["protocol", "name"] }
+hk-nodes = { name_regex = "^hk-" }
+jp-nodes = { name_regex = "^jp-" }
+sg-nodes = { name_regex = "^sg-" }
+secure = { protocols = ["vless", "shadowsocks", "hysteria2", "wireguard"] }
+
+[[artifact]]
+name = "singbox-client.json"
+type = "sing-box"
+template = "singbox-client.json"
+providers = ["singbox-nodes"]

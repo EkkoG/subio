@@ -1,0 +1,4 @@
+proxy, direct
+DOMAIN-SUFFIX,example.test,{{ proxy }}
+DST-PORT,443,{{ proxy }}
+MATCH,{{ direct }}

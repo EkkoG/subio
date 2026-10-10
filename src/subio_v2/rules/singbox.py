@@ -4,7 +4,7 @@ import ipaddress
 import json
 import re
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, Callable
 
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.errors import ConfigError
@@ -17,6 +17,7 @@ from subio_v2.core.rule_model import (
     Predicate,
     RuleComment,
     RuleExpression,
+    RuleRenderResult,
     RuleSetParseResult,
 )
 
@@ -147,6 +148,62 @@ class SingBoxSourceSerializer:
 
 
 SINGBOX_SOURCE_SERIALIZER = SingBoxSourceSerializer()
+
+
+class SingBoxRouteRuleSerializer:
+    """Render bound rule IR as sing-box client route-rule JSON fragments."""
+
+    def render(
+        self,
+        ruleset: ParameterizedRuleSet,
+        resolve_policy: Callable[[BoundRule], str],
+    ) -> RuleRenderResult:
+        issues = [replace(issue, target="sing-box") for issue in ruleset.issues]
+        rules: list[dict[str, Any]] = []
+
+        for entry in ruleset.entries:
+            if isinstance(entry, RuleComment):
+                continue
+            try:
+                if (
+                    isinstance(entry.expression, Predicate)
+                    and entry.expression.rule_type.upper() in {"MATCH", "FINAL"}
+                ):
+                    encoded: dict[str, Any] = {}
+                else:
+                    encoded = _encode_source_rule(
+                        entry.expression, ruleset.source_context
+                    )
+                encoded["action"] = "route"
+                encoded["outbound"] = resolve_policy(entry)
+                rules.append(encoded)
+            except _UnsupportedTargetRule as exc:
+                expression = entry.expression
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=None,
+                        protocol=None,
+                        source=ruleset.name,
+                        target="sing-box",
+                        field=(
+                            f"line {expression.source_line}"
+                            if expression.source_line is not None
+                            else None
+                        ),
+                        message=exc.message,
+                        stage="render",
+                        code=exc.code,
+                    )
+                )
+
+        return RuleRenderResult(
+            content=json.dumps(rules, ensure_ascii=False, indent=2),
+            issues=tuple(issues),
+        )
+
+
+SINGBOX_ROUTE_RULE_SERIALIZER = SingBoxRouteRuleSerializer()
 
 
 class SingBoxSourceCodec:

@@ -21,6 +21,17 @@ The end-to-end suite exercises the same functions with a temporary local HTTP
 server and an ephemeral Age keypair, so no public service or committed private
 key is required.
 
-The new provider fixtures and `workflow_rules` use reserved `.example.test`
-hostnames, documentation IP ranges, and conspicuous example credentials. They
-are test data, not usable endpoints.
+`config.singbox-nodes.toml` demonstrates sing-box node input and full sing-box
+client JSON output from one Jinja JSON template. The template combines
+`nodes.outbounds()` and `nodes.endpoints()` with rules converted from the local
+`singbox_rules` snippet. It also exercises global/provider filters, named
+selectors, the `nodes.*` template API, and the legacy plus composable
+`filter.*` helpers. Run it from the repository root:
+
+```bash
+uv run subio convert example/config.singbox-nodes.toml --dry-run
+```
+
+The provider fixtures and `workflow_rules` / `singbox_rules` use reserved
+`.example.test` hostnames, documentation IP ranges, and conspicuous example
+credentials. They are test data, not usable endpoints.
