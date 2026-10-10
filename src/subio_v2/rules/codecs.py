@@ -26,8 +26,9 @@ from subio_v2.rules.parser import (
     SURGE_CLASSICAL_PARSER,
     ClassicalRuleParser,
 )
+from subio_v2.rules.singbox import SingBoxSourceCodec
 
-SUPPORTED_RULESET_DIALECTS = frozenset({"mihomo", "stash", "surge"})
+SUPPORTED_RULESET_DIALECTS = frozenset({"mihomo", "sing-box", "stash", "surge"})
 
 
 class _UniqueKeySafeLoader(yaml.SafeLoader):
@@ -368,6 +369,7 @@ def create_default_ruleset_codec_registry() -> RuleSetInputCodecCatalog:
     add(
         "surge", "domain", "text", ScalarRuleSetCodec("domain", "text")
     )
+    add("sing-box", "classical", "source", SingBoxSourceCodec())
     return RuleSetInputCodecCatalog(MappingProxyType(codecs))
 
 

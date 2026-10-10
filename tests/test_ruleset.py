@@ -209,27 +209,46 @@ def test_every_self_contained_predicate_has_same_dialect_lowering(
         for dialect in ("mihomo", "stash")
         for behavior in ("domain", "ipcidr")
     ]
-    + [("surge", "classical", "text"), ("surge", "domain", "text")],
+    + [
+        ("surge", "classical", "text"),
+        ("surge", "domain", "text"),
+        ("sing-box", "classical", "source"),
+    ],
 )
 def test_registry_parses_every_supported_combination(dialect, behavior, format_name):
-    if format_name == "mrs":
+    if dialect == "sing-box":
+        content = b'{"version":1,"rules":[{"domain":"example.com"}]}'
+    elif format_name == "mrs":
         fixture = FIXTURES / "mrs" / f"{behavior}.mrs"
+        content = fixture.read_bytes()
     elif dialect == "surge":
         fixture = FIXTURES / dialect / (
             "rule-set.list" if behavior == "classical" else "domain-set.list"
         )
+        content = fixture.read_bytes()
     else:
         suffix = "yaml" if format_name == "yaml" else "list"
         fixture = FIXTURES / dialect / f"{behavior}-{format_name}.{suffix}"
+        content = fixture.read_bytes()
     selection = RuleSetInputSelection(dialect, behavior, format_name)
     parsed = DEFAULT_RULESET_CODEC_REGISTRY.get(selection).parse(
         name="fixture",
-        content=fixture.read_bytes(),
+        content=content,
         context=DialectContext(dialect, format_name),
     )
 
     assert parsed.ruleset.behavior == behavior
     assert parsed.ruleset.entries or parsed.issues
+
+
+def test_registry_exposes_only_approved_singbox_input_combination():
+    combinations = {
+        combination
+        for combination in DEFAULT_RULESET_CODEC_REGISTRY.combinations
+        if combination[0] == "sing-box"
+    }
+
+    assert combinations == {("sing-box", "classical", "source")}
 
 
 @pytest.mark.parametrize(
@@ -240,6 +259,8 @@ def test_registry_parses_every_supported_combination(dialect, behavior, format_n
         RuleSetInputSelection("mihomo", "classical", "mrs"),
         RuleSetInputSelection("stash", "classical", "mrs"),
         RuleSetInputSelection("surge", "domain", "mrs"),
+        RuleSetInputSelection("sing-box", "domain", "source"),
+        RuleSetInputSelection("sing-box", "classical", "text"),
     ],
 )
 def test_registry_rejects_illegal_combinations(selection):
