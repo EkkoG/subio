@@ -1,0 +1,95 @@
+{
+  "source": {
+    "url": "https://raw.githubusercontent.com/SagerNet/sing-box/v1.14.3/docs/schema.json",
+    "version": "v1.14.3",
+    "sha256": "15133dc518142b7082f120fa7ed08dabb5b28768850e4bebcde67272cbd58d47",
+    "extracted_at": "2026-10-10",
+    "definitions": {
+      "outbound": "#/$defs/Outbound",
+      "endpoint": "#/$defs/Endpoint"
+    }
+  },
+  "outbound": {
+    "schema_types": [
+      "anytls",
+      "block",
+      "bridge",
+      "direct",
+      "http",
+      "hysteria",
+      "hysteria2",
+      "naive",
+      "selector",
+      "shadowsocks",
+      "shadowtls",
+      "snell",
+      "socks",
+      "ssh",
+      "tor",
+      "trojan",
+      "tuic",
+      "urltest",
+      "vless",
+      "vmess"
+    ],
+    "nested_variants": {
+      "snell": [
+        4,
+        6
+      ]
+    },
+    "supported": [
+      "anytls",
+      "block",
+      "direct",
+      "http",
+      "hysteria",
+      "hysteria2",
+      "naive",
+      "shadowsocks",
+      "shadowtls",
+      "snell",
+      "socks",
+      "ssh",
+      "trojan",
+      "tuic",
+      "vless",
+      "vmess"
+    ],
+    "excluded": [
+      "bridge",
+      "selector",
+      "tor",
+      "urltest"
+    ]
+  },
+  "endpoint": {
+    "schema_types": [
+      "openconnect",
+      "openvpn-client",
+      "openvpn-server",
+      "tailscale",
+      "wireguard"
+    ],
+    "supported": [
+      "openconnect",
+      "openvpn-client",
+      "tailscale",
+      "wireguard"
+    ],
+    "excluded": [
+      "openvpn-server"
+    ]
+  },
+  "future_type_policy": {
+    "unknown": "excluded",
+    "known_after_baseline": {
+      "outbound": [
+        "tailcat"
+      ],
+      "endpoint": [
+        "masque"
+      ]
+    }
+  }
+}
