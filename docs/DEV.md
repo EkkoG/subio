@@ -8,7 +8,7 @@
 SubIO v2 只转换两类内容：
 
 1. 代理节点；
-2. Mihomo、Stash、Surge 官方定义的可独立分享规则集。
+2. Mihomo、Stash、Surge 和 sing-box 官方定义的可独立分享规则集。
 
 协议和字段实现必须基于当前工作区、本文、support matrix、官方资料和可复现测试独立完成；不得
 对照、复制、cherry-pick 或反向推断其他分支的实现。缺少官方资料的平台只维持现有 serializer
@@ -48,11 +48,11 @@ Config
 
 ```text
 Config / local snippet
-  -> Mihomo / Stash / Surge RuleSetInputCodec
+  -> Mihomo / Stash / Surge / sing-box RuleSetInputCodec
   -> HeadlessRuleSet
   -> ParameterizedRuleSet (policy binding)
-  -> existing rule renderer
-  -> Template / Artifact
+  -> existing rule renderer -> Template / node Artifact
+  -> sing-box Source serializer -> sing-box-ruleset Artifact
   -> Uploader
 ```
 
@@ -329,7 +329,7 @@ Stash 当前开放 20 种协议。具体输入、目标协议和跨平台限制�
 以下是当前已经实施并由测试固定的规则集契约。旧宽松 parser、URL/扩展名嗅探、policy 猜测和
 脚本处理路径均不属于兼容 API。
 
-SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集，不解析完整配置中的
+SubIO 只解析 Mihomo、Stash、Surge 和 sing-box 官方定义的可独立分享规则集，不解析完整配置中的
 `rules`、`[Rule]`、script provider 或其他外部依赖资源。
 
 统一术语如下：
@@ -337,9 +337,10 @@ SubIO 只解析 Mihomo、Stash 和 Surge 官方定义的可独立分享规则集
 - `RuleSetInputCodec`：按来源方言、format 和 behavior 解析输入；
 - `HeadlessRuleSet`：不带 policy 的有序规则语义；
 - `ParameterizedRuleSet`：在规则语义外增加参数声明和逐条 policy binding；
-- rule renderer：现有目标配置片段生成器，不新增对称的规则集输出 artifact。
+- rule renderer：为现有目标配置模板生成带 policy 的规则片段；
+- sing-box Source serializer：移除 policy binding 和注释，生成独立 Source v1 artifact。
 
-远程 `[[ruleset]]` 通过 `type = "mihomo" | "stash" | "surge"` 声明输入方言；未声明 `type`
+远程 `[[ruleset]]` 通过 `type = "mihomo" | "stash" | "surge" | "sing-box"` 声明输入方言；未声明 `type`
 时精确定义为 `mihomo + classical + text`。显式声明方言时使用对应 codec，不根据 URL、文件名
 或解析失败结果切换方言。不得保留 legacy parser、宽松 fallback 或根据逗号位置猜 policy。
 
@@ -347,7 +348,8 @@ Mihomo 和 Stash 的 YAML/text 支持 `domain`、`ipcidr`、`classical`；MRS �
 `ipcidr`。远程加载必须保留原始 bytes，由 codec 选择文本解码或 MRS 解码；运行时不得依赖外部
 Mihomo CLI 或系统 `zstd`。MRS 使用进程内 `zstandard` 和带输入/解压上限的 data-only decoder，
 校验内嵌 behavior、长度、trie/range 结构和尾部数据。Surge 输入只覆盖外部 Rule Set、Domain Set
-和已抽取的 inline Ruleset 内容。
+和已抽取的 inline Ruleset 内容。sing-box 输入只接受 `classical + source`，解析官方 Source JSON
+v1-v5；它不是完整 sing-box 客户端配置输入。
 
 本地 snippet 是参数化的 Mihomo classical 规则集：第一行声明参数，后续规则不写 policy 时绑定
 第一个参数，`{{ name }}` 只能引用已声明参数，`DIRECT` 等值是固定 policy。移除 binding 后，
@@ -363,6 +365,14 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 通配符、完整路径和 app bundle 前缀模式。Stash `no-track` 只输出回 Stash；Surge
 `extended-matching`、notification 和 capture 参数只输出到 Surge。无法证明等价时生成稳定 issue，
 不得因 rule type 字符串相同而直接透传成不同语义。
+
+`artifact.type = "sing-box-ruleset"` 必须用 `ruleset` 精确引用一个已加载的 store 名称：本地 snippet
+使用文件名，远程 `[[ruleset]] name = "foo"` 注册为 `remote_foo`。该 artifact 只输出 Source v1，
+不进行 URL/文件名推断，也不生成 SRS、完整客户端配置、递归规则依赖、脚本或模板。只序列化能够
+精确表示的 matcher 和 option；不支持的顶层或嵌套表达式会原子省略整条规则并产生结构化 issue。
+issue gate 在 staging 和发布前执行，除非显式设置 `allow_conversion_errors = true`。无可输出规则时
+默认失败，`allow_empty = true` 才允许输出空 `rules`。Go/RE2 正则导入使用保守子集，允许拒绝部分
+Go 引擎本身可接受、但项目尚未证明与 Python 检查等价的表达式。
 
 “输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
 不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
@@ -412,6 +422,7 @@ age key、密码或私钥。
 
 ```bash
 uv run subio convert example/config.toml --dry-run
+uv run subio convert example/config.singbox-ruleset.toml --dry-run
 ```
 
 再运行目标测试，例如 Clash：

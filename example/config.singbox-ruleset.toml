@@ -1,0 +1,4 @@
+[[artifact]]
+name = "sing-box-ruleset.json"
+type = "sing-box-ruleset"
+ruleset = "pt"

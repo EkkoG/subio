@@ -15,6 +15,7 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 | `clash` | 已废弃但仍支持 | 原版 Clash YAML 节点；加载配置时提示改用 `mihomo` |
 | `stash` | 支持 | Stash YAML 节点 |
 | `surge` | 支持 | Surge Proxy 内容，以及节点实际引用的 Keystore/WireGuard/Tailscale 附件 |
+| `sing-box` | 支持 | sing-box JSON 中当前 codec 支持的 `outbounds` 与 `endpoints`；不是完整客户端配置导入 |
 | `v2rayn` | 支持 | v2rayN 分享链接/订阅 |
 | `subio` | 推荐用于自建节点 | SubIO 节点文件 v2：`version = 2` + `nodes`，支持 TOML、JSON、JSON5、YAML；v1 与旧 `proxies` 明确拒绝，不提供迁移或 fallback |
 
@@ -27,6 +28,7 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 | `clash` | 已废弃但仍支持 | SS、VMess、Trojan、HTTP、SOCKS5；保持原版 Clash 的独立能力边界 |
 | `stash` | 支持 | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
 | `surge` | 支持 | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
+| `sing-box` | 支持 | JSON outbounds：AnyTLS、Block、Direct、HTTP、Hysteria、Hysteria2、Naive、SS、ShadowTLS、Snell、SOCKS、SSH、Trojan、TUIC、VLESS、VMess；endpoints：`openconnect`、`openvpn-client`、`tailscale`、`wireguard` |
 | `dae` | 支持 | SS、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria2、TUIC、AnyTLS |
 | `v2rayn` | 支持 | SS、VMess、VLESS、Trojan、SOCKS5 |
 
@@ -40,6 +42,11 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
   内部 DNS 模块出站，不扩展为 DNS section 转换；
 - Mieru 是 Mihomo/Stash 共享强类型协议，但 Stash 仅接受其官方 TCP profile；
 - Tailscale、MASQUE、TrustTunnel 按 selection/profile/transport/auth 分型，不因协议同名而互转；
+- sing-box 节点能力固定以官方 v1.14.3 schema/行为为基线，只实现上表 codec。`openvpn-server`、
+  `bridge`、`tor`、`selector`、`urltest`、基线后的新增类型和其他未知类型均产生结构化 unsupported
+  issue，不视为完整 sing-box 支持或透传能力；
+- sing-box Snell 只支持 v4/v6 的已实现字段组合；Block 只对应 `RejectMode.REJECT`。OpenConnect 只接受
+  显式 `https://` URL 与有效 authority（可含数字端口），拒绝空白、userinfo、query 和 fragment；
 - Surge External 的本地 file provider 默认可 Surge -> Surge 透传；远程 URL 默认忽略，只有
   `allow_unsafe_external = true` 才允许同平台透传；任何来源都不能输出到其他平台；
 - 同方言未知安全字段可保真，跨方言未消费字段产生结构化 issue，不直接泄漏到目标。
@@ -54,9 +61,11 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 | `stash` | `domain`、`ipcidr` | `text`、`yaml`、`mrs` |
 | `surge` | `classical` | `text` |
 | `surge` | `domain` | `text` |
+| `sing-box` | `classical` | `source`（官方 Source JSON v1-v5） |
 
 `type`、`behavior`、`format` 都未声明时，固定使用 `mihomo + classical + text`。SubIO 不根据 URL、
-扩展名或解析失败切换 codec。MRS 只承载 domain/ipcidr，不支持 classical。
+扩展名或解析失败切换 codec。MRS 只承载 domain/ipcidr，不支持 classical；sing-box Source 不接受
+SRS 或完整客户端配置。
 
 本地 snippet 使用同一 Mihomo classical grammar，只额外提供参数声明和最外层 policy binding。
 `SCRIPT`、脚本快捷方式、脚本 provider 和其他完整配置依赖不会被下载、执行或转换。
@@ -68,6 +77,7 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 | Mihomo | 官方 classical provider 中除 `RULE-SET`、`SUB-RULE` 外的 predicate、`MATCH`、`AND`/`OR`/`NOT` | 目标 IP 类规则的 `no-resolve`、`src` |
 | Stash | 官方 classical provider 的自包含 predicate、`MATCH`、`AND`/`OR`/`NOT` | IP 类规则的 `no-resolve`；任意规则的 `no-track` |
 | Surge | 官方 Rule Set 的自包含 predicate、`AND`/`OR`/`NOT`，逻辑嵌套最多 10 层 | `no-resolve`、`extended-matching`、notification 与 `always-capture` 参数 |
+| sing-box Source | Source v1-v5 中可无损进入当前 RuleSet IR 的 default/logical matcher | `invert`；IR 无法表达的已知或未来字段整条产生 parse issue |
 
 这里的“自包含”表示 matcher 和 option 都在规则集文件内。Stash/Surge `SCRIPT` 依赖完整配置中的
 脚本定义；Stash/Surge `RULE-SET`、Surge `DOMAIN-SET` 依赖其他资源，因此会生成结构化 parse issue
@@ -91,10 +101,10 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 
 ## 3. 规则输出
 
-现有 renderer 可为 `mihomo`、`clash`、`stash`、`surge` 和 `dae` 模板生成规则片段；
-`clash-meta` 是 `mihomo` 的兼容别名。SubIO 没有新增独立的规则集输出 artifact；规则仍通过
-现有模板 callable 绑定 policy。目标无法表示的规则类型、option 或逻辑表达式会生成结构化
-conversion issue，并在未显式放行时阻止发布。
+现有 renderer 可为 `mihomo`、`clash`、`stash`、`surge` 和 `dae` 模板生成带 policy 的规则片段；
+`clash-meta` 是 `mihomo` 的兼容别名。另有 `artifact.type = "sing-box-ruleset"` 从一个精确的已加载
+store 名称输出独立 Source JSON v1。目标无法表示的规则类型、option 或逻辑表达式会生成结构化
+conversion issue，并在未显式放行时阻止 staging、上传和 manifest 发布。
 
 | 目标 | 输出边界 |
 |---|---|
@@ -103,6 +113,13 @@ conversion issue，并在未显式放行时阻止发布。
 | `surge` | Surge 官方自包含规则、Rule Set 内合法 options 和高级逻辑 |
 | `clash` | 原版 Clash 的有限规则子集；不继承 Mihomo 新规则 |
 | `dae` | 现有 domain/IP/fallback 模板片段子集 |
+| `sing-box-ruleset` | Source JSON v1；只保留可精确表示的 matcher/option，省略 policy binding 与注释 |
+
+`sing-box-ruleset` 的远程 store 名为 `remote_<ruleset.name>`，本地 store 名为 snippet 文件名；引用
+必须完全匹配，不做 URL、扩展名或近似名称推断。没有可输出规则时默认失败，显式
+`allow_empty = true` 才允许空数组。`allow_conversion_errors = true` 可放行 issue 后剩余的安全规则，
+但不恢复被原子省略的规则。该 artifact 不输出 SRS、完整客户端配置、递归引用、脚本或模板。
+正则导入采用保守 Go/RE2 子集，可能拒绝部分 Go 本身接受的表达式。
 
 ### 3.1 Surge Policy Groups 边界
 
