@@ -30,7 +30,7 @@ def test_format_catalog_owns_names_aliases_and_directions():
     assert formats["subio"].parser_factory is not None
     assert formats["subio"].emitter_factory is None
     assert formats["sing-box"].parser_factory is not None
-    assert formats["sing-box"].emitter_factory is None
+    assert formats["sing-box"].emitter_factory is not None
     assert formats["dae"].parser_factory is None
     assert formats["dae"].emitter_factory is not None
     assert get_parser("dae") is None

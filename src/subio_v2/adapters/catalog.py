@@ -82,6 +82,12 @@ def _singbox_parser(**_: Any) -> Any:
     return SingBoxParser()
 
 
+def _singbox_emitter() -> Any:
+    from subio_v2.adapters.singbox.emitter import SingBoxEmitter
+
+    return SingBoxEmitter()
+
+
 def _v2rayn_parser(**_: Any) -> Any:
     from subio_v2.adapters.links.parser import V2RayNParser
 
@@ -166,6 +172,7 @@ _FORMAT_SPECS = (
     FormatSpec(
         "sing-box",
         parser_factory=_singbox_parser,
+        emitter_factory=_singbox_emitter,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec("subio", parser_factory=_subio_parser),

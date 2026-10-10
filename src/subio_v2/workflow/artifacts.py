@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from dataclasses import dataclass, replace
 from typing import Any
@@ -273,11 +274,14 @@ class ArtifactGenerationService:
         artifact_name: str,
     ) -> tuple[str, list[ConversionIssue]]:
         is_yaml_data = isinstance(content, dict)
-        raw_content = (
-            yaml.dump(content.get("proxies", []), allow_unicode=True, sort_keys=False)
-            if is_yaml_data
-            else content
-        )
+        if is_yaml_data and normalize_format(artifact_type) == "sing-box":
+            raw_content = json.dumps(content, ensure_ascii=False, indent=2) + "\n"
+        else:
+            raw_content = (
+                yaml.dump(content.get("proxies", []), allow_unicode=True, sort_keys=False)
+                if is_yaml_data
+                else content
+            )
         if template_path:
             context = build_template_context(
                 platform=artifact_type,
@@ -305,7 +309,7 @@ class ArtifactGenerationService:
                 for issue in render_result.issues
             ]
             return final_content, ruleset_issues
-        elif is_yaml_data:
+        elif is_yaml_data and normalize_format(artifact_type) != "sing-box":
             final_content = yaml.dump(content, allow_unicode=True, sort_keys=False)
         else:
             final_content = raw_content
