@@ -152,10 +152,6 @@ class ConfigValidator:
         template = entry.get("template")
         if template is not None and not isinstance(template, str):
             raise ConfigError(f"Artifact '{name}' template must be a string")
-        if artifact_type == "sing-box" and template is not None:
-            raise ConfigError(
-                f"Artifact '{name}' type 'sing-box' emits JSON and does not support templates"
-            )
         ruleset = entry.get("ruleset")
         if artifact_type == "sing-box-ruleset":
             if not isinstance(ruleset, str) or not ruleset:

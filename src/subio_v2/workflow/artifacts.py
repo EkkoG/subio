@@ -12,7 +12,7 @@ from subio_v2.adapters.catalog import (
     get_emitter,
     normalize_format,
 )
-from subio_v2.core.errors import ArtifactGenerationError, ConfigError
+from subio_v2.core.errors import ArtifactGenerationError, ConfigError, TemplateRenderError
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
 from subio_v2.infrastructure import age
@@ -377,6 +377,17 @@ class ArtifactGenerationService:
                 template_path, context, artifact_type, self.rulesets
             )
             final_content = render_result.content
+            if normalize_format(artifact_type) == "sing-box":
+                try:
+                    rendered_json = json.loads(final_content)
+                except json.JSONDecodeError as exc:
+                    raise TemplateRenderError(
+                        f"Rendered sing-box template '{template_path}' is not valid JSON"
+                    ) from exc
+                if not isinstance(rendered_json, dict):
+                    raise TemplateRenderError(
+                        f"Rendered sing-box template '{template_path}' must be a JSON object"
+                    )
             ruleset_issues = [
                 replace(issue, artifact=artifact_name, user=username)
                 for issue in render_result.issues

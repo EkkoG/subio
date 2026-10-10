@@ -5,7 +5,7 @@ import pytest
 
 from subio_v2.adapters.catalog import get_emitter, get_parser
 from subio_v2.adapters.singbox.emitter import SingBoxEmitter
-from subio_v2.core.errors import ArtifactGenerationError, ConfigError
+from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
 from subio_v2.core.nodes import (
     MieruNode,
     MieruTransport,
@@ -84,7 +84,7 @@ def test_singbox_artifact_emits_mixed_outbounds_and_endpoints_json(
     assert parsed.nodes[1].dialer_proxy == "edge"
 
 
-def test_singbox_artifact_config_is_typed_and_rejects_templates(tmp_path):
+def test_singbox_artifact_config_is_typed_and_supports_json_templates(tmp_path, monkeypatch):
     _write(tmp_path / "nodes.yaml", _mixed_nodes())
     config_path = _write(tmp_path / "config.toml", _workflow_config())
 
@@ -94,12 +94,50 @@ def test_singbox_artifact_config_is_typed_and_rejects_templates(tmp_path):
     assert config.artifacts[0].artifact_type == "sing-box"
     assert isinstance(get_emitter("sing-box"), SingBoxEmitter)
 
+    _write(
+        tmp_path / "client.json.j2",
+        """
+{
+  "log": {"level": "info"},
+  "outbounds": {{ nodes.outbounds() }},
+  "endpoints": {{ nodes.endpoints() }},
+  "route": {"final": "edge"}
+}
+""",
+    )
     template_config = _write(
         tmp_path / "template.toml",
-        _workflow_config(artifact_options='template = "client.j2"'),
+        _workflow_config(artifact_options='template = "client.json.j2"'),
     )
-    with pytest.raises(ConfigError, match="does not support templates"):
-        ConfigLoader.load(str(template_config))
+    assert ConfigLoader.load(str(template_config)).artifacts[0].template == "client.json.j2"
+    monkeypatch.chdir(tmp_path)
+
+    result = WorkflowEngine(str(template_config), dry_run=True).run()
+
+    assert result.errors == []
+    content = json.loads((tmp_path / "dist/client.json").read_text())
+    assert content["log"] == {"level": "info"}
+    assert [item["tag"] for item in content["outbounds"]] == ["edge"]
+    assert [item["tag"] for item in content["endpoints"]] == ["vpn"]
+    assert content["route"]["final"] == "edge"
+
+
+@pytest.mark.parametrize("template", ['{"outbounds": ', '[1, 2]'])
+def test_singbox_template_must_render_a_json_object_before_publish(
+    tmp_path, monkeypatch, template
+):
+    _write(tmp_path / "nodes.yaml", _mixed_nodes())
+    _write(tmp_path / "client.json.j2", template)
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(TemplateRenderError, match="sing-box template"):
+        WorkflowEngine(str(config_path), dry_run=True).run()
+
+    assert not (tmp_path / "dist").exists()
 
 
 def test_singbox_emitter_rejects_duplicate_and_empty_tags_without_secret_leaks():

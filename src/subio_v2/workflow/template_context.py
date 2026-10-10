@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -34,6 +35,17 @@ class TemplateNodeSet:
 
     def render(self) -> str:
         return self._rendered
+
+    def outbounds(self) -> str:
+        return self._singbox_array("outbounds")
+
+    def endpoints(self) -> str:
+        return self._singbox_array("endpoints")
+
+    def _singbox_array(self, key: str) -> str:
+        if self._platform != "sing-box":
+            raise ValueError(f"nodes.{key}() is only available for sing-box templates")
+        return json.dumps(json.loads(self._rendered)[key], ensure_ascii=False)
 
     def _selected(
         self,
