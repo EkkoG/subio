@@ -369,5 +369,10 @@ def merge_stores(*stores: RuleSetStore) -> RuleSetStore:
         for name in store.names:
             item = store.get(name)
             if item is not None:
-                merged.register(name, item)
+                try:
+                    merged.register(name, item)
+                except ValueError as exc:
+                    raise ConfigError(
+                        f"Ambiguous ruleset name {name!r}: defined more than once"
+                    ) from exc
     return merged

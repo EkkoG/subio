@@ -22,12 +22,14 @@ class ConfigValidator:
         rulesets = config.get("ruleset", [])
         if not isinstance(rulesets, list):
             raise ConfigError("Config section 'ruleset' must be a list")
-        for entry in rulesets:
+        ruleset_positions: dict[str, int] = {}
+        for position, entry in enumerate(rulesets, start=1):
             if not isinstance(entry, dict):
                 raise ConfigError("Entries in 'ruleset' must be objects")
             name = entry.get("name")
             if not isinstance(name, str) or not name:
                 raise ConfigError("Every 'ruleset' entry must have a name")
+            cls._record_unique_name("ruleset", name, position, ruleset_positions)
             url = entry.get("url")
             if not isinstance(url, str) or not url:
                 raise ConfigError(f"Ruleset '{name}' must define a URL")
@@ -153,6 +155,34 @@ class ConfigValidator:
         if artifact_type == "sing-box" and template is not None:
             raise ConfigError(
                 f"Artifact '{name}' type 'sing-box' emits JSON and does not support templates"
+            )
+        ruleset = entry.get("ruleset")
+        if artifact_type == "sing-box-ruleset":
+            if not isinstance(ruleset, str) or not ruleset:
+                raise ConfigError(
+                    f"Artifact '{name}' ruleset must be a non-empty string"
+                )
+            unsupported = [
+                key
+                for key in (
+                    "template",
+                    "providers",
+                    "user",
+                    "users",
+                    "selector",
+                    "options",
+                    "on_duplicate_name",
+                )
+                if key in entry
+            ]
+            if unsupported:
+                raise ConfigError(
+                    f"Artifact '{name}' type 'sing-box-ruleset' does not support "
+                    + ", ".join(unsupported)
+                )
+        elif "ruleset" in entry:
+            raise ConfigError(
+                f"Artifact '{name}' ruleset is only valid for type 'sing-box-ruleset'"
             )
         for key in ("allow_conversion_errors", "allow_empty"):
             if not isinstance(entry.get(key, False), bool):

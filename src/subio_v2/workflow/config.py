@@ -108,12 +108,14 @@ class ArtifactConfig:
     upload: tuple[UploadConfig, ...] = ()
     selector: str | None = None
     on_duplicate_name: str = "error"
+    ruleset: str | None = None
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ArtifactConfig:
         return cls(
             name=value["name"],
             artifact_type=value["type"],
+            ruleset=value.get("ruleset"),
             template=value.get("template"),
             providers=tuple(value.get("providers", ())),
             users=tuple(value.get("users", ())),

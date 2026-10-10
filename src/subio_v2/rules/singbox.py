@@ -3,16 +3,19 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.errors import ConfigError
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.core.rule_model import (
+    BoundRule,
     HeadlessRuleSet,
     LogicalExpression,
+    ParameterizedRuleSet,
     Predicate,
+    RuleComment,
     RuleExpression,
     RuleSetParseResult,
 )
@@ -76,6 +79,74 @@ class _DuplicateJsonKey(ValueError):
 class _UnsupportedRule(Exception):
     field: str
     message: str
+
+
+@dataclass(frozen=True)
+class SingBoxSourceRenderResult:
+    content: str
+    input_rules: int
+    emitted_rules: int
+    issues: tuple[ConversionIssue, ...] = ()
+
+
+@dataclass(frozen=True)
+class _UnsupportedTargetRule(Exception):
+    code: str
+    message: str
+
+
+class SingBoxSourceSerializer:
+    """Encode parameterized rule IR as official sing-box Source version 1."""
+
+    def render(self, ruleset: ParameterizedRuleSet) -> SingBoxSourceRenderResult:
+        issues = [replace(issue, target="sing-box") for issue in ruleset.issues]
+        rules: list[dict[str, Any]] = []
+        bound_rules = 0
+
+        for entry in ruleset.entries:
+            if isinstance(entry, RuleComment):
+                continue
+            if not isinstance(entry, BoundRule):
+                raise TypeError(
+                    f"Unsupported parameterized entry: {type(entry).__name__}"
+                )
+            bound_rules += 1
+            try:
+                rules.append(
+                    _encode_source_rule(entry.expression, ruleset.source_context)
+                )
+            except _UnsupportedTargetRule as exc:
+                issues.append(
+                    ConversionIssue(
+                        severity=IssueSeverity.ERROR,
+                        node=None,
+                        protocol=None,
+                        source=ruleset.name,
+                        target="sing-box",
+                        field=(
+                            f"line {entry.expression.source_line}"
+                            if entry.expression.source_line is not None
+                            else None
+                        ),
+                        message=exc.message,
+                        stage="render",
+                        code=exc.code,
+                    )
+                )
+
+        content = (
+            json.dumps({"version": 1, "rules": rules}, ensure_ascii=False, indent=2)
+            + "\n"
+        )
+        return SingBoxSourceRenderResult(
+            content=content,
+            input_rules=bound_rules + len(ruleset.issues),
+            emitted_rules=len(rules),
+            issues=tuple(issues),
+        )
+
+
+SINGBOX_SOURCE_SERIALIZER = SingBoxSourceSerializer()
 
 
 class SingBoxSourceCodec:
@@ -685,3 +756,203 @@ def _with_source_line(expression: RuleExpression, source_line: int) -> RuleExpre
         expression.options,
         source_line,
     )
+
+
+def _encode_source_rule(
+    expression: RuleExpression, source_context: DialectContext
+) -> dict[str, Any]:
+    if isinstance(expression, Predicate):
+        return _encode_source_predicate(expression, source_context)
+    if expression.options:
+        option = expression.options[0]
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-option",
+            f"Rule option {option!r} cannot be rendered for sing-box",
+        )
+
+    operator = expression.operator.upper()
+    if operator == "NOT":
+        if len(expression.operands) != 1:
+            raise _UnsupportedTargetRule(
+                "ruleset.unsupported-target-rule",
+                "Logical NOT requires exactly one operand for sing-box",
+            )
+        encoded = _encode_source_rule(expression.operands[0], source_context)
+        if encoded.get("invert") is True:
+            encoded.pop("invert")
+        else:
+            encoded["invert"] = True
+        return encoded
+    if operator not in {"AND", "OR"}:
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Logical rule type {expression.operator} cannot be rendered for sing-box",
+        )
+    if not expression.operands:
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Logical {operator} has no operands",
+        )
+
+    leading_dot = _leading_dot_domain_suffix(expression)
+    if leading_dot is not None:
+        return {"domain_suffix": f".{leading_dot}"}
+
+    rules = [
+        _encode_source_rule(operand, source_context) for operand in expression.operands
+    ]
+    if len(rules) == 1:
+        return rules[0]
+    return {"type": "logical", "mode": operator.lower(), "rules": rules}
+
+
+def _encode_source_predicate(
+    predicate: Predicate, source_context: DialectContext
+) -> dict[str, Any]:
+    rule_type = predicate.rule_type.upper()
+    matcher = predicate.matcher
+    options = predicate.options
+    if source_context.dialect in {"surge", "stash"} and rule_type == "DEST-PORT":
+        rule_type = "DST-PORT"
+    if source_context.dialect in {"surge", "stash"}:
+        if rule_type == "SRC-IP":
+            rule_type = "SRC-IP-CIDR"
+        elif rule_type == "PROTOCOL" and matcher.lower() in {"tcp", "udp"}:
+            rule_type = "NETWORK"
+            matcher = matcher.lower()
+        elif rule_type == "PROCESS-NAME":
+            rule_type, matcher = _canonical_process_matcher(matcher)
+    if (
+        source_context.dialect == "mihomo"
+        and rule_type in {"IP-CIDR", "IP-CIDR6"}
+        and "src" in options
+    ):
+        co_options = tuple(option for option in options if option != "src")
+        if co_options:
+            option = co_options[0]
+            raise _UnsupportedTargetRule(
+                "ruleset.unsupported-target-option",
+                f"Rule option {option!r} cannot be rendered for sing-box",
+            )
+        rule_type = "SRC-IP-CIDR"
+        options = ()
+    if options:
+        option = options[0]
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-option",
+            f"Rule option {option!r} cannot be rendered for sing-box",
+        )
+
+    field_by_type = {
+        "DOMAIN": "domain",
+        "DOMAIN-SUFFIX": "domain_suffix",
+        "DOMAIN-KEYWORD": "domain_keyword",
+        "DOMAIN-REGEX": "domain_regex",
+        "IP-CIDR": "ip_cidr",
+        "IP-CIDR6": "ip_cidr",
+        "SRC-IP-CIDR": "source_ip_cidr",
+        "NETWORK": "network",
+        "PROCESS-NAME": "process_name",
+        "PROCESS-PATH": "process_path",
+        "PROCESS-PATH-REGEX": "process_path_regex",
+    }
+    if rule_type in {"DST-PORT", "SRC-PORT"}:
+        return _encode_source_port(predicate.matcher, source=rule_type == "SRC-PORT")
+    field = field_by_type.get(rule_type)
+    if field is None:
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Rule type {rule_type} cannot be rendered for sing-box",
+        )
+    if not matcher:
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Rule type {predicate.rule_type} has an empty matcher",
+        )
+    if rule_type in {"IP-CIDR", "IP-CIDR6", "SRC-IP-CIDR"}:
+        try:
+            matcher = str(ipaddress.ip_network(matcher, strict=False))
+        except ValueError as exc:
+            raise _UnsupportedTargetRule(
+                "ruleset.unsupported-target-rule",
+                f"Rule type {predicate.rule_type} has an invalid IP CIDR",
+            ) from exc
+    elif rule_type == "NETWORK" and matcher not in {"tcp", "udp"}:
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Network {matcher!r} cannot be rendered for sing-box",
+        )
+    elif rule_type in {"DOMAIN-REGEX", "PROCESS-PATH-REGEX"}:
+        try:
+            _validate_re2_subset(matcher, predicate.rule_type)
+        except _UnsupportedRule as exc:
+            raise _UnsupportedTargetRule(
+                "ruleset.unsupported-target-rule", exc.message
+            ) from exc
+    return {field: matcher}
+
+
+def _canonical_process_matcher(matcher: str) -> tuple[str, str]:
+    has_wildcard = "*" in matcher or "?" in matcher
+    if matcher.startswith("/"):
+        if matcher.endswith("/"):
+            return "PROCESS-PATH-WILDCARD", f"{matcher}*"
+        if has_wildcard:
+            return "PROCESS-PATH-WILDCARD", matcher
+        return "PROCESS-PATH", matcher
+    if has_wildcard:
+        return "PROCESS-NAME-WILDCARD", matcher
+    return "PROCESS-NAME", matcher
+
+
+def _encode_source_port(matcher: str, *, source: bool) -> dict[str, Any]:
+    parts = [part.strip() for part in matcher.split(",")]
+    if not parts or any(not part for part in parts):
+        raise _UnsupportedTargetRule(
+            "ruleset.unsupported-target-rule",
+            f"Port matcher {matcher!r} cannot be rendered for sing-box",
+        )
+    rules = [_encode_source_port_part(part, source=source) for part in parts]
+    if len(rules) == 1:
+        return rules[0]
+    return {"type": "logical", "mode": "or", "rules": rules}
+
+
+def _encode_source_port_part(value: str, *, source: bool) -> dict[str, Any]:
+    value_field = "source_port" if source else "port"
+    range_field = "source_port_range" if source else "port_range"
+    if value.isdigit():
+        port = int(value)
+        if 0 <= port <= 65535:
+            return {value_field: port}
+    match = re.fullmatch(r"(\d+)-(\d+)", value)
+    if match is not None:
+        start, end = (int(part) for part in match.groups())
+        if 0 <= start <= end <= 65535:
+            start_text = "" if start == 0 else str(start)
+            end_text = "" if end == 65535 else str(end)
+            if not start_text and not end_text:
+                start_text, end_text = "0", "65535"
+            return {range_field: f"{start_text}:{end_text}"}
+    raise _UnsupportedTargetRule(
+        "ruleset.unsupported-target-rule",
+        f"Port matcher {value!r} cannot be rendered for sing-box",
+    )
+
+
+def _leading_dot_domain_suffix(expression: LogicalExpression) -> str | None:
+    if expression.operator.upper() != "AND" or len(expression.operands) != 2:
+        return None
+    suffix, negated = expression.operands
+    if not isinstance(suffix, Predicate) or suffix.rule_type != "DOMAIN-SUFFIX":
+        return None
+    if suffix.options or not isinstance(negated, LogicalExpression):
+        return None
+    if negated.operator.upper() != "NOT" or len(negated.operands) != 1:
+        return None
+    domain = negated.operands[0]
+    if not isinstance(domain, Predicate) or domain.rule_type != "DOMAIN":
+        return None
+    if domain.options or domain.matcher != suffix.matcher or not suffix.matcher:
+        return None
+    return suffix.matcher
