@@ -51,8 +51,7 @@ Config / local snippet
   -> Mihomo / Stash / Surge / sing-box RuleSetInputCodec
   -> HeadlessRuleSet
   -> ParameterizedRuleSet (policy binding)
-  -> existing rule renderer -> Template / node Artifact
-  -> sing-box Source serializer -> sing-box-ruleset Artifact
+  -> target rule renderer -> Template / node Artifact
   -> Uploader
 ```
 
@@ -342,7 +341,7 @@ SubIO 只解析 Mihomo、Stash、Surge 和 sing-box 官方定义的可独立分�
 - `HeadlessRuleSet`：不带 policy 的有序规则语义；
 - `ParameterizedRuleSet`：在规则语义外增加参数声明和逐条 policy binding；
 - rule renderer：为现有目标配置模板生成带 policy 的规则片段；
-- sing-box Source serializer：移除 policy binding 和注释，生成独立 Source v1 artifact。
+- sing-box route-rule renderer：把规则集 callable 编码为完整客户端模板中的 route-rule JSON 数组。
 
 远程 `[[ruleset]]` 通过 `type = "mihomo" | "stash" | "surge" | "sing-box"` 声明输入方言；未声明 `type`
 时精确定义为 `mihomo + classical + text`。显式声明方言时使用对应 codec，不根据 URL、文件名
@@ -370,15 +369,10 @@ option 语义确实不同处参与 lowering，例如 `MATCH`/`FINAL`、`DST-PORT
 `extended-matching`、notification 和 capture 参数只输出到 Surge。无法证明等价时生成稳定 issue，
 不得因 rule type 字符串相同而直接透传成不同语义。
 
-`artifact.type = "sing-box-ruleset"` 必须用 `ruleset` 精确引用一个已加载的 store 名称：本地 snippet
-使用文件名，远程 `[[ruleset]] name = "foo"` 注册为 `remote_foo`。该 artifact 只输出 Source v1，
-不进行 URL/文件名推断，也不生成 SRS、完整客户端配置、递归规则依赖、脚本或模板。只序列化能够
-精确表示的 matcher 和 option；不支持的顶层或嵌套表达式会原子省略整条规则并产生结构化 issue。
-issue gate 在 staging 和发布前执行，除非显式设置 `allow_conversion_errors = true`。无可输出规则时
-默认失败，`allow_empty = true` 才允许输出空 `rules`。Go/RE2 正则导入使用保守子集，允许拒绝部分
-Go 引擎本身可接受、但项目尚未证明与 Python 检查等价的表达式。
-完整客户端 JSON 模板中的规则集 callable 输出 route-rule 对象数组，并将 policy 参数解析为 outbound tag；
-它与独立 Source ruleset artifact 是不同输出边界。
+sing-box Source JSON 只作为规则集输入，不发布为独立 Source 或 SRS artifact。完整客户端 JSON 模板中的
+规则集 callable 输出 route-rule 对象数组，并将 policy 参数解析为 outbound tag；只输出能够精确表示的
+matcher 和 option。不支持的顶层或嵌套规则产生结构化 issue，并在 staging 前由现有 artifact gate 阻止。
+Source 输入的 Go/RE2 正则采用保守子集，可能拒绝部分 Go 引擎本身可接受的表达式。
 
 “输出保持兼容”只表示现有目标平台、模板 callable、policy 参数、artifact 文件组织和文本格式
 不新增另一套 API；已经确认会生成错误字段或静默丢失语义的行为必须修正，不能用 golden 固化。
@@ -428,7 +422,6 @@ age key、密码或私钥。
 
 ```bash
 uv run subio convert example/config.toml --dry-run
-uv run subio convert example/config.singbox-ruleset.toml --dry-run
 uv run subio convert example/config.singbox-nodes.toml --dry-run
 ```
 

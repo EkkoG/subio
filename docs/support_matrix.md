@@ -51,7 +51,7 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
   `allow_unsafe_external = true` 才允许同平台透传；任何来源都不能输出到其他平台；
 - 同方言未知安全字段可保真，跨方言未消费字段产生结构化 issue，不直接泄漏到目标。
 
-`artifact.type = "sing-box"` 不指定模板时输出上述节点 JSON；指定 JSON Jinja `template` 时可调用
+`artifact.type = "sing-box"` 必须指定 JSON Jinja `template`，可调用
 `nodes.outbounds()`、`nodes.endpoints()`，并组合可分享规则集生成完整客户端 JSON。模板负责完整配置
 中的其他部分；这不是完整 sing-box 配置导入、全量配置 IR 或无损往返能力。路由规则只输出能够
 精确表示的 sing-box client matcher，并使用 sing-box `route` action；不支持的 matcher/option 会产生
@@ -108,9 +108,9 @@ SRS 或完整客户端配置。
 ## 3. 规则输出
 
 现有 renderer 可为 `mihomo`、`clash`、`stash`、`surge` 和 `dae` 模板生成带 policy 的规则片段；
-`clash-meta` 是 `mihomo` 的兼容别名。另有 `artifact.type = "sing-box-ruleset"` 从一个精确的已加载
-store 名称输出独立 Source JSON v1。目标无法表示的规则类型、option 或逻辑表达式会生成结构化
-conversion issue，并在未显式放行时阻止 staging、上传和 manifest 发布。
+`clash-meta` 是 `mihomo` 的兼容别名。sing-box 规则只在完整客户端 JSON 模板中输出为 `route.rules`；
+不提供节点-only JSON 或独立 Source ruleset artifact。目标无法表示的规则类型、option 或逻辑表达式会生成
+结构化 conversion issue，并在未显式放行时阻止 staging、上传和 manifest 发布。
 
 | 目标 | 输出边界 |
 |---|---|
@@ -119,13 +119,7 @@ conversion issue，并在未显式放行时阻止 staging、上传和 manifest �
 | `surge` | Surge 官方自包含规则、Rule Set 内合法 options 和高级逻辑 |
 | `clash` | 原版 Clash 的有限规则子集；不继承 Mihomo 新规则 |
 | `dae` | 现有 domain/IP/fallback 模板片段子集 |
-| `sing-box-ruleset` | Source JSON v1；只保留可精确表示的 matcher/option，省略 policy binding 与注释 |
-
-`sing-box-ruleset` 的远程 store 名为 `remote_<ruleset.name>`，本地 store 名为 snippet 文件名；引用
-必须完全匹配，不做 URL、扩展名或近似名称推断。没有可输出规则时默认失败，显式
-`allow_empty = true` 才允许空数组。`allow_conversion_errors = true` 可放行 issue 后剩余的安全规则，
-但不恢复被原子省略的规则。该 artifact 不输出 SRS、完整客户端配置、递归引用、脚本或模板。
-正则导入采用保守 Go/RE2 子集，可能拒绝部分 Go 本身接受的表达式。
+| sing-box JSON template | 必须通过完整客户端 JSON 模板输出；规则集 callable 生成 `route.rules` 对象数组，不提供节点-only 或独立 Source/SRS 产物 |
 
 ### 3.1 Surge Policy Groups 边界
 

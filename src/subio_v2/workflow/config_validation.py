@@ -152,33 +152,19 @@ class ConfigValidator:
         template = entry.get("template")
         if template is not None and not isinstance(template, str):
             raise ConfigError(f"Artifact '{name}' template must be a string")
-        ruleset = entry.get("ruleset")
         if artifact_type == "sing-box-ruleset":
-            if not isinstance(ruleset, str) or not ruleset:
-                raise ConfigError(
-                    f"Artifact '{name}' ruleset must be a non-empty string"
-                )
-            unsupported = [
-                key
-                for key in (
-                    "template",
-                    "providers",
-                    "user",
-                    "users",
-                    "selector",
-                    "options",
-                    "on_duplicate_name",
-                )
-                if key in entry
-            ]
-            if unsupported:
-                raise ConfigError(
-                    f"Artifact '{name}' type 'sing-box-ruleset' does not support "
-                    + ", ".join(unsupported)
-                )
-        elif "ruleset" in entry:
             raise ConfigError(
-                f"Artifact '{name}' ruleset is only valid for type 'sing-box-ruleset'"
+                f"Artifact '{name}' type 'sing-box-ruleset' was removed; "
+                "use type 'sing-box' with a JSON template"
+            )
+        if artifact_type == "sing-box" and not template:
+            raise ConfigError(
+                f"Artifact '{name}' type 'sing-box' requires a JSON template; "
+                "standalone node output is not supported"
+            )
+        if "ruleset" in entry:
+            raise ConfigError(
+                f"Artifact '{name}' ruleset is not supported; use a template ruleset callable"
             )
         for key in ("allow_conversion_errors", "allow_empty"):
             if not isinstance(entry.get(key, False), bool):

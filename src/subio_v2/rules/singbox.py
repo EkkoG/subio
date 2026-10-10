@@ -83,71 +83,9 @@ class _UnsupportedRule(Exception):
 
 
 @dataclass(frozen=True)
-class SingBoxSourceRenderResult:
-    content: str
-    input_rules: int
-    emitted_rules: int
-    issues: tuple[ConversionIssue, ...] = ()
-
-
-@dataclass(frozen=True)
 class _UnsupportedTargetRule(Exception):
     code: str
     message: str
-
-
-class SingBoxSourceSerializer:
-    """Encode parameterized rule IR as official sing-box Source version 1."""
-
-    def render(self, ruleset: ParameterizedRuleSet) -> SingBoxSourceRenderResult:
-        issues = [replace(issue, target="sing-box") for issue in ruleset.issues]
-        rules: list[dict[str, Any]] = []
-        bound_rules = 0
-
-        for entry in ruleset.entries:
-            if isinstance(entry, RuleComment):
-                continue
-            if not isinstance(entry, BoundRule):
-                raise TypeError(
-                    f"Unsupported parameterized entry: {type(entry).__name__}"
-                )
-            bound_rules += 1
-            try:
-                rules.append(
-                    _encode_source_rule(entry.expression, ruleset.source_context)
-                )
-            except _UnsupportedTargetRule as exc:
-                issues.append(
-                    ConversionIssue(
-                        severity=IssueSeverity.ERROR,
-                        node=None,
-                        protocol=None,
-                        source=ruleset.name,
-                        target="sing-box",
-                        field=(
-                            f"line {entry.expression.source_line}"
-                            if entry.expression.source_line is not None
-                            else None
-                        ),
-                        message=exc.message,
-                        stage="render",
-                        code=exc.code,
-                    )
-                )
-
-        content = (
-            json.dumps({"version": 1, "rules": rules}, ensure_ascii=False, indent=2)
-            + "\n"
-        )
-        return SingBoxSourceRenderResult(
-            content=content,
-            input_rules=bound_rules + len(ruleset.issues),
-            emitted_rules=len(rules),
-            issues=tuple(issues),
-        )
-
-
-SINGBOX_SOURCE_SERIALIZER = SingBoxSourceSerializer()
 
 
 class SingBoxRouteRuleSerializer:

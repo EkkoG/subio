@@ -12,14 +12,13 @@ from subio_v2.adapters.catalog import (
     get_emitter,
     normalize_format,
 )
-from subio_v2.core.errors import ArtifactGenerationError, ConfigError, TemplateRenderError
+from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
-from subio_v2.rules.singbox import SINGBOX_SOURCE_SERIALIZER
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.selectors import SelectorEngine, resolve_duplicate_names
 from subio_v2.workflow.template import TemplateRenderer
@@ -150,8 +149,6 @@ class ArtifactGenerationService:
     ]:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
-        if artifact_type == "sing-box-ruleset":
-            return self._generate_ruleset_artifact(artifact_config)
         nodes: list[Node] = []
         for provider_name in artifact_config.providers:
             if provider_name not in self.providers:
@@ -259,76 +256,6 @@ class ArtifactGenerationService:
             user=username,
             input_nodes=len(nodes),
             supported_nodes=len(emission.supported_nodes),
-            content_bytes=len(draft.content.encode("utf-8")),
-            content_sha256=hashlib.sha256(draft.content.encode("utf-8")).hexdigest(),
-            issue_codes=tuple(sorted({issue.code for issue in artifact_issues})),
-        )
-        return draft, tuple(artifact_issues), upload_request, summary
-
-    def _generate_ruleset_artifact(
-        self, artifact_config: ArtifactConfig
-    ) -> tuple[
-        ArtifactDraft,
-        tuple[ConversionIssue, ...],
-        ArtifactUploadRequest | None,
-        ArtifactSummary,
-    ]:
-        name = artifact_config.name
-        ruleset_name = artifact_config.ruleset
-        if not isinstance(ruleset_name, str) or not ruleset_name:
-            raise ConfigError(f"Artifact '{name}' ruleset must be a non-empty string")
-        ruleset = self.rulesets.get(ruleset_name)
-        if ruleset is None:
-            raise ConfigError(
-                f"Artifact '{name}' references missing ruleset: {ruleset_name}"
-            )
-
-        logger.info(
-            f"Generating artifact: [bold cyan]{name}[/bold cyan] "
-            f"(sing-box-ruleset) - {ruleset_name}"
-        )
-        rendered = SINGBOX_SOURCE_SERIALIZER.render(ruleset.model)
-        artifact_issues = [
-            replace(issue, artifact=name, user=None) for issue in rendered.issues
-        ]
-        errors = [
-            issue for issue in artifact_issues if issue.severity == IssueSeverity.ERROR
-        ]
-        BaseEmitter.log_issues(artifact_issues)
-        allow_errors = bool(
-            self.config.allow_conversion_errors
-            or artifact_config.allow_conversion_errors
-        )
-        if errors and not allow_errors:
-            raise ArtifactGenerationError(
-                f"Artifact '{name}' has {len(errors)} conversion error(s)",
-                issues=errors,
-            )
-        if errors:
-            logger.warning(
-                f"Artifact '{name}' is continuing with {len(errors)} "
-                "conversion error(s) because allow_conversion_errors=true"
-            )
-        if not rendered.emitted_rules and not artifact_config.allow_empty:
-            raise ArtifactGenerationError(
-                f"Artifact '{name}' has no emit-capable rules; "
-                "set allow_empty=true to permit this",
-                issues=artifact_issues,
-            )
-
-        draft = self._stage(name, rendered.content, artifact_config, None)
-        upload_request = (
-            ArtifactUploadRequest(draft.content, artifact_config)
-            if artifact_config.upload
-            else None
-        )
-        summary = ArtifactSummary(
-            name=name,
-            artifact_type=artifact_config.artifact_type,
-            filename=draft.filename,
-            user=None,
-            input_nodes=rendered.input_rules,
-            supported_nodes=rendered.emitted_rules,
             content_bytes=len(draft.content.encode("utf-8")),
             content_sha256=hashlib.sha256(draft.content.encode("utf-8")).hexdigest(),
             issue_codes=tuple(sorted({issue.code for issue in artifact_issues})),

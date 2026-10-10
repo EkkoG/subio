@@ -61,7 +61,14 @@ def test_singbox_artifact_emits_mixed_outbounds_and_endpoints_json(
     tmp_path, monkeypatch
 ):
     _write(tmp_path / "nodes.yaml", _mixed_nodes())
-    config_path = _write(tmp_path / "config.toml", _workflow_config())
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
+    )
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
     monkeypatch.chdir(tmp_path)
 
     result = WorkflowEngine(str(config_path), dry_run=True).run()
@@ -86,7 +93,14 @@ def test_singbox_artifact_emits_mixed_outbounds_and_endpoints_json(
 
 def test_singbox_artifact_config_is_typed_and_supports_json_templates(tmp_path, monkeypatch):
     _write(tmp_path / "nodes.yaml", _mixed_nodes())
-    config_path = _write(tmp_path / "config.toml", _workflow_config())
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
+    )
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
 
     config = ConfigLoader.load(str(config_path))
 
@@ -292,7 +306,11 @@ def test_singbox_artifact_duplicate_tags_abort_before_publication(
         tmp_path / "nodes.yaml",
         _mixed_nodes().replace("name: vpn", "name: edge"),
     )
-    config_path = _write(tmp_path / "config.toml", _workflow_config())
+    _write(tmp_path / "client.json.j2", '{"outbounds": {{ nodes.outbounds() }}}')
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ArtifactGenerationError) as exc_info:
@@ -311,7 +329,14 @@ def test_singbox_artifact_endpoint_detour_must_reference_emitted_outbound(
     tmp_path, monkeypatch, detour
 ):
     _write(tmp_path / "nodes.yaml", _mixed_nodes(detour=detour))
-    config_path = _write(tmp_path / "config.toml", _workflow_config())
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
+    )
+    config_path = _write(
+        tmp_path / "config.toml",
+        _workflow_config(artifact_options='template = "client.json.j2"'),
+    )
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ArtifactGenerationError) as exc_info:
@@ -334,7 +359,14 @@ def test_singbox_artifact_reports_detour_to_filtered_outbound(tmp_path, monkeypa
     _write(tmp_path / "nodes.yaml", _mixed_nodes())
     config_path = _write(
         tmp_path / "config.toml",
-        _workflow_config(provider_options='[provider.filters]\nexclude = "^edge$"'),
+        _workflow_config(
+            provider_options='[provider.filters]\nexclude = "^edge$"',
+            artifact_options='template = "client.json.j2"',
+        ),
+    )
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
     )
     monkeypatch.chdir(tmp_path)
 
@@ -366,8 +398,15 @@ proxies:
     config_path = _write(
         tmp_path / "config.toml",
         _workflow_config(
-            artifact_options="allow_conversion_errors = true\nallow_empty = true"
+            artifact_options=(
+                'template = "client.json.j2"\n'
+                "allow_conversion_errors = true\nallow_empty = true"
+            )
         ),
+    )
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
     )
     monkeypatch.chdir(tmp_path)
 
@@ -388,6 +427,7 @@ def test_singbox_artifact_json_flows_through_age_and_upload(tmp_path, monkeypatc
         tmp_path / "config.toml",
         _workflow_config(
             artifact_options=(
+                'template = "client.json.j2"\n'
                 'age_public_key = "age1-test"\n'
                 'upload = [{to = "gist", file_name = "client.age"}]'
             )
@@ -399,6 +439,10 @@ name = "gist"
 type = "gist"
 id = "gist-id"
 """,
+    )
+    _write(
+        tmp_path / "client.json.j2",
+        '{"outbounds": {{ nodes.outbounds() }}, "endpoints": {{ nodes.endpoints() }}}',
     )
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
