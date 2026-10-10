@@ -259,6 +259,34 @@ def test_mihomo_openvpn_uses_strong_ir_for_credentials_and_runtime_options():
     assert proxy["smux"]["enabled"] is True
 
 
+def test_mihomo_openvpn_preserves_legacy_cipher_and_freeform_fallback():
+    node = ClashParser().parse_result(
+        {
+            "proxies": [
+                {
+                    "name": "openvpn-legacy",
+                    "type": "openvpn",
+                    "server": "vpn.example.com",
+                    "port": 1194,
+                    "cipher": "AES-CBC",
+                    "data-ciphers": ["AES-CBC"],
+                    "data-ciphers-fallback": "custom-cipher",
+                    "ca": "ca-content",
+                    "username": "user",
+                }
+            ]
+        }
+    ).nodes[0]
+
+    emission = ClashEmitter(platform="mihomo").emit_result([node])
+
+    assert emission.errors == []
+    proxy = emission.content["proxies"][0]
+    assert proxy["cipher"] == "AES-CBC"
+    assert proxy["data-ciphers"] == ["AES-CBC"]
+    assert proxy["data-ciphers-fallback"] == "custom-cipher"
+
+
 @pytest.mark.parametrize(
     "overrides, expected_fields",
     [
@@ -270,6 +298,9 @@ def test_mihomo_openvpn_uses_strong_ir_for_credentials_and_runtime_options():
             {"tls_auth"},
         ),
         ({"proto": "invalid"}, {"proto"}),
+        ({"cipher": "BF-CBC"}, {"cipher"}),
+        ({"data-ciphers": ["BF-CBC"]}, {"data_ciphers"}),
+        ({"data-ciphers-fallback": []}, {"data_ciphers_fallback"}),
         ({"data-ciphers": ["invalid"]}, {"data_ciphers"}),
     ],
 )

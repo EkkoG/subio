@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from subio_v2.core.nodes import Node, OpenVPNNode, Protocol
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
@@ -10,14 +11,45 @@ from subio_v2.protocols.spec import ProtocolSpec
 SPEC = ProtocolSpec(
     protocol=Protocol.OPENVPN,
     node_class=OpenVPNNode,
-    user_override_fields=frozenset({"server", "port", "username", "password", "auth", "cipher", "private_key"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
-    terminal_native_fields=frozenset({"auth", "ca", "certificate", "cipher", "comp_lzo", "data_ciphers", "data_ciphers_fallback", "dev", "dns_servers", "handshake_timeout", "key_direction", "mtu", "password", "peer_info", "ping", "ping_restart", "private_key", "proto", "remote_dns_resolve", "smux", "tls_auth", "tls_crypt", "tls_crypt_v2", "username"}),
+    user_override_fields=frozenset(
+        {"server", "port", "username", "password", "auth", "cipher", "private_key"}
+    ),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "username", "password"}
+    ),
+    terminal_native_fields=frozenset(
+        {
+            "auth",
+            "ca",
+            "certificate",
+            "cipher",
+            "comp_lzo",
+            "data_ciphers",
+            "data_ciphers_fallback",
+            "dev",
+            "dns_servers",
+            "handshake_timeout",
+            "key_direction",
+            "mtu",
+            "password",
+            "peer_info",
+            "ping",
+            "ping_restart",
+            "private_key",
+            "proto",
+            "remote_dns_resolve",
+            "smux",
+            "tls_auth",
+            "tls_crypt",
+            "tls_crypt_v2",
+            "username",
+        }
+    ),
 )
 
 _PROTOS = {"udp", "udp4", "tcp", "tcp-client", "tcp4", "tcp4-client"}
 _DEVICES = {"tun"}
-_DATA_CIPHERS = {
+_CIPHERS = {
     "AES-128-GCM",
     "AES-192-GCM",
     "AES-256-GCM",
@@ -45,9 +77,7 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
         scalar_field("proto", default="udp", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("dev", default="tun", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("cipher", default="AES-128-GCM", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field(
-            "data-ciphers", "data_ciphers", emit_policy=EmitPolicy.NOT_NONE
-        ),
+        scalar_field("data-ciphers", "data_ciphers", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field(
             "data-ciphers-fallback",
             "data_ciphers_fallback",
@@ -68,9 +98,7 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
             emit_policy=EmitPolicy.NOT_NONE,
         ),
         scalar_field("tls-crypt", "tls_crypt", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field(
-            "tls-crypt-v2", "tls_crypt_v2", emit_policy=EmitPolicy.NOT_NONE
-        ),
+        scalar_field("tls-crypt-v2", "tls_crypt_v2", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("username", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("password", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("peer-info", "peer_info", emit_policy=EmitPolicy.NOT_NONE),
@@ -102,7 +130,7 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
 
         self._validate_enum(errors, "proto", node.proto, _PROTOS)
         self._validate_enum(errors, "dev", node.dev, _DEVICES)
-        self._validate_enum(errors, "cipher", node.cipher, _DATA_CIPHERS)
+        self._validate_enum(errors, "cipher", node.cipher, _CIPHERS)
         self._validate_enum(errors, "auth", node.auth, _AUTH_METHODS)
         self._validate_enum(errors, "comp_lzo", node.comp_lzo, _COMP_LZO_MODES)
         if node.key_direction is not None:
@@ -119,19 +147,29 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
                 )
             else:
                 unsupported = [
-                    cipher for cipher in node.data_ciphers if cipher not in _DATA_CIPHERS
+                    cipher
+                    for cipher in node.data_ciphers
+                    if not isinstance(cipher, str)
                 ]
                 if unsupported:
                     errors.append(
                         NodeValidationError(
-                            "data_ciphers",
-                            "Unsupported OpenVPN data cipher(s): "
-                            + ", ".join(map(str, unsupported)),
+                            "data_ciphers", "OpenVPN data-ciphers must contain strings"
                         )
                     )
 
-        has_certificate = node.certificate not in {None, ""}
-        has_private_key = node.private_key not in {None, ""}
+        if node.data_ciphers_fallback is not None and (
+            not isinstance(node.data_ciphers_fallback, str)
+        ):
+            errors.append(
+                NodeValidationError(
+                    "data_ciphers_fallback",
+                    "OpenVPN data-ciphers fallback must be a string",
+                )
+            )
+
+        has_certificate = node.certificate is not None and node.certificate != ""
+        has_private_key = node.private_key is not None and node.private_key != ""
         if has_certificate != has_private_key:
             errors.append(
                 NodeValidationError(
@@ -139,7 +177,9 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
                     "OpenVPN cert and key must be configured together",
                 )
             )
-        if not (has_certificate and has_private_key) and node.username in {None, ""}:
+        if not (has_certificate and has_private_key) and (
+            node.username is None or node.username == ""
+        ):
             errors.append(
                 NodeValidationError(
                     "username",
@@ -154,7 +194,7 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
                 ("tls_crypt", node.tls_crypt),
                 ("tls_crypt_v2", node.tls_crypt_v2),
             )
-            if value not in {None, ""}
+            if value is not None and value != ""
         ]
         if len(static_keys) > 1:
             errors.append(
@@ -173,6 +213,25 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
             )
         return errors
 
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+        if (
+            not isinstance(node, OpenVPNNode)
+            or node.data_ciphers is None
+            or not isinstance(node.data_ciphers, list)
+        ):
+            return []
+        unsupported = [cipher for cipher in node.data_ciphers if cipher not in _CIPHERS]
+        if not unsupported:
+            return []
+        return [
+            IssueDraft(
+                IssueSeverity.ERROR,
+                "Unsupported OpenVPN data cipher(s): "
+                + ", ".join(map(str, unsupported)),
+                "data_ciphers",
+            )
+        ]
+
     @staticmethod
     def _validate_enum(
         errors: list[NodeValidationError],
@@ -180,7 +239,7 @@ class OpenVPNCodec(StructuredClashProtocolCodec):
         value: str,
         supported: set[str],
     ) -> None:
-        if value not in supported:
+        if not isinstance(value, str) or value not in supported:
             errors.append(
                 NodeValidationError(
                     field,

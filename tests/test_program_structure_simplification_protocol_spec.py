@@ -30,9 +30,9 @@ def test_representative_protocol_specs_are_local_and_authoritative():
 
 def test_all_protocol_codecs_have_local_specs():
     codecs = tuple(registry.all())
-    assert len(codecs) == 29
+    assert len(codecs) == 30
     assert all(codec.spec is not None for codec in codecs)
-    assert len(registry.all_definitions()) == 29
+    assert len(registry.all_definitions()) == 30
 
     clash_codecs = tuple(codec for codec in codecs if not codec.dynamic_clash_type)
     assert len(clash_codecs) == 27
@@ -40,6 +40,7 @@ def test_all_protocol_codecs_have_local_specs():
     runtime_only = tuple(codec for codec in codecs if codec.dynamic_clash_type)
     assert {codec.protocol for codec in runtime_only} == {
         Protocol.NAIVE,
+        Protocol.OPENCONNECT,
         Protocol.SHADOWTLS,
     }
     assert all(codec.clash_dialects == frozenset() for codec in runtime_only)

@@ -40,6 +40,7 @@ class Protocol(StrEnum):
     SUDOKU = "sudoku"
     MASQUE = "masque"
     TRUSTTUNNEL = "trusttunnel"
+    OPENCONNECT = "openconnect"
     OPENVPN = "openvpn"
     TAILSCALE = "tailscale"
     DIRECT = "direct"
@@ -175,7 +176,7 @@ class BaseNode:
     # Some native proxy policies (for example Surge Tailscale and DIRECT aliases)
     # have no remote endpoint. Concrete protocol validation decides whether these
     # fields are required.
-    server: Optional[Union[str, List[str]]] = None
+    server: Optional[Union[str, List[str]]] = field(default=None, repr=False)
     port: Optional[int] = None
     udp: bool = True  # Default true for most modern proxies
     ip_version: Optional[str] = None  # ipv4, ipv6, dual
@@ -490,6 +491,17 @@ class OpenVPNNode(BaseNode):
     remote_dns_resolve: bool = False
     dns_servers: Optional[List[str]] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
+
+
+@dataclass
+class OpenConnectNode(BaseNode):
+    type: Protocol = field(default=Protocol.OPENCONNECT)
+    flavor: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = field(default=None, repr=False)
+    auth_group: Optional[str] = None
+    cookie: Optional[str] = field(default=None, repr=False)
+    mtu: Optional[int] = None
 
 
 @dataclass

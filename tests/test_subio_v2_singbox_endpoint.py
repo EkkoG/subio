@@ -82,8 +82,18 @@ def _tailscale_node() -> TailscaleNode:
 
 
 def test_singbox_endpoint_registry_is_explicit_and_structural():
-    assert set(SINGBOX_ENDPOINT_CODECS_BY_TYPE) == {"tailscale", "wireguard"}
-    assert set(SINGBOX_ENDPOINT_CODECS) == {Protocol.TAILSCALE, Protocol.WIREGUARD}
+    assert set(SINGBOX_ENDPOINT_CODECS_BY_TYPE) == {
+        "openconnect",
+        "openvpn-client",
+        "tailscale",
+        "wireguard",
+    }
+    assert set(SINGBOX_ENDPOINT_CODECS) == {
+        Protocol.OPENCONNECT,
+        Protocol.OPENVPN,
+        Protocol.TAILSCALE,
+        Protocol.WIREGUARD,
+    }
 
 
 def test_singbox_mixed_outbounds_and_endpoints_round_trip():
@@ -133,9 +143,7 @@ def test_singbox_endpoint_parser_errors_are_section_aware():
     assert result.issues[0].message == "Sing-box endpoint entry must be an object"
 
 
-@pytest.mark.parametrize(
-    "endpoint_type", ["openconnect", "openvpn-client", "openvpn-server", "masque"]
-)
+@pytest.mark.parametrize("endpoint_type", ["openvpn-server", "masque"])
 def test_singbox_unimplemented_endpoint_types_fail_closed(endpoint_type):
     result = SingBoxParser().parse_result(
         {"endpoints": [{"type": endpoint_type, "tag": "unsupported"}]}
