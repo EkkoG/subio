@@ -9,6 +9,7 @@ from subio_v2.adapters.catalog import (
     normalize_format,
 )
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
+from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
 from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 
@@ -23,7 +24,7 @@ def _protocol_codecs(target: str):
     if target == "surge":
         return dict(SURGE_PROTOCOL_CODECS)
     if target == "sing-box":
-        return dict(SINGBOX_OUTBOUND_CODECS)
+        return {**SINGBOX_OUTBOUND_CODECS, **SINGBOX_ENDPOINT_CODECS}
     return {
         codec.protocol: codec for codec in all_link_codecs() if target in codec.targets
     }

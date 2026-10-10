@@ -3,6 +3,7 @@ import pytest
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import all_formats, common_policy_for_format
 from subio_v2.adapters.links import codecs as links
+from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
 from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.links.codecs import (
     protocols_for_target as link_protocols_for_target,
@@ -45,9 +46,10 @@ def test_surge_target_matches_serializer_codec_registry():
     assert protocols_for_target("surge") == frozenset(SURGE_NODE_PROTOCOLS)
 
 
-def test_singbox_target_matches_outbound_codec_registry():
+def test_singbox_target_matches_actual_codec_registries():
     assert protocols_for_target("sing-box") == frozenset(
-        protocol.value for protocol in SINGBOX_OUTBOUND_CODECS
+        protocol.value
+        for protocol in {*SINGBOX_OUTBOUND_CODECS, *SINGBOX_ENDPOINT_CODECS}
     )
 
 

@@ -325,7 +325,7 @@ class WireguardNode(BaseNode):
     type: Protocol = field(default=Protocol.WIREGUARD)
     private_key: str = field(default="", repr=False)
     public_key: str = ""
-    preshared_key: Optional[str] = None
+    preshared_key: Optional[str] = field(default=None, repr=False)
     interface_ip: Optional[Union[str, List[str]]] = None
     interface_ipv6: Optional[Union[str, List[str]]] = None
     allowed_ips: Optional[List[str]] = None
@@ -348,7 +348,7 @@ class TailscaleNode(BaseNode):
     auth_key: Optional[str] = field(default=None, repr=False)
     interactive_login: bool = False
     control_url: Optional[str] = None
-    state_dir: Optional[str] = None
+    state_dir: Optional[str] = field(default=None, repr=False)
     ephemeral: bool = False
     accept_routes: bool = False
     exit_node: Optional[str] = None

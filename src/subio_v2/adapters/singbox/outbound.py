@@ -56,6 +56,10 @@ _UNSAFE_FIELDS = frozenset(
         "client_certificate_path",
         "client_key_path",
         "private_key_path",
+        "state_dir",
+        "state_directory",
+        "taildrop_directory",
+        "interactive_login",
     }
 )
 _TLS_KEYS = frozenset({"enabled", "disable_sni", "server_name", "insecure", "alpn"})

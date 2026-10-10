@@ -3,6 +3,7 @@ from collections.abc import Callable, Mapping
 import subio_v2.protocols as protocol_registry
 from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
+from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
 from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.adapters.surge.validation import (
@@ -44,7 +45,7 @@ def _protocol_codecs_for_target(platform: str) -> dict:
             if platform in codec.targets
         }
     if platform == "sing-box":
-        return dict(SINGBOX_OUTBOUND_CODECS)
+        return {**SINGBOX_OUTBOUND_CODECS, **SINGBOX_ENDPOINT_CODECS}
     return {}
 
 

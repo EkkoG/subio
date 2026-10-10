@@ -38,6 +38,7 @@ CONTRACT_TEST_MODULES = {
     "test_subio_v2_stage11_stash_cross_platform.py": "stash",
     "test_subio_v2_singbox_schema_contract.py": "sing-box",
     "test_subio_v2_singbox_outbound.py": "sing-box",
+    "test_subio_v2_singbox_endpoint.py": "sing-box",
     "test_subio_v2_subio_format_docs.py": "subio-v2",
     "test_subio_v2_surge_capabilities.py": "surge",
     "test_subio_v2_surge_codec_invariants.py": "surge",

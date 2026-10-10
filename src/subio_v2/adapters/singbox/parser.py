@@ -9,6 +9,7 @@ from subio_v2.adapters.singbox.outbound import (
     SingBoxCodecError,
     unsupported_field_code,
 )
+from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS_BY_TYPE
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.core.validation import validate_node
@@ -29,27 +30,43 @@ class SingBoxParser:
             raise ValueError("Invalid content type for SingBoxParser")
         if not isinstance(data, dict):
             raise ValueError("Sing-box configuration must be an object")
-        outbounds = data.get("outbounds")
+        if "outbounds" not in data and "endpoints" not in data:
+            raise ValueError(
+                "Sing-box configuration requires an 'outbounds' or 'endpoints' array"
+            )
+        outbounds = data.get("outbounds", [])
+        endpoints = data.get("endpoints", [])
         if not isinstance(outbounds, list):
-            raise ValueError("Sing-box configuration requires an 'outbounds' array")
+            raise ValueError("Sing-box field 'outbounds' must be an array")
+        if not isinstance(endpoints, list):
+            raise ValueError("Sing-box field 'endpoints' must be an array")
 
         nodes = []
         issues: list[ConversionIssue] = []
-        if data.get("endpoints"):
-            issues.append(
-                self._issue(
-                    "parse.singbox.unsupported-section",
-                    "Sing-box endpoints are not supported by this codec boundary",
-                    "endpoints",
-                )
-            )
-        for index, raw in enumerate(outbounds):
-            path = f"outbounds[{index}]"
+        self._parse_entries(
+            outbounds,
+            "outbounds",
+            SINGBOX_OUTBOUND_CODECS_BY_TYPE,
+            nodes,
+            issues,
+        )
+        self._parse_entries(
+            endpoints,
+            "endpoints",
+            SINGBOX_ENDPOINT_CODECS_BY_TYPE,
+            nodes,
+            issues,
+        )
+        return ParseResult(nodes=nodes, issues=issues)
+
+    def _parse_entries(self, entries, section, registry, nodes, issues) -> None:
+        for index, raw in enumerate(entries):
+            path = f"{section}[{index}]"
             if not isinstance(raw, dict):
                 issues.append(
                     self._issue(
                         "parse.singbox.invalid-entry",
-                        "Sing-box outbound entry must be an object",
+                        f"Sing-box {section[:-1]} entry must be an object",
                         path,
                     )
                 )
@@ -60,18 +77,18 @@ class SingBoxParser:
                 issues.append(
                     self._issue(
                         "parse.singbox.invalid-field",
-                        "Sing-box outbound field 'type' must be a string",
+                        f"Sing-box {section[:-1]} field 'type' must be a string",
                         f"{path}.type",
                         node=tag,
                     )
                 )
                 continue
-            codec = SINGBOX_OUTBOUND_CODECS_BY_TYPE.get(raw_type)
+            codec = registry.get(raw_type)
             if codec is None:
                 issues.append(
                     self._issue(
                         "parse.singbox.unsupported-type",
-                        f"Sing-box outbound type '{raw_type}' is not supported",
+                        f"Sing-box {section[:-1]} type '{raw_type}' is not supported",
                         f"{path}.type",
                         node=tag,
                         protocol=raw_type,
@@ -86,7 +103,7 @@ class SingBoxParser:
                     issues.append(
                         self._issue(
                             code,
-                            f"Sing-box outbound field '{field}' is {label}",
+                            f"Sing-box {section[:-1]} field '{field}' is {label}",
                             f"{path}.{field}",
                             node=tag,
                             protocol=raw_type,
@@ -125,7 +142,6 @@ class SingBoxParser:
                 )
                 continue
             nodes.append(node)
-        return ParseResult(nodes=nodes, issues=issues)
 
     @staticmethod
     def _issue(
