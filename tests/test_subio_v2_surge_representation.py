@@ -66,6 +66,10 @@ def _fixture(tmp_path, family, protocol, field, *, value="{{ params.value }}", p
     if isinstance(target, list):
         target[:] = ["static", "neighbor"]
     target[_source_key(family, field[-1])] = value
+    return _document_fixture(tmp_path, family, node, parameterized=parameterized)
+
+
+def _document_fixture(tmp_path, family, node, *, parameterized=True):
     key = "nodes" if family == "subio" else "proxies"
     document = {key: [node, _source_node(family, "socks5")]}
     document[key][1]["name"] = "neighbor"
@@ -263,3 +267,242 @@ def test_raw_section_line_breaks_fail_with_safe_field_issue(protocol, field):
     assert not emitted.content and not emitted.supported_nodes
     assert any(issue.field == field[0] and issue.code == "conversion.invalid-value" for issue in emitted.errors)
     assert all("canary" not in issue.message for issue in emitted.issues)
+
+
+def _nested_node(family, protocol):
+    node = {"name": "safe", "type": protocol, "server": "example.test", "port": 443}
+    if protocol in {"vmess", "tuic"}:
+        node["uuid"] = "synthetic-uuid"
+    if protocol not in {"vmess", "socks5", "http", "masque"}:
+        node["password"] = "synthetic-password"
+    if protocol in {"ssh", "trusttunnel"}:
+        node["username"] = "synthetic-user"
+    if protocol in {"http", "trusttunnel"}:
+        node["udp"] = False
+    if protocol == "tuic" and family == "subio":
+        node["version"] = 5
+    if family == "subio":
+        if protocol != "ssh":
+            node["tls"] = {"enabled": True}
+    elif protocol in {"vmess", "trojan", "socks5", "http"}:
+        node["tls"] = True
+    return node
+
+
+def _nested_success(path, value, field, expected, monkeypatch):
+    prepared = _prepare(path, value).artifact_result
+    assert not prepared.issues
+    _round_trip(prepared.drafts[0].content, field, expected)
+    response = _http(path, value, monkeypatch)
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment"
+    _round_trip(response.text, field, expected)
+
+
+def _nested_rejection(path, value, field, monkeypatch):
+    monkeypatch.setattr(
+        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
+        lambda *args: pytest.fail("Staged an unrepresentable Surge inner value"),
+    )
+    with pytest.raises(ArtifactGenerationError) as error:
+        _prepare(path, value)
+    assert any(
+        (issue.field, issue.code, issue.severity, issue.stage)
+        == (field, "conversion.invalid-value", "error", "emit")
+        for issue in error.value.issues
+    )
+    response = _http(path, value, monkeypatch)
+    assert response.status_code == 422
+    assert response.json() == {"error": "conversion_rejected"}
+    assert not (path.parent / "dist").exists()
+
+
+HEADER_PLACEMENTS = [
+    (family, protocol, None, True)
+    for family in ("mihomo", "subio") for protocol in ("vmess", "trojan")
+] + [
+    (family, "http", variant, enabled)
+    for family in ("mihomo", "subio")
+    for variant in (("auto",) if family == "mihomo" else ("auto", "http", "https", "h2-connect"))
+    for enabled in ((False, True) if variant == "auto" else (variant != "http",))
+]
+
+
+@pytest.mark.parametrize("family, protocol, variant, enabled", HEADER_PLACEMENTS)
+@pytest.mark.parametrize("value", [
+    "safe|Injected:changed", "safe;Injected:changed", " padded ", "",
+    "safe;equal=value%2C+", "safe|equal=value%2C+",
+    'comma,quotes"(value)=equal%2C+\\backslash',
+])
+def test_header_inner_values_are_faithful_or_block_before_staging(
+    tmp_path, monkeypatch, family, protocol, variant, enabled, value
+):
+    node = _nested_node(family, protocol)
+    headers = {"X-Review": "{{ params.value }}", "X-Static": "neighbor"}
+    if protocol == "http":
+        node["headers"] = headers
+        node["tls"] = {"enabled": enabled} if family == "subio" else enabled
+        if family == "subio":
+            node["variant"] = variant
+        separator, field, issue_field = ";", ("headers",), "headers"
+    else:
+        if family == "subio":
+            node["transport"] = {"network": "ws", "headers": headers}
+        else:
+            node.update(network="ws", **{"ws-opts": {"headers": headers}})
+        separator, field, issue_field = "|", ("transport", "headers"), "transport.headers"
+    path = _document_fixture(tmp_path, family, node)
+    if separator in value or value != value.strip():
+        _nested_rejection(path, value, issue_field, monkeypatch)
+    else:
+        _nested_success(path, value, field, {"X-Review": value, "X-Static": "neighbor"}, monkeypatch)
+
+
+@pytest.mark.parametrize("family, protocol", [
+    (family, protocol) for family in ("mihomo", "subio") for protocol in ("vmess", "trojan", "http")
+])
+@pytest.mark.parametrize("key", [" padded ", "Colon:Key", "Inner|Key", "Inner;Key", ""])
+def test_header_keys_obey_only_the_selected_inner_grammar(tmp_path, monkeypatch, family, protocol, key):
+    node = _nested_node(family, protocol)
+    headers = {key: "{{ params.value }}", "X-Static": "neighbor"}
+    if protocol == "http":
+        node["headers"] = headers
+        separator, field, issue_field = ";", ("headers",), "headers"
+    else:
+        if family == "subio":
+            node["transport"] = {"network": "ws", "headers": headers}
+        else:
+            node.update(network="ws", **{"ws-opts": {"headers": headers}})
+        separator, field, issue_field = "|", ("transport", "headers"), "transport.headers"
+    path = _document_fixture(tmp_path, family, node)
+    if separator in key or ":" in key or key != key.strip():
+        _nested_rejection(path, "safe", issue_field, monkeypatch)
+    else:
+        _nested_success(path, "safe", field, {key: "safe", "X-Static": "neighbor"}, monkeypatch)
+
+
+TLS_PLACEMENTS = [
+    (family, protocol)
+    for family in ("mihomo", "subio")
+    for protocol in ("vmess", "trojan", "socks5", "http", "anytls", "tuic", "hysteria2", "trusttunnel")
+] + [("subio", "masque")]
+
+
+@pytest.mark.parametrize("family, protocol", TLS_PLACEMENTS)
+@pytest.mark.parametrize("shape", ["single", "first", "last", "both", "sandwich"])
+@pytest.mark.parametrize("value", ["h2,http/1.1", " h2 ", "", "h2", "%2C;equal=value+"])
+def test_shared_alpn_preserves_exact_elements_or_rejects_before_staging(
+    tmp_path, monkeypatch, family, protocol, shape, value
+):
+    node = _nested_node(family, protocol)
+    token = "{{ params.value }}"
+    values = {
+        "single": [token], "first": [token, "h3"], "last": ["h3", token],
+        "both": [token, token], "sandwich": [token, "h3", token],
+    }[shape]
+    if family == "subio":
+        node["tls"]["alpn"] = values
+    else:
+        node["alpn"] = values
+    path = _document_fixture(tmp_path, family, node)
+    expected = [value if item == token else item for item in values]
+    strips = len(expected) > 1 or protocol in {"masque", "trusttunnel"}
+    if "," in value or expected == [""] or (strips and value != value.strip()):
+        _nested_rejection(path, value, "tls.alpn", monkeypatch)
+    else:
+        _nested_success(path, value, ("tls", "alpn"), expected, monkeypatch)
+
+
+@pytest.mark.parametrize("family, protocol", TLS_PLACEMENTS)
+@pytest.mark.parametrize("value", ["off", "OFF", " off ", "safe.example"])
+def test_literal_sni_off_cannot_become_the_disable_instruction(
+    tmp_path, monkeypatch, family, protocol, value
+):
+    node = _nested_node(family, protocol)
+    if family == "subio":
+        node["tls"]["server_name"] = "{{ params.value }}"
+    else:
+        node["sni"] = "{{ params.value }}"
+    path = _document_fixture(tmp_path, family, node)
+    if value == "off":
+        _nested_rejection(path, value, "tls.server_name", monkeypatch)
+    else:
+        _nested_success(path, value, ("tls", "server_name"), value, monkeypatch)
+
+
+@pytest.mark.parametrize("protocol", [protocol for family, protocol in TLS_PLACEMENTS if family == "subio"])
+def test_explicit_sni_disable_remains_supported(tmp_path, monkeypatch, protocol):
+    node = _nested_node("subio", protocol)
+    node["tls"].update(sni_disabled=True, server_name="{{ params.value }}")
+    path = _document_fixture(tmp_path, "subio", node)
+    _nested_success(path, "off", ("tls", "sni_disabled"), True, monkeypatch)
+    _nested_success(path, "off", ("tls", "server_name"), None, monkeypatch)
+
+
+@pytest.mark.parametrize("value", ["one,two", "", " padded ", "%2C;equal=value+", 'say "hello"(fingerprint)'])
+def test_native_ssh_fingerprint_elements_are_faithful_or_block_before_staging(tmp_path, monkeypatch, value):
+    node = _nested_node("subio", "ssh")
+    node["server_fingerprints"] = ["{{ params.value }}", "neighbor"]
+    path = _document_fixture(tmp_path, "subio", node)
+    if not value or "," in value:
+        _nested_rejection(path, value, "server_fingerprints", monkeypatch)
+    else:
+        _nested_success(path, value, ("server_fingerprints",), [value, "neighbor"], monkeypatch)
+
+
+@pytest.mark.parametrize("case", ["headers", "alpn", "sni", "fingerprints"])
+def test_static_opt_out_still_allows_partial_output_for_inner_grammar_errors(tmp_path, case):
+    node = _nested_node("subio", "ssh" if case == "fingerprints" else "trojan")
+    if case == "headers":
+        node["transport"] = {"network": "ws", "headers": {"Host": "safe|Injected:changed"}}
+    elif case == "alpn":
+        node["tls"]["alpn"] = ["h2,http/1.1", "h3"]
+    elif case == "sni":
+        node["tls"]["server_name"] = "off"
+    else:
+        node["server_fingerprints"] = ["one,two", "neighbor"]
+    path = _document_fixture(tmp_path, "subio", node, parameterized=False)
+    result = WorkflowEngine(str(path)).prepare().artifact_result
+    assert len(result.drafts) == 1
+    assert any(issue.severity == "error" and issue.code == "conversion.invalid-value" for issue in result.issues)
+    parsed = get_parser("surge").parse_result(result.drafts[0].content)
+    assert not parsed.issues and [node.name for node in parsed.nodes] == ["neighbor"]
+
+
+@pytest.mark.parametrize("peers", [False, True])
+@pytest.mark.parametrize("value", ["1/2", "/", "1/", "/2", "1/2/3"])
+def test_mihomo_wireguard_client_id_elements_cannot_grow_the_inner_list(tmp_path, monkeypatch, peers, value):
+    node = _source_node("mihomo", "wireguard", peers=peers)
+    target = node["peers"][0] if peers else node
+    target["reserved"] = ["{{ params.value }}", 2, 3]
+    path = _document_fixture(tmp_path, "mihomo", node)
+    _nested_rejection(path, value, "peers[0].reserved" if peers else "reserved", monkeypatch)
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("peers", [False, True])
+@pytest.mark.parametrize("value", [0, 1, 255])
+def test_wireguard_integer_client_id_neighbors_remain_exact(tmp_path, monkeypatch, family, peers, value):
+    node = _source_node(family, "wireguard", peers=peers)
+    target = node["peers"][0] if peers else node
+    target["reserved"] = ["{{ params.value }}", 2, 3]
+    path = _document_fixture(tmp_path, family, node)
+    config = json.loads(path.read_text())
+    config["artifact"][0]["render"]["params"]["value"] = {"type": "integer", "required": True}
+    path.write_text(json.dumps(config))
+    field = ("peers", 0, "reserved") if peers else ("reserved",)
+    _nested_success(path, str(value), field, [value, 2, 3], monkeypatch)
+
+
+@pytest.mark.parametrize("value", ["1", " 1 ", -1, 256])
+def test_client_id_guard_does_not_add_numeric_or_byte_validation(value):
+    node = get_parser("mihomo").parse_result(yaml.safe_dump({
+        "proxies": [_source_node("mihomo", "wireguard")],
+    })).nodes[0]
+    node.reserved = [value, 2, 3]
+    emitted = get_emitter("surge").emit_result([node])
+    assert not emitted.issues
+    parsed = get_parser("surge").parse_result("[Proxy]\n" + emitted.content)
+    assert not parsed.issues
+    peer = parsed.nodes[0].source_extensions["surge"]["wireguard"]["peers"][0]
+    assert peer["client-id"] == f"{value}/2/3"

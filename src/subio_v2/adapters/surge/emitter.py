@@ -8,6 +8,7 @@ from subio_v2.adapters.surge.codecs import (
     DEFAULT_SURGE_TARGET,
     get_surge_protocol_codec,
 )
+from subio_v2.adapters.surge.emitters import _SurgeEmissionError
 from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -24,23 +25,18 @@ from subio_v2.adapters.surge.syntax import (
 )
 from subio_v2.adapters.surge.validation import emit_surge_ip_version
 from subio_v2.core.nodes import (
+    MasqueNode,
     Node,
     ShadowsocksNode,
     Socks5Node,
     SourcePassthroughNode,
     SSHNode,
     TailscaleNode,
+    TrustTunnelNode,
     VmessNode,
     WireguardNode,
 )
 from subio_v2.core.results import EmissionResult, IssueSeverity
-
-
-class _SurgeEmissionError(ValueError):
-    def __init__(self, message: str, *, field: str, code: str = "conversion"):
-        super().__init__(message)
-        self.field = field
-        self.code = code
 
 
 class SurgeEmitter(BaseEmitter):
@@ -574,6 +570,12 @@ class SurgeEmitter(BaseEmitter):
                 values.pop("preshared-key", None)
             reserved = model.get("reserved")
             if reserved:
+                if isinstance(reserved, list) and any("/" in str(value) for value in reserved):
+                    raise _SurgeEmissionError(
+                        "Surge client-id elements cannot contain slashes",
+                        field=f"peers[{index}].reserved" if node.peers else "reserved",
+                        code="conversion.invalid-value",
+                    )
                 values["client-id"] = (
                     "/".join(str(value) for value in reserved)
                     if isinstance(reserved, list)
@@ -659,6 +661,12 @@ class SurgeEmitter(BaseEmitter):
             if tls.sni_disabled:
                 config_parts.append("sni=off")
             elif tls.server_name:
+                if tls.server_name == "off":
+                    raise _SurgeEmissionError(
+                        "Surge cannot represent a literal SNI equal to its disable instruction",
+                        field="tls.server_name",
+                        code="conversion.invalid-value",
+                    )
                 config_parts.append(f"sni={tls.server_name}")
             if tls.verify_name:
                 config_parts.append(f"server-cert-verify-name={tls.verify_name}")
@@ -667,6 +675,20 @@ class SurgeEmitter(BaseEmitter):
                     f"server-cert-fingerprint-sha256={tls.certificate_sha256}"
                 )
             if tls.alpn:
+                # The resource protocols also strip a single ALPN element.
+                if isinstance(tls.alpn, list) and (
+                    tls.alpn == [""]
+                    or any("," in value for value in tls.alpn)
+                    or (
+                        (len(tls.alpn) > 1 or isinstance(node, (MasqueNode, TrustTunnelNode)))
+                        and any(value != value.strip() for value in tls.alpn)
+                    )
+                ):
+                    raise _SurgeEmissionError(
+                        "Surge cannot preserve these ALPN list elements",
+                        field="tls.alpn",
+                        code="conversion.invalid-value",
+                    )
                 alpn_str = (
                     ",".join(tls.alpn) if isinstance(tls.alpn, list) else str(tls.alpn)
                 )

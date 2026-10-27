@@ -26,6 +26,13 @@ from subio_v2.core.nodes import (
 SurgeProtocolEmitter = Callable[[Node, dict[int, str]], list[str]]
 
 
+class _SurgeEmissionError(ValueError):
+    def __init__(self, message: str, *, field: str, code: str = "conversion"):
+        super().__init__(message)
+        self.field = field
+        self.code = code
+
+
 class SurgeServerError(ValueError):
     field = "server"
     code = "conversion.invalid-value"
@@ -37,6 +44,22 @@ def _server_str(node: Node) -> str:
     if "=" in value:
         raise SurgeServerError("Surge positional server cannot contain '='")
     return value
+
+
+def _serialize_headers(headers: dict[str, str], *, separator: str, field: str) -> str:
+    # The header consumer splits and strips after the outer Surge quotes decode.
+    for key, value in headers.items():
+        if (
+            not isinstance(key, str) or not isinstance(value, str)
+            or ":" in key or separator in key or separator in value
+            or key != key.strip() or value != value.strip()
+        ):
+            raise _SurgeEmissionError(
+                "Surge headers contain an unrepresentable key or value",
+                field=field,
+                code="conversion.invalid-value",
+            )
+    return separator.join(f"{key}:{value}" for key, value in headers.items())
 
 
 def emit_direct(node: Node, _: dict[int, str]) -> list[str]:
@@ -79,8 +102,8 @@ def emit_vmess(node: Node, _: dict[int, str]) -> list[str]:
         if node.transport.path:
             parts.append(f"ws-path={node.transport.path}")
         if node.transport.headers:
-            headers = "|".join(
-                f"{key}:{value}" for key, value in node.transport.headers.items()
+            headers = _serialize_headers(
+                node.transport.headers, separator="|", field="transport.headers"
             )
             parts.append(f"ws-headers={headers}")
     return parts
@@ -99,8 +122,8 @@ def emit_trojan(node: Node, _: dict[int, str]) -> list[str]:
         if node.transport.path:
             parts.append(f"ws-path={node.transport.path}")
         if node.transport.headers:
-            headers = "|".join(
-                f"{key}:{value}" for key, value in node.transport.headers.items()
+            headers = _serialize_headers(
+                node.transport.headers, separator="|", field="transport.headers"
             )
             parts.append(f"ws-headers={headers}")
     return parts
@@ -133,15 +156,7 @@ def emit_http(node: Node, _: dict[int, str]) -> list[str]:
     if node.password:
         parts.append(f"password={node.password}")
     if node.headers:
-        separator = (
-            ";"
-            if node.variant
-            in {HttpVariant.HTTP, HttpVariant.HTTPS, HttpVariant.H2_CONNECT}
-            else "|"
-        )
-        headers = separator.join(
-            f"{key}:{value}" for key, value in node.headers.items()
-        )
+        headers = _serialize_headers(node.headers, separator=";", field="headers")
         parts.append(f"headers={headers}")
     if node.always_use_connect is not None:
         parts.append(f"always-use-connect={str(node.always_use_connect).lower()}")
@@ -222,10 +237,14 @@ def emit_ssh(node: Node, node_keystore_map: dict[int, str]) -> list[str]:
         parts.append(f"private-key={node.private_key}")
     if node.idle_timeout is not None:
         parts.append(f"idle-timeout={node.idle_timeout}")
-    parts.extend(
-        f"server-fingerprint={fingerprint}"
-        for fingerprint in node.server_fingerprints or []
-    )
+    for fingerprint in node.server_fingerprints or []:
+        if not fingerprint or "," in fingerprint:
+            raise _SurgeEmissionError(
+                "Surge server fingerprints cannot contain commas or empty elements",
+                field="server_fingerprints",
+                code="conversion.invalid-value",
+            )
+        parts.append(f"server-fingerprint={fingerprint}")
     return parts
 
 
