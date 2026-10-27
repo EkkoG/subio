@@ -424,34 +424,78 @@ age key、密码或私钥。
 `workflow.parameters` 统一检查参数名、重复值、类型、默认值和请求限额。
 启动时从同一已验证配置快照构建文件名索引，批量用户按已有命名规则展开并在请求中固定用户；
 `SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
-路由查询和 I/O 前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
+路由查询和渲染前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
 
 ```text
+ASGI startup / sequential refresh worker
+    -> prepare_resources -> providers + rulesets/snippets + finite template bundle
+    -> publish complete per-artifact in-memory snapshots
+
 GET -> raw decode/limits -> URL token authentication -> route parameter validation
-    -> WorkflowEngine.for_render (one artifact + referenced providers)
-    -> prepare -> normal validation/emission/template/Age -> HTTP response
+    -> capture one available, unexpired artifact snapshot -> render worker
+    -> bind/clone -> ArtifactGenerationService -> validation/emission/template/Age
+    -> HTTP response
 ```
 
-本地 `parameterized = true` provider 仅允许 Mihomo/Clash YAML 与 native SubIO v2。Adapter 先使用
-原有 decoder，再调用 `core.parameters.bind_document_parameters()`，最后进入原有 node codec。
+`workflow.rendering.prepare_resources()` 只加载已配置 artifact 引用的 providers，并保留全部已配置
+rulesets 及本地 snippets 的共享依赖。静态 provider 在准备时完成读取/下载、Age/UTF-8 解码、解析和
+provider transforms；请求只克隆节点等可变状态。规则集和 snippets 在准备时解析，使用不可变模型，
+每次请求创建自己的 callable 和 issue collector。每轮独占并最终关闭一个 `RunRemoteLoader`/Session，
+成功快照不保留 loader、参数、目标编码结果或发布能力。
+
+本地 `parameterized = true` provider 仅允许 Mihomo/Clash YAML 与 native SubIO v2。准备时由 adapter
+原有 decoder 解码并私有保存未绑定文档；请求调用 `core.parameters.bind_document_parameters()`，
+再进入同一 node codec 和 provider transforms。
 共享 binder 只复制文档和替换节点子树标量，保留静态形状/键，独立展开非循环 YAML alias，拒绝循环
 及 tuple-bearing `!!pairs` / `!!omap`。Native schema 继续描述替换后的正常 v2 对象，不增加模板语法类型。
 
-每次请求显式携带独立 typed mapping，不使用全局绑定状态或 provider schema。`for_render` 保留现有
-共享 ruleset 依赖，选择一个固定 artifact/user，为 loader/parser/emitter/节点与模板创建独立状态。
+`PreparedArtifact.render()` 为一个固定文件名/user 创建请求专属 typed mapping、节点、options、
+parser/emitter 和 Jinja 状态，复用现有 `ArtifactGenerationService`。每次请求只持有一个完整版本；
+刷新不会混合该请求的节点、规则和模板。正常 warm GET 不读取 provider/snippet/template 文件、下载源、
+解密/解码源序列化或解析静态 provider/规则集，不经过 `WorkflowEngine`。
 provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError`，HTTP 沿异常原因链返回固定 400，
 不回显键或值。最终 Jinja 的 `params` 缺失键在过滤器执行前失败；未使用的类型声明无需请求值。
 最终 Jinja 始终获得单一不可变 `params` 命名空间；静态生成使用 artifact 默认值，无声明时为空。
 模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
-或目标 serializer 写入合适上下文。该路径禁止 `run()`、发布、上传、manifest 和请求报告/结果缓存，
+或目标 serializer 写入合适上下文。该路径禁止发布、上传、manifest 和请求报告/结果缓存，
 任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。
+
+模板准备沿用 `template/` 目录优先、否则配置目录的选择。`PreparedTemplates` 捕获现有
+`FileSystemLoader.list_templates()` 枚举的有限名称及显式配置的根模板，预编译根模板；请求的 loader
+只访问内存，helper 可在请求时从已捕获文本编译。枚举不递归目录 symlink；只经此类目录可达且未配置
+为根模板的 helper 在 serve 中不可用，须放入可枚举目录。显式根模板仍沿用原 loader 的解析权限。
+`include`/`extends`/`import`、fallback 列表和 `ignore missing` 在此命名空间内沿用 Jinja 运行语义。
+不存在的名称是 `TemplateNotFound`；发现但无法读取/解码的名称保留安全失败标记，访问时为模板错误，
+不能由 `ignore missing` 吞掉。坏的未使用 helper 不阻断其他 artifact，坏的根模板只阻断依赖它的候选；
+helper 缺失、不可读或编译错误在实际访问时返回固定 500。根模板准备成功不保证所有条件分支都能渲染。
+
+配置、路由和 token 仍只在启动时读取。ASGI lifespan 在独立的单线程 refresh executor 完成首次准备，
+至少一个输出准备成功即可启动；未就绪路由返回固定 503，全部未就绪则以安全且可操作的提示启动失败。
+刷新私下构造候选，按 artifact 原子替换完整快照；批量 user 输出共享所属 artifact 的候选。
+独立 provider 或根模板故障只影响依赖它的 artifact，全部配置 rulesets 仍是共享依赖。
+
+`--refresh-interval` 默认 300 秒，`--max-snapshot-age` 默认 900 秒，均为正整数且后者不得小于前者。
+单一循环每次准备完成后才等待 interval，不重叠、不积压。年龄使用 monotonic 时间，从该 artifact
+最近一次成功准备的轮次开始时计量，慢 I/O 也计入年龄；失败不延长旧版本的期限。
+新请求在年龄达到 max age 时返回固定 503，已有请求可完成；成功刷新后自动恢复。
+解析返回 `ParseResult`（包括 ERROR 或无节点的 `fatal_result`）属于成功获取，发布新内容及原有 issues
+并更新年龄，随后由原有严格 artifact gate 返回 422；不得因新内容无效而继续提供旧的正常输出。
+重复成功获取无效内容保持 422；后续获取失败不更新年龄，过期转为 503。空正文、获取/解密/UTF-8/
+序列化解码等异常不发布。参数化源的节点解析/issue gate 仍在请求绑定后执行。
+
+serve 只使用内存资源快照和每轮内存去重，显式关闭远程磁盘缓存与 stale fallback，避免以旧缓存
+重新计龄；`remote.cache` 仍只控制静态 CLI 的原有磁盘缓存策略，不删除已有缓存。
+本地源、snippet、模板变化在下次成功刷新后可见；配置或 token 变化须重启。本地多文件读取不是文件系统
+事务；旧版本在已有请求结束前仍可留在内存，包括其源凭据。
 
 静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使 artifact 声明了默认值。
 普通源的最终模板可以使用所属 artifact 的参数默认值，引用缺失值在发布前失败。
 参数声明只包含 `type/default/choices/min/max`，字符串统一允许空值。远程输入和其他输入族不能启用替换。
 
-专用服务生命周期静默 workflow 日志并关闭框架访问日志。四个同步渲染名额直到工作实际结束才释放，
-包括断连后的任务；不提供可信模板的严格 wall-time 或全局传输内存上限。`RunRemoteLoader` 当前使用
+专用服务生命周期静默 workflow 日志并关闭框架访问日志。独立的一个刷新 worker 不占用四个同步渲染
+worker；渲染名额直到工作实际结束才释放，包括断连后的任务。关闭时停止调度和接收渲染，等待实际刷新
+及渲染线程结束，没有硬性关闭期限，也不提供可信模板的严格 wall-time 或全局传输内存上限。
+`RunRemoteLoader` 当前使用
 Requests，先缓冲再检查 `max_bytes`，不能将该检查描述为 streaming memory bound。
 
 ## 8. 测试与提交

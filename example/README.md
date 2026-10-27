@@ -41,3 +41,5 @@ requires the optional `server` extra and a generated `SUBIO_RENDER_TOKEN`, and
 binds typed query parameters into local Mihomo YAML or native SubIO v2 TOML.
 Its parameterized sources are intentionally rejected by static CLI commands;
 use its HTTP routes. The original examples remain runnable as shown here.
+The service prepares memory snapshots at startup and refreshes them in the
+background; local resource edits take effect after a successful refresh.

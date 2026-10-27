@@ -135,18 +135,27 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 
 | 能力 | 当前范围 |
 |---|---|
-| 服务入口 | 可选 `server` extra；`subio serve CONFIG [--port 8000]`，固定 `127.0.0.1` |
+| 服务入口 | 可选 `server` extra；`subio serve CONFIG [--port 8000] [--refresh-interval 300] [--max-snapshot-age 900]`，固定 `127.0.0.1` |
 | 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部已配置 artifact |
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
 | 参数值 | 无需逐个声明，默认 string；`artifact.params` 可补充 integer/boolean、默认值或约束；引用缺失参数返回 400，token 仅用于鉴权 |
 | 输出 | `GET /subscription/<file_name>` 直接使用已有输出文件名；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
-| 模板 | 可信最终 Jinja 获得不可变 `params`；provider 只支持一次标量 token 替换，不执行 Jinja |
-| HTTP 副作用 | 无文件发布、上传、manifest、请求报告或结果缓存；已有未改变上游响应缓存独立存在 |
+| 资源快照 | 启动/后台准备静态节点、规则/snippet、未绑定参数化文档和模板；warm GET 无源 I/O、源解码或静态解析，每次请求使用一个完整版本 |
+| 刷新与过期 | interval 默认 300 秒，完成后等待，不重叠；max age 默认 900 秒；均为正整数且 max age >= interval；monotonic 年龄从成功轮次开始时计量，失败不更新，过期返回 503 |
+| 就绪与错误 | 至少一个输出准备成功可启动，未就绪路由 503，全部未就绪则安全启动失败；返回 ParseResult ERROR/fatal_result 属成功获取并更新年龄，由 HTTP gate 返回 422 |
+| 模板 | 可信最终 Jinja 获得不可变 `params`；有限内存命名空间含现有 loader 枚举名称及配置根模板，不递归目录 symlink 查找 helper；provider 只支持一次标量替换，不执行 Jinja |
+| 缓存与更新 | 服务仅内存快照，远程磁盘缓存/stale fallback 关闭；`remote.cache` 保持静态 CLI 策略；本地源/snippet/模板成功刷新后更新，配置/token 须重启 |
+| 并发与关闭 | 一个独立刷新 worker、四个渲染 worker；取消/断连不提前释放实际工作名额，关闭等待实际线程结束，无硬性期限 |
+| HTTP 副作用 | 无文件发布、上传、manifest、请求报告、参数或结果持久化；不缓存目标编码结果 |
 
 远程 provider、Stash/Surge/sing-box/link 输入不支持源参数化；query 不能改变文档结构、键、源路径、
-URL、模板、target 或用户选择。原生 v2 字段/节点与目标校验仍生效，参数化不会扩大协议矩阵或建立
+URL、配置的根模板、target 或用户选择。原生 v2 字段/节点与目标校验仍生效，参数化不会扩大协议矩阵或建立
 完整客户端 IR。无法忠实表示的 URI authority、Surge/dae 等目标值可拒绝并返回 422；HTTP 的
 conversion ERROR gate 不能通过静态 `allow_conversion_errors` 放行。
+获取、空正文、解密/解码等异常不替换旧快照；已有版本可服务到过期，成功刷新后自动恢复。
+独立 provider/根模板故障按 artifact 隔离，全部配置 rulesets 和本地 snippets 仍是共享依赖。
+模板的 fallback/ignore-missing 只跳过真正不存在的名称；捕获时发现但无法读取/解码的文件被访问时返回
+固定 500，未使用的坏 helper 不阻断其他 artifact。可信模板仍可执行程序行为，没有严格执行期限。
 
 参数化源配置在静态 `convert/check/inspect` 于 provider/ruleset I/O 前拒绝，包括全部有默认值的情况。
 普通源的最终模板可使用自身 params 默认值，引用缺失值会阻止发布；无声明时 params 为空 mapping。源替换只覆盖节点子树标量，
