@@ -29,6 +29,7 @@ def test_base_cli_and_serve_help_do_not_import_optional_dependencies(monkeypatch
     assert "--port" in output and "--host" in output and "127.0.0.1" in output
     assert "--refresh-interval" in output and "300" in output
     assert "--max-snapshot-age" in output and "900" in output
+    assert "--log-level" in output and "debug" in output
 
 
 @pytest.mark.parametrize("port", ["0", "65536", "bad"])
@@ -93,4 +94,24 @@ def test_cli_forwards_bind_and_refresh_defaults_and_overrides(monkeypatch, optio
     ))
     monkeypatch.setattr(sys, "argv", ["subio", "serve", "synthetic.json", *options])
     assert main() == 0
-    assert calls == [("synthetic.json", {"host": host, "port": 8000, "refresh_interval": interval, "max_snapshot_age": age})]
+    assert calls == [("synthetic.json", {"host": host, "port": 8000, "log_level": "info", "refresh_interval": interval, "max_snapshot_age": age})]
+
+
+@pytest.mark.parametrize("level", ["DEBUG", "info", "warning", "error", "critical"])
+def test_cli_forwards_log_levels(monkeypatch, level):
+    calls = []
+    monkeypatch.setitem(sys.modules, "subio_v2.server", SimpleNamespace(
+        serve=lambda config_path, **kwargs: calls.append(kwargs) or 0
+    ))
+    monkeypatch.setattr(sys, "argv", ["subio", "serve", "synthetic.json", "--log-level", level])
+    assert main() == 0
+    assert calls[0]["log_level"] == level.lower()
+
+
+def test_invalid_log_level_fails_before_server_import(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "meta_path", [_NoServerDependencies(), *sys.meta_path])
+    monkeypatch.setattr(sys, "argv", ["subio", "serve", "--log-level", "trace"])
+    with pytest.raises(SystemExit) as caught:
+        main()
+    assert caught.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err

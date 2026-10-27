@@ -9,6 +9,7 @@ import re
 import secrets
 import threading
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -22,7 +23,7 @@ from starlette.responses import JSONResponse, Response
 from subio_v2.core.errors import ArtifactGenerationError, ConfigParseError, TemplateRenderError
 from subio_v2.core.parameters import MissingParameterError
 from subio_v2.core.results import IssueSeverity
-from subio_v2.infrastructure.logging import Logger, logger
+from subio_v2.infrastructure.logging import LOG_LEVELS, Logger, logger
 from subio_v2.infrastructure.remote import RemoteLoadError
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.parameters import (
@@ -56,8 +57,8 @@ _ERRORS = {
     502: "upstream_error",
     503: "busy",
 }
-# Fixed service events remain visible while source and request logs stay silent.
-_service_logger = Logger()
+# Service diagnostics never enable source content or framework access logging.
+_service_logger = Logger(timestamps=True)
 
 
 class ServerConfigurationError(ValueError):
@@ -191,8 +192,9 @@ class _RenderService:
     def _prepare_attempt(self):
         acquired_at = time.monotonic()
         try:
-            prepared = prepare_resources(self.config_path, self.config)
-        except Exception:
+            prepared = prepare_resources(self.config_path, self.config, _service_logger)
+        except Exception as exc:
+            _service_logger.error(f"Resource preparation failed: {type(exc).__name__}")
             prepared = PreparedRound(
                 MappingProxyType({}),
                 MappingProxyType({
@@ -260,17 +262,45 @@ class _RenderService:
             return Response(drafts[0].content, media_type=media_type,
                             headers={**_HEADERS, "Content-Disposition": "attachment"})
         except Exception as exc:
-            return _error(_failure_status(exc))
+            status = _failure_status(exc)
+            index = self.config.artifacts.index(artifact) + 1
+            if status == 422:
+                counts = Counter(
+                    issue.code for issue in exc.issues if issue.severity == IssueSeverity.ERROR
+                )
+                summary = ", ".join(f"{code}={count}" for code, count in sorted(counts.items()))
+                _service_logger.warning(f"Render rejected (422), artifact #{index}: {summary}")
+            elif status == 400:
+                _service_logger.warning(f"Render rejected (400), artifact #{index}: missing_parameter")
+            else:
+                _service_logger.error(
+                    f"Render failed ({status}), artifact #{index}: {type(exc).__name__}"
+                )
+            return _error(status)
         finally:
             # A disconnected/cancelled awaiter cannot release a still-running render.
             self._slots.release()
 
     async def __call__(self, scope, receive, send):
+        started = time.monotonic()
+        status = "cancelled"
+        _service_logger.debug("HTTP request started")
         try:
-            response = await self._response(scope)
-        except Exception:
-            response = _error(500)
-        await response(scope, receive, send)
+            try:
+                response = await self._response(scope)
+            except Exception as exc:
+                _service_logger.error(f"HTTP request failed: {type(exc).__name__}")
+                response = _error(500)
+            status = response.status_code
+            try:
+                await response(scope, receive, send)
+            except Exception as exc:
+                _service_logger.warning(f"HTTP response delivery failed: {type(exc).__name__}")
+                raise
+        finally:
+            _service_logger.info(
+                f"HTTP request complete: status={status} ({time.monotonic() - started:.3f}s)"
+            )
 
     async def _response(self, scope) -> Response:
         try:
@@ -291,6 +321,8 @@ class _RenderService:
         artifact = self.routes.get(path)
         if artifact is None:
             return _error(404)
+        index = self.config.artifacts.index(artifact) + 1
+        _service_logger.debug(f"Selected artifact #{index}")
         if scope["method"] != "GET":
             return _error(405)
         try:
@@ -306,10 +338,13 @@ class _RenderService:
         file_name = path.removeprefix("/subscription/")
         snapshot = self._snapshots.get(file_name)
         if snapshot is None:
+            _service_logger.warning(f"Request rejected (503), artifact #{index}: not_ready")
             return _error(503, code="not_ready")
         if time.monotonic() - snapshot.acquired_at >= self._max_snapshot_age:
+            _service_logger.warning(f"Request rejected (503), artifact #{index}: snapshot_expired")
             return _error(503, code="snapshot_expired")
         if not self._slots.acquire(blocking=False):
+            _service_logger.warning(f"Request rejected (503), artifact #{index}: busy")
             return _error(503)
         try:
             future = asyncio.get_running_loop().run_in_executor(
@@ -361,17 +396,26 @@ def create_app(
 
 def serve(
     config_path: str, *, host: str = "127.0.0.1", port: int = 8000,
-    refresh_interval: int = 300, max_snapshot_age: int = 900,
+    refresh_interval: int = 300, max_snapshot_age: int = 900, log_level: str = "info",
 ) -> int:
+    if log_level not in LOG_LEVELS:
+        logger.error("Render service log level is invalid")
+        return 1
     framework_logs = [logging.getLogger(name) for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "starlette")]
     previous = [item.disabled for item in framework_logs]
-    with logger.silenced():
+    with logger.silenced(), _service_logger.at_level(log_level):
         try:
             for item in framework_logs:
                 item.disabled = True
             _service_logger.info("Starting render service...")
             app = create_app(config_path, refresh_interval=refresh_interval,
                              max_snapshot_age=max_snapshot_age)
+            service = app.state.render_service
+            _service_logger.debug(
+                f"Configuration loaded: providers={len(service.config.providers)}, "
+                f"artifacts={len(service.config.artifacts)}, outputs={len(service.routes)}; "
+                f"refresh_interval={refresh_interval}s, max_snapshot_age={max_snapshot_age}s"
+            )
             config = uvicorn.Config(app, host=host, port=port, access_log=False,
                                     log_config=None, log_level="critical", server_header=False,
                                     proxy_headers=False)
@@ -402,12 +446,13 @@ def serve(
                 return 0
             else:
                 failure = f"Render service startup failed on port {port}; check port availability and server environment"
-        except Exception:
+        except Exception as exc:
+            _service_logger.debug(f"Startup exception: {type(exc).__name__}")
             failure = "Render service configuration or startup failed"
         else:
             return 0
         finally:
             for item, disabled in zip(framework_logs, previous):
                 item.disabled = disabled
-    logger.error(failure)
-    return 1
+        _service_logger.error(failure)
+        return 1

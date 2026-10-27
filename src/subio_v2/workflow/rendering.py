@@ -2,12 +2,14 @@
 
 import copy
 import os
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.core.parameters import ParameterValue
+from subio_v2.infrastructure.logging import Logger
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.rules.runtime import (
     RuleSetStore,
@@ -105,7 +107,26 @@ class PreparedRound:
     failures: Mapping[str, PreparationFailure]
 
 
-def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
+def _preparation_error(exc: Exception) -> str:
+    parts = []
+    seen = set()
+    while exc is not None and id(exc) not in seen and len(parts) < 8:
+        seen.add(id(exc))
+        parts.append(type(exc).__name__)
+        mark = getattr(exc, "problem_mark", None)
+        line, column = getattr(mark, "line", None), getattr(mark, "column", None)
+        if type(line) is int and type(column) is int:
+            parts.append(f"line {line + 1}, column {column + 1}")
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if type(status) is int and 100 <= status <= 599:
+            parts.append(f"HTTP {status}")
+        exc = exc.__cause__ or exc.__context__
+    return " -> ".join(parts)
+
+
+def prepare_resources(
+    config_path: str, config: RunConfig, service_logger: Logger | None = None
+) -> PreparedRound:
     """Build private per-artifact candidates; retain no loader or publication state."""
     loader = RunRemoteLoader(
         timeout=config.remote.timeout_seconds,
@@ -117,12 +138,18 @@ def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
     failures: dict[str, PreparationFailure] = {}
     try:
         config_dir = os.path.dirname(config_path)
+        if service_logger:
+            service_logger.debug("Preparing shared rulesets and snippets")
         try:
             rulesets = merge_stores(
                 load_snippets(os.path.join(config_dir, "snippet")),
                 load_rulesets(config.rulesets, loader=loader),
             )
-        except Exception:
+            if service_logger:
+                service_logger.debug(f"Shared rules prepared ({len(rulesets.names)} sets)")
+        except Exception as exc:
+            if service_logger:
+                service_logger.error("Shared ruleset preparation failed: " + _preparation_error(exc))
             return PreparedRound(
                 MappingProxyType({}),
                 MappingProxyType(
@@ -136,13 +163,21 @@ def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
         service = ProviderLoaderService(config_path, config.age_secret_key)
         referenced = {name for item in config.artifacts for name in item.providers}
         providers = {}
-        for item in config.providers:
+        for index, item in enumerate(config.providers, 1):
             if item.name in referenced:
+                started = time.monotonic()
+                if service_logger:
+                    source_kind = "remote" if item.url else "local"
+                    service_logger.debug(f"Preparing provider #{index} ({source_kind}, {item.provider_type})")
                 try:
                     providers[item.name] = service.prepare(item, loader)
-                except Exception:
+                except Exception as exc:
                     # Do not retain exception bodies, source text, paths or credentials.
-                    pass
+                    if service_logger:
+                        service_logger.warning(f"Provider #{index} preparation failed: " + _preparation_error(exc))
+                else:
+                    if service_logger:
+                        service_logger.debug(f"Provider #{index} prepared ({time.monotonic() - started:.3f}s)")
         template_dir = os.path.join(config_dir, "template")
         if not os.path.exists(template_dir):
             template_dir = config_dir
@@ -151,12 +186,18 @@ def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
             MappingProxyType({}), MappingProxyType({}), frozenset()
         )
         if roots:
+            if service_logger:
+                service_logger.debug(f"Capturing templates for {len(roots)} configured roots")
             try:
                 templates = PreparedTemplates.capture(template_dir, roots)
-            except Exception:
+            except Exception as exc:
                 templates = None
-        for artifact in config.artifacts:
+                if service_logger:
+                    service_logger.error("Template capture failed: " + _preparation_error(exc))
+        for index, artifact in enumerate(config.artifacts, 1):
             if any(name not in providers for name in artifact.providers):
+                if service_logger:
+                    service_logger.warning(f"Artifact #{index} unavailable: provider preparation failed")
                 failures.update(
                     {
                         name: PreparationFailure("provider")
@@ -166,6 +207,8 @@ def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
             elif artifact.template and (
                 templates is None or artifact.template in templates.failed_roots
             ):
+                if service_logger:
+                    service_logger.warning(f"Artifact #{index} unavailable: root template preparation failed")
                 failures.update(
                     {
                         name: PreparationFailure("template")
@@ -201,6 +244,8 @@ def prepare_resources(config_path: str, config: RunConfig) -> PreparedRound:
                 candidates.update(
                     {name: candidate for name, _ in artifact.output_names()}
                 )
+                if service_logger:
+                    service_logger.debug(f"Artifact #{index} prepared ({len(artifact.output_names())} outputs)")
         return PreparedRound(MappingProxyType(candidates), MappingProxyType(failures))
     finally:
         loader.close()

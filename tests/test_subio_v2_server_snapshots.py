@@ -79,7 +79,7 @@ def test_resource_logs_report_partial_ready_retained_expired_and_recovered_snaps
         assert "updated 1/2, ready 1/2" in startup
         assert "WARNING" in startup and "failed 1/2 (provider)" in startup
         assert client.get("/subscription/out.yaml?" + _query(credential=SECRET)).status_code == 200
-        assert output() == ""
+        assert "HTTP request complete: status=200" in output()
 
         private_source.write_text((tmp_path / "nodes.yaml").read_text())
         client.portal.call(_service(app)._refresh)

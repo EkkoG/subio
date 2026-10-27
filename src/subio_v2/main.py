@@ -8,7 +8,7 @@ from pathlib import Path
 
 from subio_v2.core.errors import WorkflowError
 from subio_v2.infrastructure import age
-from subio_v2.infrastructure.logging import logger
+from subio_v2.infrastructure.logging import LOG_LEVELS, logger
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.report import build_report, render_report
 
@@ -137,7 +137,8 @@ def _run_serve(args) -> int:
     if config_path is None:
         logger.error("Render service configuration is invalid")
         return 1
-    return serve(config_path, host=args.host, port=args.port, refresh_interval=args.refresh_interval,
+    return serve(config_path, host=args.host, port=args.port, log_level=args.log_level,
+                 refresh_interval=args.refresh_interval,
                  max_snapshot_age=args.max_snapshot_age)
 
 
@@ -299,6 +300,8 @@ def main():
                               help="Bind address (default: 127.0.0.1; use 0.0.0.0 for all IPv4 interfaces)")
     serve_parser.add_argument("--port", type=_serve_port, default=8000,
                               metavar="PORT", help="Listening port (default: 8000)")
+    serve_parser.add_argument("--log-level", type=str.lower, choices=tuple(LOG_LEVELS), default="info",
+                              help="Service log threshold (default: info; debug adds resource details)")
     serve_parser.add_argument("--refresh-interval", type=_positive_seconds, default=300,
                               metavar="SECONDS", help="Wait between resource refreshes (default: 300)")
     serve_parser.add_argument("--max-snapshot-age", type=_positive_seconds, default=900,

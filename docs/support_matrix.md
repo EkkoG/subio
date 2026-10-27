@@ -135,7 +135,7 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 
 | 能力 | 当前范围 |
 |---|---|
-| 服务入口 | 可选 `server` extra；`subio serve CONFIG [--host 127.0.0.1] [--port 8000] [--refresh-interval 300] [--max-snapshot-age 900]`；可绑定其他网卡、`0.0.0.0` 或 IPv6 |
+| 服务入口 | 可选 `server` extra；`subio serve CONFIG [--host 127.0.0.1] [--port 8000] [--log-level info] [--refresh-interval 300] [--max-snapshot-age 900]`；可绑定其他网卡、`0.0.0.0` 或 IPv6 |
 | 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部已配置 artifact |
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
 | 参数值 | 无需逐个声明，默认 string；`artifact.params` 可补充 integer/boolean、默认值或约束；引用缺失参数返回 400，token 仅用于鉴权 |
@@ -146,7 +146,7 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 | 模板 | 可信最终 Jinja 获得不可变 `params`；有限内存命名空间含现有 loader 枚举名称及配置根模板，不递归目录 symlink 查找 helper；provider 只支持一次标量替换，不执行 Jinja |
 | 缓存与更新 | 服务仅内存快照，远程磁盘缓存/stale fallback 关闭；`remote.cache` 保持静态 CLI 策略；本地源/snippet/模板成功刷新后更新，配置/token 须重启 |
 | 并发与关闭 | 一个独立刷新 worker、四个渲染 worker；取消/断连不提前释放实际工作名额，关闭等待实际线程结束，无硬性期限 |
-| 服务日志 | 显示资源准备、就绪数量/耗时、固定失败阶段、实际监听成功和关闭；不记录请求、token、源路径或结果 |
+| 服务日志 | UTC 时间、生命周期、准备/刷新、请求状态/耗时、错误码和安全异常类别；`--log-level` 为 debug/info/warning/error/critical，默认 info；所有级别均不记录 URL/参数、token、源路径或结果 |
 | HTTP 副作用 | 无文件发布、上传、manifest、请求报告、参数或结果持久化；不缓存目标编码结果 |
 
 远程 provider、Stash/Surge/sing-box/link 输入不支持源参数化；query 不能改变文档结构、键、源路径、

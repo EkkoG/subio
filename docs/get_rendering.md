@@ -27,6 +27,27 @@ uv run --extra server subio serve example/render/config.toml --host 0.0.0.0 --po
 请求。部分资源失败时显示警告和安全的阶段类别，仍可请求已就绪的输出；刷新失败时会再次显示警告。
 日志中的 `0.0.0.0` 或 `[::]` 表示监听所有对应网卡，其他机器应使用服务所在机器的实际地址访问。
 
+`--log-level` 控制整个 Web 服务的日志阈值，默认 `info`，可选 `debug`、`info`、`warning`、`error`、
+`critical`，大小写均可。日志带 UTC 时间；静态 `convert/check/inspect` 的日志行为保持不变。
+
+```bash
+uv run --extra server subio serve example/render/config.toml --log-level debug
+```
+
+| 级别 | 日志内容 |
+|---|---|
+| DEBUG | 配置数量与刷新设置、逐个 provider 准备和耗时、规则及模板准备、artifact 就绪、请求开始和已鉴权 artifact 序号 |
+| INFO | 启动、资源准备/刷新摘要、实际监听成功、每次 HTTP 请求的状态和耗时、关闭 |
+| WARNING | provider/模板未就绪、503 的具体原因、缺少渲染参数、422 的结构化错误码和计数、响应传输失败 |
+| ERROR | 共享资源准备失败、意外的准备/请求/渲染异常、启动失败 |
+| CRITICAL | 仅保留 critical 及以上事件；当前常规服务事件均低于此级别 |
+
+阈值会包含更高级别。provider 和 artifact 使用配置中的一基序号，批量用户的输出共享所属 artifact
+序号；异常只显示类型、数字 HTTP 状态和可用的解析行列号。请求日志只显示固定状态和耗时，不包含
+请求 URL、文件名、客户端地址、查询参数、token、节点/规则正文或异常原文，DEBUG 也遵守相同限制。
+例如 `Render rejected (422), artifact #1: ruleset.unsupported-target-rule=7` 表示第一个 artifact 有
+7 条规则无法由当前目标输出，需检查其实际 `type` 和规则种类；输出文件名不会决定目标平台。
+
 `SUBIO_RENDER_TOKEN` 必须为 32–128 个 ASCII 字母、数字、`_` 或 `-`，缺少或无效时启动失败。
 推荐用 `secrets.token_urlsafe(32)` 生成随机值；长度和字符集检查本身不能证明随机性。
 
@@ -276,8 +297,8 @@ CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同�
 
 错误体仅含固定安全 code，不回显值、原始异常或 traceback。原始大小、百分号编码和 UTF-8 检查
 先执行，可能返回 400/413；之后以常量时间字节比较验证唯一 token，再查路由、参数、快照可用性和渲染名额。
-框架访问日志关闭，workflow 日志在专用服务生命周期内静默。独立的服务日志只记录启动、资源准备/
-刷新、监听就绪和关闭事件，以及数量、耗时和固定失败阶段，不记录查询、token、源路径或渲染内容。
+框架访问日志关闭，workflow 日志在专用服务生命周期内静默。独立的服务日志记录生命周期、资源准备/
+刷新、请求状态与耗时、配置序号、错误码计数及异常类别；不记录查询、token、源路径或渲染内容。
 
 ## URL token 与 TLS 反向代理
 

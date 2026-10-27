@@ -21,6 +21,8 @@ pytest.importorskip("httpx", reason="HTTP test transport requires dev dependenci
 from starlette.testclient import TestClient
 
 from subio_v2 import server
+from subio_v2.core.errors import ArtifactGenerationError
+from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RunRemoteLoader
@@ -643,6 +645,89 @@ def test_runtime_template_and_internal_errors_are_sanitized(tmp_path, monkeypatc
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.yaml?" + _query())
         assert response.status_code == 500 and response.json() == {"error": "internal_error"}
+
+
+@pytest.mark.parametrize("level", ["debug", "info", "warning", "error", "critical"])
+def test_service_log_levels_cover_requests_and_safe_conversion_diagnostics(tmp_path, monkeypatch, capsys, level):
+    path, _ = _fixture(tmp_path)
+    issue = ConversionIssue(
+        severity=IssueSeverity.ERROR, node=SECRET, protocol=SECRET, source=SECRET,
+        target=SECRET, field=SECRET, message=SECRET + TOKEN,
+        suggestion=SECRET, code="ruleset.unsupported-target-rule", artifact=SECRET, user=SECRET,
+    )
+
+    def fail(*args, **kwargs):
+        raise ArtifactGenerationError(SECRET + TOKEN, issues=(issue, issue))
+
+    monkeypatch.setattr(PreparedArtifact, "render", fail)
+    previous = server._service_logger._level
+    with server._service_logger.at_level(level):
+        with TestClient(server.create_app(str(path))) as client:
+            response = client.get("/subscription/out.yaml?" + _query(credential=SECRET))
+            assert response.status_code == 422 and response.json() == {"error": "conversion_rejected"}
+            _headers(response)
+    assert server._service_logger._level == previous
+    captured = capsys.readouterr()
+    output = " ".join((captured.out + captured.err).split())
+    assert all(value not in output for value in (SECRET, TOKEN, str(tmp_path), "out.yaml", "credential="))
+    assert ("Preparing provider #1 (local, mihomo)" in output) == (level == "debug")
+    assert ("HTTP request complete: status=422" in output) == (level in {"debug", "info"})
+    assert ("artifact #1: ruleset.unsupported-target-rule=2" in output) == (level in {"debug", "info", "warning"})
+    if level in {"error", "critical"}:
+        assert output == ""
+
+
+def test_debug_resource_failures_show_safe_categories_and_yaml_locations(tmp_path, capsys):
+    path, _ = _fixture(tmp_path)
+    (tmp_path / "nodes.yaml").write_text("proxies:\n  - password: {{ params.credential }}\n")
+    with server._service_logger.at_level("debug"), pytest.raises(server.ServerPreparationError):
+        with TestClient(server.create_app(str(path))):
+            pytest.fail("Invalid YAML became ready")
+    captured = capsys.readouterr()
+    output = " ".join((captured.out + captured.err).split())
+    assert "Provider #1 preparation failed: ValueError -> ConstructorError" in output
+    assert "line 2, column" in output and "Artifact #1 unavailable: provider preparation failed" in output
+    assert all(value not in output for value in (SECRET, TOKEN, str(tmp_path), "credential", "nodes.yaml"))
+
+
+def test_debug_remote_failures_show_http_status_without_url_or_exception_text(tmp_path, monkeypatch, capsys):
+    import requests
+
+    path, data = _fixture(tmp_path)
+    data["provider"][0].pop("file")
+    data["provider"][0].update(url="https://private.test/" + SECRET + "?token=" + TOKEN, parameterized=False)
+    _save(path, data)
+
+    def fail(*args, **kwargs):
+        raise requests.HTTPError(SECRET + TOKEN, response=SimpleNamespace(status_code=403))
+
+    monkeypatch.setattr("requests.Session.get", fail)
+    with server._service_logger.at_level("debug"), pytest.raises(server.ServerPreparationError):
+        with TestClient(server.create_app(str(path))):
+            pytest.fail("Unavailable remote source became ready")
+    captured = capsys.readouterr()
+    output = " ".join((captured.out + captured.err).split())
+    assert "ProviderLoadError -> RemoteLoadError -> HTTPError -> HTTP 403" in output
+    assert all(value not in output for value in (SECRET, TOKEN, "private.test", str(tmp_path)))
+
+
+@pytest.mark.parametrize("level", ["debug", "info", "warning", "error", "critical"])
+def test_serve_log_threshold_includes_startup_failures_and_restores_state(tmp_path, monkeypatch, capsys, level):
+    path, _ = _fixture(tmp_path)
+    previous = server._service_logger._level
+
+    def fail(running):
+        raise RuntimeError(SECRET + TOKEN)
+
+    monkeypatch.setattr(server._RenderServer, "run", fail)
+    assert server.serve(str(path), log_level=level) == 1
+    assert server._service_logger._level == previous
+    captured = capsys.readouterr()
+    output = " ".join((captured.out + captured.err).split())
+    assert ("configuration or startup failed" in output) == (level != "critical")
+    assert ("Starting render service" in output) == (level in {"debug", "info"})
+    assert ("Startup exception: RuntimeError" in output) == (level == "debug")
+    assert TOKEN not in output and SECRET not in output and "Traceback" not in output
 
 
 def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monkeypatch, capsys):
