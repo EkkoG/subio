@@ -26,7 +26,7 @@ def test_base_cli_and_serve_help_do_not_import_optional_dependencies(monkeypatch
         main()
     assert caught.value.code == 0
     output = capsys.readouterr().out
-    assert "--port" in output and "--host" not in output
+    assert "--port" in output and "--host" in output and "127.0.0.1" in output
     assert "--refresh-interval" in output and "300" in output
     assert "--max-snapshot-age" in output and "900" in output
 
@@ -80,12 +80,17 @@ def test_maximum_age_must_cover_interval_before_server_import(monkeypatch, capsy
     assert "Maximum snapshot age must be at least the refresh interval" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("options,interval,age", [([], 300, 900), (["--refresh-interval", "10", "--max-snapshot-age", "10"], 10, 10)])
-def test_cli_forwards_refresh_defaults_and_overrides(monkeypatch, options, interval, age):
+@pytest.mark.parametrize("options,host,interval,age", [
+    ([], "127.0.0.1", 300, 900),
+    (["--host", "0.0.0.0", "--refresh-interval", "10", "--max-snapshot-age", "10"], "0.0.0.0", 10, 10),
+    (["--host", "::"], "::", 300, 900),
+    (["--host", "192.0.2.1"], "192.0.2.1", 300, 900),
+])
+def test_cli_forwards_bind_and_refresh_defaults_and_overrides(monkeypatch, options, host, interval, age):
     calls = []
     monkeypatch.setitem(sys.modules, "subio_v2.server", SimpleNamespace(
         serve=lambda config_path, **kwargs: calls.append((config_path, kwargs)) or 0
     ))
     monkeypatch.setattr(sys, "argv", ["subio", "serve", "synthetic.json", *options])
     assert main() == 0
-    assert calls == [("synthetic.json", {"port": 8000, "refresh_interval": interval, "max_snapshot_age": age})]
+    assert calls == [("synthetic.json", {"host": host, "port": 8000, "refresh_interval": interval, "max_snapshot_age": age})]

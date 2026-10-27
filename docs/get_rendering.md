@@ -15,7 +15,18 @@ uv run --extra server subio serve example/render/config.toml
 ```
 
 已有安装可执行 `pip install 'subio[server]'`，再运行 `subio serve CONFIG`。
-服务固定监听 `127.0.0.1`，默认端口 `8000`；可用 `--port 8001` 修改端口，没有对外监听选项。
+服务默认监听 `127.0.0.1:8000`。`--host` 可指定绑定地址，`--port` 可修改端口；例如监听全部 IPv4
+网卡可用 `--host 0.0.0.0 --port 8000`，IPv6 可用 `--host ::`，也可指定具体网卡地址。
+
+```bash
+uv run --extra server subio serve example/render/config.toml --host 0.0.0.0 --port 8000
+```
+
+启动时会显示 `Preparing subscription resources...`，随后报告更新和已就绪快照数量、准备耗时及刷新
+间隔。看到 `Ready to accept GET requests at http://...` 表示资源预热已完成且端口已实际绑定，可以发起
+请求。部分资源失败时显示警告和安全的阶段类别，仍可请求已就绪的输出；刷新失败时会再次显示警告。
+日志中的 `0.0.0.0` 或 `[::]` 表示监听所有对应网卡，其他机器应使用服务所在机器的实际地址访问。
+
 `SUBIO_RENDER_TOKEN` 必须为 32–128 个 ASCII 字母、数字、`_` 或 `-`，缺少或无效时启动失败。
 推荐用 `secrets.token_urlsafe(32)` 生成随机值；长度和字符集检查本身不能证明随机性。
 
@@ -263,7 +274,8 @@ CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同�
 
 错误体仅含固定安全 code，不回显值、原始异常或 traceback。原始大小、百分号编码和 UTF-8 检查
 先执行，可能返回 400/413；之后以常量时间字节比较验证唯一 token，再查路由、参数、快照可用性和渲染名额。
-框架访问日志关闭，workflow 日志在专用服务生命周期内静默，不记录查询或渲染内容。
+框架访问日志关闭，workflow 日志在专用服务生命周期内静默。独立的服务日志只记录启动、资源准备/
+刷新、监听就绪和关闭事件，以及数量、耗时和固定失败阶段，不记录查询、token、源路径或渲染内容。
 
 ## URL token 与 TLS 反向代理
 
@@ -275,7 +287,8 @@ GET 的 token 和其他凭据会出现在 URL，可能进入客户端/浏览器�
 访问或错误日志、APM 和无 TLS 的网络流量。应用的 no-store、no-referrer 和日志关闭无法删除
 这些副本。避免记录真实 URL；为共享链接设置相同的保密与轮换流程。
 
-跨主机访问应通过操作者控制的 TLS 反向代理，SubIO 仍只监听 loopback。以下 Nginx 片段示意
+外网部署应通过操作者控制的 TLS 反向代理或其他 TLS 入口传输 URL 中的凭据。可保留默认 loopback
+监听，也可用 `--host` 绑定代理可达的网卡地址；token 鉴权规则保持不变。以下 Nginx 片段示意
 专用虚拟主机的日志和缓存关闭；域名、证书路径和连接/速率限制需按部署环境设置：
 
 ```nginx

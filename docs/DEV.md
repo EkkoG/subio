@@ -418,8 +418,9 @@ age key、密码或私钥。
 
 ### 7.3 GET 参数化渲染
 
-可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 loopback HTTP
-传输。`GET /subscription/<file_name>` 按已配置输出文件名精确匹配，无需路由声明；
+可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 HTTP 传输。
+默认绑定 `127.0.0.1`，`--host` 可指定其他网卡、`0.0.0.0` 或 IPv6 地址。
+`GET /subscription/<file_name>` 按已配置输出文件名精确匹配，无需路由声明；
 请求参数默认按字符串处理，`artifact.params` 可选地补充类型、默认值和约束；
 `workflow.parameters` 统一检查参数名、重复值、类型、默认值和请求限额。
 启动时从同一已验证配置快照构建文件名索引，批量用户按已有命名规则展开并在请求中固定用户；
@@ -492,7 +493,9 @@ serve 只使用内存资源快照和每轮内存去重，显式关闭远程磁�
 普通源的最终模板可以使用所属 artifact 的参数默认值，引用缺失值在发布前失败。
 参数声明只包含 `type/default/choices/min/max`，字符串统一允许空值。远程输入和其他输入族不能启用替换。
 
-专用服务生命周期静默 workflow 日志并关闭框架访问日志。独立的一个刷新 worker 不占用四个同步渲染
+专用服务生命周期静默 workflow 日志并关闭框架访问日志；独立 Logger 实例仅输出固定服务事件及数量/
+耗时/失败阶段，保持 worker 和请求数据静默。Uvicorn startup 完成实际 socket 绑定后才报告可请求的
+监听地址，不将资源准备完成误报为端口监听成功。独立的一个刷新 worker 不占用四个同步渲染
 worker；渲染名额直到工作实际结束才释放，包括断连后的任务。关闭时停止调度和接收渲染，等待实际刷新
 及渲染线程结束，没有硬性关闭期限，也不提供可信模板的严格 wall-time 或全局传输内存上限。
 `RunRemoteLoader` 当前使用

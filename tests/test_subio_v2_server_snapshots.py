@@ -5,6 +5,8 @@ import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
+from http.client import HTTPConnection
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlencode
@@ -24,7 +26,7 @@ from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.workflow.providers import ProviderLoaderService
 from subio_v2.workflow.rendering import PreparedArtifact
-from tests.test_subio_v2_server import TOKEN, _fixture, _headers, _query, _raw_request, _save, _service
+from tests.test_subio_v2_server import SECRET, TOKEN, _fixture, _headers, _query, _raw_request, _save, _service
 
 
 @pytest.fixture(autouse=True)
@@ -51,6 +53,104 @@ def test_serve_reports_all_unready_without_framework_logs_or_secrets(tmp_path, c
     assert "resource preparation failed (provider: unavailable)" in output
     assert "check configured sources and templates" in output
     assert TOKEN not in output and str(tmp_path) not in output and "Traceback" not in output
+    assert "Ready to accept GET requests" not in output
+
+
+def test_resource_logs_report_partial_ready_retained_expired_and_recovered_snapshots(
+    tmp_path, monkeypatch, capsys
+):
+    path, data = _static(tmp_path)
+    private_source = tmp_path / (SECRET + ".yaml")
+    data["provider"].append({"name": SECRET, "type": "mihomo", "file": private_source.name})
+    data["artifact"].append({**data["artifact"][0], "name": SECRET + ".yaml", "providers": [SECRET]})
+    _save(path, data)
+    clock = _clock(monkeypatch)
+    app = server.create_app(str(path), refresh_interval=10, max_snapshot_age=30)
+
+    def output():
+        captured = capsys.readouterr()
+        text = " ".join((captured.out + captured.err).split())
+        assert all(value not in text for value in (TOKEN, SECRET, str(tmp_path)))
+        return text
+
+    with TestClient(app) as client:
+        startup = output()
+        assert "Preparing subscription resources..." in startup
+        assert "updated 1/2, ready 1/2" in startup
+        assert "WARNING" in startup and "failed 1/2 (provider)" in startup
+        assert client.get("/subscription/out.yaml?" + _query(credential=SECRET)).status_code == 200
+        assert output() == ""
+
+        private_source.write_text((tmp_path / "nodes.yaml").read_text())
+        client.portal.call(_service(app)._refresh)
+        assert "updated 2/2, ready 2/2" in output()
+
+        private_source.unlink()
+        (tmp_path / "nodes.yaml").unlink()
+        clock.now = 20
+        client.portal.call(_service(app)._refresh)
+        retained = output()
+        assert "updated 0/2, ready 2/2" in retained and "failed 2/2 (provider)" in retained
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+
+        clock.now = 30
+        client.portal.call(_service(app)._refresh)
+        assert "updated 0/2, ready 0/2" in output()
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 503
+
+        _source(tmp_path)
+        private_source.write_text((tmp_path / "nodes.yaml").read_text())
+        client.portal.call(_service(app)._refresh)
+        assert "updated 2/2, ready 2/2" in output()
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+    assert "Render service stopped" in output()
+
+
+@pytest.mark.parametrize("host,client_host", [("0.0.0.0", "127.0.0.1"), ("::", "::1")])
+def test_ready_log_follows_preparation_and_real_socket_bind(tmp_path, monkeypatch, capsys, host, client_host):
+    if host == "::":
+        try:
+            with socket.socket(socket.AF_INET6) as probe:
+                probe.bind(("::1", 0))
+        except OSError:
+            pytest.skip("IPv6 loopback is unavailable")
+    path, _ = _static(tmp_path)
+    app = server.create_app(str(path))
+    running = server._RenderServer(server.uvicorn.Config(
+        app, host=host, port=0, access_log=False, log_config=None,
+        log_level="critical", proxy_headers=False,
+    ))
+    ready = threading.Event()
+    success = server._service_logger.success
+    bound = {}
+
+    def observe_ready(message):
+        assert running.started and _service(app)._snapshots
+        address = running.servers[0].sockets[0].getsockname()
+        bound["port"] = address[1]
+        success(message)
+        ready.set()
+
+    monkeypatch.setattr(server._service_logger, "success", observe_ready)
+    thread = threading.Thread(target=running.run, daemon=True)
+    thread.start()
+    try:
+        assert ready.wait(timeout=10)
+        with closing(HTTPConnection(client_host, bound["port"], timeout=5)) as connection:
+            connection.request("GET", "/subscription/out.yaml?" + _query(credential=SECRET))
+            response = connection.getresponse()
+            assert response.status == 200
+            response.read()
+    finally:
+        running.should_exit = True
+        thread.join(timeout=10)
+    assert not thread.is_alive()
+    captured = capsys.readouterr()
+    output = " ".join((captured.out + captured.err).split())
+    address = "[::]" if host == "::" else host
+    assert f"Ready to accept GET requests at http://{address}:{bound['port']}" in output
+    assert output.index("Resource preparation complete") < output.index("Ready to accept GET requests")
+    assert all(value not in output for value in (TOKEN, SECRET, str(tmp_path)))
 
 
 def _clock(monkeypatch):

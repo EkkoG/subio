@@ -121,7 +121,8 @@ password = "secret"
 参数可替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，引用缺失参数直接报错。
 `token` 专用于鉴权，不进入模板参数。
 `file_name` 直接使用已有 artifact 输出文件名，无需声明额外路由。
-服务固定监听 loopback，不发布文件或上传结果；普通静态 CLI 的用法保持不变。
+服务默认监听 loopback，可用 `--host 0.0.0.0` 或具体网卡地址部署；不发布文件或上传结果。
+启动日志显示资源准备进度，实际绑定成功后显示 `Ready to accept GET requests`。普通静态 CLI 的用法保持不变。
 启动和后台刷新预先准备内存资源快照，普通请求不重新读取/下载源或解析静态输入。本地节点、snippet
 和模板修改在成功刷新后可见；配置或 token 修改须重启。`--refresh-interval` 默认 300 秒，
 `--max-snapshot-age` 默认 900 秒，均为正整数且后者至少等于前者。未准备或过期的路由返回 503；

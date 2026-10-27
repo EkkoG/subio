@@ -22,7 +22,7 @@ from starlette.responses import JSONResponse, Response
 from subio_v2.core.errors import ArtifactGenerationError, ConfigParseError, TemplateRenderError
 from subio_v2.core.parameters import MissingParameterError
 from subio_v2.core.results import IssueSeverity
-from subio_v2.infrastructure.logging import logger
+from subio_v2.infrastructure.logging import Logger, logger
 from subio_v2.infrastructure.remote import RemoteLoadError
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.parameters import (
@@ -56,6 +56,8 @@ _ERRORS = {
     502: "upstream_error",
     503: "busy",
 }
+# Fixed service events remain visible while source and request logs stay silent.
+_service_logger = Logger()
 
 
 class ServerConfigurationError(ValueError):
@@ -172,6 +174,7 @@ class _RenderService:
                 self._refresh_task = asyncio.create_task(self._refresh_loop())
                 yield
             finally:
+                _service_logger.info("Stopping render service; waiting for active work")
                 self._stop.set()
                 # Stop admission before waiting for the actual, uncancellable threads.
                 render_executor = self._executor
@@ -182,6 +185,7 @@ class _RenderService:
                 await asyncio.to_thread(render_executor.shutdown, wait=True)
                 self._refresh_executor = None
                 self._snapshots.clear()
+                _service_logger.info("Render service stopped")
 
     def _prepare_attempt(self):
         acquired_at = time.monotonic()
@@ -198,6 +202,7 @@ class _RenderService:
         return acquired_at, prepared
 
     async def _refresh(self):
+        _service_logger.info("Preparing subscription resources...")
         acquired_at, prepared = await asyncio.shield(
             asyncio.get_running_loop().run_in_executor(
                 self._refresh_executor, self._prepare_attempt
@@ -209,6 +214,25 @@ class _RenderService:
             for name, artifact in prepared.candidates.items()
         })
         self._failures = prepared.failures
+        now = time.monotonic()
+        ready = sum(
+            now - snapshot.acquired_at < self._max_snapshot_age
+            for snapshot in self._snapshots.values()
+        )
+        total = len(self.routes)
+        message = (
+            f"Resource preparation complete: updated {len(prepared.candidates)}/{total}, "
+            f"ready {ready}/{total} ({now - acquired_at:.2f}s); "
+            f"next refresh in {self._refresh_interval}s"
+        )
+        if prepared.failures or ready < total:
+            phases = ", ".join(sorted({failure.phase for failure in prepared.failures.values()}))
+            _service_logger.warning(
+                message + f"; failed {len(prepared.failures)}/{total}"
+                + (f" ({phases})" if phases else "")
+            )
+        else:
+            _service_logger.info(message)
 
     async def _refresh_loop(self):
         while not self._stop.is_set():
@@ -306,6 +330,19 @@ class _RenderHTTP:
             await self.app(scope, receive, send)
 
 
+class _RenderServer(uvicorn.Server):
+    async def startup(self, sockets=None):
+        await super().startup(sockets=sockets)
+        if self.started:
+            for listener in self.servers:
+                for sock in listener.sockets:
+                    host, port = sock.getsockname()[:2]
+                    address = f"[{host}]" if ":" in host else host
+                    _service_logger.success(
+                        f"Ready to accept GET requests at http://{address}:{port}"
+                    )
+
+
 def create_app(
     config_path: str, *, refresh_interval: int = 300, max_snapshot_age: int = 900
 ) -> Starlette:
@@ -320,7 +357,7 @@ def create_app(
 
 
 def serve(
-    config_path: str, *, port: int = 8000,
+    config_path: str, *, host: str = "127.0.0.1", port: int = 8000,
     refresh_interval: int = 300, max_snapshot_age: int = 900,
 ) -> int:
     framework_logs = [logging.getLogger(name) for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "starlette")]
@@ -329,13 +366,21 @@ def serve(
         try:
             for item in framework_logs:
                 item.disabled = True
+            _service_logger.info("Starting render service...")
             app = create_app(config_path, refresh_interval=refresh_interval,
                              max_snapshot_age=max_snapshot_age)
-            uvicorn.run(app, host="127.0.0.1", port=port, access_log=False,
-                        log_config=None, log_level="critical", server_header=False,
-                        proxy_headers=False)
+            config = uvicorn.Config(app, host=host, port=port, access_log=False,
+                                    log_config=None, log_level="critical", server_header=False,
+                                    proxy_headers=False)
+            http_server = _RenderServer(config)
+            try:
+                http_server.run()
+            except KeyboardInterrupt:
+                pass
             if app.state.render_service.startup_failure:
                 raise ServerPreparationError(app.state.render_service.startup_failure)
+            if not http_server.started:
+                raise SystemExit(1)
         except ServerConfigurationError as exc:
             failure = str(exc)
         except ServerPreparationError as exc:

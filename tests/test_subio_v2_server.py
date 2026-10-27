@@ -843,23 +843,26 @@ def test_real_loopback_disconnects_keep_four_running_workers_admitted(tmp_path, 
     assert not thread.is_alive()
 
 
-def test_serve_disables_framework_logs_and_uses_loopback_without_reload(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("host", ["127.0.0.1", "0.0.0.0", "::", "192.0.2.1"])
+def test_serve_disables_framework_logs_and_forwards_bind_without_reload(tmp_path, monkeypatch, capsys, host):
     path, _ = _fixture(tmp_path)
     calls = []
     names = ("uvicorn", "uvicorn.error", "uvicorn.access", "starlette")
     before = [logging.getLogger(name).disabled for name in names]
 
-    def run(app, **kwargs):
+    def run(running):
         assert logger._quiet
         assert all(logging.getLogger(name).disabled for name in names)
         logging.getLogger("uvicorn.error").critical(TOKEN + SECRET)
         logger.error(TOKEN + SECRET)
-        calls.append(kwargs)
+        config = running.config
+        calls.append((config.host, config.port, config.access_log, config.log_config,
+                      config.log_level, config.server_header, config.proxy_headers, config.reload))
+        running.started = True
 
-    monkeypatch.setattr(server.uvicorn, "run", run)
-    assert server.serve(str(path)) == 0
-    assert calls == [{"host": "127.0.0.1", "port": 8000, "access_log": False,
-                      "log_config": None, "log_level": "critical", "server_header": False, "proxy_headers": False}]
+    monkeypatch.setattr(server._RenderServer, "run", run)
+    assert server.serve(str(path), host=host) == 0
+    assert calls == [(host, 8000, False, None, "critical", False, False, False)]
     assert [logging.getLogger(name).disabled for name in names] == before
     captured = capsys.readouterr()
     assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
@@ -900,7 +903,7 @@ def test_serve_parse_errors_report_only_safe_source_locations(
     def run(*args, **kwargs):
         pytest.fail("Invalid configuration must fail before starting HTTP")
 
-    monkeypatch.setattr(server.uvicorn, "run", run)
+    monkeypatch.setattr(server._RenderServer, "run", run)
     assert server.serve(str(path)) == 1
     captured = capsys.readouterr()
     assert (
@@ -926,7 +929,27 @@ def test_serve_reports_occupied_port_without_framework_logs(tmp_path, capsys):
     assert "check port availability" in " ".join(captured.out.split())
     assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
     assert "Traceback" not in captured.out + captured.err
+    assert "Ready to accept GET requests" not in captured.out + captured.err
     assert [logging.getLogger(name).disabled for name in names] == before
+
+
+def test_serve_reports_a_server_that_never_started(tmp_path, monkeypatch, capsys):
+    path, _ = _fixture(tmp_path)
+    monkeypatch.setattr(server._RenderServer, "run", lambda running: None)
+    assert server.serve(str(path)) == 1
+    assert "startup failed on port 8000" in capsys.readouterr().out
+
+
+def test_serve_handles_keyboard_interrupt_after_startup(tmp_path, monkeypatch, capsys):
+    path, _ = _fixture(tmp_path)
+
+    def run(running):
+        running.started = True
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(server._RenderServer, "run", run)
+    assert server.serve(str(path)) == 0
+    assert "Traceback" not in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("code", [None, 0, TOKEN + SECRET])
@@ -936,7 +959,7 @@ def test_serve_handles_server_exit_codes_without_echoing_them(tmp_path, monkeypa
     def run(*args, **kwargs):
         raise SystemExit(code)
 
-    monkeypatch.setattr(server.uvicorn, "run", run)
+    monkeypatch.setattr(server._RenderServer, "run", run)
     assert server.serve(str(path)) == (0 if code in (None, 0) else 1)
     captured = capsys.readouterr()
     assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
