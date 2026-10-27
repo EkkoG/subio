@@ -52,6 +52,14 @@ uv run python -m pytest tests/test_example_e2e.py -v
 本地 HTTP provider/ruleset、Gist dry-run 和 Age 加解密闭环。详细约束见
 `docs/e2e_testing.md`。
 
+可选 HTTP 服务和随仓离线 GET 示例需安装 server extra；完整功能验收时必须运行这些测试并确认
+没有因缺少依赖而跳过：
+
+```bash
+uv sync --dev --extra server
+uv run python -m pytest tests/test_subio_v2_server.py tests/test_subio_v2_serve_cli.py tests/test_example_render_e2e.py -v
+```
+
 重构期间的端到端与 adapter 契约层：
 
 ```bash

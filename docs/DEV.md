@@ -416,6 +416,38 @@ age key、密码或私钥。
 `allow_conversion_errors = true` 会放行全部 conversion error，只适合已审阅的调试配置。
 新增 issue 时应使用稳定 code，为后续按 code allowlist 做准备。
 
+### 7.3 GET 参数化渲染
+
+可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 loopback HTTP
+传输。`artifact.render` 声明路由和标量 schema；`workflow.parameters` 负责类型、默认值和请求约束。
+启动时从同一已验证配置快照构建路由；`SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
+路由查询和 I/O 前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
+
+```text
+GET -> raw decode/limits -> URL token authentication -> route parameter validation
+    -> WorkflowEngine.for_render (one artifact + referenced providers)
+    -> prepare -> normal validation/emission/template/Age -> HTTP response
+```
+
+本地 `parameterized = true` provider 仅允许 Mihomo/Clash YAML 与 native SubIO v2。Adapter 先使用
+原有 decoder，再调用 `core.parameters.bind_document_parameters()`，最后进入原有 node codec。
+共享 binder 只复制文档和替换节点子树标量，保留静态形状/键，独立展开非循环 YAML alias，拒绝循环
+及 tuple-bearing `!!pairs` / `!!omap`。Native schema 继续描述替换后的正常 v2 对象，不增加模板语法类型。
+
+每次请求显式携带独立 typed mapping，不使用全局绑定状态或 provider schema。`for_render` 保留现有
+共享 ruleset 依赖，选择一个固定 artifact/user，为 loader/parser/emitter/节点与模板创建独立状态。
+最终 Jinja 只获得单一不可变 `params` 命名空间；模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
+或目标 serializer 写入合适上下文。该路径禁止 `run()`、发布、上传、manifest 和请求报告/结果缓存，
+任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。
+
+静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使路由声明了默认值。
+普通源的最终模板可以使用所属 artifact 的参数默认值，缺失必填值在发布前失败。普通 provider 与旧模板
+维持既有行为；远程输入和其他输入族不能启用替换。
+
+专用服务生命周期静默 workflow 日志并关闭框架访问日志。四个同步渲染名额直到工作实际结束才释放，
+包括断连后的任务；不提供可信模板的严格 wall-time 或全局传输内存上限。`RunRemoteLoader` 当前使用
+Requests，先缓冲再检查 `max_bytes`，不能将该检查描述为 streaming memory bound。
+
 ## 8. 测试与提交
 
 先运行示例：

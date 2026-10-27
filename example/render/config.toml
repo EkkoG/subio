@@ -1,0 +1,75 @@
+[[provider]]
+name = "yaml-nodes"
+type = "mihomo"
+file = "nodes.yaml"
+parameterized = true
+
+[[provider]]
+name = "native-nodes"
+type = "subio"
+file = "nodes.toml"
+parameterized = true
+
+[[artifact]]
+name = "yaml-client.yaml"
+type = "mihomo"
+providers = ["yaml-nodes"]
+template = "client.yaml"
+[artifact.render]
+route = "mihomo"
+[artifact.render.params.name]
+type = "string"
+default = "example"
+[artifact.render.params.host]
+type = "string"
+default = "proxy.example.test"
+[artifact.render.params.port]
+type = "integer"
+default = 1080
+min = 1
+max = 65535
+[artifact.render.params.username]
+type = "string"
+required = true
+[artifact.render.params.password]
+type = "string"
+required = true
+[artifact.render.params.udp]
+type = "boolean"
+default = true
+[artifact.render.params.controller_secret]
+type = "string"
+default = ""
+allow_empty = true
+
+[[artifact]]
+name = "native-client.yaml"
+type = "mihomo"
+providers = ["native-nodes"]
+template = "client.yaml"
+[artifact.render]
+route = "native"
+[artifact.render.params.name]
+type = "string"
+default = "example"
+[artifact.render.params.host]
+type = "string"
+default = "proxy.example.test"
+[artifact.render.params.port]
+type = "integer"
+default = 1080
+min = 1
+max = 65535
+[artifact.render.params.username]
+type = "string"
+required = true
+[artifact.render.params.password]
+type = "string"
+required = true
+[artifact.render.params.udp]
+type = "boolean"
+default = true
+[artifact.render.params.controller_secret]
+type = "string"
+default = ""
+allow_empty = true

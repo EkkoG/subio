@@ -35,3 +35,9 @@ uv run subio convert example/config.singbox-nodes.toml --dry-run
 The provider fixtures and `workflow_rules` / `singbox_rules` use reserved
 `.example.test` hostnames, documentation IP ranges, and conspicuous example
 credentials. They are test data, not usable endpoints.
+
+[`render/`](render/README.md) is a separate offline GET service example. It
+requires the optional `server` extra and a generated `SUBIO_RENDER_TOKEN`, and
+binds typed query parameters into local Mihomo YAML or native SubIO v2 TOML.
+Its parameterized sources are intentionally rejected by static CLI commands;
+use its HTTP routes. The original examples remain runnable as shown here.

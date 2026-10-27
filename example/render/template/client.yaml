@@ -1,0 +1,12 @@
+mixed-port: 7890
+mode: rule
+secret: {{ params["controller_secret"] | tojson }}
+proxies:
+{{ nodes.render() | indent(2, true) }}
+proxy-groups:
+  - name: Example
+    type: select
+    proxies:
+{{ nodes.names() | to_yaml | indent(6, true) }}
+rules:
+  - MATCH,Example

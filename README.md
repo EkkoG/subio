@@ -114,6 +114,23 @@ password = "secret"
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
 跨平台转换，也不会由 SubIO 执行。
 
+#### GET 参数化渲染服务
+
+可选的 `server` extra 提供 `GET /render/<route>?token=...`，无需附加请求头。配置可声明类型化
+参数，替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，并返回一个配置好的 artifact。
+服务固定监听 loopback，不发布文件或上传结果；普通静态 CLI 的用法保持不变。
+
+```bash
+uv sync --extra server
+export SUBIO_RENDER_TOKEN="$(uv run python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uv run --extra server subio serve example/render/config.toml
+```
+
+离线示例包含两个路由和安全模板，见 [GET 示例](./example/render/README.md)。参数声明、URL 编码、
+静态 CLI 拒绝参数化源、token 轮换和 TLS 反向代理设置见 [GET 渲染指南](./docs/get_rendering.md)。
+一个 token 授权所有暴露路由；GET URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
+`no-store` 无法清除这些副本。
+
 #### 规则集输入
 
 远程规则集输入使用 `type`、`behavior` 和 `format` 显式选择 codec：
@@ -215,6 +232,7 @@ subio convert example/config.toml --clean-gist
 
 - [开发约束与架构](./docs/DEV.md)
 - [SubIO 节点文件格式 v2](./docs/subio_node_format.md)
+- [GET 参数化渲染与安全部署](./docs/get_rendering.md)
 - [支持矩阵](./docs/support_matrix.md)
 - [端到端测试](./docs/e2e_testing.md)
 - [文档索引](./docs/README.md)

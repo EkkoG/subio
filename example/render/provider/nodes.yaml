@@ -1,0 +1,8 @@
+proxies:
+  - name: "yaml-{{ params.name }}"
+    type: socks5
+    server: "{{ params.host }}"
+    port: "{{ params.port }}"
+    username: "{{ params.username }}"
+    password: "{{ params.password }}"
+    udp: "{{ params.udp }}"
