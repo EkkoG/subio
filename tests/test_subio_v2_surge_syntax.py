@@ -127,3 +127,18 @@ def test_serializer_rejects_invalid_record_identity():
         serialize_proxy_line(
             SurgeProxyRecord(name="bad=name", type="http", positional=())
         )
+
+
+@pytest.mark.parametrize("name", [
+    "#hidden", "//hidden", " #hidden", " //hidden", " ", "  ",
+    " leading", "trailing ", " both ",
+])
+def test_serializer_rejects_names_that_would_be_comments_or_trimmed(name):
+    with pytest.raises(ValueError, match="Surge proxy name"):
+        serialize_proxy_line(SurgeProxyRecord(name=name, type="direct"))
+
+
+@pytest.mark.parametrize("name", ["plain", "foo#bar", "foo//bar", "internal space"])
+def test_serializer_preserves_names_with_internal_comment_markers_or_spaces(name):
+    record = SurgeProxyRecord(name=name, type="direct")
+    assert parse_proxy_line(serialize_proxy_line(record)) == record

@@ -26,9 +26,17 @@ from subio_v2.core.nodes import (
 SurgeProtocolEmitter = Callable[[Node, dict[int, str]], list[str]]
 
 
+class SurgeServerError(ValueError):
+    field = "server"
+    code = "conversion.invalid-value"
+
+
 def _server_str(node: Node) -> str:
     server = node.server
-    return str(server[0]) if isinstance(server, list) else str(server)
+    value = str(server[0]) if isinstance(server, list) else str(server)
+    if "=" in value:
+        raise SurgeServerError("Surge positional server cannot contain '='")
+    return value
 
 
 def emit_direct(node: Node, _: dict[int, str]) -> list[str]:

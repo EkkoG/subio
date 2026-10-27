@@ -187,6 +187,67 @@ def test_surge_typed_lowercase_reserved_policy_name_is_rejected_before_emit():
     assert emission.errors[0].code == "conversion.reserved-policy-name"
 
 
+@pytest.mark.parametrize("name", [
+    "#hidden", "//hidden", " #hidden", " //hidden", " ",
+    " leading", "trailing ", " both ",
+])
+def test_surge_target_rejects_names_that_would_be_comments_or_trimmed(name):
+    node = HttpNode(name=name, type=Protocol.HTTP, server="example.test", port=80)
+    checked = TargetValidationService("surge").check_node(node)
+    assert not checked.supported
+    assert any(
+        issue.field == "name" and issue.code == "conversion.invalid-value"
+        for issue in checked.warnings
+    )
+    emitted = SurgeEmitter().emit_result([node])
+    assert not emitted.supported_nodes and not emitted.content
+    assert any(issue.field == "name" for issue in emitted.errors)
+
+
+@pytest.mark.parametrize("keyword, options", [
+    ("socks5", "username=user=name, password=pass=word"),
+    ("http", "username=user=name, password=pass=word"),
+    ("ss", "encrypt-method=aes-256-gcm, password=pass=word"),
+    ("trojan", "password=pass=word"),
+])
+@pytest.mark.parametrize("server", ["host=value", "=host", "host=", 'quoted"host=value'])
+def test_surge_positional_servers_cannot_be_reclassified_as_options(keyword, options, server):
+    node = SurgeParser().parse_result(
+        f"proxy = {keyword}, example.test, 443, {options}"
+    ).nodes[0]
+    node.server = server
+    emitted = SurgeEmitter().emit_result([node])
+    assert not emitted.supported_nodes and not emitted.content
+    assert any(
+        issue.field == "server" and issue.code == "conversion.invalid-value"
+        and issue.stage == "emit"
+        for issue in emitted.errors
+    )
+    assert all(server not in issue.message for issue in emitted.issues)
+
+
+@pytest.mark.parametrize("keyword, options", [
+    ("socks5", "username=user=name, password=pass=word"),
+    ("http", "username=user=name, password=pass=word"),
+    ("ss", "encrypt-method=aes-256-gcm, password=pass=word"),
+    ("trojan", "password=pass=word"),
+])
+@pytest.mark.parametrize("server", ["example.test", "comma,host", 'quoted"host'])
+def test_surge_positional_server_neighbors_and_named_option_equals_round_trip(keyword, options, server):
+    node = SurgeParser().parse_result(
+        f"proxy = {keyword}, example.test, 443, {options}, tfo=true, hybrid=auto"
+    ).nodes[0]
+    node.server = server
+    emitted = SurgeEmitter().emit_result([node])
+    assert emitted.issues == []
+    parsed = SurgeParser().parse_result(emitted.content)
+    assert parsed.issues == [] and len(parsed.nodes) == 1
+    assert parsed.nodes[0].server == server
+    assert parsed.nodes[0].password == "pass=word"
+    assert parsed.nodes[0].tfo is True
+    assert parsed.nodes[0].surge_options.hybrid == "auto"
+
+
 @pytest.mark.parametrize("udp_port", [0, -1, 65536, True])
 def test_surge_typed_shadowsocks_udp_port_is_bounded(udp_port):
     node = ShadowsocksNode(

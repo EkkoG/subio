@@ -11,8 +11,10 @@ import yaml
 from subio_v2.core.errors import (
     ArtifactGenerationError,
     ConfigError,
+    ProviderLoadError,
     TemplateRenderError,
 )
+from subio_v2.adapters.catalog import get_parser
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.main import main
@@ -430,6 +432,123 @@ def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
         and issue.severity == "error"
         for issue in error.value.issues
     )
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("native", [False, True])
+@pytest.mark.parametrize("field, value, protocol", [
+    ("name", "#hidden", "socks5"),
+    ("name", "//hidden", "socks5"),
+    ("name", " #hidden", "socks5"),
+    ("name", " //hidden", "socks5"),
+    ("name", " ", "socks5"),
+    ("name", " leading", "socks5"),
+    ("name", "trailing ", "socks5"),
+    ("name", " both ", "socks5"),
+    ("server", "host=value", "socks5"),
+    ("server", "host=value", "http"),
+    ("server", "host=value", "ss"),
+    ("server", "host=value", "trojan"),
+])
+def test_scoped_surge_parameter_errors_block_before_staging_despite_static_opt_out(
+    tmp_path, monkeypatch, native, field, value, protocol
+):
+    path, data = _fixture(tmp_path, native=native, parameterized=False)
+    data["allow_conversion_errors"] = True
+    data["artifact"][0].update({"type": "surge", "allow_conversion_errors": True})
+    (tmp_path / "client.j2").write_text("{{ nodes.render() }}")
+    document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+    key = "nodes" if native else "proxies"
+    node = document[key][0]
+    node.update({
+        "type": "shadowsocks" if native and protocol == "ss" else protocol,
+        "password": "synthetic",
+    })
+    if protocol == "ss":
+        node["cipher"] = "aes-256-gcm"
+    document[key].append({**node, "name": "safe", "server": "example.test"})
+    node[field] = value
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    _snapshot(path, data)
+    static = WorkflowEngine(str(path)).prepare().artifact_result
+    assert static.drafts
+    assert any(
+        issue.field == field and issue.code == "conversion.invalid-value"
+        for issue in static.issues
+    )
+
+    parameter = "name" if field == "name" else "host"
+    data["provider"][0]["parameterized"] = True
+    node[field] = "{{ params." + parameter + " }}"
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    config = _snapshot(path, data)
+    engine = _engine(path, config, pairs=[(parameter, value)])
+    assert not engine.config.allow_conversion_errors
+    assert not engine.config.artifacts[0].allow_conversion_errors
+    monkeypatch.setattr(
+        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
+        lambda *args: pytest.fail("Staged malformed Surge output"),
+    )
+    with pytest.raises(ArtifactGenerationError) as error:
+        engine.prepare()
+    assert any(
+        issue.field == field and issue.code == "conversion.invalid-value"
+        and issue.severity == "error"
+        for issue in error.value.issues
+    )
+    assert config.allow_conversion_errors and config.artifacts[0].allow_conversion_errors
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("native", [False, True])
+@pytest.mark.parametrize("parameter, value", [
+    ("name", "plain"), ("name", "foo#bar"), ("name", "foo//bar"),
+    ("name", "internal space"), ("host", "example.test"),
+    ("host", "comma,host"), ("host", 'quoted"host'),
+])
+def test_scoped_surge_parameter_neighbors_round_trip_exactly(tmp_path, native, parameter, value):
+    path, data = _fixture(tmp_path, native=native)
+    data["artifact"][0]["type"] = "surge"
+    (tmp_path / "client.j2").write_text("{{ nodes.render() }}")
+    config = _snapshot(path, data)
+    result = _engine(path, config, pairs=[
+        (parameter, value), ("credential", 'pass=word, with "quotes"'),
+    ]).prepare()
+    assert not result.artifact_result.issues
+    output = result.artifact_result.drafts[0].content
+    parsed = get_parser("surge").parse_result(output)
+    assert parsed.issues == [] and len(parsed.nodes) == 1
+    node = parsed.nodes[0]
+    assert (node.name if parameter == "name" else node.server) == value
+    assert node.password == 'pass=word, with "quotes"'
+
+
+@pytest.mark.parametrize("native", [False, True])
+@pytest.mark.parametrize("tag", ["!!pairs", "!!omap"])
+@pytest.mark.parametrize("position", ["field", "outside", "cycle"])
+def test_scoped_tuple_tags_fail_before_staging_despite_static_opt_out(
+    tmp_path, monkeypatch, native, tag, position
+):
+    path, data = _fixture(tmp_path, native=native)
+    data["allow_conversion_errors"] = True
+    data["artifact"][0]["allow_conversion_errors"] = True
+    key = "nodes" if native else "proxies"
+    tagged = tag + ' [{static: "{{ params.name }}"}]'
+    source = {
+        "field": f"{key}: [{{password: {tagged}}}]",
+        "outside": f"{key}: []\nother: {tagged}",
+        "cycle": f"{key}: &cycle {tag} [{{again: *cycle}}]",
+    }[position]
+    if native:
+        source = "version: 2\n" + source
+    (tmp_path / "nodes.yaml").write_text(source)
+    config = _snapshot(path, data)
+    monkeypatch.setattr(
+        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
+        lambda *args: pytest.fail("Staged an unsupported tuple document"),
+    )
+    with pytest.raises(ProviderLoadError, match="Unsupported tuple"):
+        _engine(path, config).prepare()
     assert not (tmp_path / "dist").exists()
 
 

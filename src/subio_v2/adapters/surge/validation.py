@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 
+from subio_v2.adapters.surge.syntax import validate_proxy_name
 from subio_v2.core.nodes import (
     GENERIC_IP_VERSION_VALUES,
     HttpNode,
@@ -316,6 +317,11 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
     """Validate typed node fields that are specific to the Surge target."""
 
     errors: list[IssueDraft] = []
+    if isinstance(node.name, str):
+        try:
+            validate_proxy_name(node.name)
+        except ValueError as exc:
+            errors.append(_error(str(exc), "name"))
     if node.ip_version not in {None, *GENERIC_IP_VERSION_VALUES}:
         errors.append(_error("ip_version is not a supported generic value", "ip_version"))
     _check_bool(node.udp, "udp", errors)

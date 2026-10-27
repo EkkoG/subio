@@ -36,9 +36,12 @@ def bind_document_parameters(
         return _TOKEN.sub(lambda match: parameters[match[1]], value)
 
     def visit(value: Any, allowed: bool, ancestors: frozenset[int]) -> Any:
+        if isinstance(value, tuple):
+            # Safe YAML pairs/omap decode to tuples without a faithful output contract.
+            raise ValueError("Unsupported tuple in parameterized provider document")
         if isinstance(value, set):
             # YAML sets contain keys, so their members cannot be parameterized.
-            return {bind_scalar(item, False) if isinstance(item, str) else item for item in value}
+            return {visit(item, False, ancestors) for item in value}
         if isinstance(value, (dict, list)):
             identity = id(value)
             if identity in ancestors:
@@ -49,8 +52,7 @@ def bind_document_parameters(
                 return [visit(item, allowed, ancestors) for item in value]
             copied = {}
             for key, item in value.items():
-                if isinstance(key, str):
-                    bind_scalar(key, False)
+                visit(key, False, ancestors)
                 copied[key] = visit(item, allowed, ancestors)
             return copied
         if isinstance(value, str):
@@ -61,8 +63,7 @@ def bind_document_parameters(
         return visit(data, False, frozenset())
     result = {}
     for key, value in data.items():
-        if isinstance(key, str):
-            bind_scalar(key, False)
+        visit(key, False, frozenset({id(data)}))
         result[key] = visit(
             value, key == node_key and isinstance(value, list), frozenset({id(data)})
         )

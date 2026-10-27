@@ -187,6 +187,79 @@ def test_yaml_set_members_are_static_keys_and_alias_copies_are_independent():
     assert bound["proxies"][0]["options"] is not bound["proxies"][1]["options"]
 
 
+@pytest.mark.parametrize("tag", ["!!pairs", "!!omap"])
+@pytest.mark.parametrize("fmt", ["mihomo", "subio"])
+@pytest.mark.parametrize("position", ["root", "nodes", "field", "nested", "outside", "key"])
+@pytest.mark.parametrize("value", [
+    "static", "{{ params.host }}", "{{ params.missing }}", "{{ params.host | upper }}",
+])
+def test_parameterized_yaml_rejects_tuple_tags_in_every_document_position(
+    tag, fmt, position, value
+):
+    key = "nodes" if fmt == "subio" else "proxies"
+    pair_key = value if position == "key" else "static"
+    tagged = f"{tag} [{{{json.dumps(pair_key)}: {json.dumps(value)}}}]"
+    document = {
+        "root": tagged,
+        "nodes": f"{key}: {tagged}",
+        "field": f"{key}: [{{password: {tagged}}}]",
+        "nested": f"{key}: [{{options: {{nested: {tagged}}}}}]",
+        "outside": f"{key}: []\nother: {tagged}",
+        "key": f"{key}: [{{options: {tagged}}}]",
+    }[position]
+    if fmt == "subio" and position != "root":
+        document = "version: 2\n" + document
+    with pytest.raises(ValueError, match="Unsupported tuple") as error:
+        _parser(fmt).parse_result(document)
+    assert value not in str(error.value)
+
+
+@pytest.mark.parametrize("tag", ["!!pairs", "!!omap"])
+@pytest.mark.parametrize("fmt", ["mihomo", "subio"])
+def test_parameterized_yaml_rejects_tuple_edge_aliases_and_cycles_without_mutation(tag, fmt):
+    key = "nodes" if fmt == "subio" else "proxies"
+    aliases = yaml.safe_load(f"""
+{key}:
+  - options: &options {tag} [{{static: "{{{{ params.host }}}}"}}]
+    copy: *options
+""")
+    before = copy.deepcopy(aliases)
+    with pytest.raises(ValueError, match="Unsupported tuple"):
+        bind_document_parameters(aliases, key, _values())
+    assert aliases == before
+    assert aliases[key][0]["options"] is aliases[key][0]["copy"]
+    cycle = yaml.safe_load(f"{key}: &cycle {tag} [{{again: *cycle}}]")
+    assert cycle[key][0][1] is cycle[key]
+    with pytest.raises(ValueError, match="Unsupported tuple"):
+        bind_document_parameters(cycle, key, _values())
+    assert cycle[key][0][1] is cycle[key]
+
+
+@pytest.mark.parametrize("source", [
+    {("{{ params.host }}",): "static", "proxies": []},
+    {"proxies": [{("{{ params.host }}",): "static"}]},
+    {"proxies": [{"options": {("{{ params.host }}",)}}]},
+])
+def test_shared_binder_rejects_tuple_mapping_keys_and_set_members(source):
+    with pytest.raises(ValueError, match="Unsupported tuple"):
+        bind_document_parameters(source, "proxies", _values())
+
+
+@pytest.mark.parametrize("tag", ["!!pairs", "!!omap"])
+def test_ordinary_yaml_provider_retains_tuple_tag_values_and_literals(tag):
+    source = f"""
+proxies:
+  - name: ordinary
+    type: socks5
+    server: example.test
+    port: 1080
+    future-options: {tag} [{{static: "{{{{ params.host }}}}"}}]
+"""
+    result = get_parser("mihomo").parse_result(source)
+    assert result.issues == []
+    assert result.nodes[0].extra["future-options"] == [("static", "{{ params.host }}")]
+
+
 @pytest.mark.parametrize("fmt", ["mihomo", "subio"])
 def test_generic_type_and_known_token_fields_can_bind_without_field_allowlists(fmt):
     native = fmt == "subio"
