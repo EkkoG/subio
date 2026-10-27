@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import os
 from collections.abc import Mapping
@@ -7,7 +8,7 @@ from subio_v2.adapters.catalog import get_parser
 from subio_v2.core.errors import ProviderLoadError
 from subio_v2.core.nodes import Node
 from subio_v2.core.parameters import ParameterValue
-from subio_v2.core.results import ConversionIssue
+from subio_v2.core.results import ConversionIssue, ParseResult
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import (
@@ -35,10 +36,72 @@ class ProviderLoadResult:
     summaries: dict[str, ProviderSummary] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class PreparedProvider:
+    config: ProviderConfig = field(repr=False)
+    content_sha256: str
+    metadata: RemoteMetadata | None = field(default=None, repr=False)
+    _static: ProviderLoadResult | None = field(default=None, repr=False)
+    _document: object = field(default=None, repr=False)
+
+    def bind(self, parameters: Mapping[str, ParameterValue]) -> ProviderLoadResult:
+        if self._static is not None:
+            return copy.deepcopy(self._static)
+        parser = get_parser(
+            self.config.provider_type,
+            source_kind="local",
+            parameterized=True,
+            parameters=parameters,
+        )
+        # The adapter binder copies the private document before invoking node codecs.
+        parsed = parser.parse_document(self._document)
+        return ProviderLoaderService._finish_parse(
+            parsed, self.config, self.content_sha256, self.metadata
+        )
+
+
 class ProviderLoaderService:
     def __init__(self, config_path: str, global_age_secret_key: str = ""):
         self.config_path = config_path
         self.global_age_secret_key = global_age_secret_key
+        self._prepared_content: dict[tuple[str | None, ...], bytes] = {}
+
+    def prepare(
+        self, config: ProviderConfig, remote_loader: RunRemoteLoader
+    ) -> PreparedProvider:
+        parser = get_parser(
+            config.provider_type,
+            source_kind="remote" if config.url else "local",
+            allow_unsafe_external=config.allow_unsafe_external,
+            parameterized=config.parameterized,
+            parameters={} if config.parameterized else None,
+        )
+        if parser is None:
+            raise ProviderLoadError("Unsupported provider type")
+        source_key = (config.url, config.file, config.user_agent)
+        if config.url:
+            # The run loader owns remote deduplication and last-result metadata.
+            content_bytes = self._fetch_content(config, remote_loader)
+        else:
+            if source_key not in self._prepared_content:
+                self._prepared_content[source_key] = self._fetch_content(config, remote_loader)
+            content_bytes = self._prepared_content[source_key]
+        if not content_bytes:
+            raise ProviderLoadError("Provider returned empty content")
+        content = self._decode_content(content_bytes, config)
+        digest = hashlib.sha256(content_bytes).hexdigest()
+        metadata = (
+            remote_loader.last_result.metadata
+            if config.url and remote_loader.last_result is not None else None
+        )
+        if config.parameterized:
+            return PreparedProvider(
+                config, digest, metadata, _document=parser.decode_source(content)
+            )
+        return PreparedProvider(
+            config, digest, metadata,
+            _static=self._finish_parse(parser.parse_result(content), config, digest, metadata),
+        )
 
     def load(
         self,
@@ -97,20 +160,13 @@ class ProviderLoaderService:
                     raise ProviderLoadError(
                         f"Failed to parse provider '{name}': {exc}"
                     ) from exc
-                nodes = parse_result.nodes
-                parsed_node_count = len(nodes)
-                for node in nodes:
-                    node.source_provider = name
-                provider_issues[name] = [
-                    replace(issue, source=name) for issue in parse_result.issues
-                ]
-                nodes = self._process_nodes(nodes, provider_config)
-                provider_summaries[name] = ProviderSummary(
-                    name=name,
-                    content_sha256=hashlib.sha256(content_bytes).hexdigest(),
-                    parsed_nodes=parsed_node_count,
-                    selected_nodes=len(nodes),
+                result = self._finish_parse(
+                    parse_result, provider_config,
+                    hashlib.sha256(content_bytes).hexdigest(),
                 )
+                nodes = result.providers[name]
+                provider_issues.update(result.issues)
+                provider_summaries.update(result.summaries)
                 logger.info(
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: "
                     f"[bold]{len(nodes)}[/bold] nodes"
@@ -121,6 +177,24 @@ class ProviderLoaderService:
             provider_issues,
             provider_metadata,
             provider_summaries,
+        )
+
+    @staticmethod
+    def _finish_parse(
+        result: ParseResult,
+        config: ProviderConfig,
+        digest: str,
+        metadata: RemoteMetadata | None = None,
+    ) -> ProviderLoadResult:
+        name = config.name
+        for node in result.nodes:
+            node.source_provider = name
+        nodes = ProviderLoaderService._process_nodes(result.nodes, config)
+        return ProviderLoadResult(
+            {name: nodes},
+            {name: [replace(issue, source=name) for issue in result.issues]},
+            {name: metadata} if metadata is not None else {},
+            {name: ProviderSummary(name, digest, len(result.nodes), len(nodes))},
         )
 
     @staticmethod

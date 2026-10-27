@@ -27,6 +27,10 @@ class SubioParser:
         self.parameters = dict(parameters) if parameters is not None else None
 
     def parse_result(self, content: Any) -> ParseResult:
+        return self.parse_document(self.decode_source(content))
+
+    @staticmethod
+    def decode_source(content: Any) -> tuple[Any, str]:
         if not isinstance(content, str):
             raise ValueError("Invalid content type for SubioParser")
 
@@ -69,7 +73,10 @@ class SubioParser:
                 "Error parsing subio provider: Unknown format "
                 "(tried toml, json, json5, yaml)"
             )
+        return data, source_format
 
+    def parse_document(self, document: tuple[Any, str]) -> ParseResult:
+        data, source_format = document
         if self.parameters is not None:
             data = bind_document_parameters(data, "nodes", self.parameters)
 

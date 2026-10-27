@@ -28,22 +28,26 @@ class ClashParser:
         self.parameters = dict(parameters) if parameters is not None else None
 
     def parse_result(self, content: Any) -> ParseResult:
+        return self.parse_document(self.decode_source(content))
+
+    @staticmethod
+    def decode_source(content: Any) -> Any:
         if isinstance(content, str):
             try:
-                data = yaml.safe_load(content)
+                return yaml.safe_load(content)
             except yaml.YAMLError as e:
                 raise ValueError(f"YAML parse error: {e}") from e
         elif isinstance(content, dict):
-            data = content
+            return content
         else:
             raise ValueError("Invalid content type for ClashParser")
 
+    def parse_document(self, data: Any) -> ParseResult:
         if self.parameters is not None:
             data = bind_document_parameters(data, "proxies", self.parameters)
         if not isinstance(data, dict):
             raise ValueError(
-                f"Invalid Clash config format: Expected dict, got {type(data)}. "
-                f"Content preview: {str(content)[:100]}"
+                f"Invalid Clash config format: Expected dict, got {type(data)}"
             )
 
         proxies = data.get("proxies")
