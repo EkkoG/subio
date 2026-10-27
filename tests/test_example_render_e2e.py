@@ -20,7 +20,7 @@ EXAMPLE_DIR = Path(__file__).resolve().parents[1] / "example" / "render"
 TOKEN = "synthetic_example_token_0123456789"
 
 
-@pytest.mark.parametrize("route,prefix", [("mihomo", "yaml"), ("native", "native")])
+@pytest.mark.parametrize("route,prefix", [("yaml-client.yaml", "yaml"), ("native-client.yaml", "native")])
 def test_shipped_render_example_is_offline_typed_and_unpublished(
     tmp_path, monkeypatch, route, prefix
 ):
@@ -58,7 +58,7 @@ def test_shipped_render_example_is_offline_typed_and_unpublished(
         "password": special, "controller_secret": special,
     }
     with TestClient(create_app(str(project / "config.toml"))) as client:
-        response = client.get(f"/render/{route}?" + urlencode(values))
+        response = client.get(f"/subscription/{route}?" + urlencode(values))
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/yaml"
         assert response.headers["content-disposition"] == "attachment"
@@ -77,7 +77,7 @@ def test_shipped_render_example_is_offline_typed_and_unpublished(
         assert rendered["proxy-groups"][0]["proxies"] == [node["name"]]
         assert rendered["rules"] == ["MATCH,Example"]
 
-        defaults = client.get(f"/render/{route}?" + urlencode({
+        defaults = client.get(f"/subscription/{route}?" + urlencode({
             "token": TOKEN, "username": "example-user", "password": "%2B%26%3D",
         }))
         assert defaults.status_code == 200

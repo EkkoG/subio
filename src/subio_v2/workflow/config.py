@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -13,7 +13,7 @@ import yaml
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.rules.config import RuleSetConfig
-from subio_v2.workflow.parameters import RenderConfig
+from subio_v2.workflow.parameters import ParameterSpec, parse_parameter_specs
 from subio_v2.workflow.selectors import SelectorSpec
 
 
@@ -111,7 +111,14 @@ class ArtifactConfig:
     upload: tuple[UploadConfig, ...] = ()
     selector: str | None = None
     on_duplicate_name: str = "error"
-    render: RenderConfig | None = None
+    params: Mapping[str, ParameterSpec] = field(default=MappingProxyType({}), repr=False)
+
+    def output_names(self) -> tuple[tuple[str, str | None], ...]:
+        """Pair each configured output filename with its fixed user context."""
+        return tuple(
+            (self.name.replace("{user}", user) if user is not None else self.name, user)
+            for user in self.users or (self.user,)
+        )
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ArtifactConfig:
@@ -135,10 +142,7 @@ class ArtifactConfig:
             ),
             selector=value.get("selector"),
             on_duplicate_name=value.get("on_duplicate_name", "error"),
-            render=(
-                RenderConfig.from_mapping(value["render"])
-                if "render" in value else None
-            ),
+            params=parse_parameter_specs(value.get("params", {})),
         )
 
 

@@ -197,9 +197,9 @@ def _fixture(tmp_path, family, case, *, empty_neighbors=False):
         "provider": [{"name": "source", "type": family, "file": "nodes.yaml", "parameterized": True}],
         "artifact": [{"name": "out.txt", "type": "v2rayn", "providers": ["source"],
                       "allow_conversion_errors": True,
-                      "render": {"route": "nested", "params": {
+                      "params": {
                           "value": {"type": "string", "required": True, "allow_empty": True},
-                      }}}],
+                      }}],
     }
     path = tmp_path / "config.json"
     path.write_text(json.dumps(data))
@@ -220,8 +220,8 @@ def test_nested_link_errors_block_prepare_and_http_before_partial_staging(
     from subio_v2 import server
 
     path, config = _fixture(tmp_path, family, case)
-    params = normalize_parameters(config.artifacts[0].render.params, [("value", value)])
-    engine = WorkflowEngine.for_render(str(path), config, "nested", params)
+    params = normalize_parameters(config.artifacts[0].params, [("value", value)])
+    engine = WorkflowEngine.for_render(str(path), config, "out.txt", params)
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged partial nested-link output"),
@@ -236,7 +236,7 @@ def test_nested_link_errors_block_prepare_and_http_before_partial_staging(
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/nested?" + urlencode({"token": token, "value": value}))
+        response = client.get("/subscription/out.txt?" + urlencode({"token": token, "value": value}))
     assert response.status_code == 422
     assert response.json() == {"error": "conversion_rejected"}
     assert response.headers["cache-control"] == "no-store, private"
@@ -253,12 +253,12 @@ def test_parameterized_empty_neighbors_roundtrip_through_prepare_and_http(
     from subio_v2 import server
 
     path, config = _fixture(tmp_path, family, case, empty_neighbors=True)
-    params = normalize_parameters(config.artifacts[0].render.params, [("value", "")])
-    prepared = WorkflowEngine.for_render(str(path), config, "nested", params).prepare()
+    params = normalize_parameters(config.artifacts[0].params, [("value", "")])
+    prepared = WorkflowEngine.for_render(str(path), config, "out.txt", params).prepare()
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/nested?" + urlencode({"token": token, "value": ""}))
+        response = client.get("/subscription/out.txt?" + urlencode({"token": token, "value": ""}))
     assert response.status_code == 200
     assert response.text == prepared.artifact_result.drafts[0].content
     result = get_parser("v2rayn").parse_result(response.text)
@@ -284,13 +284,13 @@ def test_nested_link_safe_neighbors_roundtrip_from_both_providers_over_http(
     from subio_v2 import server
 
     path, config = _fixture(tmp_path, family, case)
-    params = normalize_parameters(config.artifacts[0].render.params, [("value", value)])
-    prepared = WorkflowEngine.for_render(str(path), config, "nested", params).prepare()
+    params = normalize_parameters(config.artifacts[0].params, [("value", value)])
+    prepared = WorkflowEngine.for_render(str(path), config, "out.txt", params).prepare()
     content = prepared.artifact_result.drafts[0].content
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/nested?" + urlencode({"token": token, "value": value}))
+        response = client.get("/subscription/out.txt?" + urlencode({"token": token, "value": value}))
     assert response.status_code == 200
     assert response.text == content
     result = get_parser("v2rayn").parse_result(response.text)

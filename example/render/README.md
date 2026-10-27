@@ -1,9 +1,11 @@
 # Offline GET render example
 
 Run from the repository root. The two routes load separate local sources:
-`/render/mihomo` reads Mihomo YAML, and `/render/native` reads native SubIO v2
+`/subscription/yaml-client.yaml` reads Mihomo YAML, and `/subscription/native-client.yaml` reads native SubIO v2
 TOML. Both return one Mihomo client configuration. No uploader or remote input
 is configured, and the service does not write `dist` or a manifest.
+Paths use the existing artifact output filenames. No `render` block or route
+declaration is needed; typed parameters live under `artifact.params`.
 
 ```bash
 uv sync --extra server
@@ -14,7 +16,7 @@ uv run --extra server subio serve example/render/config.toml
 In another terminal with the same `SUBIO_RENDER_TOKEN` environment value:
 
 ```bash
-curl --get 'http://127.0.0.1:8000/render/mihomo' \
+curl --get 'http://127.0.0.1:8000/subscription/yaml-client.yaml' \
   --data-urlencode "token=${SUBIO_RENDER_TOKEN}" \
   --data-urlencode 'name=local-example' \
   --data-urlencode 'host=proxy.example.test' \
@@ -24,7 +26,7 @@ curl --get 'http://127.0.0.1:8000/render/mihomo' \
   --data-urlencode 'password=example + & = % # value' \
   --data-urlencode 'controller_secret=example-only'
 
-curl --get 'http://127.0.0.1:8000/render/native' \
+curl --get 'http://127.0.0.1:8000/subscription/native-client.yaml' \
   --data-urlencode "token=${SUBIO_RENDER_TOKEN}" \
   --data-urlencode 'username=example-user' \
   --data-urlencode 'password=example-only'

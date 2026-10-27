@@ -419,8 +419,10 @@ age key、密码或私钥。
 ### 7.3 GET 参数化渲染
 
 可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 loopback HTTP
-传输。`artifact.render` 声明路由和标量 schema；`workflow.parameters` 负责类型、默认值和请求约束。
-启动时从同一已验证配置快照构建路由；`SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
+传输。`GET /subscription/<file_name>` 按已配置输出文件名精确匹配，无需路由声明；
+`artifact.params` 声明标量 schema，`workflow.parameters` 负责类型、默认值和请求约束。
+启动时从同一已验证配置快照构建文件名索引，批量用户按已有命名规则展开并在请求中固定用户；
+`SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
 路由查询和 I/O 前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
 
 ```text
@@ -440,7 +442,7 @@ GET -> raw decode/limits -> URL token authentication -> route parameter validati
 或目标 serializer 写入合适上下文。该路径禁止 `run()`、发布、上传、manifest 和请求报告/结果缓存，
 任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。
 
-静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使路由声明了默认值。
+静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使 artifact 声明了默认值。
 普通源的最终模板可以使用所属 artifact 的参数默认值，缺失必填值在发布前失败。普通 provider 与旧模板
 维持既有行为；远程输入和其他输入族不能启用替换。
 

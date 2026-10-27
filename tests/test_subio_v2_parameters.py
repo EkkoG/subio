@@ -3,39 +3,38 @@ import json
 import pytest
 
 from subio_v2.core.errors import ConfigError
-from subio_v2.workflow.config import ConfigLoader
+from subio_v2.workflow.config import ArtifactConfig, ConfigLoader
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.parameters import (
     ParameterError,
     ParameterLimitError,
     ParameterSpec,
-    RenderConfig,
     normalize_parameters,
+    parse_parameter_specs,
 )
 
 
-def test_render_config_loads_typed_route_owned_declarations(tmp_path):
+def test_artifact_params_load_typed_declarations(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(json.dumps({
         "provider": [{"name": "p", "type": "clash-meta", "file": "p.yaml", "parameterized": True}],
         "artifact": [{
             "name": "a.yaml", "type": "mihomo", "providers": ["p"], "user": "alice",
-            "render": {"route": "demo_1", "params": {
+            "params": {
                 "host": {"type": "string", "default": "example.test"},
                 "port": {"type": "integer", "default": 1080, "min": 1, "max": 65535},
                 "tls": {"type": "boolean", "default": False},
                 "node_token": {"type": "string", "required": True},
-            }},
+            },
         }],
     }))
     config = ConfigLoader.load(str(path))
     assert config.providers[0].parameterized is True
-    render = config.artifacts[0].render
-    assert render.route == "demo_1"
-    assert render.params["port"].default == 1080
-    assert render.params["node_token"].required is True
+    params = config.artifacts[0].params
+    assert params["port"].default == 1080
+    assert params["node_token"].required is True
     with pytest.raises(TypeError):
-        render.params["added"] = render.params["host"]
+        params["added"] = params["host"]
 
 
 @pytest.mark.parametrize("declaration", [
@@ -69,27 +68,30 @@ def test_invalid_parameter_declarations_fail_without_values(declaration):
     assert "CANARY" not in str(error.value)
 
 
-@pytest.mark.parametrize("render", [
-    None, [], {}, {"route": "../other"}, {"route": "a/b"},
-    {"route": "x" * 65}, {"route": "demo", "params": []},
-    {"route": "demo", "params": {"token": {"type": "string", "required": True}}},
-    {"route": "demo", "params": {"bad-name": {"type": "string", "required": True}}},
-    {"route": "demo", "params": {"x" * 65: {"type": "string", "required": True}}},
-    {"route": "demo", "params": {"\u540d": {"type": "string", "required": True}}},
-    {"route": "demo", "params": {f"p{i}": {"type": "string", "required": True} for i in range(33)}},
-    {"route": "demo", "unknown": True},
+@pytest.mark.parametrize("params", [
+    None, [],
+    {"token": {"type": "string", "required": True}},
+    {"bad-name": {"type": "string", "required": True}},
+    {"x" * 65: {"type": "string", "required": True}},
+    {"\u540d": {"type": "string", "required": True}},
+    {f"p{i}": {"type": "string", "required": True} for i in range(33)},
 ])
-def test_render_declaration_shape_and_names_are_validated(render):
+def test_parameter_declaration_shape_and_names_are_validated(params):
     with pytest.raises(ConfigError):
+        ConfigValidator.validate({"artifact": [{"name": "a", "type": "mihomo", "params": params}]})
+
+
+@pytest.mark.parametrize("render", [None, {}, {"route": "demo"}])
+def test_legacy_render_declaration_has_migration_error(render):
+    with pytest.raises(ConfigError, match=r"move render.params to artifact.params"):
         ConfigValidator.validate({"artifact": [{"name": "a", "type": "mihomo", "render": render}]})
 
 
-def test_render_routes_are_unique_and_batch_users_are_rejected():
-    artifacts = [{"name": name, "type": "mihomo", "render": {"route": "demo"}} for name in ("a", "b")]
-    with pytest.raises(ConfigError, match="unique"):
-        ConfigValidator.validate({"artifact": artifacts})
-    with pytest.raises(ConfigError, match="batch"):
-        ConfigValidator.validate({"artifact": [{**artifacts[0], "users": []}]})
+def test_parameters_share_existing_output_filename_collision_validation():
+    artifact = {"name": "{user}.yaml", "type": "mihomo", "users": ["alice", "bob"], "params": {}}
+    ConfigValidator.validate({"artifact": [artifact]})
+    with pytest.raises(ConfigError, match="Duplicate artifact output name"):
+        ConfigValidator.validate({"artifact": [artifact, {"name": "alice.yaml", "type": "mihomo"}]})
 
 
 @pytest.mark.parametrize("provider", [
@@ -104,13 +106,13 @@ def test_parameterized_provider_requires_supported_local_opt_in(provider):
 
 
 def test_normalization_preserves_types_unicode_spaces_and_defaults():
-    render = RenderConfig.from_mapping({"route": "demo", "params": {
+    params = parse_parameter_specs({
         "name": {"type": "string", "required": True},
         "port": {"type": "integer", "required": True, "min": -10, "max": 100},
         "tls": {"type": "boolean", "default": True, "choices": [True, False]},
         "self": {"type": "string", "default": "" , "allow_empty": True},
-    }})
-    values = normalize_parameters(render.params, [("name", " \u540d+&=%# "), ("port", "+0010"), ("tls", "false")])
+    })
+    values = normalize_parameters(params, [("name", " \u540d+&=%# "), ("port", "+0010"), ("tls", "false")])
     assert dict(values) == {"name": " \u540d+&=%# ", "port": 10, "tls": False, "self": ""}
     assert type(values["port"]) is int
     assert type(values["tls"]) is bool
@@ -151,19 +153,20 @@ def test_normalization_rejects_missing_duplicate_unknown_and_size_limits():
         normalize_parameters(declarations, [(name, "x") for name in declarations])
 
 
-def test_routes_over_one_provider_have_independent_defaults_and_constraints():
-    a = RenderConfig.from_mapping({"route": "a", "params": {"port": {"type": "integer", "default": 80, "max": 100}}})
-    b = RenderConfig.from_mapping({"route": "b", "params": {"port": {"type": "integer", "default": 443, "min": 101}}})
-    assert normalize_parameters(a.params, [])["port"] == 80
-    assert normalize_parameters(b.params, [])["port"] == 443
+def test_artifact_parameters_have_independent_defaults_and_constraints():
+    a = parse_parameter_specs({"port": {"type": "integer", "default": 80, "max": 100}})
+    b = parse_parameter_specs({"port": {"type": "integer", "default": 443, "min": 101}})
+    assert normalize_parameters(a, [])["port"] == 80
+    assert normalize_parameters(b, [])["port"] == 443
     with pytest.raises(ParameterError):
-        normalize_parameters(a.params, [("port", "443")])
-    assert normalize_parameters(b.params, [("port", "443")])["port"] == 443
+        normalize_parameters(a, [("port", "443")])
+    assert normalize_parameters(b, [("port", "443")])["port"] == 443
 
 
 def test_config_reprs_do_not_include_parameter_defaults_or_choices():
-    render = RenderConfig.from_mapping({"route": "demo", "params": {
+    artifact = {"name": "a", "type": "mihomo", "params": {
         "credential": {"type": "string", "default": "CANARY", "choices": ["CANARY"]},
-    }})
-    assert "CANARY" not in repr(render)
-    assert "CANARY" not in repr(render.params["credential"])
+    }}
+    config = ArtifactConfig.from_mapping(artifact)
+    assert "CANARY" not in repr(config)
+    assert "CANARY" not in repr(config.params["credential"])

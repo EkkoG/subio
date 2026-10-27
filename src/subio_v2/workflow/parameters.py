@@ -12,7 +12,6 @@ from subio_v2.core.parameters import ParameterValue
 
 
 _NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z", re.ASCII)
-_ROUTE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z", re.ASCII)
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z", re.ASCII)
 _TYPES = {"string": str, "integer": int, "boolean": bool}
 
@@ -106,29 +105,17 @@ class ParameterSpec:
             raise ParameterError("Rendering parameter is not an allowed choice")
 
 
-@dataclass(frozen=True)
-class RenderConfig:
-    route: str
-    params: Mapping[str, ParameterSpec] = field(repr=False)
-
-    @classmethod
-    def from_mapping(cls, value: Any) -> RenderConfig:
-        if not isinstance(value, dict) or set(value) - {"route", "params"}:
-            raise ConfigError("Artifact render must be an object with route and params")
-        route = value.get("route")
-        if not isinstance(route, str) or not _ROUTE.fullmatch(route):
-            raise ConfigError("Artifact render route must be a safe URL segment of at most 64 characters")
-        params = value.get("params", {})
-        if not isinstance(params, dict) or len(params) > 32:
-            raise ConfigError("Artifact render params must be an object with at most 32 entries")
-        if any(
-            not isinstance(name, str) or not _NAME.fullmatch(name) or name == "token"
-            for name in params
-        ):
-            raise ConfigError("Render parameter names must be ASCII identifiers; token is reserved")
-        return cls(route, MappingProxyType({
-            name: ParameterSpec.from_mapping(spec) for name, spec in params.items()
-        }))
+def parse_parameter_specs(value: Any) -> Mapping[str, ParameterSpec]:
+    if not isinstance(value, dict) or len(value) > 32:
+        raise ConfigError("Artifact params must be an object with at most 32 entries")
+    if any(
+        not isinstance(name, str) or not _NAME.fullmatch(name) or name == "token"
+        for name in value
+    ):
+        raise ConfigError("Render parameter names must be ASCII identifiers; token is reserved")
+    return MappingProxyType({
+        name: ParameterSpec.from_mapping(spec) for name, spec in value.items()
+    })
 
 
 def normalize_parameters(

@@ -66,7 +66,7 @@ def _fixture(tmp_path, *, native=False, parameterized=True):
                 "type": "mihomo",
                 "providers": ["source"],
                 "template": "client.j2",
-                "render": {"route": "a", "params": params},
+                "params": params,
             }
         ],
     }
@@ -79,14 +79,14 @@ def _snapshot(path, data):
     return ConfigLoader.load(str(path))
 
 
-def _engine(path, config, route="a", pairs=()):
+def _engine(path, config, file_name="out.yaml", pairs=()):
     artifact = next(
         item
         for item in config.artifacts
-        if item.render is not None and item.render.route == route
+        if any(name == file_name for name, _ in item.output_names())
     )
-    parameters = normalize_parameters(artifact.render.params, pairs)
-    return WorkflowEngine.for_render(str(path), config, route, parameters)
+    parameters = normalize_parameters(artifact.params, pairs)
+    return WorkflowEngine.for_render(str(path), config, file_name, parameters)
 
 
 @pytest.mark.parametrize("native", [False, True])
@@ -179,8 +179,8 @@ def test_static_template_defaults_work_and_required_values_block_publication(
     config = _snapshot(path, data)
     output = WorkflowEngine(str(path)).prepare().artifact_result.drafts[0].content
     assert yaml.safe_load(output)["values"]["port"] == 80
-    assert config.artifacts[0].render.params["port"].default == 80
-    data["artifact"][0]["render"]["params"]["credential"] = {
+    assert config.artifacts[0].params["port"].default == 80
+    data["artifact"][0]["params"]["credential"] = {
         "type": "string",
         "required": True,
     }
@@ -198,11 +198,11 @@ def test_static_template_defaults_work_and_required_values_block_publication(
     assert not (tmp_path / "dist").exists()
 
 
-def test_params_namespace_is_nested_immutable_and_only_render_opted(
+def test_params_namespace_is_nested_immutable_and_static_defaults_are_opted_in(
     tmp_path, monkeypatch
 ):
     path, data = _fixture(tmp_path, parameterized=False)
-    data["artifact"][0]["render"]["params"].update(
+    data["artifact"][0]["params"].update(
         {
             "self": {"type": "string", "default": "self-value"},
             "items": {"type": "string", "default": "items-value"},
@@ -212,8 +212,8 @@ def test_params_namespace_is_nested_immutable_and_only_render_opted(
         '{{ params["self"] }}|{{ params["items"] }}|{{ credential is undefined }}'
     )
     config = _snapshot(path, data)
-    runtime = dict(normalize_parameters(config.artifacts[0].render.params, ()))
-    engine = WorkflowEngine.for_render(str(path), config, "a", runtime)
+    runtime = dict(normalize_parameters(config.artifacts[0].params, ()))
+    engine = WorkflowEngine.for_render(str(path), config, "out.yaml", runtime)
     runtime["self"] = "changed after engine construction"
     render_result = engine.renderer.render_result
     contexts = []
@@ -230,7 +230,7 @@ def test_params_namespace_is_nested_immutable_and_only_render_opted(
         == "self-value|items-value|True"
     )
     assert "self" not in contexts[0] and "credential" not in contexts[0]
-    data["artifact"][0].pop("render")
+    data["artifact"][0].pop("params")
     _snapshot(path, data)
     (tmp_path / "client.j2").write_text("{{ params is undefined }}")
     assert (
@@ -248,7 +248,7 @@ def test_scoped_singbox_json_uses_params_serialization_and_normal_node_fragments
     )
     config = _snapshot(path, data)
     output = (
-        _engine(path, config, pairs=[("credential", 'literal " & {{ 7 * 7 }}')])
+        _engine(path, config, "out.json", pairs=[("credential", 'literal " & {{ 7 * 7 }}')])
         .prepare()
         .artifact_result.drafts[0]
         .content
@@ -560,13 +560,10 @@ def test_two_routes_get_fresh_concurrent_state_and_independent_defaults(
     second.update(
         {
             "name": "b.yaml",
-            "render": {
-                "route": "b",
-                "params": {
-                    **second["render"]["params"],
-                    "name": {"type": "string", "default": "route-b"},
-                    "port": {"type": "integer", "default": 443, "min": 101, "max": 500},
-                },
+            "params": {
+                **second["params"],
+                "name": {"type": "string", "default": "route-b"},
+                "port": {"type": "integer", "default": 443, "min": 101, "max": 500},
             },
         }
     )
@@ -577,7 +574,8 @@ def test_two_routes_get_fresh_concurrent_state_and_independent_defaults(
     (tmp_path / "snippet").mkdir()
     (tmp_path / "snippet" / "shared").write_text("policy\nDOMAIN,example.test")
     engines = [
-        _engine(path, config, route, [("credential", route)]) for route in ("a", "b")
+        _engine(path, config, file_name, [("credential", value)])
+        for file_name, value in (("out.yaml", "a"), ("b.yaml", "b"))
     ]
     assert engines[0].renderer is not engines[1].renderer
     assert engines[0]._local_rulesets is not engines[1]._local_rulesets
@@ -679,12 +677,12 @@ def test_failed_request_closes_loader_and_next_request_has_fresh_nodes(
     assert all(loader._session is None for loader in loaders)
 
 
-def test_unknown_route_is_rejected_before_snippet_io(tmp_path, monkeypatch):
+def test_unknown_filename_is_rejected_before_snippet_io(tmp_path, monkeypatch):
     path, data = _fixture(tmp_path)
     config = _snapshot(path, data)
     monkeypatch.setattr(
         "subio_v2.workflow.engine.load_snippets",
         lambda *_: pytest.fail("Loaded snippets"),
     )
-    with pytest.raises(ConfigError, match="Unknown artifact render route"):
+    with pytest.raises(ConfigError, match="Unknown subscription filename"):
         WorkflowEngine.for_render(str(path), config, "unconfigured", {})

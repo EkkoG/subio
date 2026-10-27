@@ -109,21 +109,24 @@ class WorkflowEngine:
         cls,
         config_path: str,
         config: RunConfig,
-        route: str,
+        file_name: str,
         parameters: Mapping[str, ParameterValue],
     ) -> "WorkflowEngine":
         """Create a prepare-only engine from a snapshot and normalized parameters."""
-        artifact = next(
+        selected = next(
             (
-                item for item in config.artifacts
-                if item.render is not None and item.render.route == route
+                (item, user) for item in config.artifacts
+                for output_name, user in item.output_names() if output_name == file_name
             ),
             None,
         )
-        if artifact is None:
-            raise ConfigError("Unknown artifact render route")
+        if selected is None:
+            raise ConfigError("Unknown subscription filename")
+        artifact, user = selected
         selected_artifact = replace(
             artifact,
+            users=(),
+            user=user,
             allow_conversion_errors=False,
             upload=(),
             options=MappingProxyType(copy.deepcopy(dict(artifact.options))),

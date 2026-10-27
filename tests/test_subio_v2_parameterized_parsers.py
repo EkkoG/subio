@@ -11,7 +11,7 @@ from subio_v2.core.errors import ProviderLoadError
 from subio_v2.core.nodes import SourcePassthroughNode
 from subio_v2.core.parameters import bind_document_parameters
 from subio_v2.workflow.config import RunConfig
-from subio_v2.workflow.parameters import RenderConfig, normalize_parameters
+from subio_v2.workflow.parameters import normalize_parameters, parse_parameter_specs
 from subio_v2.workflow.providers import ProviderLoaderService
 
 
@@ -19,14 +19,14 @@ PAYLOAD = "literal \"' &:[]=+#% {{ params.host }} {{ 7 * 7 }} {% include 'x' %}"
 
 
 def _values():
-    render = RenderConfig.from_mapping({"route": "demo", "params": {
+    params = parse_parameter_specs({
         "host": {"type": "string", "required": True},
         "port": {"type": "integer", "required": True},
         "tls": {"type": "boolean", "required": True},
         "credential": {"type": "string", "required": True},
         "node_token": {"type": "string", "required": True},
-    }})
-    return normalize_parameters(render.params, [
+    })
+    return normalize_parameters(params, [
         ("host", "proxy.example.test"), ("port", "1080"), ("tls", "true"),
         ("credential", PAYLOAD), ("node_token", "synthetic-token"),
     ])

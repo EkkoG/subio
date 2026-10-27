@@ -136,10 +136,10 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 | 能力 | 当前范围 |
 |---|---|
 | 服务入口 | 可选 `server` extra；`subio serve CONFIG [--port 8000]`，固定 `127.0.0.1` |
-| 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部暴露路由 |
+| 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部已配置 artifact |
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
-| 参数值 | 路由声明的 string/integer/boolean，节点子树中任意合法标量及嵌套/静态列表元素；不按凭据字段名限制 |
-| 输出 | 一个声明了 `artifact.render.route` 的正常 artifact，可有固定 `user` 和 Age；不支持批量 `users` 暴露 |
+| 参数值 | `artifact.params` 声明的 string/integer/boolean，节点子树中任意合法标量及嵌套/静态列表元素；不按凭据字段名限制 |
+| 输出 | `GET /subscription/<file_name>` 直接使用已有输出文件名，无需 `render`；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
 | 模板 | 可信最终 Jinja 获得不可变 `params`；provider 只支持一次标量 token 替换，不执行 Jinja |
 | HTTP 副作用 | 无文件发布、上传、manifest、请求报告或结果缓存；已有未改变上游响应缓存独立存在 |
 
@@ -149,7 +149,7 @@ URL、模板、target 或用户选择。原生 v2 字段/节点与目标校验�
 conversion ERROR gate 不能通过静态 `allow_conversion_errors` 放行。
 
 参数化源配置在静态 `convert/check/inspect` 于 provider/ruleset I/O 前拒绝，包括全部有默认值的情况。
-普通源的最终模板可使用自身 render 默认值，缺少必填值会阻止发布。源替换只覆盖节点子树标量，
+普通源的最终模板可使用自身 params 默认值，缺少必填值会阻止发布。源替换只覆盖节点子树标量，
 YAML 循环和会产生 tuple 的 `!!pairs` / `!!omap` 拒绝。部署、编码、限额和 GET 凭据暴露风险见
 [GET 渲染指南](get_rendering.md) 与 [离线示例](../example/render/README.md)。
 

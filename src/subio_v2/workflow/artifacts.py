@@ -156,12 +156,12 @@ class ArtifactGenerationService:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
         parameters = None
-        if artifact_config.render is not None:
+        if self.parameters is not None or artifact_config.params:
             try:
                 parameters = (
                     self.parameters
                     if self.parameters is not None
-                    else normalize_parameters(artifact_config.render.params, ())
+                    else normalize_parameters(artifact_config.params, ())
                 )
             except ParameterError:
                 raise ArtifactGenerationError(

@@ -106,10 +106,12 @@ class _RenderService:
         self._token = token.encode("ascii")
         self.config_path = config_path
         self.config = ConfigLoader.load(config_path)
-        self.routes = {
-            "/render/" + item.render.route: item
-            for item in self.config.artifacts if item.render is not None
-        }
+        self.routes = {}
+        for item in self.config.artifacts:
+            for file_name, _ in item.output_names():
+                if "/" in file_name or "\\" in file_name or file_name in {".", ".."}:
+                    raise ServerConfigurationError("Subscription names must be filenames")
+                self.routes["/subscription/" + file_name] = item
         self._slots = threading.BoundedSemaphore(4)
         self._executor = None
 
@@ -124,10 +126,10 @@ class _RenderService:
                 await asyncio.to_thread(self._executor.shutdown, wait=True)
                 self._executor = None
 
-    def _render(self, artifact, parameters) -> Response:
+    def _render(self, file_name, artifact, parameters) -> Response:
         try:
             engine = WorkflowEngine.for_render(
-                self.config_path, self.config, artifact.render.route, parameters
+                self.config_path, self.config, file_name, parameters
             )
             drafts = engine.prepare().artifact_result.drafts
             if len(drafts) != 1:
@@ -179,7 +181,7 @@ class _RenderService:
             return _error(405)
         try:
             parameters = normalize_parameters(
-                artifact.render.params, ((name, value) for name, value in pairs if name != "token")
+                artifact.params, ((name, value) for name, value in pairs if name != "token")
             )
         except ParameterLimitError:
             return _error(413)
@@ -191,7 +193,7 @@ class _RenderService:
             return _error(503)
         try:
             future = asyncio.get_running_loop().run_in_executor(
-                self._executor, self._render, artifact, parameters
+                self._executor, self._render, path.removeprefix("/subscription/"), artifact, parameters
             )
         except BaseException:
             self._slots.release()

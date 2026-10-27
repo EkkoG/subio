@@ -8,7 +8,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from urllib.error import HTTPError
-from urllib.parse import unquote_to_bytes, urlencode
+from urllib.parse import quote, unquote_to_bytes, urlencode
 from urllib.request import urlopen
 
 import pytest
@@ -67,7 +67,7 @@ def _fixture(tmp_path, family="mihomo", serialization="yaml"):
     data = {
         "provider": [{"name": "source", "type": family, "file": source.name, "parameterized": True}],
         "artifact": [{"name": "out.yaml", "type": "mihomo", "template": "client.j2",
-                      "providers": ["source"], "render": {"route": "demo", "params": params}}],
+                      "providers": ["source"], "params": params}],
     }
     path = tmp_path / "config.json"
     _save(path, data)
@@ -95,7 +95,7 @@ def _service(app):
     return app.user_middleware[0].kwargs["service"]
 
 
-async def _raw_request(app, path=b"/render/demo", query=b"", method="GET", *, disconnect=False):
+async def _raw_request(app, path=b"/subscription/out.yaml", query=b"", method="GET", *, disconnect=False):
     messages = []
     scope = {
         "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
@@ -136,7 +136,7 @@ def test_headerless_get_decodes_once_and_renders_both_families(tmp_path, monkeyp
 
     monkeypatch.setattr(WorkflowEngine, "for_render", capture)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query(credential=special, port="+1081", enabled="true"))
+        response = client.get("/subscription/out.yaml?" + _query(credential=special, port="+1081", enabled="true"))
         assert response.status_code == 200
         _headers(response)
         assert response.headers["content-type"] == "application/yaml"
@@ -148,11 +148,11 @@ def test_headerless_get_decodes_once_and_renders_both_families(tmp_path, monkeyp
         assert output["values"]["enabled"] is True
         assert output["values"] == calls[0]
         assert TOKEN not in response.text
-        response = client.get("/render/demo?" + _query(credential="%2B%26%3D%25%23"))
+        response = client.get("/subscription/out.yaml?" + _query(credential="%2B%26%3D%25%23"))
         assert yaml.safe_load(response.text)["proxies"][0]["password"] == "%2B%26%3D%25%23"
-        response = client.get("/render/demo?token=" + TOKEN + "&credential=a+b%2Bc")
+        response = client.get("/subscription/out.yaml?token=" + TOKEN + "&credential=a+b%2Bc")
         assert yaml.safe_load(response.text)["values"]["credential"] == "a b+c"
-        response = client.get("/render/demo?%74oken=" + TOKEN + "&credential=x")
+        response = client.get("/subscription/out.yaml?%74oken=" + TOKEN + "&credential=x")
         assert response.status_code == 200
 
 
@@ -204,16 +204,16 @@ def test_authentication_precedes_route_normalization_admission_and_all_input_io(
 
 
 @pytest.mark.parametrize("path,query,status", [
-    (b"/render/demo", b"token=%", 400),
-    (b"/render/demo", b"token=%GG", 400),
-    (b"/render/demo", b"token=%FF", 400),
-    (b"/render/demo", b"%FF=value", 400),
-    (b"/render/%FF", b"", 400),
-    (b"/render/%", b"", 400),
-    (b"/render/demo", b"token=%C0%AF", 400),
-    (b"/render/demo", b"token=wrong&" + b"&".join([b"x=1"] * 33), 413),
+    (b"/subscription/out.yaml", b"token=%", 400),
+    (b"/subscription/out.yaml", b"token=%GG", 400),
+    (b"/subscription/out.yaml", b"token=%FF", 400),
+    (b"/subscription/out.yaml", b"%FF=value", 400),
+    (b"/subscription/%FF", b"", 400),
+    (b"/subscription/%", b"", 400),
+    (b"/subscription/out.yaml", b"token=%C0%AF", 400),
+    (b"/subscription/out.yaml", b"token=wrong&" + b"&".join([b"x=1"] * 33), 413),
     (b"/" + b"x" * 8192, b"", 413),
-    (b"/render/demo", b"x=" + b"x" * 8192, 413),
+    (b"/subscription/out.yaml", b"x=" + b"x" * 8192, 413),
 ])
 def test_raw_limits_and_encoding_are_checked_before_auth(tmp_path, monkeypatch, path, query, status):
     config_path, _ = _fixture(tmp_path)
@@ -241,17 +241,17 @@ def test_semantic_rejections_precede_construction_and_loading(tmp_path, monkeypa
     app = server.create_app(str(path))
     monkeypatch.setattr(WorkflowEngine, "for_render", lambda *_: pytest.fail("Constructed invalid render"))
     with TestClient(app) as client:
-        response = client.get("/render/demo?" + _query() + suffix)
+        response = client.get("/subscription/out.yaml?" + _query() + suffix)
         assert response.status_code == status
         _headers(response)
         assert SECRET not in response.text and TOKEN not in response.text
-        response = client.get("/render/demo?token=" + TOKEN)
+        response = client.get("/subscription/out.yaml?token=" + TOKEN)
         assert response.status_code == 400
 
 
 def test_exact_raw_and_decoded_value_boundaries(tmp_path):
     path, data = _fixture(tmp_path)
-    params = data["artifact"][0]["render"]["params"]
+    params = data["artifact"][0]["params"]
     params["credential"] = {"type": "string", "required": True, "allow_empty": True}
     for index in range(26):
         params["field_" + str(index)] = {"type": "string", "default": "default"}
@@ -259,11 +259,11 @@ def test_exact_raw_and_decoded_value_boundaries(tmp_path):
     _save(path, data)
     app = server.create_app(str(path))
     with TestClient(app) as client:
-        response = client.get("/render/demo?" + _query(credential="雪" * 341 + "x"))
+        response = client.get("/subscription/out.yaml?" + _query(credential="雪" * 341 + "x"))
         assert response.status_code == 200
         fields = {name: "x" for name in params}
         fields.update(port="1080", enabled="false", credential="")
-        response = client.get("/render/demo?" + _query(**fields))
+        response = client.get("/subscription/out.yaml?" + _query(**fields))
         assert response.status_code == 200
         response = asyncio.run(_raw_request(app, b"/" + b"x" * 8191))
         assert response.status_code == 401
@@ -277,16 +277,22 @@ def test_every_non_get_method_is_fixed_405_without_framework_redirects_or_io(tmp
     app = server.create_app(str(path))
     monkeypatch.setattr(WorkflowEngine, "for_render", lambda *_: pytest.fail("Constructed non-GET render"))
     with TestClient(app) as client:
-        response = client.request(method, "/render/demo?" + _query(), follow_redirects=False)
+        response = client.request(method, "/subscription/out.yaml?" + _query(), follow_redirects=False)
         assert response.status_code == 405
         _headers(response)
         if method != "HEAD":
             assert response.json() == {"error": "method_not_allowed"}
-        response = client.request(method, "/render/demo?token=wrong")
+        response = client.request(method, "/subscription/out.yaml?token=wrong")
         assert response.status_code == 401
 
 
-@pytest.mark.parametrize("target", ["/", "/render", "/render/", "/render/demo/", "/render/unknown", "/docs", "/openapi.json", "/render/demo%0A"])
+@pytest.mark.parametrize("target", [
+    "/", "/subscription", "/subscription/", "/subscription/out.yaml/",
+    "/subscription/unknown", "/subscription/OUT.yaml", "/subscription/out.yaml%0A",
+    "/render/demo", "/docs", "/openapi.json",
+    "/subscription/%2E%2E%2Fconfig.json", "/subscription/%2Fetc%2Fpasswd",
+    "/subscription/..%5Cconfig.json", "/subscription/%252E%252E%252Fconfig.json",
+])
 def test_unknown_paths_are_safe_404_with_no_enumeration_or_redirect(tmp_path, monkeypatch, target):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
@@ -298,6 +304,67 @@ def test_unknown_paths_are_safe_404_with_no_enumeration_or_redirect(tmp_path, mo
         _headers(response)
 
 
+@pytest.mark.parametrize("file_name", ["out.yaml", "\u5ba2\u6237 +%#?.yaml", "%2F.yaml"])
+def test_existing_artifact_needs_no_params_or_render_and_matches_decoded_filename(tmp_path, file_name):
+    path, data = _fixture(tmp_path)
+    data["provider"][0].pop("parameterized")
+    data["artifact"][0].pop("params")
+    data["artifact"][0]["name"] = file_name
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump({"proxies": [{
+        "name": "static", "type": "socks5", "server": "example.test", "port": 1080,
+    }]}))
+    _save(path, data)
+    target = "/subscription/" + quote(file_name, safe="")
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get(target, params={"token": TOKEN})
+        assert response.status_code == 200
+        assert yaml.safe_load(response.text)["proxies"][0]["name"] == "static"
+        assert yaml.safe_load(response.text)["values"] == {}
+        assert response.headers["content-disposition"] == "attachment"
+        assert client.get(target, params={"token": TOKEN, "unknown": "value"}).status_code == 400
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("batch", [False, True])
+def test_expanded_filename_selects_one_configured_user(tmp_path, family, batch):
+    path, data = _fixture(tmp_path, family)
+    artifact = data["artifact"][0]
+    artifact["name"] = "user-{user}.yaml"
+    artifact.update({"users": ["alice", "bob"]} if batch else {"user": "alice"})
+    artifact["params"]["user"] = {"type": "string", "default": "unrelated-template-value"}
+    document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+    nodes = document["nodes" if family == "subio" else "proxies"]
+    nodes[0]["users"] = {
+        "alice": {"username": "alice-static", "password": "alice-{{ params.credential }}"},
+        "bob": {"username": "bob-static", "password": "bob-{{ params.credential }}"},
+    }
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    _save(path, data)
+    with TestClient(server.create_app(str(path))) as client:
+        for user in (["alice", "bob"] if batch else ["alice"]):
+            response = client.get("/subscription/user-" + user + ".yaml?" + _query(user="bob"))
+            assert response.status_code == 200
+            output = yaml.safe_load(response.text)
+            assert len(output["proxies"]) == 1
+            assert output["proxies"][0]["username"] == user + "-static"
+            assert output["proxies"][0]["password"] == user + "-" + SECRET
+            assert output["values"]["user"] == "bob"
+        for file_name in (["user-{user}.yaml", "user-mallory.yaml"] + ([] if batch else ["user-bob.yaml"])):
+            response = client.get("/subscription/" + quote(file_name, safe="") + "?" + _query())
+            assert response.status_code == 404
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("name", ["../out.yaml", "/out.yaml", "a/b.yaml", "a\\b.yaml", ".", ".."])
+def test_service_rejects_configured_paths_instead_of_filenames(tmp_path, name):
+    path, data = _fixture(tmp_path)
+    data["artifact"][0]["name"] = name
+    _save(path, data)
+    with pytest.raises(server.ServerConfigurationError, match="filenames"):
+        server.create_app(str(path))
+
+
 def test_startup_snapshot_and_secret_are_read_once(tmp_path, monkeypatch):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
@@ -305,14 +372,14 @@ def test_startup_snapshot_and_secret_are_read_once(tmp_path, monkeypatch):
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", "changed_token_value_0123456789012345")
     monkeypatch.setattr(server.ConfigLoader, "load", lambda *_: pytest.fail("Reread startup config"))
     with TestClient(app) as client:
-        assert client.get("/render/demo?" + _query()).status_code == 200
-        assert client.get("/render/demo?" + _query(token="changed_token_value_0123456789012345")).status_code == 401
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+        assert client.get("/subscription/out.yaml?" + _query(token="changed_token_value_0123456789012345")).status_code == 401
 
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
 def test_control_token_is_excluded_but_node_token_can_bind(tmp_path, family):
     path, data = _fixture(tmp_path, family)
-    params = data["artifact"][0]["render"]["params"]
+    params = data["artifact"][0]["params"]
     params["node_token"] = {"type": "string", "required": True}
     node = {"name": "tuic", "type": "tuic", "server": "proxy.example.test", "port": 443,
             "token": "{{ params.node_token }}"}
@@ -324,7 +391,7 @@ def test_control_token_is_excluded_but_node_token_can_bind(tmp_path, family):
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query(node_token="synthetic_node_token"))
+        response = client.get("/subscription/out.yaml?" + _query(node_token="synthetic_node_token"))
         assert response.status_code == 200
         output = yaml.safe_load(response.text)
         assert output["proxies"][0]["token"] == "synthetic_node_token"
@@ -345,7 +412,7 @@ def test_success_media_and_attachment_use_configured_target(tmp_path, target, me
         data["artifact"][0].pop("template")
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query())
+        response = client.get("/subscription/operator-chosen-name?" + _query())
         assert response.status_code == 200
         _headers(response)
         assert response.headers["content-type"] == media
@@ -368,7 +435,7 @@ def test_age_content_and_fixed_user_use_existing_preparation(tmp_path, global_ke
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query())
+        response = client.get("/subscription/out.yaml?" + _query())
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/octet-stream"
         _headers(response)
@@ -389,7 +456,7 @@ def test_parse_and_target_errors_reject_partial_output_despite_static_optouts(tm
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query())
+        response = client.get("/subscription/out.yaml?" + _query())
         assert response.status_code == 422
         assert response.json() == {"error": "conversion_rejected"}
         assert SECRET not in response.text and "proxies" not in response.text
@@ -407,7 +474,7 @@ def test_target_encoding_rejection_is_422_before_a_draft_exists(tmp_path, family
     data["allow_conversion_errors"] = True
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query(host="good.example#fragment"))
+        response = client.get("/subscription/out.yaml?" + _query(host="good.example#fragment"))
         assert response.status_code == 422
         assert response.json() == {"error": "conversion_rejected"}
         _headers(response)
@@ -422,7 +489,7 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
     data["allow_conversion_errors"] = True
     artifact = data["artifact"][0]
     artifact["allow_conversion_errors"] = True
-    artifact["render"]["params"]["port"] = {"type": "integer", "required": True}
+    artifact["params"]["port"] = {"type": "integer", "required": True}
     source = tmp_path / "nodes.yaml"
     document = yaml.safe_load(source.read_text())
     nodes = document["nodes" if family == "subio" else "proxies"]
@@ -444,7 +511,7 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
     with caplog.at_level(logging.DEBUG), TestClient(server.create_app(str(path))) as client:
         for port in (1081, 0, 1082):
             staged.clear()
-            response = client.get("/render/demo?" + _query(port=port))
+            response = client.get("/subscription/out.yaml?" + _query(port=port))
             _headers(response)
             if port == 0:
                 assert response.status_code == 422
@@ -498,14 +565,14 @@ def test_actual_failure_paths_are_sanitized_and_recover(tmp_path, monkeypatch, c
     if failure == "template":
         (tmp_path / "client.j2").write_text("{{ " + SECRET + " }}")
     with caplog.at_level(logging.DEBUG), TestClient(server.create_app(str(path))) as client:
-        response = client.get("/render/demo?" + _query())
+        response = client.get("/subscription/out.yaml?" + _query())
         assert response.status_code == status
         _headers(response)
         assert response.json() == {"error": "upstream_error" if status == 502 else "internal_error"}
         working["value"] = True
         (tmp_path / "nodes.yaml").write_text(original_source)
         (tmp_path / "client.j2").write_text(original_template)
-        assert client.get("/render/demo?" + _query()).status_code == 200
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
     captured = capsys.readouterr()
     # HTTPX is the test client, and deliberately logs its own outgoing URL at INFO.
     application_logs = "\n".join(record.getMessage() for record in caplog.records if record.name != "httpx")
@@ -540,7 +607,7 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
     before = {item.relative_to(tmp_path) for item in tmp_path.rglob("*")}
     with TestClient(server.create_app(str(path))) as client:
         for credential in (SECRET, "second_request_canary"):
-            response = client.get("/render/demo?" + _query(credential=credential))
+            response = client.get("/subscription/out.yaml?" + _query(credential=credential))
             assert response.status_code == 200
             assert yaml.safe_load(response.text)["values"]["credential"] == credential
     assert len(upstream) == len(cache) == 2
@@ -557,9 +624,8 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
     path, data = _fixture(tmp_path)
     second = copy.deepcopy(data["artifact"][0])
     second["name"] = "second.yaml"
-    second["render"]["route"] = "other"
-    second["render"]["params"]["port"] = {"type": "integer", "default": 9080, "min": 9000, "max": 9999}
-    second["render"]["params"]["name"]["default"] = "other-default"
+    second["params"]["port"] = {"type": "integer", "default": 9080, "min": 9000, "max": 9999}
+    second["params"]["name"]["default"] = "other-default"
     data["artifact"].append(second)
     _save(path, data)
     barrier = threading.Barrier(2)
@@ -575,8 +641,8 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
     with TestClient(server.create_app(str(path))) as client:
         assert logger._quiet
         with ThreadPoolExecutor(max_workers=2) as pool:
-            first = pool.submit(client.get, "/render/demo?" + _query(credential="first-secret"))
-            second = pool.submit(client.get, "/render/other?" + _query(credential="second-secret"))
+            first = pool.submit(client.get, "/subscription/out.yaml?" + _query(credential="first-secret"))
+            second = pool.submit(client.get, "/subscription/second.yaml?" + _query(credential="second-secret"))
             responses = [first.result(timeout=10), second.result(timeout=10)]
         for response, name, port, credential in zip(responses, ("default-name", "other-default"), (1080, 9080), ("first-secret", "second-secret")):
             assert response.status_code == 200
@@ -586,8 +652,8 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
             assert output["proxies"][0]["password"] == credential
         assert logger._quiet
         monkeypatch.setattr(ProviderLoaderService, "load", load)
-        assert client.get("/render/other?" + _query(port="1080")).status_code == 400
-        assert client.get("/render/demo?" + _query()).status_code == 200
+        assert client.get("/subscription/second.yaml?" + _query(port="1080")).status_code == 400
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
     assert logger._quiet is previous
 
 
@@ -688,19 +754,19 @@ def test_real_loopback_disconnects_keep_four_running_workers_admitted(tmp_path, 
         assert running.started
         for _ in range(4):
             connection = socket.create_connection(("127.0.0.1", port), timeout=2)
-            request = "GET /render/demo?" + _query() + " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+            request = "GET /subscription/out.yaml?" + _query() + " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
             connection.sendall(request.encode("ascii"))
             connection.close()
         started.wait(timeout=5)
         with pytest.raises(HTTPError) as caught:
-            urlopen(f"http://127.0.0.1:{port}/render/demo?" + _query(), timeout=2)
+            urlopen(f"http://127.0.0.1:{port}/subscription/out.yaml?" + _query(), timeout=2)
         assert caught.value.code == 503
         _headers(caught.value)
         assert json.loads(caught.value.read()) == {"error": "busy"}
         release.set()
         finished.wait(timeout=5)
         monkeypatch.setattr(service, "_render", original)
-        with urlopen(f"http://127.0.0.1:{port}/render/demo?" + _query(), timeout=2) as response:
+        with urlopen(f"http://127.0.0.1:{port}/subscription/out.yaml?" + _query(), timeout=2) as response:
             assert response.status == 200
             assert yaml.safe_load(response.read())["values"]["credential"] == SECRET
     finally:

@@ -1,6 +1,6 @@
 # GET 参数化渲染
 
-`subio serve` 提供带 URL token 认证的 `GET /render/<route>`。请求参数替换本地节点文件中的
+`subio serve` 提供带 URL token 认证的 `GET /subscription/<file_name>`。请求参数替换本地节点文件中的
 已声明标量，再经过现有节点解码、校验、目标编码和可信模板，返回一个完整 artifact。
 无需附加请求头、登录或 Cookie。可运行的离线配置见 [example/render](../example/render/README.md)。
 
@@ -19,7 +19,7 @@ uv run --extra server subio serve example/render/config.toml
 `SUBIO_RENDER_TOKEN` 必须为 32–128 个 ASCII 字母、数字、`_` 或 `-`，缺少或无效时启动失败。
 推荐用 `secrets.token_urlsafe(32)` 生成随机值；长度和字符集检查本身不能证明随机性。
 
-配置和路由声明在启动时读取成同一快照；更改配置后重启。token 也只在启动时读取，轮换方式是
+配置和输出文件名在启动时读取成同一快照；更改配置后重启。token 也只在启动时读取，轮换方式是
 更换环境变量并重启服务。可信本地 provider 和模板文件仍在渲染时读取，必须由操作者控制。
 
 ## 发起请求
@@ -27,7 +27,7 @@ uv run --extra server subio serve example/render/config.toml
 在另一个已设置相同 `SUBIO_RENDER_TOKEN` 的终端请求示例路由：
 
 ```bash
-curl --get 'http://127.0.0.1:8000/render/mihomo' \
+curl --get 'http://127.0.0.1:8000/subscription/yaml-client.yaml' \
   --data-urlencode "token=${SUBIO_RENDER_TOKEN}" \
   --data-urlencode 'name=example-node' \
   --data-urlencode 'host=proxy.example.test' \
@@ -38,7 +38,7 @@ curl --get 'http://127.0.0.1:8000/render/mihomo' \
   --data-urlencode 'controller_secret=example-only'
 ```
 
-将路径改为 `/render/native` 即使用原生 SubIO v2 TOML 源。示例没有远程输入或 uploader，
+将路径改为 `/subscription/native-client.yaml` 即使用原生 SubIO v2 TOML 源。示例没有远程输入或 uploader，
 返回的主机和凭据都是合成数据。HTTP 不写 `dist`、manifest 或请求报告，不发布或上传结果。
 
 查询按 UTF-8 `application/x-www-form-urlencoded` 规则只解码一次：原始 `+` 表示空格，字面
@@ -46,9 +46,10 @@ curl --get 'http://127.0.0.1:8000/render/mihomo' \
 避免手工拼接 URL。编码后的 `%252B` 解码后仍是字面 `%2B`。接受的首尾空格和 Unicode 原样保留；
 不做 trim，也不执行参数里的 `{{ 7 * 7 }}` 或其他模板文本。
 
-## 声明路由和参数
+## 文件名和参数声明
 
-源 provider 必须显式设置 `parameterized = true`，artifact 必须显式声明 `render.route`。
+订阅路径直接使用原有 `artifact.name`，无需声明路由或额外的 `render` 配置。
+需要源文件标量替换时，provider 显式设置 `parameterized = true`，参数声明放在 `artifact.params`。
 完整配置见示例，最小声明如下：
 
 ```toml
@@ -63,25 +64,32 @@ name = "client.yaml"
 type = "mihomo"
 providers = ["dynamic"]
 template = "client.yaml"
-[artifact.render]
-route = "demo"
-[artifact.render.params.host]
+[artifact.params.host]
 type = "string"
 default = "proxy.example.test"
-[artifact.render.params.port]
+[artifact.params.port]
 type = "integer"
 default = 1080
 min = 1
 max = 65535
-[artifact.render.params.password]
+[artifact.params.password]
 type = "string"
 required = true
 ```
 
-路由名是最多 64 字符的唯一安全路径段，只能包含 ASCII 字母、数字、`_`、`-`。没有路由枚举接口。
-每条路由拥有自己的参数声明；同一 provider 被多条路由引用时，各自的默认值、类型和约束独立生效。
-路由只生成一个配置好的 artifact，可使用固定 `artifact.user`，不支持暴露批量 `artifact.users`。
-请求不能选择用户、目标类型、模板、provider 文件或 URL，也不能提交节点文档或 Jinja 源码。
+该配置对应 `/subscription/client.yaml`。所有已配置的 artifact 都可按文件名访问；没有参数的
+artifact 无需声明 `params`。文件名按 URL 路径段编码，并在 UTF-8 解码一次后精确匹配，大小写敏感。
+只接受配置中的文件名，不拼接磁盘路径，也不读取已有 `dist` 文件；文件名不能含 `/`、`\` 或为 `.`、`..`。
+没有文件名枚举接口。
+
+每个 artifact 拥有自己的参数声明；共享 provider 时，各自的默认值、类型和约束独立生效。
+固定 `artifact.user` 沿用原有语义；批量 `users = ["alice", "bob"]` 和 `name = "user-{user}.yaml"`
+对应 `/subscription/user-alice.yaml` 与 `/subscription/user-bob.yaml`，每次仅生成对应用户的一份结果。
+展开后的文件名必须唯一。查询参数不能覆盖选定用户、目标类型、模板、provider 文件或 URL，
+也不能提交节点文档或 Jinja 源码。
+
+旧 `artifact.render` 配置会在启动时被拒绝：将 `render.params` 移至 `artifact.params`，删除
+`render.route`，并把订阅 URL 改为 `/subscription/<file_name>`；旧 `/render/...` 地址不再可用。
 
 | 参数声明 | 含义 |
 |---|---|
@@ -134,7 +142,7 @@ proxies:
 
 ## 可信最终模板
 
-声明了 `artifact.render` 的模板获得单一、不可变、请求独有的 `params` mapping；参数名不会展开
+HTTP 渲染的模板获得单一、不可变、请求独有的 `params` mapping；参数名不会展开
 成模板顶层变量。使用 `params["items"]` 等方括号访问可避开 mapping 方法名冲突，`params["self"]`
 也可正常访问。名为 `params` 的规则集 callable 与该命名空间冲突时会被拒绝。
 
@@ -160,9 +168,9 @@ proxy-groups:
 ## 静态 CLI 与运行边界
 
 包含参数化源的配置在 `convert`、`check`、`inspect` 入口会于 provider/ruleset I/O 前被拒绝，
-即使所有路由参数都有默认值也一样，因为源不能从不同路由中选择全局默认上下文。只引用普通源的
-artifact 可以在最终模板使用自身的 render 参数默认值；若其中有缺少运行值的必填参数，生成失败并
-阻止发布。普通源、没有 render 声明的模板、现有静态 CLI 与 `subio2` 别名保持原有行为。
+即使所有 artifact 参数都有默认值也一样，因为源不能从不同 artifact 中选择全局默认上下文。只引用普通源的
+artifact 可以在最终模板使用自身的参数默认值；若其中有缺少运行值的必填参数，生成失败并
+阻止发布。没有参数声明的静态模板维持原有上下文；现有静态 CLI 与 `subio2` 别名保持原有行为。
 
 每个请求只准备选中 artifact 及其引用的 providers，已有共享 rulesets 仍是依赖。解析器、节点、
 参数和渲染状态不跨请求共享。HTTP 不调用发布/上传/manifest 路径，不创建请求报告，不缓存请求参数
@@ -199,8 +207,8 @@ CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同�
 
 ## URL token 与 TLS 反向代理
 
-一个服务 token 授权访问所有已暴露路由和其中的静态材料；没有按路由或按用户的 ACL、账号或
-token 签发接口。节点凭据和路由名不提供额外授权。泄露的 URL bearer token 可重放，直到更换
+一个服务 token 授权访问全部已配置 artifact（包括批量用户展开的文件）和其中的静态材料；
+没有按文件或按用户的 ACL、账号或 token 签发接口。节点凭据和文件名不提供额外授权。泄露的 URL bearer token 可重放，直到更换
 环境变量并重启服务。
 
 GET 的 token 和其他凭据会出现在 URL，可能进入客户端/浏览器历史、shell 历史、进程参数、代理
@@ -220,7 +228,7 @@ server {
     access_log off;
     error_log /dev/null crit;
 
-    location ^~ /render/ {
+    location ^~ /subscription/ {
         proxy_pass http://127.0.0.1:8000;
         proxy_cache off;
         proxy_no_cache 1;

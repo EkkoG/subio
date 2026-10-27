@@ -5,7 +5,7 @@ from typing import Any
 from subio_v2.adapters.catalog import get_format, resolve_format
 from subio_v2.core.errors import ConfigError
 from subio_v2.infrastructure.logging import logger
-from subio_v2.workflow.parameters import RenderConfig
+from subio_v2.workflow.parameters import parse_parameter_specs
 
 
 class ConfigValidator:
@@ -45,7 +45,6 @@ class ConfigValidator:
                 raise ConfigError(f"Config section '{section}' must be a list")
             name_positions: dict[str, int] = {}
             artifact_outputs: dict[str, tuple[int, str | None]] = {}
-            render_routes: set[str] = set()
             for position, entry in enumerate(entries, start=1):
                 if not isinstance(entry, dict):
                     raise ConfigError(f"Entries in '{section}' must be objects")
@@ -60,11 +59,6 @@ class ConfigValidator:
                     cls._validate_artifact(
                         entry, name, position, artifact_outputs
                     )
-                    if "render" in entry:
-                        render = RenderConfig.from_mapping(entry["render"])
-                        if render.route in render_routes:
-                            raise ConfigError("Artifact render routes must be unique")
-                        render_routes.add(render.route)
                 else:
                     cls._validate_uploader(entry, name)
 
@@ -202,8 +196,12 @@ class ConfigValidator:
             raise ConfigError(f"Artifact '{name}' providers must be a list of names")
         cls._validate_options(entry.get("options"), f"Artifact '{name}' options")
         cls._validate_artifact_users(entry, name)
-        if "render" in entry and "users" in entry:
-            raise ConfigError("Artifact render cannot expose batch users")
+        if "render" in entry:
+            raise ConfigError(
+                "Artifact render was removed; move render.params to artifact.params "
+                "and use /subscription/<file_name>"
+            )
+        parse_parameter_specs(entry.get("params", {}))
         users = entry.get("users", [])
         if users and "{user}" not in name:
             raise ConfigError(

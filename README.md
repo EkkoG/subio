@@ -116,8 +116,9 @@ password = "secret"
 
 #### GET 参数化渲染服务
 
-可选的 `server` extra 提供 `GET /render/<route>?token=...`，无需附加请求头。配置可声明类型化
-参数，替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，并返回一个配置好的 artifact。
+可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...`，无需附加请求头。配置可声明类型化
+参数（`artifact.params`），替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，并返回一个配置好的 artifact。
+`file_name` 直接使用已有 artifact 输出文件名，无需声明 `render` 或额外路由。
 服务固定监听 loopback，不发布文件或上传结果；普通静态 CLI 的用法保持不变。
 
 ```bash
@@ -126,9 +127,9 @@ export SUBIO_RENDER_TOKEN="$(uv run python -c 'import secrets; print(secrets.tok
 uv run --extra server subio serve example/render/config.toml
 ```
 
-离线示例包含两个路由和安全模板，见 [GET 示例](./example/render/README.md)。参数声明、URL 编码、
+离线示例包含两个 artifact 和安全模板，见 [GET 示例](./example/render/README.md)。参数声明、URL 编码、
 静态 CLI 拒绝参数化源、token 轮换和 TLS 反向代理设置见 [GET 渲染指南](./docs/get_rendering.md)。
-一个 token 授权所有暴露路由；GET URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
+一个 token 授权全部已配置 artifact；GET URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
 `no-store` 无法清除这些副本。
 
 #### 规则集输入

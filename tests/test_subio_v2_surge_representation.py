@@ -83,11 +83,11 @@ def _document_fixture(tmp_path, family, node, *, parameterized=True):
         "artifact": [{
             "name": "surge.conf", "type": "surge", "providers": ["source"],
             "template": "client.j2", "allow_conversion_errors": True,
-            "render": {"route": "demo", "params": {"value": {"type": "string", "required": True, "allow_empty": True}}},
+            "params": {"value": {"type": "string", "required": True, "allow_empty": True}},
         }],
     }
     if not parameterized:
-        config["artifact"][0].pop("render")
+        config["artifact"][0].pop("params")
     path = tmp_path / "config.json"
     path.write_text(json.dumps(config))
     return path
@@ -95,8 +95,8 @@ def _document_fixture(tmp_path, family, node, *, parameterized=True):
 
 def _prepare(path, value):
     config = ConfigLoader.load(str(path))
-    values = normalize_parameters(config.artifacts[0].render.params, [("value", value)])
-    engine = WorkflowEngine.for_render(str(path), config, "demo", values)
+    values = normalize_parameters(config.artifacts[0].params, [("value", value)])
+    engine = WorkflowEngine.for_render(str(path), config, "surge.conf", values)
     assert not engine.config.allow_conversion_errors
     assert not engine.config.artifacts[0].allow_conversion_errors
     return engine.prepare()
@@ -112,7 +112,7 @@ def _http(path, value, monkeypatch):
 
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", TOKEN)
     with TestClient(create_app(str(path))) as client:
-        response = client.get("/render/demo", params={"token": TOKEN, "value": value})
+        response = client.get("/subscription/surge.conf", params={"token": TOKEN, "value": value})
     assert response.headers["cache-control"] == "no-store, private"
     return response
 
@@ -488,7 +488,7 @@ def test_wireguard_integer_client_id_neighbors_remain_exact(tmp_path, monkeypatc
     target["reserved"] = ["{{ params.value }}", 2, 3]
     path = _document_fixture(tmp_path, family, node)
     config = json.loads(path.read_text())
-    config["artifact"][0]["render"]["params"]["value"] = {"type": "integer", "required": True}
+    config["artifact"][0]["params"]["value"] = {"type": "integer", "required": True}
     path.write_text(json.dumps(config))
     field = ("peers", 0, "reserved") if peers else ("reserved",)
     _nested_success(path, str(value), field, [value, 2, 3], monkeypatch)
