@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from typing import Any
 
 import json5
@@ -6,6 +7,7 @@ import toml
 import yaml
 
 from subio_v2.adapters.subio.codec import SubioNodeCodec
+from subio_v2.core.parameters import ParameterValue, bind_document_parameters
 from subio_v2.core.results import ParseResult
 
 
@@ -20,8 +22,9 @@ class SubioParser:
     4. YAML
     """
 
-    def __init__(self):
+    def __init__(self, *, parameters: Mapping[str, ParameterValue] | None = None):
         self.node_codec = SubioNodeCodec()
+        self.parameters = dict(parameters) if parameters is not None else None
 
     def parse_result(self, content: Any) -> ParseResult:
         if not isinstance(content, str):
@@ -66,6 +69,9 @@ class SubioParser:
                 "Error parsing subio provider: Unknown format "
                 "(tried toml, json, json5, yaml)"
             )
+
+        if self.parameters is not None:
+            data = bind_document_parameters(data, "nodes", self.parameters)
 
         if (
             isinstance(data, dict)

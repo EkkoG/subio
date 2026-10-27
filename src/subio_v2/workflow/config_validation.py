@@ -2,9 +2,10 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from subio_v2.adapters.catalog import resolve_format
+from subio_v2.adapters.catalog import get_format, resolve_format
 from subio_v2.core.errors import ConfigError
 from subio_v2.infrastructure.logging import logger
+from subio_v2.workflow.parameters import RenderConfig
 
 
 class ConfigValidator:
@@ -44,6 +45,7 @@ class ConfigValidator:
                 raise ConfigError(f"Config section '{section}' must be a list")
             name_positions: dict[str, int] = {}
             artifact_outputs: dict[str, tuple[int, str | None]] = {}
+            render_routes: set[str] = set()
             for position, entry in enumerate(entries, start=1):
                 if not isinstance(entry, dict):
                     raise ConfigError(f"Entries in '{section}' must be objects")
@@ -58,6 +60,11 @@ class ConfigValidator:
                     cls._validate_artifact(
                         entry, name, position, artifact_outputs
                     )
+                    if "render" in entry:
+                        render = RenderConfig.from_mapping(entry["render"])
+                        if render.route in render_routes:
+                            raise ConfigError("Artifact render routes must be unique")
+                        render_routes.add(render.route)
                 else:
                     cls._validate_uploader(entry, name)
 
@@ -120,6 +127,15 @@ class ConfigValidator:
             raise ConfigError(
                 f"Provider '{name}' must define exactly one of 'url' or 'file'"
             )
+        parameterized = entry.get("parameterized", False)
+        if type(parameterized) is not bool:
+            raise ConfigError("Provider parameterized must be a boolean")
+        if parameterized:
+            spec = get_format(provider_type)
+            if not has_file or spec is None or not spec.parameterized_input:
+                raise ConfigError("Parameterized providers require a supported local file format")
+            if not isinstance(entry["file"], str) or not entry["file"]:
+                raise ConfigError("Parameterized provider file must be a non-empty string")
         allow_unsafe_external = entry.get("allow_unsafe_external", False)
         if not isinstance(allow_unsafe_external, bool):
             raise ConfigError(
@@ -186,6 +202,8 @@ class ConfigValidator:
             raise ConfigError(f"Artifact '{name}' providers must be a list of names")
         cls._validate_options(entry.get("options"), f"Artifact '{name}' options")
         cls._validate_artifact_users(entry, name)
+        if "render" in entry and "users" in entry:
+            raise ConfigError("Artifact render cannot expose batch users")
         users = entry.get("users", [])
         if users and "{user}" not in name:
             raise ConfigError(

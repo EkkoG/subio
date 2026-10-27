@@ -1,10 +1,12 @@
 import hashlib
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 
 from subio_v2.adapters.catalog import get_parser
 from subio_v2.core.errors import ProviderLoadError
 from subio_v2.core.nodes import Node
+from subio_v2.core.parameters import ParameterValue
 from subio_v2.core.results import ConversionIssue
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
@@ -39,8 +41,14 @@ class ProviderLoaderService:
         self.global_age_secret_key = global_age_secret_key
 
     def load(
-        self, config: RunConfig, remote_loader: RunRemoteLoader
+        self,
+        config: RunConfig,
+        remote_loader: RunRemoteLoader,
+        *,
+        parameters: Mapping[str, ParameterValue] | None = None,
     ) -> ProviderLoadResult:
+        if parameters is None and any(item.parameterized for item in config.providers):
+            raise ProviderLoadError("Parameterized providers require runtime bindings")
         providers: dict[str, list[Node]] = {}
         provider_issues: dict[str, list[ConversionIssue]] = {}
         provider_metadata: dict[str, RemoteMetadata] = {}
@@ -62,17 +70,22 @@ class ProviderLoaderService:
                         "the generated Surge configuration may contain program entries "
                         "supplied by that remote provider"
                     )
+                try:
+                    parser = get_parser(
+                        provider_type,
+                        source_kind="remote" if provider_config.url else "local",
+                        allow_unsafe_external=provider_config.allow_unsafe_external,
+                        parameterized=provider_config.parameterized,
+                        parameters=parameters if provider_config.parameterized else None,
+                    )
+                except ValueError as exc:
+                    raise ProviderLoadError(str(exc)) from exc
                 content_bytes = self._fetch_content(provider_config, remote_loader)
                 if provider_config.url and remote_loader.last_result is not None:
                     provider_metadata[name] = remote_loader.last_result.metadata
                 if not content_bytes:
                     raise ProviderLoadError(f"Provider '{name}' returned empty content")
                 content = self._decode_content(content_bytes, provider_config)
-                parser = get_parser(
-                    provider_type,
-                    source_kind="remote" if provider_config.url else "local",
-                    allow_unsafe_external=provider_config.allow_unsafe_external,
-                )
                 if parser is None:
                     raise ProviderLoadError(
                         f"Unsupported provider type '{provider_type}' for provider "

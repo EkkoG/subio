@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
+
+from subio_v2.core.parameters import ParameterValue
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class FormatSpec:
     parser_factory: Callable[..., Any] | None = None
     emitter_factory: Callable[[], Any] | None = None
     common_policy: TargetCommonPolicy | None = None
+    parameterized_input: bool = False
 
 
 @dataclass(frozen=True)
@@ -39,18 +42,22 @@ class FormatResolution:
     replacement: str | None
 
 
-def _clash_parser(**_: Any) -> Any:
+def _clash_parser(
+    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+) -> Any:
     from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
 
-    return ClashParser(DialectContext("mihomo", "yaml"))
+    return ClashParser(DialectContext("mihomo", "yaml"), parameters=parameters)
 
 
-def _clash_parser_for_clash(**_: Any) -> Any:
+def _clash_parser_for_clash(
+    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+) -> Any:
     from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
 
-    return ClashParser(DialectContext("clash", "yaml"))
+    return ClashParser(DialectContext("clash", "yaml"), parameters=parameters)
 
 
 def _stash_parser(**_: Any) -> Any:
@@ -70,10 +77,12 @@ def _surge_parser(
     )
 
 
-def _subio_parser(**_: Any) -> Any:
+def _subio_parser(
+    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+) -> Any:
     from subio_v2.adapters.subio.parser import SubioParser
 
-    return SubioParser()
+    return SubioParser(parameters=parameters)
 
 
 def _singbox_parser(**_: Any) -> Any:
@@ -137,6 +146,7 @@ _FORMAT_SPECS = (
         parser_factory=_clash_parser,
         emitter_factory=_clash_emitter,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
+        parameterized_input=True,
     ),
     FormatSpec(
         "clash",
@@ -145,6 +155,7 @@ _FORMAT_SPECS = (
         parser_factory=_clash_parser_for_clash,
         emitter_factory=_clash_emitter_for_clash,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
+        parameterized_input=True,
     ),
     FormatSpec(
         "stash",
@@ -175,7 +186,7 @@ _FORMAT_SPECS = (
         emitter_factory=_singbox_emitter,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
     ),
-    FormatSpec("subio", parser_factory=_subio_parser),
+    FormatSpec("subio", parser_factory=_subio_parser, parameterized_input=True),
 )
 
 
@@ -228,13 +239,23 @@ def get_parser(
     *,
     source_kind: str = "unknown",
     allow_unsafe_external: bool = False,
+    parameterized: bool = False,
+    parameters: Mapping[str, ParameterValue] | None = None,
 ) -> Any | None:
     spec = get_format(format_name)
+    if parameterized:
+        if source_kind != "local" or spec is None or not spec.parameterized_input:
+            raise ValueError("Parameterized providers require a supported local file format")
+        if parameters is None:
+            raise ValueError("Parameterized providers require runtime bindings")
+    elif parameters is not None:
+        raise ValueError("Provider parameter bindings require explicit opt-in")
     if spec is None or spec.parser_factory is None:
         return None
     return spec.parser_factory(
         source_kind=source_kind,
         allow_unsafe_external=allow_unsafe_external,
+        parameters=parameters,
     )
 
 

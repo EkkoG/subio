@@ -13,6 +13,7 @@ import yaml
 
 from subio_v2.core.errors import ConfigError
 from subio_v2.rules.config import RuleSetConfig
+from subio_v2.workflow.parameters import RenderConfig
 from subio_v2.workflow.selectors import SelectorSpec
 
 
@@ -76,6 +77,7 @@ class ProviderConfig:
     filters: FilterConfig | None = None
     rename: RenameConfig | None = None
     dialer_proxy: str | None = None
+    parameterized: bool = False
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ProviderConfig:
@@ -90,6 +92,7 @@ class ProviderConfig:
             filters=FilterConfig.from_mapping(value.get("filters")),
             rename=RenameConfig.from_mapping(value.get("rename")),
             dialer_proxy=value.get("dialer_proxy"),
+            parameterized=value.get("parameterized", False),
         )
 
 
@@ -108,6 +111,7 @@ class ArtifactConfig:
     upload: tuple[UploadConfig, ...] = ()
     selector: str | None = None
     on_duplicate_name: str = "error"
+    render: RenderConfig | None = None
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ArtifactConfig:
@@ -131,6 +135,10 @@ class ArtifactConfig:
             ),
             selector=value.get("selector"),
             on_duplicate_name=value.get("on_duplicate_name", "error"),
+            render=(
+                RenderConfig.from_mapping(value["render"])
+                if "render" in value else None
+            ),
         )
 
 

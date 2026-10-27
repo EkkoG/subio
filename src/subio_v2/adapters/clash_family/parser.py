@@ -1,4 +1,5 @@
 import copy
+from collections.abc import Mapping
 from typing import Any, Dict
 
 import yaml
@@ -8,16 +9,23 @@ from subio_v2.adapters.catalog import normalize_format
 from subio_v2.adapters.clash_family.dialect import pre_descriptor_normalize
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import SourcePassthroughNode
+from subio_v2.core.parameters import ParameterValue, bind_document_parameters
 from subio_v2.core.records import NodeRecord
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 
 
 class ClashParser:
-    def __init__(self, context: DialectContext | None = None):
+    def __init__(
+        self,
+        context: DialectContext | None = None,
+        *,
+        parameters: Mapping[str, ParameterValue] | None = None,
+    ):
         context = context or DialectContext("mihomo", "yaml")
         self.context = DialectContext(
             normalize_format(context.dialect), context.format
         )
+        self.parameters = dict(parameters) if parameters is not None else None
 
     def parse_result(self, content: Any) -> ParseResult:
         if isinstance(content, str):
@@ -30,6 +38,8 @@ class ClashParser:
         else:
             raise ValueError("Invalid content type for ClashParser")
 
+        if self.parameters is not None:
+            data = bind_document_parameters(data, "proxies", self.parameters)
         if not isinstance(data, dict):
             raise ValueError(
                 f"Invalid Clash config format: Expected dict, got {type(data)}. "
