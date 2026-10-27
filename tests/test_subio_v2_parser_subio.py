@@ -305,6 +305,26 @@ username = "alice"
     assert "alice" in result.issues[0].message
 
 
+@pytest.mark.parametrize("port", [0, 65536])
+def test_subio_invalid_user_port_is_a_structured_parse_error(port):
+    document = _native_ss_document()
+    document["nodes"][0]["users"] = {"fixed": {"port": port}}
+    document["nodes"].append({
+        "name": "shared", "type": "socks5", "server": "example.test", "port": 1080,
+    })
+
+    result = SubioParser().parse_result(json.dumps(document))
+
+    assert [node.name for node in result.nodes] == ["shared"]
+    assert len(result.issues) == 1
+    issue = result.issues[0]
+    assert issue.severity == "error"
+    assert issue.code == "parse.subio.invalid-combination"
+    assert issue.field == "nodes[0].users.fixed"
+    assert issue.node == "n1" and issue.protocol == "shadowsocks"
+    assert issue.message == "SubIO user overrides produce an invalid node"
+
+
 def test_subio_native_format_rejects_meaningless_user_overrides():
     result = SubioParser().parse_result(
         """

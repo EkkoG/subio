@@ -24,6 +24,7 @@ from subio_v2 import server
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RunRemoteLoader
+from subio_v2.workflow.artifacts import ArtifactGenerationService
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService
 
@@ -410,6 +411,55 @@ def test_target_encoding_rejection_is_422_before_a_draft_exists(tmp_path, family
         assert response.status_code == 422
         assert response.json() == {"error": "conversion_rejected"}
         _headers(response)
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("fixed_user", [False, True])
+def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
+    tmp_path, monkeypatch, capsys, caplog, family, fixed_user
+):
+    path, data = _fixture(tmp_path, family)
+    data["allow_conversion_errors"] = True
+    artifact = data["artifact"][0]
+    artifact["allow_conversion_errors"] = True
+    artifact["render"]["params"]["port"] = {"type": "integer", "required": True}
+    source = tmp_path / "nodes.yaml"
+    document = yaml.safe_load(source.read_text())
+    nodes = document["nodes" if family == "subio" else "proxies"]
+    if fixed_user:
+        artifact["user"] = "fixed"
+        nodes[0]["port"] = 1080
+        nodes[0]["users"] = {"fixed": {"port": "{{ params.port }}"}}
+    nodes.append({"name": "shared", "type": "socks5", "server": "shared.test", "port": 1080})
+    source.write_text(yaml.safe_dump(document))
+    _save(path, data)
+    staged = []
+    original_stage = ArtifactGenerationService._stage
+
+    def stage(*args):
+        staged.append(True)
+        return original_stage(*args)
+
+    monkeypatch.setattr("subio_v2.workflow.artifacts.ArtifactGenerationService._stage", stage)
+    with caplog.at_level(logging.DEBUG), TestClient(server.create_app(str(path))) as client:
+        for port in (1081, 0, 1082):
+            staged.clear()
+            response = client.get("/render/demo?" + _query(port=port))
+            _headers(response)
+            if port == 0:
+                assert response.status_code == 422
+                assert response.json() == {"error": "conversion_rejected"}
+                assert staged == []
+                assert SECRET not in response.text and TOKEN not in response.text
+            else:
+                assert response.status_code == 200
+                proxies = yaml.safe_load(response.text)["proxies"]
+                assert [node["port"] for node in proxies] == [port, 1080]
+                assert staged == [True]
+    assert not (tmp_path / "dist").exists()
+    captured = capsys.readouterr()
+    application_logs = "\n".join(record.getMessage() for record in caplog.records if record.name != "httpx")
+    assert all(value not in captured.out + captured.err + application_logs for value in (TOKEN, SECRET))
 
 
 @pytest.mark.parametrize("failure,status", [

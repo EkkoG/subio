@@ -179,7 +179,22 @@ class ArtifactGenerationService:
                 nodes = get_nodes_for_user(nodes, username)
             except ValueError as exc:
                 raise ArtifactGenerationError(
-                    f"Invalid user overrides for artifact '{name}': {exc}"
+                    f"Invalid user overrides for artifact '{name}': {exc}",
+                    issues=(
+                        ConversionIssue(
+                            severity=IssueSeverity.ERROR,
+                            node=None,
+                            protocol=None,
+                            source=None,
+                            target=normalize_format(artifact_type),
+                            field="users",
+                            message=str(exc),
+                            stage="selection",
+                            code="conversion.invalid-value",
+                            artifact=name,
+                            user=username,
+                        ),
+                    ),
                 ) from exc
         if global_filter:
             nodes = filter_nodes(nodes, global_filter)

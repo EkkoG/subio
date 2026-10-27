@@ -756,6 +756,42 @@ proxies:
     assert flushed == []
 
 
+@pytest.mark.parametrize("allow_errors", [False, True])
+def test_invalid_user_override_aborts_static_run_with_structured_issue(
+    tmp_path, monkeypatch, allow_errors
+):
+    write(tmp_path, "nodes.yaml", yaml.safe_dump({"proxies": [
+        {"name": "shared", "type": "socks5", "server": "example.test", "port": 1080},
+        {"name": "per-user", "type": "socks5", "server": "example.test", "port": 1080,
+         "users": {"fixed": {"port": 0}}},
+    ]}))
+    cfg = write(tmp_path, "config.yaml", yaml.safe_dump({
+        "allow_conversion_errors": allow_errors,
+        "provider": [{"name": "source", "type": "mihomo", "file": "nodes.yaml"}],
+        "artifact": [{"name": "out.yaml", "type": "mihomo", "providers": ["source"],
+                      "user": "fixed", "allow_conversion_errors": allow_errors}],
+    }))
+    monkeypatch.chdir(tmp_path)
+    engine = WorkflowEngine(str(cfg))
+    monkeypatch.setattr(
+        ArtifactGenerationService, "_stage", lambda *args: pytest.fail("Staged partial output")
+    )
+    monkeypatch.setattr(
+        engine.batch_uploader, "flush", lambda: pytest.fail("Flushed a failed artifact")
+    )
+
+    with pytest.raises(ArtifactGenerationError, match="Invalid user overrides") as error:
+        engine.run()
+
+    assert len(error.value.issues) == 1
+    issue = error.value.issues[0]
+    assert issue.severity == "error" and issue.code == "conversion.invalid-value"
+    assert issue.artifact == "out.yaml" and issue.user == "fixed"
+    assert issue.target == "mihomo" and issue.field == "users"
+    assert issue.stage == "selection"
+    assert not (tmp_path / "dist").exists()
+
+
 def test_allow_conversion_errors_still_requires_allow_empty(tmp_path, monkeypatch):
     cfg = _write_conversion_workflow(
         tmp_path,

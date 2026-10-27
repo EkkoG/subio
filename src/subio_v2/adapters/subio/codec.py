@@ -223,7 +223,18 @@ class SubioNodeCodec:
         if node.users:
             validation_targets = []
             for username in node.users:
-                user_node = clone_node_for_user(node, username)
+                try:
+                    user_node = clone_node_for_user(node, username)
+                except ValueError:
+                    return [
+                        self._issue(
+                            "parse.subio.invalid-combination",
+                            "SubIO user overrides produce an invalid node",
+                            field=f"{path}.users.{username}",
+                            node=node.name,
+                            protocol=protocol.value,
+                        )
+                    ]
                 assert user_node is not None
                 validation_targets.append((username, user_node))
 
