@@ -1,6 +1,11 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
+from subio_v2.adapters.links.codecs._base import (
+    LinkCodec,
+    format_authority,
+    join_comma_values,
+    quote_name,
+)
 from subio_v2.core.nodes import Node, Protocol, TUICNode
 
 
@@ -12,7 +17,7 @@ def build(node: Node) -> str:
     if node.tls.skip_cert_verify:
         params["allow_insecure"] = "1"
     if node.tls.alpn:
-        params["alpn"] = ",".join(node.tls.alpn)
+        params["alpn"] = join_comma_values(node.tls.alpn, field="tls.alpn")
     if node.version == 5 or (node.uuid and node.password):
         userinfo = (
             f"{urllib.parse.quote(node.uuid, safe='')}:"

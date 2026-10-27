@@ -1,7 +1,7 @@
 import base64
 import json
 
-from subio_v2.adapters.links.codecs._base import LinkCodec
+from subio_v2.adapters.links.codecs._base import LinkCodec, join_comma_values
 from subio_v2.core.nodes import (
     Network,
     Node,
@@ -28,22 +28,25 @@ def build(node: Node) -> str:
     elif node.transport.network == Network.H2:
         data["path"] = node.transport.path or ""
         if node.transport.host:
-            data["host"] = (
-                ",".join(node.transport.host)
+            data["host"] = join_comma_values(
+                node.transport.host
                 if isinstance(node.transport.host, list)
-                else node.transport.host
+                else [node.transport.host],
+                field="transport.host",
             )
     elif node.transport.network == Network.GRPC:
         data["path"] = node.transport.grpc_service_name or ""
     elif node.transport.network == Network.HTTP:
         path = node.transport.path
-        data["path"] = path if isinstance(path, str) else ",".join(path or [])
+        data["path"] = path if isinstance(path, str) else join_comma_values(
+            path or [], field="transport.path"
+        )
         if node.transport.headers and "Host" in node.transport.headers:
             data["host"] = node.transport.headers["Host"]
     if node.tls.enabled:
         data["tls"] = "tls"
         data["sni"] = node.tls.server_name or ""
-        data["alpn"] = ",".join(node.tls.alpn or [])
+        data["alpn"] = join_comma_values(node.tls.alpn or [], field="tls.alpn")
     payload = json.dumps(data).encode()
     return "vmess://" + base64.b64encode(payload).decode()
 

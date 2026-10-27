@@ -1,7 +1,12 @@
 import base64
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
+from subio_v2.adapters.links.codecs._base import (
+    LinkCodec,
+    LinkValueError,
+    format_authority,
+    quote_name,
+)
 from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 
 
@@ -11,8 +16,18 @@ def build(node: Node) -> str:
     encoded = base64.urlsafe_b64encode(userinfo.encode()).decode().rstrip("=")
     url = f"ss://{encoded}@{format_authority(node.server, node.port)}"
     if node.plugin:
+        if ";" in node.plugin:
+            raise LinkValueError(
+                "Plugin name is not representable in a share link", field="plugin"
+            )
         plugin = [node.plugin]
-        plugin.extend(f"{key}={value}" for key, value in (node.plugin_opts or {}).items())
+        for key, value in (node.plugin_opts or {}).items():
+            if ";" in key or "=" in key or ";" in str(value):
+                raise LinkValueError(
+                    "Plugin option is not representable in a share link",
+                    field="plugin_opts",
+                )
+            plugin.append(f"{key}={value}")
         url += f"/?plugin={urllib.parse.quote(';'.join(plugin), safe='')}"
     return f"{url}#{quote_name(node.name)}"
 

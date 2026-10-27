@@ -30,6 +30,23 @@ class LinkAuthorityError(ValueError):
     code = "conversion.invalid-value"
 
 
+class LinkValueError(ValueError):
+    code = "conversion.invalid-value"
+
+    def __init__(self, message: str, *, field: str):
+        super().__init__(message)
+        self.field = field
+
+
+def join_comma_values(values: list[str], *, field: str) -> str:
+    # The inner grammar cannot escape commas; a lone empty item decodes as absent.
+    if values == [""] or any("," in value for value in values):
+        raise LinkValueError(
+            "Value is not representable in a comma-separated link field", field=field
+        )
+    return ",".join(values)
+
+
 def format_authority(server: str, port: int) -> str:
     if ":" in server or "[" in server or "]" in server:
         address = (

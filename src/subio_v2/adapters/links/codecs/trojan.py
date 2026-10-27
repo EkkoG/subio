@@ -1,6 +1,11 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
+from subio_v2.adapters.links.codecs._base import (
+    LinkCodec,
+    format_authority,
+    join_comma_values,
+    quote_name,
+)
 from subio_v2.core.nodes import (
     Network,
     Node,
@@ -20,7 +25,7 @@ def build(node: Node) -> str:
         if node.tls.skip_cert_verify:
             params["allowInsecure"] = "1"
         if node.tls.alpn:
-            params["alpn"] = ",".join(node.tls.alpn)
+            params["alpn"] = join_comma_values(node.tls.alpn, field="tls.alpn")
     if node.transport.network == Network.WS:
         params["type"] = "ws"
         if node.transport.path:
@@ -36,10 +41,11 @@ def build(node: Node) -> str:
         if node.transport.path:
             params["path"] = str(node.transport.path)
         if node.transport.host:
-            params["host"] = (
-                ",".join(node.transport.host)
+            params["host"] = join_comma_values(
+                node.transport.host
                 if isinstance(node.transport.host, list)
-                else node.transport.host
+                else [node.transport.host],
+                field="transport.host",
             )
     password = urllib.parse.quote(node.password, safe="")
     url = f"trojan://{password}@{format_authority(node.server, node.port)}"

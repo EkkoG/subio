@@ -1,6 +1,11 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
+from subio_v2.adapters.links.codecs._base import (
+    LinkCodec,
+    format_authority,
+    join_comma_values,
+    quote_name,
+)
 from subio_v2.core.nodes import (
     Network,
     Node,
@@ -30,7 +35,7 @@ def build(node: Node) -> str:
         if node.tls.skip_cert_verify:
             params["allowInsecure"] = "1"
         if node.tls.alpn:
-            params["alpn"] = ",".join(node.tls.alpn)
+            params["alpn"] = join_comma_values(node.tls.alpn, field="tls.alpn")
     else:
         params["security"] = "none"
     if node.flow:
@@ -47,15 +52,18 @@ def build(node: Node) -> str:
         if node.transport.path:
             params["path"] = str(node.transport.path)
         if node.transport.host:
-            params["host"] = (
-                ",".join(node.transport.host)
+            params["host"] = join_comma_values(
+                node.transport.host
                 if isinstance(node.transport.host, list)
-                else node.transport.host
+                else [node.transport.host],
+                field="transport.host",
             )
     elif node.transport.network == Network.HTTP:
         path = node.transport.path
         if path:
-            params["path"] = path if isinstance(path, str) else ",".join(path)
+            params["path"] = join_comma_values(
+                [path] if isinstance(path, str) else path, field="transport.path"
+            )
         if node.transport.headers and "Host" in node.transport.headers:
             params["host"] = node.transport.headers["Host"]
     query = urllib.parse.urlencode(params)
