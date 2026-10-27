@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -14,12 +15,14 @@ from subio_v2.adapters.catalog import (
 )
 from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
 from subio_v2.core.nodes import Node
+from subio_v2.core.parameters import ParameterValue
 from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
+from subio_v2.workflow.parameters import ParameterError, normalize_parameters
 from subio_v2.workflow.selectors import SelectorEngine, resolve_duplicate_names
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.template_context import build_template_context
@@ -69,6 +72,8 @@ class ArtifactGenerationService:
         renderer: TemplateRenderer,
         rulesets: RuleSetStore,
         global_age_public_key: str = "",
+        *,
+        parameters: Mapping[str, ParameterValue] | None = None,
     ):
         self.config = config
         self.providers = providers
@@ -76,6 +81,7 @@ class ArtifactGenerationService:
         self.renderer = renderer
         self.rulesets = rulesets
         self.global_age_public_key = global_age_public_key
+        self.parameters = parameters
         self.selector_engine = SelectorEngine(config.selectors)
 
     def generate(self) -> ArtifactGenerationResult:
@@ -149,6 +155,18 @@ class ArtifactGenerationService:
     ]:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
+        parameters = None
+        if artifact_config.render is not None:
+            try:
+                parameters = (
+                    self.parameters
+                    if self.parameters is not None
+                    else normalize_parameters(artifact_config.render.params, ())
+                )
+            except ParameterError:
+                raise ArtifactGenerationError(
+                    "Artifact rendering requires runtime parameter values"
+                ) from None
         nodes: list[Node] = []
         for provider_name in artifact_config.providers:
             if provider_name not in self.providers:
@@ -217,6 +235,7 @@ class ArtifactGenerationService:
             emission.supported_nodes,
             emission.fragments,
             name,
+            parameters,
         )
         artifact_issues.extend(ruleset_issues)
         errors = [
@@ -272,6 +291,7 @@ class ArtifactGenerationService:
         supported_nodes: list[Node] | tuple[Node, ...],
         fragments: EmissionFragments,
         artifact_name: str,
+        parameters: Mapping[str, ParameterValue] | None = None,
     ) -> tuple[str, list[ConversionIssue]]:
         is_yaml_data = isinstance(content, dict)
         if is_yaml_data and normalize_format(artifact_type) == "sing-box":
@@ -300,6 +320,8 @@ class ArtifactGenerationService:
                     "user": username,
                 }
             )
+            if parameters is not None:
+                context["params"] = parameters
             render_result = self.renderer.render_result(
                 template_path, context, artifact_type, self.rulesets
             )

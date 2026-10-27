@@ -1,5 +1,6 @@
 """Render artifact templates with data-only ruleset callables."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -48,9 +49,20 @@ class TemplateRenderer:
 
     def _register_base_filters(self):
         def to_yaml_filter(value):
+            if isinstance(value, Mapping) and not isinstance(value, dict):
+                value = dict(value)
             return yaml.dump(value, allow_unicode=True, sort_keys=False).strip()
 
         self.env.filters["to_yaml"] = to_yaml_filter
+        builtin_tojson = self.env.filters["tojson"]
+
+        @jinja2.pass_eval_context
+        def to_json_filter(eval_context, value, indent=None):
+            if isinstance(value, Mapping) and not isinstance(value, dict):
+                value = dict(value)
+            return builtin_tojson(eval_context, value, indent)
+
+        self.env.filters["tojson"] = to_json_filter
 
     def _register_globals(self):
         self.env.globals["filter"] = all_filters

@@ -1,8 +1,12 @@
+import copy
 import os
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
+from types import MappingProxyType
 
 from subio_v2.core.errors import ConfigError
+from subio_v2.core.parameters import ParameterValue
 from subio_v2.core.results import (
     WorkflowResult,
 )
@@ -44,9 +48,21 @@ class WorkflowEngine:
         clean_gist: bool = False,
         write_manifest: bool = False,
         clean_dist: bool = False,
+        *,
+        _config: RunConfig | None = None,
+        _parameters: Mapping[str, ParameterValue] | None = None,
     ):
         self.config_path = config_path
-        self.config: RunConfig = ConfigLoader.load(self.config_path)
+        self.config = _config if _config is not None else ConfigLoader.load(config_path)
+        self._parameters = (
+            MappingProxyType(dict(_parameters)) if _parameters is not None else None
+        )
+        if self._parameters is None and any(
+            item.parameterized for item in self.config.providers
+        ):
+            raise ConfigError(
+                "Parameterized providers are only available in scoped rendering requests"
+            )
         self.dry_run = dry_run
         self.clean_gist = clean_gist
         self.write_manifest = write_manifest or clean_dist
@@ -88,7 +104,45 @@ class WorkflowEngine:
         else:
             self._local_rulesets = RuleSetStore()
 
+    @classmethod
+    def for_render(
+        cls,
+        config_path: str,
+        config: RunConfig,
+        route: str,
+        parameters: Mapping[str, ParameterValue],
+    ) -> "WorkflowEngine":
+        """Create a prepare-only engine from a snapshot and normalized parameters."""
+        artifact = next(
+            (
+                item for item in config.artifacts
+                if item.render is not None and item.render.route == route
+            ),
+            None,
+        )
+        if artifact is None:
+            raise ConfigError("Unknown artifact render route")
+        selected_artifact = replace(
+            artifact,
+            allow_conversion_errors=False,
+            upload=(),
+            options=MappingProxyType(copy.deepcopy(dict(artifact.options))),
+        )
+        selected_config = replace(
+            config,
+            providers=tuple(
+                item for item in config.providers if item.name in artifact.providers
+            ),
+            artifacts=(selected_artifact,),
+            uploaders=(),
+            allow_conversion_errors=False,
+            options=MappingProxyType(copy.deepcopy(dict(config.options))),
+        )
+        return cls(config_path, _config=selected_config, _parameters=parameters)
+
     def run(self) -> WorkflowResult:
+        if self._parameters is not None:
+            raise ConfigError("Scoped rendering requests only support preparation")
         if self.dry_run:
             logger.info("--- Starting SubIO v2 Workflow (DRY-RUN) ---")
         else:
@@ -140,9 +194,16 @@ class WorkflowEngine:
                 else RuleSetStore()
             )
             rulesets = merge_stores(self._local_rulesets, remote_rulesets)
-            provider_result = ProviderLoaderService(
+            provider_service = ProviderLoaderService(
                 self.config_path, self.global_age_secret_key
-            ).load(self.config, remote_loader)
+            )
+            provider_result = (
+                provider_service.load(self.config, remote_loader)
+                if self._parameters is None
+                else provider_service.load(
+                    self.config, remote_loader, parameters=self._parameters
+                )
+            )
             artifact_result = ArtifactGenerationService(
                 self.config,
                 provider_result.providers,
@@ -150,6 +211,7 @@ class WorkflowEngine:
                 self.renderer,
                 rulesets,
                 self.global_age_public_key,
+                parameters=self._parameters,
             ).generate()
             return WorkflowPreparation(
                 provider_result,
@@ -162,6 +224,8 @@ class WorkflowEngine:
     def load_providers(self) -> ProviderLoadResult:
         """Load providers for inspect without generating or publishing artifacts."""
 
+        if self._parameters is not None:
+            raise ConfigError("Scoped rendering requests only support preparation")
         remote_loader = self._remote_loader()
         try:
             return ProviderLoaderService(
