@@ -758,6 +758,7 @@ def test_four_actual_workers_hold_slots_after_disconnect_and_cancellation_then_r
                 await asyncio.to_thread(started.wait, 5)
                 overflow = await _raw_request(app, query=_query().encode())
                 assert overflow.status_code == 503
+                assert json.loads(overflow.content) == {"error": "busy"}
                 _headers(overflow)
                 # The event loop remains responsive while four synchronous threads block.
                 assert (await _raw_request(app, query=b"token=wrong")).status_code == 401

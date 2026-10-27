@@ -248,7 +248,9 @@ def test_failed_preparation_never_reages_a_previous_snapshot(tmp_path, monkeypat
         assert service._failures["out.yaml"].phase == "provider"
         assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
         clock.now = 30
-        assert client.get("/subscription/out.yaml?" + _query()).status_code == 503
+        expired = client.get("/subscription/out.yaml?" + _query())
+        assert expired.status_code == 503 and expired.json() == {"error": "snapshot_expired"}
+        _headers(expired)
 
 
 def test_partial_readiness_batch_identity_and_independent_refresh(tmp_path, monkeypatch):
@@ -265,7 +267,11 @@ def test_partial_readiness_batch_identity_and_independent_refresh(tmp_path, monk
         bob = service._snapshots["user-bob.yaml"]
         assert alice.artifact is bob.artifact
         assert client.get("/subscription/user-alice.yaml?" + _query()).status_code == 200
-        assert client.get("/subscription/other.yaml?" + _query()).status_code == 503
+        missing = client.get("/subscription/other.yaml?" + _query())
+        assert missing.status_code == 503 and missing.json() == {"error": "not_ready"}
+        _headers(missing)
+        unauthorized = client.get("/subscription/other.yaml")
+        assert unauthorized.status_code == 401 and unauthorized.json() == {"error": "unauthorized"}
         clock.now = 10
         (tmp_path / "missing.yaml").write_text((tmp_path / "nodes.yaml").read_text())
         (tmp_path / "nodes.yaml").unlink()
@@ -273,7 +279,11 @@ def test_partial_readiness_batch_identity_and_independent_refresh(tmp_path, monk
         assert service._snapshots["user-alice.yaml"] is alice
         assert service._snapshots["other.yaml"].acquired_at == 10
         clock.now = 30
-        assert client.get("/subscription/user-bob.yaml?" + _query()).status_code == 503
+        expired = client.get("/subscription/user-bob.yaml?" + _query())
+        assert expired.status_code == 503 and expired.json() == {"error": "snapshot_expired"}
+        _headers(expired)
+        unauthorized = client.get("/subscription/user-bob.yaml")
+        assert unauthorized.status_code == 401 and unauthorized.json() == {"error": "unauthorized"}
         assert client.get("/subscription/other.yaml?" + _query()).status_code == 200
 
 

@@ -81,8 +81,9 @@ def _validate_freshness(refresh_interval: int, max_snapshot_age: int) -> None:
         raise ServerConfigurationError("Maximum snapshot age must be at least the refresh interval")
 
 
-def _error(status: int) -> Response:
-    return JSONResponse({"error": _ERRORS[status]}, status_code=status, headers=_HEADERS)
+def _error(status: int, *, code: str | None = None) -> Response:
+    return JSONResponse({"error": code if code is not None else _ERRORS[status]},
+                        status_code=status, headers=_HEADERS)
 
 
 def _decode(value: bytes, *, form: bool = False) -> str:
@@ -304,8 +305,10 @@ class _RenderService:
             return _error(500)
         file_name = path.removeprefix("/subscription/")
         snapshot = self._snapshots.get(file_name)
-        if snapshot is None or time.monotonic() - snapshot.acquired_at >= self._max_snapshot_age:
-            return _error(503)
+        if snapshot is None:
+            return _error(503, code="not_ready")
+        if time.monotonic() - snapshot.acquired_at >= self._max_snapshot_age:
+            return _error(503, code="snapshot_expired")
         if not self._slots.acquire(blocking=False):
             return _error(503)
         try:
