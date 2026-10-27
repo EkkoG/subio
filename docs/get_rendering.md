@@ -19,6 +19,12 @@ uv run --extra server subio serve example/render/config.toml
 `SUBIO_RENDER_TOKEN` 必须为 32–128 个 ASCII 字母、数字、`_` 或 `-`，缺少或无效时启动失败。
 推荐用 `secrets.token_urlsafe(32)` 生成随机值；长度和字符集检查本身不能证明随机性。
 
+`SUBIO_RENDER_TOKEN` 通过环境变量读取，不要写入 `config.toml` 或其他配置文件。
+从另一个配置项目运行时，`uv --project ../subio run subio serve` 默认读取当前目录的 `config.*`；
+`--project` 用于选择 Python 项目环境。配置语法错误会报告行列位置（解析器支持时），
+不会回显原始配置、解析异常或 token。
+端口占用等 Uvicorn 启动失败会返回非零退出码和固定提示；可用 `--port 8001` 选择其他端口。
+
 配置和输出文件名在启动时读取成同一快照；更改配置后重启。token 也只在启动时读取，轮换方式是
 更换环境变量并重启服务。可信本地 provider 和模板文件仍在渲染时读取，必须由操作者控制。
 

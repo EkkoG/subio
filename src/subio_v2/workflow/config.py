@@ -11,7 +11,7 @@ import json5
 import toml
 import yaml
 
-from subio_v2.core.errors import ConfigError
+from subio_v2.core.errors import ConfigError, ConfigParseError
 from subio_v2.rules.config import RuleSetConfig
 from subio_v2.workflow.parameters import ParameterSpec, parse_parameter_specs
 from subio_v2.workflow.selectors import SelectorSpec
@@ -293,7 +293,14 @@ class ConfigLoader:
         except ConfigError:
             raise
         except Exception as exc:
-            raise ConfigError(f"Error parsing config ({extension}): {exc}") from exc
+            line = getattr(exc, "lineno", None)
+            column = getattr(exc, "colno", None)
+            if isinstance(exc, yaml.MarkedYAMLError) and exc.problem_mark is not None:
+                line = exc.problem_mark.line + 1
+                column = exc.problem_mark.column + 1
+            raise ConfigParseError(
+                f"Error parsing config ({extension}): {exc}", line=line, column=column
+            ) from exc
 
         if not isinstance(data, dict):
             raise ConfigError("Config root must be an object")

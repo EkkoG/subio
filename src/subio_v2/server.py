@@ -16,7 +16,7 @@ import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response
 
-from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
+from subio_v2.core.errors import ArtifactGenerationError, ConfigParseError, TemplateRenderError
 from subio_v2.core.parameters import MissingParameterError
 from subio_v2.core.results import IssueSeverity
 from subio_v2.infrastructure.logging import logger
@@ -239,6 +239,17 @@ def serve(config_path: str, *, port: int = 8000) -> int:
                         proxy_headers=False)
         except ServerConfigurationError:
             failure = "SUBIO_RENDER_TOKEN is missing or invalid"
+        except ConfigParseError as exc:
+            failure = "Render service configuration has invalid syntax"
+            if exc.line is not None:
+                failure += f" at line {exc.line}"
+                if exc.column is not None:
+                    failure += f", column {exc.column}"
+            failure += "; check configuration syntax"
+        except SystemExit as exc:
+            if exc.code is None or exc.code == 0:
+                return 0
+            failure = f"Render service startup failed on port {port}; check port availability and server environment"
         except Exception:
             failure = "Render service configuration or startup failed"
         else:

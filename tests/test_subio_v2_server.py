@@ -877,8 +877,72 @@ def test_serve_startup_errors_never_echo_secret_configuration(tmp_path, monkeypa
     assert server.serve(str(path)) == 1
     assert "SUBIO_RENDER_TOKEN is missing or invalid" in capsys.readouterr().out
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", TOKEN)
-    path.write_text(SECRET + TOKEN)
+
+    def fail(config_path):
+        raise RuntimeError(SECRET + TOKEN)
+
+    monkeypatch.setattr(server, "create_app", fail)
     assert server.serve(str(path)) == 1
     captured = capsys.readouterr()
     assert "Render service configuration or startup failed" in captured.out
+    assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
+
+
+@pytest.mark.parametrize(("extension", "content", "location"), [
+    ("toml", f"\n\nSUBIO_RENDER_TOKEN = {SECRET}{TOKEN}\n", " at line 3, column 1"),
+    ("json", '{\n"password": "' + SECRET + TOKEN + '",\ninvalid\n}', " at line 3, column 1"),
+    ("yaml", f"password: [{SECRET}{TOKEN}\n", " at line 2, column 1"),
+    ("yml", f"password: [{SECRET}{TOKEN}\n", " at line 2, column 1"),
+    ("json5", f"password = {SECRET}{TOKEN}\n", ""),
+])
+def test_serve_parse_errors_report_only_safe_source_locations(
+    tmp_path, monkeypatch, capsys, extension, content, location
+):
+    path = tmp_path / (SECRET + "." + extension)
+    path.write_text(content)
+    names = ("uvicorn", "uvicorn.error", "uvicorn.access", "starlette")
+    before = [logging.getLogger(name).disabled for name in names]
+
+    def run(*args, **kwargs):
+        pytest.fail("Invalid configuration must fail before starting HTTP")
+
+    monkeypatch.setattr(server.uvicorn, "run", run)
+    assert server.serve(str(path)) == 1
+    captured = capsys.readouterr()
+    assert (
+        "Render service configuration has invalid syntax" + location
+        + "; check configuration syntax"
+    ) in " ".join(captured.out.split())
+    assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
+    assert "Traceback" not in captured.out + captured.err
+    assert [logging.getLogger(name).disabled for name in names] == before
+
+
+def test_serve_reports_occupied_port_without_framework_logs(tmp_path, capsys):
+    path, _ = _fixture(tmp_path)
+    names = ("uvicorn", "uvicorn.error", "uvicorn.access", "starlette")
+    before = [logging.getLogger(name).disabled for name in names]
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        port = listener.getsockname()[1]
+        assert server.serve(str(path), port=port) == 1
+    captured = capsys.readouterr()
+    assert f"Render service startup failed on port {port}" in captured.out
+    assert "check port availability" in " ".join(captured.out.split())
+    assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
+    assert "Traceback" not in captured.out + captured.err
+    assert [logging.getLogger(name).disabled for name in names] == before
+
+
+@pytest.mark.parametrize("code", [None, 0, TOKEN + SECRET])
+def test_serve_handles_server_exit_codes_without_echoing_them(tmp_path, monkeypatch, capsys, code):
+    path, _ = _fixture(tmp_path)
+
+    def run(*args, **kwargs):
+        raise SystemExit(code)
+
+    monkeypatch.setattr(server.uvicorn, "run", run)
+    assert server.serve(str(path)) == (0 if code in (None, 0) else 1)
+    captured = capsys.readouterr()
     assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err

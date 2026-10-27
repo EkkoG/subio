@@ -11,6 +11,17 @@ class ConfigError(WorkflowError):
     pass
 
 
+class ConfigParseError(ConfigError):
+    """Configuration syntax failure with safe source location metadata."""
+
+    def __init__(
+        self, message: str, *, line: int | None = None, column: int | None = None
+    ) -> None:
+        super().__init__(message)
+        self.line = line if type(line) is int and line > 0 else None
+        self.column = column if type(column) is int and column > 0 else None
+
+
 class ProviderLoadError(WorkflowError):
     pass
 
