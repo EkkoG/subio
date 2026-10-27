@@ -29,7 +29,6 @@ type = "boolean"
 default = true
 [artifact.params.controller_secret]
 default = ""
-allow_empty = true
 
 [[artifact]]
 name = "native-client.yaml"
@@ -50,4 +49,3 @@ type = "boolean"
 default = true
 [artifact.params.controller_secret]
 default = ""
-allow_empty = true

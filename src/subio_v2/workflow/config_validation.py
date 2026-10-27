@@ -196,11 +196,12 @@ class ConfigValidator:
             raise ConfigError(f"Artifact '{name}' providers must be a list of names")
         cls._validate_options(entry.get("options"), f"Artifact '{name}' options")
         cls._validate_artifact_users(entry, name)
-        if "render" in entry:
-            raise ConfigError(
-                "Artifact render was removed; move render.params to artifact.params "
-                "and use /subscription/<file_name>"
-            )
+        if set(entry) - {
+            "name", "type", "template", "providers", "users", "user", "options",
+            "allow_conversion_errors", "allow_empty", "age_public_key", "upload",
+            "selector", "on_duplicate_name", "params",
+        }:
+            raise ConfigError("Artifact contains unsupported fields")
         parse_parameter_specs(entry.get("params", {}))
         users = entry.get("users", [])
         if users and "{user}" not in name:

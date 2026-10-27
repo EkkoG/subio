@@ -48,7 +48,7 @@ curl --get 'http://127.0.0.1:8000/subscription/yaml-client.yaml' \
 
 ## 文件名和参数声明
 
-订阅路径直接使用原有 `artifact.name`，无需声明路由或额外的 `render` 配置。
+订阅路径直接使用 `artifact.name`，无需声明路由。
 需要源文件标量替换时，provider 显式设置 `parameterized = true`。请求参数默认按字符串处理，
 无需逐个声明；只在需要整数、布尔值、默认值或约束时，在 `artifact.params` 中补充声明。
 完整配置见示例，最小声明如下：
@@ -85,31 +85,26 @@ artifact 无需声明 `params`。文件名按 URL 路径段编码，并在 UTF-8
 展开后的文件名必须唯一。查询参数不能覆盖选定用户、目标类型、模板、provider 文件或 URL，
 也不能提交节点文档或 Jinja 源码。
 
-旧 `artifact.render` 配置会在启动时被拒绝：将 `render.params` 移至 `artifact.params`，删除
-`render.route`，并把订阅 URL 改为 `/subscription/<file_name>`；旧 `/render/...` 地址不再可用。
-
 | 参数声明 | 含义 |
 |---|---|
 | `type` | 可选，默认 `string`；可指定 `integer` 或 `boolean`，不接受数组、对象或 null |
-| `required` | 默认 `false`；为 `true` 时必须由请求提供，不能同时设置 `default` |
 | `default` | 可选，必须类型正确且满足本声明的全部约束；请求未提供时使用此值 |
 | `choices` | 可选的非空列表；元素必须与声明类型一致，请求值和默认值必须在其中 |
 | `min` / `max` | 仅用于整数，闭区间边界；整数查询值使用带可选正负号的十进制文本，不截断小数 |
-| `allow_empty` | 仅用于已声明字符串，默认 `false`；未声明字符串允许空值，空值与缺失不同 |
 
 例如 `username` 和 `password` 无需声明：请求提供后就是字符串。`port` 若只有
 `type = "integer"` 而没有默认值，请求提供时转为整数；没有提供时不加入 `params`。
 provider 或最终模板直接引用缺失参数会返回 HTTP 400，不会静默替换为空字符串；即使最终模板
 使用 Jinja `default` 过滤器，直接访问缺失键也会失败。默认值应放在 `artifact.params`。
 没有被引用的额外请求参数允许存在；没有被引用、没有默认值的类型声明也不要求请求提供。
-显式 `required = true` 可要求请求始终提供该字段。
+字符串统一允许空值，空值与缺失不同；如需限制取值，可使用 `choices`。
 
 布尔查询值严格使用小写 `true` 或 `false`。参数名为最多 64 字符的 ASCII 标识符：首字符是
 字母或 `_`，其余可含数字。最多补充声明 32 个参数。`token` 是保留的认证字段，不得声明为参数。
 若节点本身含 `token` 字段，应使用 `node_token` 并写成 `token: "{{ params.node_token }}"`；
 字段仍须满足现有 codec 或同方言保真规则。认证 token 永远不会进入 `params`、节点、模板或上游请求。
 
-请求中非法参数名、重复解码后的名字、缺少必填值或违反约束的值都会被拒绝；`host` 和 `%68ost`
+请求中非法参数名、重复解码后的名字或违反约束的值都会被拒绝；`host` 和 `%68ost`
 视为同名。原始路径与查询合计最多 8 KiB，最多 33 个查询字段（32 个参数加一个 token），每个
 解码后的渲染字符串最多 1024 UTF-8 字节；拒绝控制字符和 Unicode 行/段分隔符。
 
@@ -146,7 +141,7 @@ proxies:
 
 ## 可信最终模板
 
-HTTP 渲染的模板获得单一、不可变、请求独有的 `params` mapping；参数名不会展开
+模板始终获得单一、不可变的 `params` mapping；HTTP 中的参数状态属于当前请求。参数名不会展开
 成模板顶层变量。使用 `params["items"]` 等方括号访问可避开 mapping 方法名冲突，`params["self"]`
 也可正常访问。名为 `params` 的规则集 callable 与该命名空间冲突时会被拒绝。
 
@@ -173,8 +168,8 @@ proxy-groups:
 
 包含参数化源的配置在 `convert`、`check`、`inspect` 入口会于 provider/ruleset I/O 前被拒绝，
 即使所有 artifact 参数都有默认值也一样，因为源不能从不同 artifact 中选择全局默认上下文。只引用普通源的
-artifact 可以在最终模板使用自身的参数默认值；若其中有缺少运行值的必填参数，生成失败并
-阻止发布。没有参数声明的静态模板维持原有上下文；现有静态 CLI 与 `subio2` 别名保持原有行为。
+artifact 可以在最终模板使用自身的参数默认值；若模板引用没有请求值和默认值的参数，生成失败并
+阻止发布。没有参数声明时，静态模板的 `params` 是空 mapping。
 
 每个请求只准备选中 artifact 及其引用的 providers，已有共享 rulesets 仍是依赖。解析器、节点、
 参数和渲染状态不跨请求共享。HTTP 不调用发布/上传/manifest 路径，不创建请求报告，不缓存请求参数

@@ -118,7 +118,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Ensure dist exists
     (tmp_path / "dist").mkdir(exist_ok=True)
     rendered, issues = service._render_content(
-        content_yaml, None, "clash", {}, None, [], EmissionFragments(), "out.yaml"
+        content_yaml, None, "clash", {}, None, [], EmissionFragments(), "out.yaml", {}
     )
     assert issues == []
     first = service._stage(
@@ -133,7 +133,7 @@ def test_write_artifact_basic_yaml_and_text(tmp_path, monkeypatch):
     # Text content with template: should use renderer result
     service = artifact_service(eng)
     rendered, issues = service._render_content(
-        "rawtext", "tpl", "surge", {}, None, [], EmissionFragments(), "out.txt"
+        "rawtext", "tpl", "surge", {}, None, [], EmissionFragments(), "out.txt", {}
     )
     assert issues == []
     second = service._stage(
@@ -531,7 +531,7 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     engine = WorkflowEngine(str(cfg), dry_run=False)
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ProviderLoaderService.load",
-        lambda self, config, loader: ProviderLoadResult({}, {}),
+        lambda self, config, loader, *, parameters: ProviderLoadResult({}, {}),
     )
 
     def generate(self):

@@ -38,30 +38,20 @@ def _validate_text(value: str) -> None:
 @dataclass(frozen=True)
 class ParameterSpec:
     type: str
-    required: bool = False
     default: ParameterValue | None = field(default=None, repr=False)
     choices: tuple[ParameterValue, ...] | None = field(default=None, repr=False)
     min: int | None = None
     max: int | None = None
-    allow_empty: bool = False
 
     @classmethod
     def from_mapping(cls, value: Any) -> ParameterSpec:
         if not isinstance(value, dict) or set(value) - {
-            "type", "required", "default", "choices", "min", "max", "allow_empty"
+            "type", "default", "choices", "min", "max"
         }:
             raise ConfigError("Render parameter declaration must use supported fields")
         parameter_type = value.get("type", "string")
         if not isinstance(parameter_type, str) or parameter_type not in _TYPES:
             raise ConfigError("Render parameter type must be string, integer or boolean")
-        required = value.get("required", False)
-        allow_empty = value.get("allow_empty", False)
-        if type(required) is not bool or type(allow_empty) is not bool:
-            raise ConfigError("Render parameter required/allow_empty must be booleans")
-        if "allow_empty" in value and parameter_type != "string":
-            raise ConfigError("Render parameter allow_empty is only valid for strings")
-        if required and "default" in value:
-            raise ConfigError("Required parameters cannot have defaults")
         for key in ("min", "max"):
             if key in value and (
                 parameter_type != "integer" or type(value[key]) is not int
@@ -74,12 +64,10 @@ class ParameterSpec:
             raise ConfigError("Render parameter choices must be a non-empty list")
         spec = cls(
             type=parameter_type,
-            required=required,
             default=value.get("default"),
             choices=tuple(choices) if choices is not None else None,
             min=value.get("min"),
             max=value.get("max"),
-            allow_empty=allow_empty,
         )
         try:
             for choice in spec.choices or ():
@@ -95,8 +83,6 @@ class ParameterSpec:
             raise ParameterError("Rendering parameter has an invalid type")
         if isinstance(value, str):
             _validate_text(value)
-            if not value and not self.allow_empty:
-                raise ParameterError("Rendering parameter cannot be empty")
         if self.min is not None and value < self.min:
             raise ParameterError("Rendering parameter is below its minimum")
         if self.max is not None and value > self.max:
@@ -150,9 +136,6 @@ def normalize_parameters(
         spec.validate_value(value)
         values[name] = value
     for name, spec in declarations.items():
-        if name not in values:
-            if spec.required:
-                raise ParameterError("Missing required rendering parameter")
-            if spec.default is not None:
-                values[name] = spec.default
+        if name not in values and spec.default is not None:
+            values[name] = spec.default
     return MappingProxyType(values)

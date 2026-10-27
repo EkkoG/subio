@@ -441,13 +441,14 @@ GET -> raw decode/limits -> URL token authentication -> route parameter validati
 共享 ruleset 依赖，选择一个固定 artifact/user，为 loader/parser/emitter/节点与模板创建独立状态。
 provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError`，HTTP 沿异常原因链返回固定 400，
 不回显键或值。最终 Jinja 的 `params` 缺失键在过滤器执行前失败；未使用的类型声明无需请求值。
-最终 Jinja 只获得单一不可变 `params` 命名空间；模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
+最终 Jinja 始终获得单一不可变 `params` 命名空间；静态生成使用 artifact 默认值，无声明时为空。
+模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
 或目标 serializer 写入合适上下文。该路径禁止 `run()`、发布、上传、manifest 和请求报告/结果缓存，
 任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。
 
 静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使 artifact 声明了默认值。
-普通源的最终模板可以使用所属 artifact 的参数默认值，缺失必填值在发布前失败。普通 provider 与旧模板
-维持既有行为；远程输入和其他输入族不能启用替换。
+普通源的最终模板可以使用所属 artifact 的参数默认值，引用缺失值在发布前失败。
+参数声明只包含 `type/default/choices/min/max`，字符串统一允许空值。远程输入和其他输入族不能启用替换。
 
 专用服务生命周期静默 workflow 日志并关闭框架访问日志。四个同步渲染名额直到工作实际结束才释放，
 包括断连后的任务；不提供可信模板的严格 wall-time 或全局传输内存上限。`RunRemoteLoader` 当前使用

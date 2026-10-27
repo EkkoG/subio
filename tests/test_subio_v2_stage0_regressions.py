@@ -285,7 +285,7 @@ def test_failed_engine_run_does_not_upload_stale_queue_on_retry(
 
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ProviderLoaderService.load",
-        lambda self, config, loader: ProviderLoadResult({}, {}),
+        lambda self, config, loader, *, parameters: ProviderLoadResult({}, {}),
     )
     monkeypatch.setattr(engine, "_commit_artifacts", lambda drafts: None)
     monkeypatch.setattr(engine.batch_uploader, "flush", lambda: None)

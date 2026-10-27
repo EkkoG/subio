@@ -20,11 +20,11 @@ PAYLOAD = "literal \"' &:[]=+#% {{ params.host }} {{ 7 * 7 }} {% include 'x' %}"
 
 def _values():
     params = parse_parameter_specs({
-        "host": {"type": "string", "required": True},
-        "port": {"type": "integer", "required": True},
-        "tls": {"type": "boolean", "required": True},
-        "credential": {"type": "string", "required": True},
-        "node_token": {"type": "string", "required": True},
+        "host": {"type": "string"},
+        "port": {"type": "integer"},
+        "tls": {"type": "boolean"},
+        "credential": {"type": "string"},
+        "node_token": {"type": "string"},
     })
     return normalize_parameters(params, [
         ("host", "proxy.example.test"), ("port", "1080"), ("tls", "true"),

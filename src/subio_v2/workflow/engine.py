@@ -200,12 +200,8 @@ class WorkflowEngine:
             provider_service = ProviderLoaderService(
                 self.config_path, self.global_age_secret_key
             )
-            provider_result = (
-                provider_service.load(self.config, remote_loader)
-                if self._parameters is None
-                else provider_service.load(
-                    self.config, remote_loader, parameters=self._parameters
-                )
+            provider_result = provider_service.load(
+                self.config, remote_loader, parameters=self._parameters
             )
             artifact_result = ArtifactGenerationService(
                 self.config,

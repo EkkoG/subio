@@ -4,8 +4,8 @@ Run from the repository root. The two routes load separate local sources:
 `/subscription/yaml-client.yaml` reads Mihomo YAML, and `/subscription/native-client.yaml` reads native SubIO v2
 TOML. Both return one Mihomo client configuration. No uploader or remote input
 is configured, and the service does not write `dist` or a manifest.
-Paths use the existing artifact output filenames. No `render` block or route
-declaration is needed. Request parameters default to strings without prior
+Paths use the existing artifact output filenames without additional route
+declarations. Request parameters default to strings without prior
 declarations; `artifact.params` adds types, defaults or constraints where needed.
 
 ```bash

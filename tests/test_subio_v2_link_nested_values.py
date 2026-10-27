@@ -198,7 +198,7 @@ def _fixture(tmp_path, family, case, *, empty_neighbors=False):
         "artifact": [{"name": "out.txt", "type": "v2rayn", "providers": ["source"],
                       "allow_conversion_errors": True,
                       "params": {
-                          "value": {"type": "string", "required": True, "allow_empty": True},
+                          "value": {"type": "string"},
                       }}],
     }
     path = tmp_path / "config.json"

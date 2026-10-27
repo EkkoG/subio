@@ -24,7 +24,6 @@ def test_artifact_params_load_typed_declarations(tmp_path):
                 "host": {"type": "string", "default": "example.test"},
                 "port": {"type": "integer", "default": 1080, "min": 1, "max": 65535},
                 "tls": {"type": "boolean", "default": False},
-                "node_token": {"type": "string", "required": True},
             },
         }],
     }))
@@ -32,34 +31,32 @@ def test_artifact_params_load_typed_declarations(tmp_path):
     assert config.providers[0].parameterized is True
     params = config.artifacts[0].params
     assert params["port"].default == 1080
-    assert params["node_token"].required is True
+    assert params["tls"].default is False
     with pytest.raises(TypeError):
         params["added"] = params["host"]
 
 
 @pytest.mark.parametrize("declaration", [
-    None, [], {"type": "object", "required": True},
-    {"type": None}, {"type": "string", "required": "true"},
-    {"type": "string", "required": True, "default": "CANARY"},
+    None, [], {"type": "object"}, {"type": None},
     {"type": "integer", "default": "CANARY"},
     {"type": "integer", "default": True},
     {"type": "boolean", "default": 1},
     {"type": "string", "default": None},
     {"type": "string", "default": []},
     {"type": "string", "default": {}},
-    {"type": "string", "default": ""},
     {"type": "string", "default": "CANARY\n"},
     {"type": "string", "default": "CANARY" * 200},
-    {"type": "string", "required": True, "choices": [1]},
+    {"type": "string", "choices": [1]},
     {"type": "string", "default": "CANARY", "choices": ["other"]},
-    {"type": "string", "required": True, "choices": []},
-    {"type": "string", "required": True, "choices": "CANARY"},
-    {"type": "string", "required": True, "min": 1},
+    {"type": "string", "choices": []},
+    {"type": "string", "choices": "CANARY"},
+    {"type": "string", "min": 1},
     {"type": "integer", "default": 1, "min": True},
     {"type": "integer", "default": 1, "min": 2},
     {"type": "integer", "default": 1, "max": 0},
-    {"type": "integer", "required": True, "min": 2, "max": 1},
-    {"type": "integer", "required": True, "allow_empty": False},
+    {"type": "integer", "min": 2, "max": 1},
+    {"type": "string", "required": True},
+    {"type": "string", "allow_empty": True},
     {"type": "string", "default": "CANARY", "unknown": True},
 ])
 def test_invalid_parameter_declarations_fail_without_values(declaration):
@@ -70,21 +67,21 @@ def test_invalid_parameter_declarations_fail_without_values(declaration):
 
 @pytest.mark.parametrize("params", [
     None, [],
-    {"token": {"type": "string", "required": True}},
-    {"bad-name": {"type": "string", "required": True}},
-    {"x" * 65: {"type": "string", "required": True}},
-    {"\u540d": {"type": "string", "required": True}},
-    {f"p{i}": {"type": "string", "required": True} for i in range(33)},
+    {"token": {"type": "string"}},
+    {"bad-name": {"type": "string"}},
+    {"x" * 65: {"type": "string"}},
+    {"\u540d": {"type": "string"}},
+    {f"p{i}": {"type": "string"} for i in range(33)},
 ])
 def test_parameter_declaration_shape_and_names_are_validated(params):
     with pytest.raises(ConfigError):
         ConfigValidator.validate({"artifact": [{"name": "a", "type": "mihomo", "params": params}]})
 
 
-@pytest.mark.parametrize("render", [None, {}, {"route": "demo"}])
-def test_legacy_render_declaration_has_migration_error(render):
-    with pytest.raises(ConfigError, match=r"move render.params to artifact.params"):
-        ConfigValidator.validate({"artifact": [{"name": "a", "type": "mihomo", "render": render}]})
+@pytest.mark.parametrize("field", ["render", "route", "unknown"])
+def test_artifact_rejects_unsupported_fields(field):
+    with pytest.raises(ConfigError, match="unsupported fields"):
+        ConfigValidator.validate({"artifact": [{"name": "a", "type": "mihomo", field: {}}]})
 
 
 def test_parameters_share_existing_output_filename_collision_validation():
@@ -107,10 +104,10 @@ def test_parameterized_provider_requires_supported_local_opt_in(provider):
 
 def test_normalization_preserves_types_unicode_spaces_and_defaults():
     params = parse_parameter_specs({
-        "name": {"type": "string", "required": True},
-        "port": {"type": "integer", "required": True, "min": -10, "max": 100},
+        "name": {"type": "string"},
+        "port": {"type": "integer", "min": -10, "max": 100},
         "tls": {"type": "boolean", "default": True, "choices": [True, False]},
-        "self": {"type": "string", "default": "" , "allow_empty": True},
+        "self": {"default": ""},
     })
     values = normalize_parameters(params, [("name", " \u540d+&=%# "), ("port", "+0010"), ("tls", "false")])
     assert dict(values) == {"name": " \u540d+&=%# ", "port": 10, "tls": False, "self": ""}
@@ -121,18 +118,18 @@ def test_normalization_preserves_types_unicode_spaces_and_defaults():
 
 
 @pytest.mark.parametrize(("declaration", "raw"), [
-    ({"type": "integer", "required": True}, value)
+    ({"type": "integer"}, value)
     for value in ("1.0", "1e2", " 1", "1 ", "0x10", "\uff11", "--1", "", "true")
 ] + [
-    ({"type": "boolean", "required": True}, value)
+    ({"type": "boolean"}, value)
     for value in ("True", "FALSE", "1", "0", " true", "")
 ] + [
-    ({"type": "string", "required": True}, value)
-    for value in ("", "CANARY\n", "CANARY\x00", "CANARY\x7f", "CANARY\x85", "CANARY\u2028", "CANARY\u2029", "CANARY\ud800")
+    ({"type": "string"}, value)
+    for value in ("CANARY\n", "CANARY\x00", "CANARY\x7f", "CANARY\x85", "CANARY\u2028", "CANARY\u2029", "CANARY\ud800")
 ] + [
-    ({"type": "integer", "required": True, "min": 1, "max": 10}, "11"),
-    ({"type": "integer", "required": True, "min": 1, "max": 10}, "0"),
-    ({"type": "string", "required": True, "choices": ["allowed"]}, "CANARY"),
+    ({"type": "integer", "min": 1, "max": 10}, "11"),
+    ({"type": "integer", "min": 1, "max": 10}, "0"),
+    ({"type": "string", "choices": ["allowed"]}, "CANARY"),
 ])
 def test_invalid_runtime_values_fail_without_echoing_input(declaration, raw):
     with pytest.raises(ParameterError) as error:
@@ -140,9 +137,9 @@ def test_invalid_runtime_values_fail_without_echoing_input(declaration, raw):
     assert "CANARY" not in str(error.value)
 
 
-def test_normalization_rejects_required_duplicate_reserved_and_size_limits():
-    declaration = ParameterSpec.from_mapping({"type": "string", "required": True})
-    for pairs in ([], [("value", "x"), ("value", "y")], [("unknown", "x")], [("token", "CANARY")], [("value", [])]):
+def test_normalization_rejects_duplicate_reserved_and_size_limits():
+    declaration = ParameterSpec.from_mapping({"type": "string"})
+    for pairs in ([("value", "x"), ("value", "y")], [("token", "CANARY")], [("value", [])]):
         with pytest.raises(ParameterError):
             normalize_parameters({"value": declaration}, pairs)
     assert normalize_parameters({"value": declaration}, [("value", "\u540d" * 341)])["value"] == "\u540d" * 341
@@ -171,6 +168,11 @@ def test_optional_declarations_can_specify_only_type_or_default():
     values = normalize_parameters(declarations, [("port", "1080"), ("tls", "false"), ("password", "synthetic")])
     assert dict(values) == {"region": "hk", "port": 1080, "tls": False, "password": "synthetic"}
     assert type(values["port"]) is int and type(values["tls"]) is bool
+
+
+@pytest.mark.parametrize("declarations", [{}, {"value": {"type": "string"}}, {"value": {"choices": [""]}}])
+def test_empty_strings_follow_the_same_rules_with_or_without_declarations(declarations):
+    assert normalize_parameters(parse_parameter_specs(declarations), [("value", "")])["value"] == ""
 
 
 @pytest.mark.parametrize("name", ["", "token", "bad-name", "\u540d", "x" * 65, "value[]", "value[0]", "x\n", None])

@@ -22,7 +22,7 @@ from subio_v2.infrastructure.logging import logger
 from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
-from subio_v2.workflow.parameters import ParameterError, normalize_parameters
+from subio_v2.workflow.parameters import normalize_parameters
 from subio_v2.workflow.selectors import SelectorEngine, resolve_duplicate_names
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.template_context import build_template_context
@@ -155,18 +155,10 @@ class ArtifactGenerationService:
     ]:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
-        parameters = None
-        if self.parameters is not None or artifact_config.params:
-            try:
-                parameters = (
-                    self.parameters
-                    if self.parameters is not None
-                    else normalize_parameters(artifact_config.params, ())
-                )
-            except ParameterError:
-                raise ArtifactGenerationError(
-                    "Artifact rendering requires runtime parameter values"
-                ) from None
+        parameters = (
+            self.parameters if self.parameters is not None
+            else normalize_parameters(artifact_config.params, ())
+        )
         nodes: list[Node] = []
         for provider_name in artifact_config.providers:
             if provider_name not in self.providers:
@@ -306,7 +298,7 @@ class ArtifactGenerationService:
         supported_nodes: list[Node] | tuple[Node, ...],
         fragments: EmissionFragments,
         artifact_name: str,
-        parameters: Mapping[str, ParameterValue] | None = None,
+        parameters: Mapping[str, ParameterValue],
     ) -> tuple[str, list[ConversionIssue]]:
         is_yaml_data = isinstance(content, dict)
         if is_yaml_data and normalize_format(artifact_type) == "sing-box":
@@ -335,8 +327,7 @@ class ArtifactGenerationService:
                     "user": username,
                 }
             )
-            if parameters is not None:
-                context["params"] = parameters
+            context["params"] = parameters
             render_result = self.renderer.render_result(
                 template_path, context, artifact_type, self.rulesets
             )

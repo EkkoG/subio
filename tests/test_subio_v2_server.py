@@ -61,7 +61,7 @@ def _fixture(tmp_path, family="mihomo", serialization="yaml"):
         "host": {"type": "string", "default": "proxy.example.test"},
         "port": {"type": "integer", "default": 1080, "min": 1, "max": 65535},
         "username": {"type": "string", "default": "synthetic-user"},
-        "credential": {"type": "string", "required": True},
+        "credential": {"type": "string"},
         "enabled": {"type": "boolean", "default": False},
     }
     data = {
@@ -230,7 +230,7 @@ def test_raw_limits_and_encoding_are_checked_before_auth(tmp_path, monkeypatch, 
     ("&port=0", 400), ("&port=65536", 400), ("&enabled=TRUE", 400),
     ("&enabled=1", 400), ("&host=%00", 400), ("&host=%0A", 400),
     ("&host=%E2%80%A8", 400), ("&host=%E2%80%A9", 400),
-    ("&host=", 400), ("&host=" + "x" * 1025, 413),
+    ("&host=" + "x" * 1025, 413),
     ("&host=" + "%E9%9B%AA" * 342, 413),
     ("&credential[]=object", 400), ("&credential%5B0%5D=array", 400),
 ])
@@ -243,14 +243,12 @@ def test_semantic_rejections_precede_construction_and_loading(tmp_path, monkeypa
         assert response.status_code == status
         _headers(response)
         assert SECRET not in response.text and TOKEN not in response.text
-        response = client.get("/subscription/out.yaml?token=" + TOKEN)
-        assert response.status_code == 400
 
 
 def test_exact_raw_and_decoded_value_boundaries(tmp_path):
     path, data = _fixture(tmp_path)
     params = data["artifact"][0]["params"]
-    params["credential"] = {"type": "string", "required": True, "allow_empty": True}
+    params["credential"] = {"type": "string"}
     for index in range(26):
         params["field_" + str(index)] = {"type": "string", "default": "default"}
     assert len(params) == 32
@@ -287,7 +285,7 @@ def test_every_non_get_method_is_fixed_405_without_framework_redirects_or_io(tmp
 @pytest.mark.parametrize("target", [
     "/", "/subscription", "/subscription/", "/subscription/out.yaml/",
     "/subscription/unknown", "/subscription/OUT.yaml", "/subscription/out.yaml%0A",
-    "/render/demo", "/docs", "/openapi.json",
+    "/docs", "/openapi.json",
     "/subscription/%2E%2E%2Fconfig.json", "/subscription/%2Fetc%2Fpasswd",
     "/subscription/..%5Cconfig.json", "/subscription/%252E%252E%252Fconfig.json",
 ])
@@ -563,7 +561,7 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
     data["allow_conversion_errors"] = True
     artifact = data["artifact"][0]
     artifact["allow_conversion_errors"] = True
-    artifact["params"]["port"] = {"type": "integer", "required": True}
+    artifact["params"]["port"] = {"type": "integer"}
     source = tmp_path / "nodes.yaml"
     document = yaml.safe_load(source.read_text())
     nodes = document["nodes" if family == "subio" else "proxies"]

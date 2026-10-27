@@ -173,7 +173,7 @@ def test_static_cli_rejects_parameterized_sources_before_any_input_io(
     assert "scoped rendering" in capsys.readouterr().out
 
 
-def test_static_template_defaults_work_and_required_values_block_publication(
+def test_static_template_defaults_work_and_missing_values_block_publication(
     tmp_path, monkeypatch
 ):
     path, data = _fixture(tmp_path, parameterized=False)
@@ -181,11 +181,9 @@ def test_static_template_defaults_work_and_required_values_block_publication(
     output = WorkflowEngine(str(path)).prepare().artifact_result.drafts[0].content
     assert yaml.safe_load(output)["values"]["port"] == 80
     assert config.artifacts[0].params["port"].default == 80
-    data["artifact"][0]["params"]["credential"] = {
-        "type": "string",
-        "required": True,
-    }
+    data["artifact"][0]["params"].pop("credential")
     _snapshot(path, data)
+    (tmp_path / "client.j2").write_text('credential: {{ params.credential | tojson }}')
     monkeypatch.setattr(
         "subio_v2.workflow.publication.ArtifactPublisher.commit",
         lambda *_: pytest.fail("Published"),
@@ -194,12 +192,12 @@ def test_static_template_defaults_work_and_required_values_block_publication(
         "subio_v2.workflow.engine.queue_upload_requests",
         lambda *_: pytest.fail("Queued uploads"),
     )
-    with pytest.raises(ArtifactGenerationError, match="requires runtime parameter"):
+    with pytest.raises(TemplateRenderError, match="Missing rendering parameter"):
         WorkflowEngine(str(path)).run()
     assert not (tmp_path / "dist").exists()
 
 
-def test_params_namespace_is_nested_immutable_and_static_defaults_are_opted_in(
+def test_params_namespace_is_nested_immutable_and_always_present(
     tmp_path, monkeypatch
 ):
     path, data = _fixture(tmp_path, parameterized=False)
@@ -235,7 +233,7 @@ def test_params_namespace_is_nested_immutable_and_static_defaults_are_opted_in(
     _snapshot(path, data)
     (tmp_path / "client.j2").write_text("{{ params is undefined }}")
     assert (
-        WorkflowEngine(str(path)).prepare().artifact_result.drafts[0].content == "True"
+        WorkflowEngine(str(path)).prepare().artifact_result.drafts[0].content == "False"
     )
 
 

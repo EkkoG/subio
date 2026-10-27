@@ -83,7 +83,7 @@ def _document_fixture(tmp_path, family, node, *, parameterized=True):
         "artifact": [{
             "name": "surge.conf", "type": "surge", "providers": ["source"],
             "template": "client.j2", "allow_conversion_errors": True,
-            "params": {"value": {"type": "string", "required": True, "allow_empty": True}},
+            "params": {"value": {"type": "string"}},
         }],
     }
     if not parameterized:
@@ -488,7 +488,7 @@ def test_wireguard_integer_client_id_neighbors_remain_exact(tmp_path, monkeypatc
     target["reserved"] = ["{{ params.value }}", 2, 3]
     path = _document_fixture(tmp_path, family, node)
     config = json.loads(path.read_text())
-    config["artifact"][0]["params"]["value"] = {"type": "integer", "required": True}
+    config["artifact"][0]["params"]["value"] = {"type": "integer"}
     path.write_text(json.dumps(config))
     field = ("peers", 0, "reserved") if peers else ("reserved",)
     _nested_success(path, str(value), field, [value, 2, 3], monkeypatch)
