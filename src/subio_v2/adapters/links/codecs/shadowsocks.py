@@ -1,7 +1,7 @@
 import base64
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 
 
@@ -9,7 +9,7 @@ def build(node: Node) -> str:
     assert isinstance(node, ShadowsocksNode)
     userinfo = f"{node.cipher}:{node.password}"
     encoded = base64.urlsafe_b64encode(userinfo.encode()).decode().rstrip("=")
-    url = f"ss://{encoded}@{node.server}:{node.port}"
+    url = f"ss://{encoded}@{format_authority(node.server, node.port)}"
     if node.plugin:
         plugin = [node.plugin]
         plugin.extend(f"{key}={value}" for key, value in (node.plugin_opts or {}).items())
@@ -33,7 +33,7 @@ def parse(line: str) -> Node | None:
         else:
             server, port = url.hostname, url.port
             if url.username and ":" not in url.username and not url.password:
-                auth = base64.b64decode(
+                auth = base64.urlsafe_b64decode(
                     url.username + "=" * ((4 - len(url.username) % 4) % 4)
                 ).decode()
                 method, password = auth.split(":", 1)

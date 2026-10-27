@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import Hysteria2Node, Node, Protocol
 
 
@@ -21,7 +21,8 @@ def build(node: Node) -> str:
         params["up"] = node.up
     if node.down:
         params["down"] = node.down
-    url = f"hysteria2://{urllib.parse.quote(node.password, safe='')}@{node.server}:{node.port}/"
+    password = urllib.parse.quote(node.password, safe="")
+    url = f"hysteria2://{password}@{format_authority(node.server, node.port)}/"
     if params:
         url += f"?{urllib.parse.urlencode(params)}"
     return f"{url}#{quote_name(node.name)}"

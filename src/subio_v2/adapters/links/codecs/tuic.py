@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import Node, Protocol, TUICNode
 
 
@@ -14,10 +14,13 @@ def build(node: Node) -> str:
     if node.tls.alpn:
         params["alpn"] = ",".join(node.tls.alpn)
     if node.version == 5 or (node.uuid and node.password):
-        userinfo = f"{node.uuid}:{urllib.parse.quote(node.password or '', safe='')}"
+        userinfo = (
+            f"{urllib.parse.quote(node.uuid, safe='')}:"
+            f"{urllib.parse.quote(node.password or '', safe='')}"
+        )
     else:
         userinfo = urllib.parse.quote(node.token or "", safe="")
-    url = f"tuic://{userinfo}@{node.server}:{node.port}"
+    url = f"tuic://{userinfo}@{format_authority(node.server, node.port)}"
     if params:
         url += f"?{urllib.parse.urlencode(params)}"
     return f"{url}#{quote_name(node.name)}"

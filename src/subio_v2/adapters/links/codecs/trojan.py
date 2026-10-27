@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import (
     Network,
     Node,
@@ -42,7 +42,7 @@ def build(node: Node) -> str:
                 else node.transport.host
             )
     password = urllib.parse.quote(node.password, safe="")
-    url = f"trojan://{password}@{node.server}:{node.port}"
+    url = f"trojan://{password}@{format_authority(node.server, node.port)}"
     if params:
         url += f"?{urllib.parse.urlencode(params)}"
     return f"{url}#{quote_name(node.name)}"
@@ -78,7 +78,7 @@ def parse(line: str) -> Node | None:
             type=Protocol.TROJAN,
             server=url.hostname,
             port=url.port,
-            password=url.username,
+            password=urllib.parse.unquote(url.username) if url.username else url.username,
             transport=transport,
             tls=TLSSettings(
                 enabled=True,

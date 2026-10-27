@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import (
     Network,
     Node,
@@ -59,7 +59,11 @@ def build(node: Node) -> str:
         if node.transport.headers and "Host" in node.transport.headers:
             params["host"] = node.transport.headers["Host"]
     query = urllib.parse.urlencode(params)
-    return f"vless://{node.uuid}@{node.server}:{node.port}?{query}#{quote_name(node.name)}"
+    userinfo = urllib.parse.quote(node.uuid, safe="")
+    return (
+        f"vless://{userinfo}@{format_authority(node.server, node.port)}"
+        f"?{query}#{quote_name(node.name)}"
+    )
 
 
 def parse(line: str) -> Node | None:
@@ -97,7 +101,7 @@ def parse(line: str) -> Node | None:
             type=Protocol.VLESS,
             server=url.hostname,
             port=url.port,
-            uuid=url.username,
+            uuid=urllib.parse.unquote(url.username) if url.username else url.username,
             flow=query.get("flow", [None])[0],
             transport=transport,
             tls=TLSSettings(

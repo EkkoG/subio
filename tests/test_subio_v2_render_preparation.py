@@ -383,6 +383,56 @@ def test_scoped_errors_use_strict_existing_gate_despite_static_opt_out(
     )
 
 
+@pytest.mark.parametrize(
+    "target, field, parameter, value",
+    [
+        ("dae", "name", "name", "x': 'malformed"),
+        ("dae", "server", "host", "good.example#fragment"),
+        ("v2rayn", "server", "host", "good.example#fragment"),
+    ],
+)
+def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
+    tmp_path, monkeypatch, target, field, parameter, value
+):
+    path, data = _fixture(tmp_path, parameterized=False)
+    data["allow_conversion_errors"] = True
+    data["artifact"][0].update({"type": target, "allow_conversion_errors": True})
+    (tmp_path / "client.j2").write_text("{{ nodes.render() }}")
+    document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+    document["proxies"].append(
+        {"name": "safe", "type": "socks5", "server": "example.test", "port": 1080}
+    )
+    document["proxies"][0][field] = value
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    _snapshot(path, data)
+    static_result = WorkflowEngine(str(path)).prepare().artifact_result
+    assert static_result.drafts
+    assert any(
+        issue.field == field and issue.code == "conversion.invalid-value"
+        for issue in static_result.issues
+    )
+
+    data["provider"][0]["parameterized"] = True
+    document["proxies"][0][field] = "{{ params." + parameter + " }}"
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    config = _snapshot(path, data)
+    engine = _engine(path, config, pairs=[(parameter, value)])
+    monkeypatch.setattr(
+        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
+        lambda *args: pytest.fail("Staged malformed target output"),
+    )
+    with pytest.raises(ArtifactGenerationError) as error:
+        engine.prepare()
+    assert any(
+        issue.field == field
+        and issue.code == "conversion.invalid-value"
+        and issue.stage == "emit"
+        and issue.severity == "error"
+        for issue in error.value.issues
+    )
+    assert not (tmp_path / "dist").exists()
+
+
 def test_two_routes_get_fresh_concurrent_state_and_independent_defaults(
     tmp_path, monkeypatch
 ):

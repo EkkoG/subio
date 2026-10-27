@@ -26,6 +26,18 @@ class DaeEmitter(BaseEmitter):
         candidate_nodes: list[Node] = []
 
         for node in nodes:
+            # Reject unsafe wrapper values until dae escaping has a proven contract.
+            if any(char in "'\\" or not char.isprintable() for char in node.name):
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        "Node name is not representable in a dae quoted wrapper",
+                        field="name",
+                        code="conversion.invalid-value",
+                    )
+                )
+                continue
             if node.name in node_by_name:
                 issues.append(
                     self.issue_for_node(

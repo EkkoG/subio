@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import AnyTLSNode, Node, Protocol
 
 
@@ -13,7 +13,8 @@ def build(node: Node) -> str:
         params["insecure"] = "1"
     if node.tls.alpn:
         params["alpn"] = ",".join(node.tls.alpn)
-    url = f"anytls://{urllib.parse.quote(node.password, safe='')}@{node.server}:{node.port}/"
+    password = urllib.parse.quote(node.password, safe="")
+    url = f"anytls://{password}@{format_authority(node.server, node.port)}/"
     if params:
         url += f"?{urllib.parse.urlencode(params)}"
     return f"{url}#{quote_name(node.name)}"

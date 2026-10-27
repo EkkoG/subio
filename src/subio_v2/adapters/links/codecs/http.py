@@ -1,6 +1,6 @@
 import urllib.parse
 
-from subio_v2.adapters.links.codecs._base import LinkCodec, quote_name
+from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
 from subio_v2.core.nodes import HttpNode, Node, Protocol
 
 
@@ -13,7 +13,10 @@ def build(node: Node) -> str:
             f"{urllib.parse.quote(node.username or '', safe='')}:"
             f"{urllib.parse.quote(node.password or '', safe='')}@"
         )
-    return f"{scheme}://{userinfo}{node.server}:{node.port}#{quote_name(node.name)}"
+    return (
+        f"{scheme}://{userinfo}{format_authority(node.server, node.port)}"
+        f"#{quote_name(node.name)}"
+    )
 
 
 CODEC = LinkCodec(
