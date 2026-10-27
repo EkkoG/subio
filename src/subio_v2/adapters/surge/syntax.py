@@ -284,6 +284,7 @@ def _encode_atom(
         or '"' in value
         or "(" in value
         or ")" in value
+        or value.endswith("]")  # Avoid whole-line section headers.
         or value != value.strip()
         or (quote_equals and "=" in value)
     )

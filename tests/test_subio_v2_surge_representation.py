@@ -506,3 +506,79 @@ def test_client_id_guard_does_not_add_numeric_or_byte_validation(value):
     assert not parsed.issues
     peer = parsed.nodes[0].source_extensions["surge"]["wireguard"]["peers"][0]
     assert peer["client-id"] == f"{value}/2/3"
+
+
+def _section_like_proxy(family, name, case, value):
+    protocol = "http" if case == "headers" else ("anytls" if case == "anytls-password" else "socks5")
+    node = _nested_node(family, protocol)
+    node.update(name=name, udp=False)
+    if case in {"password", "anytls-password"}:
+        node["password"] = value
+        field = ("password",)
+    elif case == "interface":
+        node["interface_name" if family == "subio" else "interface-name"] = value
+        field = ("interface_name",)
+    elif case == "sni":
+        if family == "subio":
+            node["tls"]["server_name"] = value
+        else:
+            node["sni"] = value
+        field = ("tls", "server_name")
+    else:
+        node["headers"] = {"X-Review": value}
+        field = ("headers",)
+    return node, field
+
+
+def _assert_proxy_and_following_neighbor(content, name, field, value):
+    parsed = get_parser("surge").parse_result(content)
+    assert not parsed.issues
+    assert [node.name for node in parsed.nodes] == [name, "neighbor"]
+    assert _read(parsed.nodes[0], field) == value
+    assert parsed.nodes[1].server == "example.test"
+    assert parsed.nodes[1].password == "password"
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("name", ["plain", "[literal]", "[open"])
+@pytest.mark.parametrize("case", ["password", "interface", "sni", "headers", "anytls-password"])
+@pytest.mark.parametrize("value", ["pw]", "safe", "pw]x", "pw],", 'quoted"pw]'])
+def test_complete_proxy_line_preserves_both_nodes_through_prepare_and_http(
+    tmp_path, monkeypatch, family, name, case, value
+):
+    node, field = _section_like_proxy(family, name, case, "{{ params.value }}")
+    path = _document_fixture(tmp_path, family, node)
+    result = _prepare(path, value).artifact_result
+    assert not result.issues
+    expected = {"X-Review": value} if case == "headers" else value
+    _assert_proxy_and_following_neighbor(result.drafts[0].content, name, field, expected)
+    response = _http(path, value, monkeypatch)
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment"
+    _assert_proxy_and_following_neighbor(response.text, name, field, expected)
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("name", ["[literal]", "[open"])
+@pytest.mark.parametrize("case", ["password", "interface", "sni", "headers", "anytls-password"])
+def test_static_opt_out_keeps_both_nodes_for_section_like_proxy_lines(tmp_path, family, name, case):
+    node, field = _section_like_proxy(family, name, case, "pw]")
+    path = _document_fixture(tmp_path, family, node, parameterized=False)
+    result = WorkflowEngine(str(path)).prepare().artifact_result
+    assert not result.issues
+    expected = {"X-Review": "pw]"} if case == "headers" else "pw]"
+    _assert_proxy_and_following_neighbor(result.drafts[0].content, name, field, expected)
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("name", ["[literal]", "[open"])
+def test_parameterized_bracketed_name_with_static_closing_atom_remains_a_proxy(tmp_path, monkeypatch, family, name):
+    node, field = _section_like_proxy(family, "{{ params.value }}", "password", "pw]")
+    path = _document_fixture(tmp_path, family, node)
+    prepared = _prepare(path, name).artifact_result
+    assert not prepared.issues
+    _assert_proxy_and_following_neighbor(prepared.drafts[0].content, name, field, "pw]")
+    response = _http(path, name, monkeypatch)
+    assert response.status_code == 200
+    _assert_proxy_and_following_neighbor(response.text, name, field, "pw]")

@@ -1,5 +1,6 @@
 import pytest
 
+from subio_v2.adapters.catalog import get_parser
 from subio_v2.adapters.surge.syntax import (
     SurgeParameter,
     SurgeParameters,
@@ -170,3 +171,23 @@ def test_quoted_literal_parentheses_do_not_replace_structural_peer_parentheses()
     assert parse_parameter_list(peers[0][1:-1]).last_values == {
         "public-key": "left(", "endpoint": "right):51820",
     }
+
+
+@pytest.mark.parametrize("name", ["plain", "[literal]", "[open"])
+@pytest.mark.parametrize("value", ["pw]", "safe", "pw]x", "pw],", 'quoted"pw]'])
+@pytest.mark.parametrize("placement", ["positional", "parameter"])
+def test_proxy_line_does_not_become_a_document_section(name, value, placement):
+    record = SurgeProxyRecord(
+        name=name,
+        type="socks5",
+        positional=("example.test", "1080", "user", value) if placement == "positional" else ("example.test", "1080"),
+        parameters=SurgeParameters([SurgeParameter("password", value)]) if placement == "parameter" else SurgeParameters(),
+    )
+    line = serialize_proxy_line(record)
+    assert parse_proxy_line(line) == record
+    for prefix in ("", "[Proxy]\n"):
+        parsed = get_parser("surge").parse_result(prefix + line + "\nhealthy = socks5, healthy.test, 1080")
+        assert not parsed.issues
+        assert [node.name for node in parsed.nodes] == [name, "healthy"]
+        assert parsed.nodes[0].password == value
+        assert parsed.nodes[1].server == "healthy.test"
