@@ -6,6 +6,7 @@ from subio_v2.adapters.surge.syntax import (
     SurgeProxyRecord,
     parse_parameter_list,
     parse_proxy_line,
+    serialize_comma_separated,
     serialize_parameter_list,
     serialize_proxy_line,
     split_comma_separated,
@@ -142,3 +143,30 @@ def test_serializer_rejects_names_that_would_be_comments_or_trimmed(name):
 def test_serializer_preserves_names_with_internal_comment_markers_or_spaces(name):
     record = SurgeProxyRecord(name=name, type="direct")
     assert parse_proxy_line(serialize_proxy_line(record)) == record
+
+
+@pytest.mark.parametrize("value", [
+    "(", ")", "left(", "right)", "balanced(value)", "comma,value",
+    'say "hello"', " padded ", r"back\slash", r'quoted\"slash', "literal=value",
+])
+def test_literal_atoms_and_csv_elements_keep_parentheses_and_other_delimiters(value):
+    record = SurgeProxyRecord(
+        name="literal", type="custom", positional=(value,),
+        parameters=SurgeParameters((SurgeParameter("value", value),)),
+    )
+    assert parse_proxy_line(serialize_proxy_line(record)) == record
+    values = [value, "neighbor", ""]
+    assert split_comma_separated(serialize_comma_separated(values)) == tuple(values)
+
+
+def test_quoted_literal_parentheses_do_not_replace_structural_peer_parentheses():
+    peer = serialize_parameter_list([
+        SurgeParameter("public-key", "left("),
+        SurgeParameter("endpoint", "right):51820"),
+    ], spaced_equals=True)
+    record = "(" + peer + ")"
+    peers = split_comma_separated(record + ", " + record)
+    assert peers == (record, record)
+    assert parse_parameter_list(peers[0][1:-1]).last_values == {
+        "public-key": "left(", "endpoint": "right):51820",
+    }

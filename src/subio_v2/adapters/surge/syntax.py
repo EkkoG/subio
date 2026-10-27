@@ -162,6 +162,12 @@ def split_comma_separated(payload: str) -> tuple[str, ...]:
     return tuple(_decode_atom(token) for token in _split_comma_separated(payload))
 
 
+def serialize_comma_separated(values: Iterable[str]) -> str:
+    """Serialize literal list elements without giving them structural meaning."""
+
+    return ", ".join(_encode_atom(value, quote_empty=True) for value in values)
+
+
 def serialize_parameter_list(
     parameters: Iterable[SurgeParameter], *, spaced_equals: bool = False
 ) -> str:
@@ -276,6 +282,8 @@ def _encode_atom(
         (quote_empty and not value)
         or "," in value
         or '"' in value
+        or "(" in value
+        or ")" in value
         or value != value.strip()
         or (quote_equals and "=" in value)
     )

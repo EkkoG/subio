@@ -18,6 +18,7 @@ from subio_v2.adapters.surge.syntax import (
     SurgeParameter,
     SurgeParameters,
     SurgeProxyRecord,
+    serialize_comma_separated,
     serialize_parameter_list,
     serialize_proxy_line,
 )
@@ -68,6 +69,33 @@ class SurgeEmitter(BaseEmitter):
         if isinstance(server, list):
             return str(server[0])
         return str(server)
+
+    @staticmethod
+    def _section_name(node: Node) -> str:
+        source_name = node.source_extensions.get("surge", {}).get("section_name")
+        name = source_name or node.name
+        if (
+            name != name.strip()
+            or name.splitlines() != [name]
+            or "[" in name or "]" in name
+        ):
+            raise _SurgeEmissionError(
+                "Surge section name cannot contain brackets, line breaks or surrounding whitespace",
+                field="source_extensions.surge.section_name" if source_name else "name",
+                code="conversion.invalid-value",
+            )
+        return name
+
+    @staticmethod
+    def _section_scalar(value: str, field: str) -> str:
+        # Section values are stripped by their consumer and do not decode quotes.
+        if value != value.strip() or value.splitlines() != [value]:
+            raise _SurgeEmissionError(
+                "Surge section scalar cannot contain line breaks or surrounding whitespace",
+                field=field,
+                code="conversion.invalid-value",
+            )
+        return value
 
     def emit_result(self, nodes: List[Node]) -> EmissionResult[str]:
         issues = []
@@ -214,7 +242,7 @@ class SurgeEmitter(BaseEmitter):
 
         extension = node.source_extensions.get("surge", {})
         if isinstance(node, WireguardNode):
-            section_name = extension.get("section_name") or node.name
+            section_name = self._section_name(node)
             key = ("wireguard", section_name)
             existing = source.named_sections.get(key) if source else None
             if extension.get("section_name") and existing is None:
@@ -231,7 +259,7 @@ class SurgeEmitter(BaseEmitter):
             )
 
         if isinstance(node, TailscaleNode):
-            section_name = extension.get("section_name") or node.name
+            section_name = self._section_name(node)
             key = ("tailscale", section_name)
             existing = source.named_sections.get(key) if source else None
             if extension.get("section_name") and existing is None:
@@ -422,13 +450,13 @@ class SurgeEmitter(BaseEmitter):
     ) -> tuple[str, ...]:
         lines: list[str] = []
         if node.auth_key:
-            lines.append(f"auth-key = {node.auth_key}")
+            lines.append("auth-key = " + SurgeEmitter._section_scalar(node.auth_key, "auth_key"))
         elif node.interactive_login:
             lines.append("interactive-login = true")
         if node.control_url:
-            lines.append(f"control-url = {node.control_url}")
+            lines.append("control-url = " + SurgeEmitter._section_scalar(node.control_url, "control_url"))
         if node.hostname:
-            lines.append(f"hostname = {node.hostname}")
+            lines.append("hostname = " + SurgeEmitter._section_scalar(node.hostname, "hostname"))
         if node.derp_only:
             lines.append("derp-only = true")
         if node.auto_add_magic_dns_rule is not None:
@@ -436,13 +464,13 @@ class SurgeEmitter(BaseEmitter):
                 "auto-add-magic-dns-rule = " + str(node.auto_add_magic_dns_rule).lower()
             )
         if node.exit_node:
-            lines.append(f"exit-node = {node.exit_node}")
+            lines.append("exit-node = " + SurgeEmitter._section_scalar(node.exit_node, "exit_node"))
         if node.idle_keepalive is not None:
             lines.append(f"idle-keepalive = {node.idle_keepalive}")
         if node.prefer_ipv6:
             lines.append("prefer-ipv6 = true")
         if node.dns_servers:
-            lines.append("dns-server = " + ", ".join(node.dns_servers))
+            lines.append("dns-server = " + serialize_comma_separated(node.dns_servers))
         if node.mtu is not None:
             lines.append(f"mtu = {node.mtu}")
 
@@ -497,7 +525,7 @@ class SurgeEmitter(BaseEmitter):
                     "server": SurgeEmitter._server_str(node),
                     "port": node.port,
                     "public-key": node.public_key,
-                    "pre-shared-key": node.preshared_key,
+                    "preshared-key": node.preshared_key,
                     "allowed-ips": node.allowed_ips,
                     "reserved": node.reserved,
                     "keepalive": node.persistent_keepalive,
@@ -521,12 +549,22 @@ class SurgeEmitter(BaseEmitter):
                 allowed_ips = ["0.0.0.0/0", "::/0"]
             values["public-key"] = str(public_key)
             values["allowed-ips"] = (
-                ", ".join(str(value) for value in allowed_ips)
+                serialize_comma_separated(str(value) for value in allowed_ips)
                 if isinstance(allowed_ips, list)
                 else str(allowed_ips)
             )
+            server_field = f"peers[{index}].server" if node.peers else "server"
             endpoint_server = str(server)
-            if ":" in endpoint_server and not endpoint_server.startswith("["):
+            if endpoint_server.startswith("[") or (
+                ":" not in endpoint_server
+                and endpoint_server != endpoint_server.lstrip()
+            ):
+                raise _SurgeEmissionError(
+                    "Surge WireGuard server cannot be represented faithfully as an endpoint",
+                    field=server_field,
+                    code="conversion.invalid-value",
+                )
+            if ":" in endpoint_server:
                 endpoint_server = f"[{endpoint_server}]"
             values["endpoint"] = f"{endpoint_server}:{port}"
             preshared_key = model.get("preshared_key") or model.get("preshared-key")
@@ -568,20 +606,22 @@ class SurgeEmitter(BaseEmitter):
     def _wireguard_section_lines(
         self, node: WireguardNode, existing: SurgeNamedSection | None
     ) -> tuple[str, ...]:
-        lines = [f"private-key = {node.private_key}"]
+        lines = ["private-key = " + self._section_scalar(node.private_key, "private_key")]
         if node.interface_ip:
-            lines.append(f"self-ip = {node.interface_ip}")
+            lines.append("self-ip = " + self._section_scalar(node.interface_ip, "interface_ip"))
         if node.interface_ipv6:
-            lines.append(f"self-ip-v6 = {node.interface_ipv6}")
+            lines.append("self-ip-v6 = " + self._section_scalar(node.interface_ipv6, "interface_ipv6"))
         if node.dns_servers:
-            lines.append("dns-server = " + ", ".join(node.dns_servers))
+            lines.append("dns-server = " + serialize_comma_separated(node.dns_servers))
         prefer_ipv6 = (
             node.source_extensions.get("surge", {})
             .get("wireguard", {})
             .get("prefer_ipv6")
         )
         if prefer_ipv6 is not None:
-            lines.append(f"prefer-ipv6 = {prefer_ipv6}")
+            lines.append("prefer-ipv6 = " + self._section_scalar(
+                prefer_ipv6, "source_extensions.surge.wireguard.prefer_ipv6"
+            ))
         if node.mtu is not None:
             lines.append(f"mtu = {node.mtu}")
         for peer in self._wireguard_peer_parameters(node):
