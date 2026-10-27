@@ -7,7 +7,6 @@ import yaml
 
 from subio_v2.adapters.catalog import get_emitter, get_parser
 from subio_v2.adapters.links import codecs as links
-from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Network
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.rendering import prepare_resources
@@ -212,7 +211,7 @@ def _fixture(tmp_path, family, case, *, empty_neighbors=False):
     ("host", "one.test,two.test", "transport.host"), ("host", "", "transport.host"),
     ("plugin", "good.test;injected=other", "plugin_opts"),
 ])
-def test_nested_link_errors_block_prepare_and_http_before_partial_staging(
+def test_nested_link_errors_skip_unsafe_node_in_prepare_and_http(
     tmp_path, monkeypatch, family, case, value, field
 ):
     pytest.importorskip("starlette")
@@ -222,23 +221,26 @@ def test_nested_link_errors_block_prepare_and_http_before_partial_staging(
     path, config = _fixture(tmp_path, family, case)
     params = normalize_parameters(config.artifacts[0].params, [("value", value)])
     candidate = prepare_resources(str(path), config).candidates["out.txt"]
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged partial nested-link output"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        candidate.render("out.txt", params)
+    prepared = candidate.render("out.txt", params).artifact_result
     assert any(
         issue.field == field and issue.code == "conversion.invalid-value"
         and issue.severity == "error" and issue.stage == "emit"
-        for issue in error.value.issues
+        for issue in prepared.issues
     )
+    parsed = get_parser("v2rayn").parse_result(prepared.drafts[0].content)
+    assert not parsed.issues and [node.name for node in parsed.nodes] == ["safe"]
+    expected = _node("vmess")
+    expected.name = "safe"
+    expected.server = "safe.test"
+    expected.uuid = "synthetic-safe-uuid"
+    expected.tls.enabled = False
+    assert prepared.drafts[0].content == get_emitter("v2rayn").emit_result([expected]).content
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.txt?" + urlencode({"token": token, "value": value}))
-    assert response.status_code == 422
-    assert response.json() == {"error": "conversion_rejected"}
+    assert response.status_code == 200
+    assert response.text == prepared.drafts[0].content
     assert response.headers["cache-control"] == "no-store, private"
     assert not (tmp_path / "dist").exists()
 

@@ -459,7 +459,10 @@ provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError
 最终 Jinja 始终获得单一不可变 `params` 命名空间；静态生成使用 artifact 默认值，无声明时为空。
 模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
 或目标 serializer 写入合适上下文。该路径禁止发布、上传、manifest 和请求报告/结果缓存，
-任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。
+所有 artifact 类型沿用静态生成的转换策略，包括全局或 artifact 级 `allow_conversion_errors`、
+`allow_empty`、用户选择、preflight 和模板检查。默认 conversion ERROR 阻断响应；显式允许时，
+返回剩余可生成内容并以安全 WARNING 记录错误码/计数。被 parser、codec 或规则 renderer 拒绝的
+节点/规则不会因该选项而直接输出。请求参数不能改变这些配置策略；鉴权、参数输入和结构检查仍然执行。
 
 模板准备沿用 `template/` 目录优先、否则配置目录的选择。`PreparedTemplates` 捕获现有
 `FileSystemLoader.list_templates()` 枚举的有限名称及显式配置的根模板，预编译根模板；请求的 loader
@@ -481,8 +484,8 @@ helper 缺失、不可读或编译错误在实际访问时返回固定 500。根
 新请求在年龄达到 max age 时返回固定 `503 snapshot_expired`，尚无快照返回 `503 not_ready`，
 四个渲染名额占满才返回 `503 busy`；这些错误码仅在鉴权成功后返回。已有请求可完成；成功刷新后自动恢复。
 解析返回 `ParseResult`（包括 ERROR 或无节点的 `fatal_result`）属于成功获取，发布新内容及原有 issues
-并更新年龄，随后由原有严格 artifact gate 返回 422；不得因新内容无效而继续提供旧的正常输出。
-重复成功获取无效内容保持 422；后续获取失败不更新年龄，过期转为 503。空正文、获取/解密/UTF-8/
+并更新年龄，随后由既有 artifact 策略决定是否拒绝，默认返回 422；不得因新内容无效而继续提供旧的正常输出。
+显式允许转换错误时可返回剩余结果；后续获取失败不更新年龄，过期转为 503。空正文、获取/解密/UTF-8/
 序列化解码等异常不发布。参数化源的节点解析/issue gate 仍在请求绑定后执行。
 
 serve 只使用内存资源快照和每轮内存去重，显式关闭远程磁盘缓存与 stale fallback，避免以旧缓存

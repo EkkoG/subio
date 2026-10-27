@@ -72,12 +72,10 @@ class PreparedArtifact:
                     users=(),
                     user=selected[1],
                     upload=(),
-                    allow_conversion_errors=False,
                     options=MappingProxyType(copy.deepcopy(dict(artifact.options))),
                 ),
             ),
             uploaders=(),
-            allow_conversion_errors=False,
             options=MappingProxyType(copy.deepcopy(dict(self._config.options))),
         )
         providers = ProviderLoadResult({}, {})
@@ -229,7 +227,6 @@ def prepare_resources(
                         if item.name in artifact.providers
                     ),
                     uploaders=(),
-                    allow_conversion_errors=False,
                     options=MappingProxyType(copy.deepcopy(dict(config.options))),
                 )
                 candidate = PreparedArtifact(

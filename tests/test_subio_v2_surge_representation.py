@@ -4,7 +4,6 @@ import pytest
 import yaml
 
 from subio_v2.adapters.catalog import get_emitter, get_parser
-from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Protocol, TailscaleNode, WireguardNode
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
@@ -132,6 +131,16 @@ def _round_trip(content, field, value):
         assert _read(node, field[:-1]) == [value, "neighbor"]
 
 
+def _assert_only_neighbor(content):
+    parsed = get_parser("surge").parse_result(content)
+    assert not parsed.issues and len(parsed.nodes) == 1
+    node = parsed.nodes[0]
+    assert (node.name, node.type, node.server, node.port, node.username, node.password) == (
+        "neighbor", Protocol.SOCKS5, "example.test", 1080, "user", "password"
+    )
+    assert content == "[Proxy]\n" + get_emitter("surge").emit_result(parsed.nodes).content
+
+
 def _successful_request(tmp_path, monkeypatch, family, protocol, field, value):
     path = _fixture(tmp_path, family, protocol, field)
     prepared = _prepare(path, value).artifact_result
@@ -174,25 +183,22 @@ UNREPRESENTABLE = [
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
 @pytest.mark.parametrize("protocol, field, value", UNREPRESENTABLE)
-def test_unrepresentable_section_values_block_before_draft_and_http_success(
+def test_unrepresentable_section_values_skip_node_in_prepare_and_http(
     tmp_path, monkeypatch, family, protocol, field, value
 ):
     path = _fixture(tmp_path, family, protocol, field)
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged an unrepresentable Surge value"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        _prepare(path, value)
+    result = _prepare(path, value).artifact_result
     expected_field = ".".join(str(item) for item in field).replace("peers.0.", "peers[0].")
     assert any(
         issue.field == expected_field and issue.code == "conversion.invalid-value"
         and issue.severity == "error"
-        for issue in error.value.issues
+        for issue in result.issues
     )
+    _assert_only_neighbor(result.drafts[0].content)
     response = _http(path, value, monkeypatch)
-    assert response.status_code == 422
-    assert response.json() == {"error": "conversion_rejected"}
+    assert response.status_code == 200
+    assert response.text == result.drafts[0].content
+    _assert_only_neighbor(response.text)
     assert not (tmp_path / "dist").exists()
 
 
@@ -299,20 +305,17 @@ def _nested_success(path, value, field, expected, monkeypatch):
 
 
 def _nested_rejection(path, value, field, monkeypatch):
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged an unrepresentable Surge inner value"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        _prepare(path, value)
+    result = _prepare(path, value).artifact_result
     assert any(
         (issue.field, issue.code, issue.severity, issue.stage)
         == (field, "conversion.invalid-value", "error", "emit")
-        for issue in error.value.issues
+        for issue in result.issues
     )
+    _assert_only_neighbor(result.drafts[0].content)
     response = _http(path, value, monkeypatch)
-    assert response.status_code == 422
-    assert response.json() == {"error": "conversion_rejected"}
+    assert response.status_code == 200
+    assert response.text == result.drafts[0].content
+    _assert_only_neighbor(response.text)
     assert not (path.parent / "dist").exists()
 
 
@@ -333,7 +336,7 @@ HEADER_PLACEMENTS = [
     "safe;equal=value%2C+", "safe|equal=value%2C+",
     'comma,quotes"(value)=equal%2C+\\backslash',
 ])
-def test_header_inner_values_are_faithful_or_block_before_staging(
+def test_header_inner_values_are_faithful_or_skip_node(
     tmp_path, monkeypatch, family, protocol, variant, enabled, value
 ):
     node = _nested_node(family, protocol)
@@ -390,7 +393,7 @@ TLS_PLACEMENTS = [
 @pytest.mark.parametrize("family, protocol", TLS_PLACEMENTS)
 @pytest.mark.parametrize("shape", ["single", "first", "last", "both", "sandwich"])
 @pytest.mark.parametrize("value", ["h2,http/1.1", " h2 ", "", "h2", "%2C;equal=value+"])
-def test_shared_alpn_preserves_exact_elements_or_rejects_before_staging(
+def test_shared_alpn_preserves_exact_elements_or_skips_node(
     tmp_path, monkeypatch, family, protocol, shape, value
 ):
     node = _nested_node(family, protocol)
@@ -439,7 +442,7 @@ def test_explicit_sni_disable_remains_supported(tmp_path, monkeypatch, protocol)
 
 
 @pytest.mark.parametrize("value", ["one,two", "", " padded ", "%2C;equal=value+", 'say "hello"(fingerprint)'])
-def test_native_ssh_fingerprint_elements_are_faithful_or_block_before_staging(tmp_path, monkeypatch, value):
+def test_native_ssh_fingerprint_elements_are_faithful_or_skip_node(tmp_path, monkeypatch, value):
     node = _nested_node("subio", "ssh")
     node["server_fingerprints"] = ["{{ params.value }}", "neighbor"]
     path = _document_fixture(tmp_path, "subio", node)

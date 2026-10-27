@@ -247,9 +247,20 @@ class _RenderService:
 
     def _render(self, file_name, artifact, parameters, snapshot) -> Response:
         try:
-            drafts = snapshot.artifact.render(file_name, parameters).artifact_result.drafts
+            result = snapshot.artifact.render(file_name, parameters).artifact_result
+            drafts = result.drafts
             if len(drafts) != 1:
                 return _error(500)
+            counts = Counter(
+                issue.code for issue in result.issues if issue.severity == IssueSeverity.ERROR
+            )
+            if counts:
+                index = self.config.artifacts.index(artifact) + 1
+                summary = ", ".join(f"{code}={count}" for code, count in sorted(counts.items()))
+                _service_logger.warning(
+                    f"Render completed with conversion errors (200), artifact #{index}: "
+                    f"{summary}; allow_conversion_errors=true"
+                )
             encrypted = artifact.age_public_key or self.config.age_public_key
             if encrypted:
                 media_type = "application/octet-stream"

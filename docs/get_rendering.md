@@ -38,7 +38,7 @@ uv run --extra server subio serve example/render/config.toml --log-level debug
 |---|---|
 | DEBUG | 配置数量与刷新设置、逐个 provider 准备和耗时、规则及模板准备、artifact 就绪、请求开始和已鉴权 artifact 序号 |
 | INFO | 启动、资源准备/刷新摘要、实际监听成功、每次 HTTP 请求的状态和耗时、关闭 |
-| WARNING | provider/模板未就绪、503 的具体原因、缺少渲染参数、422 的结构化错误码和计数、响应传输失败 |
+| WARNING | provider/模板未就绪、503 的具体原因、缺少渲染参数、转换错误码和计数（含显式放行的 200 响应）、响应传输失败 |
 | ERROR | 共享资源准备失败、意外的准备/请求/渲染异常、启动失败 |
 | CRITICAL | 仅保留 critical 及以上事件；当前常规服务事件均低于此级别 |
 
@@ -92,8 +92,8 @@ uv run --extra server subio serve example/render/config.toml \
 获取、空正文、解密、UTF-8 或源序列化解码等异常不发布候选，也不更新旧快照年龄；尚未过期的旧版本
 可继续服务，达到 max age 的新请求返回 `503 snapshot_expired`。已有请求可完成；后续成功刷新后自动恢复。
 静态解析器正常返回的 `ParseResult` 即使含 ERROR 或无节点的 `fatal_result`，也代表成功获取：
-它替换旧内容并更新年龄，由原有 conversion gate 返回 `422 conversion_rejected`。重复成功获取
-无效内容保持 422；如果之后获取失败，年龄不再更新，过期后返回 503。
+它替换旧内容并更新年龄，请求由既有 artifact 策略决定是否拒绝，默认返回 `422 conversion_rejected`。
+配置允许转换错误时可返回剩余结果；如果之后获取失败，年龄不再更新，过期后返回 503。
 
 serve 以资源快照为唯一服务缓存，每轮仍有内存去重，远程磁盘响应缓存和 stale fallback 始终关闭。
 配置中的 `remote.cache` 仍控制静态 `convert/check/inspect` 的原有策略，不控制 serve，也不会删除
@@ -156,6 +156,14 @@ artifact 无需声明 `params`。文件名按 URL 路径段编码，并在 UTF-8
 只接受配置中的文件名，不拼接磁盘路径，也不读取已有 `dist` 文件；文件名不能含 `/`、`\` 或为 `.`、`..`。
 没有文件名枚举接口。
 
+Web 沿用所有现有输出类型的生成行为：`mihomo`、`clash-meta`、`clash`、`stash`、`surge`、
+`sing-box`、`dae`、`v2rayn`。全局或当前 artifact 设置 `allow_conversion_errors = true` 时，与静态
+生成一样，保留转换 issues 并返回剩余可生成内容；未设置时，conversion ERROR 返回 422。
+被 parser、codec 或规则 renderer 拒绝的节点/规则不会被强行输出；例如跳过不支持的规则后，最终匹配
+结果可能变化，应按需审阅。服务会以 WARNING 记录已放行的错误码和计数，不记录源正文或请求值。
+`allow_empty`、用户选择、节点 preflight 和模板检查也沿用原行为；此选项不会放行所有生成异常。
+这些策略只从配置读取，URL 参数不能修改它们。
+
 每个 artifact 拥有自己的参数声明；共享 provider 时，各自的默认值、类型和约束独立生效。
 固定 `artifact.user` 沿用原有语义；批量 `users = ["alice", "bob"]` 和 `name = "user-{user}.yaml"`
 对应 `/subscription/user-alice.yaml` 与 `/subscription/user-bob.yaml`，每次仅生成对应用户的一份结果。
@@ -213,8 +221,9 @@ proxies:
 
 替换后仍经过原有 native schema、节点语义、目标 codec 和转换 gate。未知 native 字段不会因替换
 而变得合法；未知安全 YAML 字段只按已有同方言规则保真。分享链接中的 URI authority、Surge 标识符
-或 dae 引号包装无法忠实表达某个值时，可以安全拒绝并返回 HTTP 422，不承诺所有字符串都可用于所有目标。
-静态 CLI 的 `allow_conversion_errors = true` 不能绕过 HTTP 的严格转换 ERROR gate。
+或 dae 引号包装无法忠实表达某个值时，该节点会被拒绝编码，不承诺所有字符串都可用于所有目标。
+默认返回 HTTP 422；配置允许转换错误时，可返回其余可生成内容，不能通过该选项强行输出非法字段。
+请求解码、token 认证、参数类型/限额、缺失值及源标量替换的结构检查始终执行。
 
 ## 可信最终模板
 
@@ -288,7 +297,7 @@ CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同�
 | 404 | `not_found` | 认证后没有对应路由 |
 | 405 | `method_not_allowed` | 认证后的已知路由使用非 GET 方法 |
 | 413 | `request_too_large` | 原始请求、字段数或字符串超限 |
-| 422 | `conversion_rejected` | 节点/目标转换 ERROR，未返回部分成功内容 |
+| 422 | `conversion_rejected` | artifact 的既有生成策略拒绝了转换结果，未返回部分成功内容 |
 | 500 | `internal_error` | 本地配置、模板或内部故障 |
 | 502 | `upstream_error` | 渲染时传播的上游异常；后台资源获取失败按快照可用性处理 |
 | 503 | `not_ready` | 请求的输出尚无成功准备的资源快照；检查准备日志，修复资源后等待刷新或重启 |

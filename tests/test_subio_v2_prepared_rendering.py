@@ -331,8 +331,9 @@ def test_static_nodes_are_parsed_and_transformed_once_then_deeply_cloned(
 
 
 @pytest.mark.parametrize("fatal", [False, True])
-def test_returned_parse_errors_complete_preparation_and_keep_strict_request_422(
-    tmp_path, fatal
+@pytest.mark.parametrize("allow_errors,allow_empty", [(False, False), (True, False), (True, True)])
+def test_returned_parse_errors_complete_preparation_and_follow_artifact_policy(
+    tmp_path, fatal, allow_errors, allow_empty
 ):
     data = _fixture(tmp_path, fmt="subio" if fatal else "mihomo", parameterized=False)
     source = (
@@ -351,8 +352,7 @@ def test_returned_parse_errors_complete_preparation_and_keep_strict_request_422(
         }
     )
     (tmp_path / "nodes.source").write_text(yaml.safe_dump(source))
-    data["allow_conversion_errors"] = True
-    data["artifact"][0]["allow_conversion_errors"] = True
+    data["artifact"][0].update(allow_conversion_errors=allow_errors, allow_empty=allow_empty)
     path, config = _config(tmp_path, data)
     prepared = prepare_resources(path, config)
     assert not prepared.failures
@@ -360,13 +360,17 @@ def test_returned_parse_errors_complete_preparation_and_keep_strict_request_422(
     static = candidate._providers[0]._static
     assert len(static.providers["source"]) == (0 if fatal else 1)
     assert any(issue.severity == "error" for issue in static.issues["source"])
-    with pytest.raises(ArtifactGenerationError) as error:
-        _render(candidate)
-    assert _failure_status(error.value) == 422
-    assert any(issue.severity == "error" for issue in error.value.issues)
-    assert (
-        config.allow_conversion_errors and config.artifacts[0].allow_conversion_errors
-    )
+    if allow_errors and (not fatal or allow_empty):
+        result = _render(candidate).artifact_result
+        proxies = yaml.safe_load(result.drafts[0].content)["proxies"]
+        assert [node["name"] for node in proxies] == ([] if fatal else ["valid"])
+        assert any(issue.severity == "error" for issue in result.issues)
+    else:
+        with pytest.raises(ArtifactGenerationError) as error:
+            _render(candidate)
+        assert _failure_status(error.value) == 422
+        assert any(issue.severity == "error" for issue in error.value.issues)
+    assert config.artifacts[0].allow_conversion_errors == allow_errors
 
 
 def test_partial_preparation_scope_failures_and_loader_cleanup_are_sanitized(
@@ -673,6 +677,7 @@ def test_memory_templates_keep_strict_missing_parameters_at_request_gate(
     tmp_path, expression
 ):
     data = _fixture(tmp_path)
+    data["artifact"][0]["allow_conversion_errors"] = True
     (tmp_path / "client.j2").write_text("{{ " + expression + " }}")
     path, config = _config(tmp_path, data)
     prepared = prepare_resources(path, config)
@@ -695,10 +700,7 @@ def test_prepared_singbox_template_and_parameter_dependent_target_encoding(tmp_p
         _render(candidate, "client.json").artifact_result.drafts[0].content
     )
     assert output["outbounds"][0]["password"] == "default-secret"
-    data["artifact"][0].update(
-        name="links.txt", type="v2rayn", allow_conversion_errors=True
-    )
-    data["allow_conversion_errors"] = True
+    data["artifact"][0].update(name="links.txt", type="v2rayn")
     (tmp_path / "nodes.source").write_text(
         yaml.safe_dump(
             {

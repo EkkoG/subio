@@ -21,12 +21,14 @@ pytest.importorskip("httpx", reason="HTTP test transport requires dev dependenci
 from starlette.testclient import TestClient
 
 from subio_v2 import server
+from subio_v2.adapters.catalog import all_formats
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RunRemoteLoader
-from subio_v2.workflow.artifacts import ArtifactGenerationService
+from subio_v2.workflow.artifacts import ArtifactDraft, ArtifactGenerationResult, ArtifactGenerationService
+from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import PreparedProvider, ProviderLoaderService
 from subio_v2.workflow.rendering import PreparedArtifact
 
@@ -370,6 +372,8 @@ def test_missing_referenced_parameter_is_safe_400_before_staging_and_can_recover
     tmp_path, monkeypatch, capsys, caplog, family, boundary, missing
 ):
     path, data = _fixture(tmp_path, family)
+    data["allow_conversion_errors"] = True
+    data["artifact"][0]["allow_conversion_errors"] = True
     data["artifact"][0]["params"].pop("credential")
     if boundary == "provider":
         document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
@@ -494,6 +498,101 @@ def test_success_media_and_attachment_use_configured_target(tmp_path, target, me
             assert len(response.json()["outbounds"]) == 1
 
 
+@pytest.mark.parametrize("target", [
+    name for spec in all_formats() if spec.emitter_factory
+    for name in (spec.name, *sorted(spec.aliases))
+])
+@pytest.mark.parametrize("global_allow,artifact_allow", [
+    (False, False), (True, False), (False, True), (True, True),
+])
+def test_all_artifact_targets_follow_static_conversion_policy(
+    tmp_path, target, global_allow, artifact_allow
+):
+    path, data = _fixture(tmp_path)
+    data["provider"][0]["parameterized"] = False
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump({"proxies": [
+        {"name": "safe", "type": "socks5", "server": "example.test", "port": 1080},
+        "invalid node",
+    ]}))
+    data["allow_conversion_errors"] = global_allow
+    data["artifact"][0].update(type=target, allow_conversion_errors=artifact_allow)
+    (tmp_path / "client.j2").write_text(
+        '{"outbounds": {{ nodes.outbounds() }}}' if target == "sing-box"
+        else "{{ nodes.render() }}"
+    )
+    _save(path, data)
+    allowed = global_allow or artifact_allow
+    with logger.silenced():
+        if allowed:
+            static = WorkflowEngine(str(path)).prepare().artifact_result
+            assert any(issue.severity == IssueSeverity.ERROR for issue in static.issues)
+        else:
+            with pytest.raises(ArtifactGenerationError):
+                WorkflowEngine(str(path)).prepare()
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml?" + _query())
+        _headers(response)
+        if allowed:
+            assert response.status_code == 200
+            assert response.text == static.drafts[0].content
+        else:
+            assert response.status_code == 422
+            assert response.json() == {"error": "conversion_rejected"}
+    assert not (tmp_path / "dist").exists()
+
+
+def test_conversion_policy_remains_scoped_to_selected_artifact(tmp_path):
+    path, data = _fixture(tmp_path)
+    document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+    document["proxies"].append("invalid node")
+    (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    permissive = copy.deepcopy(data["artifact"][0])
+    permissive.update(name="permissive.yaml", allow_conversion_errors=True)
+    data["artifact"].append(permissive)
+    _save(path, data)
+    with TestClient(server.create_app(str(path))) as client:
+        for _ in range(2):
+            for name, status in (("permissive.yaml", 200), ("out.yaml", 422)):
+                response = client.get("/subscription/" + name + "?" + _query(
+                    allow_conversion_errors="true", allow_empty="true"
+                ))
+                assert response.status_code == status
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("global_allow,artifact_allow", [(False, False), (True, False), (False, True)])
+def test_stash_unsupported_process_rules_follow_static_policy_and_log_counts(
+    tmp_path, capsys, global_allow, artifact_allow
+):
+    path, data = _fixture(tmp_path)
+    data["allow_conversion_errors"] = global_allow
+    data["artifact"][0].update(type="stash", allow_conversion_errors=artifact_allow)
+    (tmp_path / "snippet").mkdir()
+    (tmp_path / "snippet" / "processes").write_text(
+        "policy\nDOMAIN,safe.example\n" + "\n".join(
+            f"PROCESS-PATH-REGEX,^/synthetic/app{index}$" for index in range(7)
+        )
+    )
+    (tmp_path / "client.j2").write_text(
+        "proxies:\n{{ nodes.render() | indent(2, true) }}\n"
+        "rules: {{ processes('DIRECT') | tojson }}\n"
+    )
+    _save(path, data)
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml?" + _query())
+        if global_allow or artifact_allow:
+            assert response.status_code == 200
+            assert yaml.safe_load(yaml.safe_load(response.text)["rules"]) == ["DOMAIN,safe.example,DIRECT"]
+            assert "PROCESS-PATH-REGEX" not in response.text
+        else:
+            assert response.status_code == 422
+            assert response.json() == {"error": "conversion_rejected"}
+    output = " ".join((capsys.readouterr().out).split())
+    assert "artifact #1: ruleset.unsupported-target-rule=7" in output
+    assert ("allow_conversion_errors=true" in output) == (global_allow or artifact_allow)
+    assert all(value not in output for value in (TOKEN, SECRET, str(tmp_path), "/synthetic/"))
+
+
 @pytest.mark.parametrize("global_key", [False, True])
 def test_age_content_and_fixed_user_use_existing_preparation(tmp_path, global_key):
     path, data = _fixture(tmp_path, "subio")
@@ -518,10 +617,10 @@ def test_age_content_and_fixed_user_use_existing_preparation(tmp_path, global_ke
 
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
-def test_parse_and_target_errors_reject_partial_output_despite_static_optouts(tmp_path, family, capsys):
+@pytest.mark.parametrize("allow_errors", [False, True])
+def test_parse_and_target_errors_follow_configured_policy(tmp_path, family, capsys, allow_errors):
     path, data = _fixture(tmp_path, family)
-    data["allow_conversion_errors"] = True
-    data["artifact"][0]["allow_conversion_errors"] = True
+    data["artifact"][0]["allow_conversion_errors"] = allow_errors
     data["artifact"][0]["allow_empty"] = True
     document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
     nodes = document["nodes" if family == "subio" else "proxies"]
@@ -530,38 +629,47 @@ def test_parse_and_target_errors_reject_partial_output_despite_static_optouts(tm
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.yaml?" + _query())
-        assert response.status_code == 422
-        assert response.json() == {"error": "conversion_rejected"}
-        assert SECRET not in response.text and "proxies" not in response.text
+        if allow_errors:
+            assert response.status_code == 200
+            assert [node["name"] for node in yaml.safe_load(response.text)["proxies"]] == ["default-name"]
+        else:
+            assert response.status_code == 422
+            assert response.json() == {"error": "conversion_rejected"}
+            assert SECRET not in response.text and "proxies" not in response.text
         _headers(response)
     captured = capsys.readouterr()
     assert SECRET not in captured.out + captured.err
 
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
-def test_target_encoding_rejection_is_422_before_a_draft_exists(tmp_path, family):
+@pytest.mark.parametrize("allow_empty", [False, True])
+def test_target_encoding_rejection_follows_empty_output_policy(tmp_path, family, allow_empty):
     path, data = _fixture(tmp_path, family)
     data["artifact"][0]["type"] = "v2rayn"
     data["artifact"][0].pop("template")
     data["artifact"][0]["allow_conversion_errors"] = True
+    data["artifact"][0]["allow_empty"] = allow_empty
     data["allow_conversion_errors"] = True
     _save(path, data)
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.yaml?" + _query(host="good.example#fragment"))
-        assert response.status_code == 422
-        assert response.json() == {"error": "conversion_rejected"}
+        if allow_empty:
+            assert response.status_code == 200 and response.content == b""
+        else:
+            assert response.status_code == 422
+            assert response.json() == {"error": "conversion_rejected"}
         _headers(response)
 
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
 @pytest.mark.parametrize("fixed_user", [False, True])
-def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
-    tmp_path, monkeypatch, capsys, caplog, family, fixed_user
+@pytest.mark.parametrize("allow_errors", [False, True])
+def test_direct_and_fixed_user_port_validation_follows_policy_and_recovers(
+    tmp_path, monkeypatch, capsys, caplog, family, fixed_user, allow_errors
 ):
     path, data = _fixture(tmp_path, family)
-    data["allow_conversion_errors"] = True
     artifact = data["artifact"][0]
-    artifact["allow_conversion_errors"] = True
+    artifact["allow_conversion_errors"] = allow_errors
     artifact["params"]["port"] = {"type": "integer"}
     source = tmp_path / "nodes.yaml"
     document = yaml.safe_load(source.read_text())
@@ -586,7 +694,8 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
             staged.clear()
             response = client.get("/subscription/out.yaml?" + _query(port=port))
             _headers(response)
-            if port == 0:
+            # Native rejects invalid overrides during parsing; Mihomo defers them to selection.
+            if port == 0 and (not allow_errors or (fixed_user and family == "mihomo")):
                 assert response.status_code == 422
                 assert response.json() == {"error": "conversion_rejected"}
                 assert staged == []
@@ -594,7 +703,7 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
             else:
                 assert response.status_code == 200
                 proxies = yaml.safe_load(response.text)["proxies"]
-                assert [node["port"] for node in proxies] == [port, 1080]
+                assert [node["port"] for node in proxies] == ([1080] if port == 0 else [port, 1080])
                 assert staged == [True]
     assert not (tmp_path / "dist").exists()
     captured = capsys.readouterr()
@@ -648,8 +757,13 @@ def test_runtime_template_and_internal_errors_are_sanitized(tmp_path, monkeypatc
 
 
 @pytest.mark.parametrize("level", ["debug", "info", "warning", "error", "critical"])
-def test_service_log_levels_cover_requests_and_safe_conversion_diagnostics(tmp_path, monkeypatch, capsys, level):
-    path, _ = _fixture(tmp_path)
+@pytest.mark.parametrize("allow_errors", [False, True])
+def test_service_log_levels_cover_requests_and_safe_conversion_diagnostics(
+    tmp_path, monkeypatch, capsys, level, allow_errors
+):
+    path, data = _fixture(tmp_path)
+    data["artifact"][0]["allow_conversion_errors"] = allow_errors
+    _save(path, data)
     issue = ConversionIssue(
         severity=IssueSeverity.ERROR, node=SECRET, protocol=SECRET, source=SECRET,
         target=SECRET, field=SECRET, message=SECRET + TOKEN,
@@ -657,6 +771,10 @@ def test_service_log_levels_cover_requests_and_safe_conversion_diagnostics(tmp_p
     )
 
     def fail(*args, **kwargs):
+        if allow_errors:
+            return SimpleNamespace(artifact_result=ArtifactGenerationResult(
+                drafts=(ArtifactDraft("out.yaml", "safe synthetic result"),), issues=(issue, issue)
+            ))
         raise ArtifactGenerationError(SECRET + TOKEN, issues=(issue, issue))
 
     monkeypatch.setattr(PreparedArtifact, "render", fail)
@@ -664,15 +782,20 @@ def test_service_log_levels_cover_requests_and_safe_conversion_diagnostics(tmp_p
     with server._service_logger.at_level(level):
         with TestClient(server.create_app(str(path))) as client:
             response = client.get("/subscription/out.yaml?" + _query(credential=SECRET))
-            assert response.status_code == 422 and response.json() == {"error": "conversion_rejected"}
+            if allow_errors:
+                assert response.status_code == 200 and response.text == "safe synthetic result"
+            else:
+                assert response.status_code == 422 and response.json() == {"error": "conversion_rejected"}
             _headers(response)
     assert server._service_logger._level == previous
     captured = capsys.readouterr()
     output = " ".join((captured.out + captured.err).split())
     assert all(value not in output for value in (SECRET, TOKEN, str(tmp_path), "out.yaml", "credential="))
     assert ("Preparing provider #1 (local, mihomo)" in output) == (level == "debug")
-    assert ("HTTP request complete: status=422" in output) == (level in {"debug", "info"})
+    status = 200 if allow_errors else 422
+    assert (f"HTTP request complete: status={status}" in output) == (level in {"debug", "info"})
     assert ("artifact #1: ruleset.unsupported-target-rule=2" in output) == (level in {"debug", "info", "warning"})
+    assert ("allow_conversion_errors=true" in output) == (allow_errors and level in {"debug", "info", "warning"})
     if level in {"error", "critical"}:
         assert output == ""
 

@@ -335,12 +335,13 @@ def test_fixed_user_and_age_reuse_normal_gates_without_publication(
 
 
 @pytest.mark.parametrize("failure", ["parse", "emit", "ruleset"])
-def test_scoped_errors_use_strict_existing_gate_despite_static_opt_out(
-    tmp_path, monkeypatch, failure
+@pytest.mark.parametrize("global_allow,artifact_allow", [(False, False), (True, False), (False, True)])
+def test_scoped_conversion_errors_follow_static_policy(
+    tmp_path, monkeypatch, failure, global_allow, artifact_allow
 ):
     path, data = _fixture(tmp_path, parameterized=False)
-    data["allow_conversion_errors"] = True
-    data["artifact"][0]["allow_conversion_errors"] = True
+    data["allow_conversion_errors"] = global_allow
+    data["artifact"][0]["allow_conversion_errors"] = artifact_allow
     document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
     if failure == "parse":
         document["proxies"].append("invalid entry")
@@ -366,20 +367,23 @@ def test_scoped_errors_use_strict_existing_gate_despite_static_opt_out(
         (tmp_path / "client.j2").write_text('{{ remote_bad("DIRECT") }}')
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     config = _snapshot(path, data)
+    if not (global_allow or artifact_allow):
+        for generate in (lambda: WorkflowEngine(str(path)).prepare(), lambda: _render(path, config)):
+            with pytest.raises(ArtifactGenerationError) as error:
+                generate()
+            assert any(issue.severity == "error" for issue in error.value.issues)
+        assert not (tmp_path / "dist").exists()
+        return
     static_result = WorkflowEngine(str(path)).prepare().artifact_result
     assert static_result.drafts and any(
         issue.severity == "error" for issue in static_result.issues
     )
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged partial output"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        _render(path, config)
-    assert any(issue.severity == "error" for issue in error.value.issues)
-    assert (
-        config.allow_conversion_errors and config.artifacts[0].allow_conversion_errors
-    )
+    result = _render(path, config).artifact_result
+    assert result.drafts == static_result.drafts
+    assert result.issues == static_result.issues
+    assert config.allow_conversion_errors == global_allow
+    assert config.artifacts[0].allow_conversion_errors == artifact_allow
+    assert not (tmp_path / "dist").exists()
 
 
 @pytest.mark.parametrize(
@@ -390,8 +394,8 @@ def test_scoped_errors_use_strict_existing_gate_despite_static_opt_out(
         ("v2rayn", "server", "host", "good.example#fragment"),
     ],
 )
-def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
-    tmp_path, monkeypatch, target, field, parameter, value
+def test_scoped_parameterized_encoding_errors_skip_unsafe_nodes_like_static(
+    tmp_path, target, field, parameter, value
 ):
     path, data = _fixture(tmp_path, parameterized=False)
     data["allow_conversion_errors"] = True
@@ -415,18 +419,15 @@ def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
     document["proxies"][0][field] = "{{ params." + parameter + " }}"
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     config = _snapshot(path, data)
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged malformed target output"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        _render(path, config, pairs=[(parameter, value)])
+    result = _render(path, config, pairs=[(parameter, value)]).artifact_result
+    assert result.drafts == static_result.drafts
+    assert value not in result.drafts[0].content
     assert any(
         issue.field == field
         and issue.code == "conversion.invalid-value"
         and issue.stage == "emit"
         and issue.severity == "error"
-        for issue in error.value.issues
+        for issue in result.issues
     )
     assert not (tmp_path / "dist").exists()
 
@@ -446,8 +447,8 @@ def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
     ("server", "host=value", "ss"),
     ("server", "host=value", "trojan"),
 ])
-def test_scoped_surge_parameter_errors_block_before_staging_despite_static_opt_out(
-    tmp_path, monkeypatch, native, field, value, protocol
+def test_scoped_surge_parameter_errors_skip_unsafe_nodes_like_static(
+    tmp_path, native, field, value, protocol
 ):
     path, data = _fixture(tmp_path, native=native, parameterized=False)
     data["allow_conversion_errors"] = True
@@ -478,16 +479,14 @@ def test_scoped_surge_parameter_errors_block_before_staging_despite_static_opt_o
     node[field] = "{{ params." + parameter + " }}"
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     config = _snapshot(path, data)
-    monkeypatch.setattr(
-        "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
-        lambda *args: pytest.fail("Staged malformed Surge output"),
-    )
-    with pytest.raises(ArtifactGenerationError) as error:
-        _render(path, config, pairs=[(parameter, value)])
+    result = _render(path, config, pairs=[(parameter, value)]).artifact_result
+    assert result.drafts == static.drafts
+    parsed = get_parser("surge").parse_result(result.drafts[0].content)
+    assert not parsed.issues and [node.name for node in parsed.nodes] == ["safe"]
     assert any(
         issue.field == field and issue.code == "conversion.invalid-value"
         and issue.severity == "error"
-        for issue in error.value.issues
+        for issue in result.issues
     )
     assert config.allow_conversion_errors and config.artifacts[0].allow_conversion_errors
     assert not (tmp_path / "dist").exists()
