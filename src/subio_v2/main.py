@@ -127,6 +127,29 @@ def _run_inspect(args) -> int:
     return 1 if report["status"] == "error" else 0
 
 
+def _run_serve(args) -> int:
+    try:
+        from subio_v2.server import serve
+    except ImportError:
+        logger.error(r"Serving requires the server extra: install subio\[server]")
+        return 1
+    config_path = args.config or find_default_config()
+    if config_path is None:
+        logger.error("Render service configuration is invalid")
+        return 1
+    return serve(config_path, port=args.port)
+
+
+def _serve_port(value: str) -> int:
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Port must be an integer from 1 to 65535") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError("Port must be an integer from 1 to 65535")
+    return port
+
+
 def _cmd_age_keygen(args):
     """Generate a new X25519 key pair."""
     try:
@@ -257,6 +280,13 @@ def main():
     )
 
     report_formats = ("text", "json")
+    serve_parser = subparsers.add_parser(
+        "serve", help="Serve authenticated GET renders on 127.0.0.1"
+    )
+    serve_parser.add_argument("config", nargs="?", help="Path to config file")
+    serve_parser.add_argument("--port", type=_serve_port, default=8000,
+                              metavar="PORT", help="Loopback port (default: 8000)")
+
     check_parser = subparsers.add_parser(
         "check",
         help="Validate and render without writing artifacts or uploading",
@@ -357,6 +387,9 @@ def main():
 
     if args.subcommand == "check":
         return _run_check(args)
+
+    if args.subcommand == "serve":
+        return _run_serve(args)
 
     if args.subcommand == "inspect":
         if not args.inspect_command:
