@@ -138,7 +138,7 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 | 服务入口 | 可选 `server` extra；`subio serve CONFIG [--port 8000]`，固定 `127.0.0.1` |
 | 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部已配置 artifact |
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
-| 参数值 | `artifact.params` 声明的 string/integer/boolean，节点子树中任意合法标量及嵌套/静态列表元素；不按凭据字段名限制 |
+| 参数值 | 无需逐个声明，默认 string；`artifact.params` 可补充 integer/boolean、默认值或约束；引用缺失参数返回 400，token 仅用于鉴权 |
 | 输出 | `GET /subscription/<file_name>` 直接使用已有输出文件名，无需 `render`；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
 | 模板 | 可信最终 Jinja 获得不可变 `params`；provider 只支持一次标量 token 替换，不执行 Jinja |
 | HTTP 副作用 | 无文件发布、上传、manifest、请求报告或结果缓存；已有未改变上游响应缓存独立存在 |

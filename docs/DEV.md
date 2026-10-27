@@ -420,7 +420,8 @@ age key、密码或私钥。
 
 可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 loopback HTTP
 传输。`GET /subscription/<file_name>` 按已配置输出文件名精确匹配，无需路由声明；
-`artifact.params` 声明标量 schema，`workflow.parameters` 负责类型、默认值和请求约束。
+请求参数默认按字符串处理，`artifact.params` 可选地补充类型、默认值和约束；
+`workflow.parameters` 统一检查参数名、重复值、类型、默认值和请求限额。
 启动时从同一已验证配置快照构建文件名索引，批量用户按已有命名规则展开并在请求中固定用户；
 `SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
 路由查询和 I/O 前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
@@ -438,6 +439,8 @@ GET -> raw decode/limits -> URL token authentication -> route parameter validati
 
 每次请求显式携带独立 typed mapping，不使用全局绑定状态或 provider schema。`for_render` 保留现有
 共享 ruleset 依赖，选择一个固定 artifact/user，为 loader/parser/emitter/节点与模板创建独立状态。
+provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError`，HTTP 沿异常原因链返回固定 400，
+不回显键或值。最终 Jinja 的 `params` 缺失键在过滤器执行前失败；未使用的类型声明无需请求值。
 最终 Jinja 只获得单一不可变 `params` 命名空间；模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
 或目标 serializer 写入合适上下文。该路径禁止 `run()`、发布、上传、manifest 和请求报告/结果缓存，
 任何 conversion ERROR 都阻断响应，静态 `allow_conversion_errors` 不适用。

@@ -89,6 +89,12 @@ def test_shipped_render_example_is_offline_typed_and_unpublished(
         assert default_node["udp"] is True
         assert default_node["password"] == "%2B%26%3D"
         assert default_document["secret"] == ""
+        for missing in ("username", "password"):
+            required_values = {"token": TOKEN, "username": "example-user", "password": "example-only"}
+            required_values.pop(missing)
+            rejected = client.get(f"/subscription/{route}?" + urlencode(required_values))
+            assert rejected.status_code == 400
+            assert rejected.json() == {"error": "invalid_request"}
 
     assert {
         path.relative_to(project): path.read_bytes()

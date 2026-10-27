@@ -116,8 +116,10 @@ password = "secret"
 
 #### GET 参数化渲染服务
 
-可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...`，无需附加请求头。配置可声明类型化
-参数（`artifact.params`），替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，并返回一个配置好的 artifact。
+可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...`，无需附加请求头。请求参数
+默认按字符串处理，无需预先逐个声明；仅在需要类型、默认值或约束时补充 `artifact.params`。
+参数可替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，引用缺失参数直接报错。
+`token` 专用于鉴权，不进入模板参数。
 `file_name` 直接使用已有 artifact 输出文件名，无需声明 `render` 或额外路由。
 服务固定监听 loopback，不发布文件或上传结果；普通静态 CLI 的用法保持不变。
 

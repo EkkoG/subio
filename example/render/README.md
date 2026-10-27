@@ -5,7 +5,8 @@ Run from the repository root. The two routes load separate local sources:
 TOML. Both return one Mihomo client configuration. No uploader or remote input
 is configured, and the service does not write `dist` or a manifest.
 Paths use the existing artifact output filenames. No `render` block or route
-declaration is needed; typed parameters live under `artifact.params`.
+declaration is needed. Request parameters default to strings without prior
+declarations; `artifact.params` adds types, defaults or constraints where needed.
 
 ```bash
 uv sync --extra server
@@ -33,7 +34,8 @@ curl --get 'http://127.0.0.1:8000/subscription/native-client.yaml' \
 ```
 
 These are synthetic credentials and a reserved hostname, not a usable proxy.
-The second request demonstrates defaults; username and password remain required.
+The second request demonstrates defaults. Username and password have no
+declarations; omitting either fails because the provider references it.
 The quoted port and UDP placeholders become an integer and a boolean after
 document decoding. Names demonstrate embedded string interpolation.
 

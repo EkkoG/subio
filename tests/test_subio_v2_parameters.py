@@ -39,7 +39,7 @@ def test_artifact_params_load_typed_declarations(tmp_path):
 
 @pytest.mark.parametrize("declaration", [
     None, [], {"type": "object", "required": True},
-    {"type": "string"}, {"type": "string", "required": "true"},
+    {"type": None}, {"type": "string", "required": "true"},
     {"type": "string", "required": True, "default": "CANARY"},
     {"type": "integer", "default": "CANARY"},
     {"type": "integer", "default": True},
@@ -140,7 +140,7 @@ def test_invalid_runtime_values_fail_without_echoing_input(declaration, raw):
     assert "CANARY" not in str(error.value)
 
 
-def test_normalization_rejects_missing_duplicate_unknown_and_size_limits():
+def test_normalization_rejects_required_duplicate_reserved_and_size_limits():
     declaration = ParameterSpec.from_mapping({"type": "string", "required": True})
     for pairs in ([], [("value", "x"), ("value", "y")], [("unknown", "x")], [("token", "CANARY")], [("value", [])]):
         with pytest.raises(ParameterError):
@@ -151,6 +151,48 @@ def test_normalization_rejects_missing_duplicate_unknown_and_size_limits():
     declarations = {f"p{i}": declaration for i in range(33)}
     with pytest.raises(ParameterLimitError):
         normalize_parameters(declarations, [(name, "x") for name in declarations])
+
+
+def test_undeclared_values_are_literal_strings_including_empty_and_numeric_text():
+    raw = {"name": ' \u540d+&=%# {{ params.other }} {{ 7 * 7 }} ', "port": "+0010", "tls": "false", "empty": ""}
+    values = normalize_parameters({}, raw.items())
+    assert dict(values) == raw
+    assert all(type(value) is str for value in values.values())
+    with pytest.raises(TypeError):
+        values["name"] = "other"
+
+
+def test_optional_declarations_can_specify_only_type_or_default():
+    declarations = parse_parameter_specs({
+        "port": {"type": "integer"}, "tls": {"type": "boolean"},
+        "region": {"default": "hk"}, "unused": {},
+    })
+    assert dict(normalize_parameters(declarations, [])) == {"region": "hk"}
+    values = normalize_parameters(declarations, [("port", "1080"), ("tls", "false"), ("password", "synthetic")])
+    assert dict(values) == {"region": "hk", "port": 1080, "tls": False, "password": "synthetic"}
+    assert type(values["port"]) is int and type(values["tls"]) is bool
+
+
+@pytest.mark.parametrize("name", ["", "token", "bad-name", "\u540d", "x" * 65, "value[]", "value[0]", "x\n", None])
+def test_undeclared_parameter_names_still_obey_boundary_rules(name):
+    with pytest.raises(ParameterError):
+        normalize_parameters({}, [(name, "CANARY")])
+
+
+@pytest.mark.parametrize("raw", ["CANARY\n", "CANARY\x00", "CANARY\x7f", "CANARY\u2028", "CANARY\u2029", "CANARY\ud800", "x" * 1025, 1, []])
+def test_undeclared_parameter_values_still_obey_boundary_rules(raw):
+    with pytest.raises(ParameterError) as error:
+        normalize_parameters({}, [("value", raw)])
+    assert "CANARY" not in str(error.value)
+
+
+def test_undeclared_duplicates_and_field_limits_are_rejected():
+    with pytest.raises(ParameterError):
+        normalize_parameters({}, [("value", "first"), ("value", "second")])
+    values = [("p" + str(index), "x") for index in range(32)]
+    assert len(normalize_parameters({}, values)) == 32
+    with pytest.raises(ParameterLimitError):
+        normalize_parameters({}, values + [("extra", "x")])
 
 
 def test_artifact_parameters_have_independent_defaults_and_constraints():

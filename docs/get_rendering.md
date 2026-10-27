@@ -1,7 +1,7 @@
 # GET 参数化渲染
 
 `subio serve` 提供带 URL token 认证的 `GET /subscription/<file_name>`。请求参数替换本地节点文件中的
-已声明标量，再经过现有节点解码、校验、目标编码和可信模板，返回一个完整 artifact。
+标量占位符，再经过现有节点解码、校验、目标编码和可信模板，返回一个完整 artifact。
 无需附加请求头、登录或 Cookie。可运行的离线配置见 [example/render](../example/render/README.md)。
 
 ## 安装与启动
@@ -49,7 +49,8 @@ curl --get 'http://127.0.0.1:8000/subscription/yaml-client.yaml' \
 ## 文件名和参数声明
 
 订阅路径直接使用原有 `artifact.name`，无需声明路由或额外的 `render` 配置。
-需要源文件标量替换时，provider 显式设置 `parameterized = true`，参数声明放在 `artifact.params`。
+需要源文件标量替换时，provider 显式设置 `parameterized = true`。请求参数默认按字符串处理，
+无需逐个声明；只在需要整数、布尔值、默认值或约束时，在 `artifact.params` 中补充声明。
 完整配置见示例，最小声明如下：
 
 ```toml
@@ -65,16 +66,12 @@ type = "mihomo"
 providers = ["dynamic"]
 template = "client.yaml"
 [artifact.params.host]
-type = "string"
 default = "proxy.example.test"
 [artifact.params.port]
 type = "integer"
 default = 1080
 min = 1
 max = 65535
-[artifact.params.password]
-type = "string"
-required = true
 ```
 
 该配置对应 `/subscription/client.yaml`。所有已配置的 artifact 都可按文件名访问；没有参数的
@@ -93,19 +90,26 @@ artifact 无需声明 `params`。文件名按 URL 路径段编码，并在 UTF-8
 
 | 参数声明 | 含义 |
 |---|---|
-| `type` | 必填：`string`、`integer` 或 `boolean`；不接受数组、对象或 null |
+| `type` | 可选，默认 `string`；可指定 `integer` 或 `boolean`，不接受数组、对象或 null |
 | `required` | 默认 `false`；为 `true` 时必须由请求提供，不能同时设置 `default` |
-| `default` | 每个非必填参数都必须有类型正确的默认值，且满足本声明的全部约束 |
+| `default` | 可选，必须类型正确且满足本声明的全部约束；请求未提供时使用此值 |
 | `choices` | 可选的非空列表；元素必须与声明类型一致，请求值和默认值必须在其中 |
 | `min` / `max` | 仅用于整数，闭区间边界；整数查询值使用带可选正负号的十进制文本，不截断小数 |
-| `allow_empty` | 仅用于字符串，默认 `false`；只有显式为 `true` 才接受空字符串 |
+| `allow_empty` | 仅用于已声明字符串，默认 `false`；未声明字符串允许空值，空值与缺失不同 |
+
+例如 `username` 和 `password` 无需声明：请求提供后就是字符串。`port` 若只有
+`type = "integer"` 而没有默认值，请求提供时转为整数；没有提供时不加入 `params`。
+provider 或最终模板直接引用缺失参数会返回 HTTP 400，不会静默替换为空字符串；即使最终模板
+使用 Jinja `default` 过滤器，直接访问缺失键也会失败。默认值应放在 `artifact.params`。
+没有被引用的额外请求参数允许存在；没有被引用、没有默认值的类型声明也不要求请求提供。
+显式 `required = true` 可要求请求始终提供该字段。
 
 布尔查询值严格使用小写 `true` 或 `false`。参数名为最多 64 字符的 ASCII 标识符：首字符是
-字母或 `_`，其余可含数字。最多声明 32 个渲染参数。`token` 是保留的认证字段，不得声明为参数。
-若节点本身含 `token` 字段，应另声明 `node_token` 并写成 `token: "{{ params.node_token }}"`；
+字母或 `_`，其余可含数字。最多补充声明 32 个参数。`token` 是保留的认证字段，不得声明为参数。
+若节点本身含 `token` 字段，应使用 `node_token` 并写成 `token: "{{ params.node_token }}"`；
 字段仍须满足现有 codec 或同方言保真规则。认证 token 永远不会进入 `params`、节点、模板或上游请求。
 
-请求中未知参数、重复解码后的名字、缺少必填值或违反约束的值都会被拒绝；`host` 和 `%68ost`
+请求中非法参数名、重复解码后的名字、缺少必填值或违反约束的值都会被拒绝；`host` 和 `%68ost`
 视为同名。原始路径与查询合计最多 8 KiB，最多 33 个查询字段（32 个参数加一个 token），每个
 解码后的渲染字符串最多 1024 UTF-8 字节；拒绝控制字符和 Unicode 行/段分隔符。
 
@@ -131,8 +135,8 @@ proxies:
 
 只识别带可选空白的 `{{ params.NAME }}`，源 provider 不能使用表达式、过滤器、循环或 include。
 替换只作用于原始占位符一次，参数中看似占位符的文字不会再次扫描。容器结构、列表长度和 mapping
-键必须保持静态；占位符不得出现在键、原生 `version` 或节点子树外的客户端配置段。未声明或格式
-错误的参数 token、非字符串的嵌入替换都会失败。YAML 非循环 alias 按可见路径独立展开，循环被拒绝；
+键必须保持静态；占位符不得出现在键、原生 `version` 或节点子树外的客户端配置段。缺少请求值和
+默认值的参数、格式错误的参数 token、非字符串的嵌入替换都会失败。YAML 非循环 alias 按可见路径独立展开，循环被拒绝；
 启用参数化的文档也拒绝 `!!pairs` / `!!omap` 等会解码为 tuple 的结构，不能用它们绕过标量遍历。
 
 替换后仍经过原有 native schema、节点语义、目标 codec 和转换 gate。未知 native 字段不会因替换
@@ -191,7 +195,7 @@ CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同�
 
 | 状态 | 固定 JSON `error` | 含义 |
 |---|---|---|
-| 400 | `invalid_request` | 编码错误或参数不满足声明 |
+| 400 | `invalid_request` | 编码/参数错误，或引用了没有请求值和默认值的参数 |
 | 401 | `unauthorized` | token 缺少、空、错误或重复 |
 | 404 | `not_found` | 认证后没有对应路由 |
 | 405 | `method_not_allowed` | 认证后的已知路由使用非 GET 方法 |

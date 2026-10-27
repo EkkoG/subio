@@ -51,7 +51,7 @@ class ParameterSpec:
             "type", "required", "default", "choices", "min", "max", "allow_empty"
         }:
             raise ConfigError("Render parameter declaration must use supported fields")
-        parameter_type = value.get("type")
+        parameter_type = value.get("type", "string")
         if not isinstance(parameter_type, str) or parameter_type not in _TYPES:
             raise ConfigError("Render parameter type must be string, integer or boolean")
         required = value.get("required", False)
@@ -60,8 +60,8 @@ class ParameterSpec:
             raise ConfigError("Render parameter required/allow_empty must be booleans")
         if "allow_empty" in value and parameter_type != "string":
             raise ConfigError("Render parameter allow_empty is only valid for strings")
-        if required == ("default" in value):
-            raise ConfigError("Required parameters cannot have defaults; optional parameters need defaults")
+        if required and "default" in value:
+            raise ConfigError("Required parameters cannot have defaults")
         for key in ("min", "max"):
             if key in value and (
                 parameter_type != "integer" or type(value[key]) is not int
@@ -84,7 +84,7 @@ class ParameterSpec:
         try:
             for choice in spec.choices or ():
                 spec.validate_value(choice)
-            if not required:
+            if "default" in value:
                 spec.validate_value(spec.default)
         except ParameterError:
             raise ConfigError("Render parameter default or choices violate its declaration") from None
@@ -126,12 +126,17 @@ def normalize_parameters(
     for index, (name, raw) in enumerate(pairs):
         if index >= 32:
             raise ParameterLimitError("Too many rendering parameter fields")
-        if name not in declarations or name in values:
-            raise ParameterError("Unknown or duplicate rendering parameter")
+        if not isinstance(name, str) or not _NAME.fullmatch(name) or name == "token":
+            raise ParameterError("Invalid or reserved rendering parameter name")
+        if name in values:
+            raise ParameterError("Duplicate rendering parameter")
         if not isinstance(raw, str):
             raise ParameterError("Rendering parameters must be strings")
         _validate_text(raw)
-        spec = declarations[name]
+        spec = declarations.get(name)
+        if spec is None:
+            values[name] = raw
+            continue
         if spec.type == "integer":
             if not _INTEGER.fullmatch(raw):
                 raise ParameterError("Rendering integer must use signed decimal syntax")
@@ -148,5 +153,6 @@ def normalize_parameters(
         if name not in values:
             if spec.required:
                 raise ParameterError("Missing required rendering parameter")
-            values[name] = spec.default
+            if spec.default is not None:
+                values[name] = spec.default
     return MappingProxyType(values)

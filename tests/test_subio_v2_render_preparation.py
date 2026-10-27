@@ -14,6 +14,7 @@ from subio_v2.core.errors import (
     ProviderLoadError,
     TemplateRenderError,
 )
+from subio_v2.core.parameters import MissingParameterError
 from subio_v2.adapters.catalog import get_parser
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.remote import RunRemoteLoader
@@ -280,6 +281,19 @@ def test_immutable_params_use_yaml_and_builtin_json_serialization_policies(tmp_p
     assert yaml.safe_load(renderer.render("yaml.j2", {"params": parameters})) == dict(
         parameters
     )
+
+
+@pytest.mark.parametrize("expression", [
+    "params.missing", 'params["missing"]', 'params["items"]',
+    'params.missing | tojson', 'params.missing | default("fallback")',
+    "params.missing is defined", "params.token",
+])
+def test_missing_params_fail_on_direct_template_access_before_filters(tmp_path, expression):
+    (tmp_path / "client.j2").write_text("{{ " + expression + " }}")
+    renderer = TemplateRenderer(str(tmp_path))
+    with pytest.raises(TemplateRenderError) as error:
+        renderer.render("client.j2", {"params": {}})
+    assert isinstance(error.value.__cause__, MissingParameterError)
 
 
 def test_ruleset_callable_params_collision_fails_without_shadowing(tmp_path):

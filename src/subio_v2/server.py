@@ -17,6 +17,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response
 
 from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
+from subio_v2.core.parameters import MissingParameterError
 from subio_v2.core.results import IssueSeverity
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RemoteLoadError
@@ -89,6 +90,8 @@ def _failure_status(exc: Exception) -> int:
     seen = set()
     while cause is not None and id(cause) not in seen:
         seen.add(id(cause))
+        if isinstance(cause, MissingParameterError):
+            return 400
         if isinstance(cause, RemoteLoadError):
             return 502
         cause = cause.__cause__

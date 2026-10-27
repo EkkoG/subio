@@ -2,12 +2,14 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Dict, Optional
 
 import jinja2
 import yaml
 
 from subio_v2.core.errors import TemplateRenderError
+from subio_v2.core.parameters import MissingParameterError
 from subio_v2.core.results import ConversionIssue
 from subio_v2.rules.runtime import RuleIssueCollector, RuleSetStore
 from subio_v2.workflow.filters import all_filters
@@ -17,6 +19,11 @@ from subio_v2.workflow.filters import all_filters
 class TemplateRenderResult:
     content: str
     issues: tuple[ConversionIssue, ...] = ()
+
+
+class _TemplateParameters(dict):
+    def __missing__(self, key):
+        raise MissingParameterError("Missing rendering parameter")
 
 
 class TemplateRenderer:
@@ -103,6 +110,11 @@ class TemplateRenderer:
         try:
             platform = artifact_type or "mihomo"
             render_context = dict(context)
+            if isinstance(render_context.get("params"), Mapping):
+                # Missing request fields are input errors, including before Jinja filters.
+                render_context["params"] = MappingProxyType(
+                    _TemplateParameters(render_context["params"])
+                )
             collector = RuleIssueCollector()
             if rulesets:
                 callables = rulesets.get_callables(platform, collector)

@@ -226,8 +226,6 @@ def test_raw_limits_and_encoding_are_checked_before_auth(tmp_path, monkeypatch, 
 
 
 @pytest.mark.parametrize("suffix,status", [
-    ("&unknown=x", 400), ("&template=other.j2", 400), ("&file=/etc/passwd", 400),
-    ("&url=https://other.test", 400), ("&user=other", 400), ("&type=surge", 400),
     ("&host=a&%68ost=b", 400), ("&port=1.5", 400), ("&port=true", 400),
     ("&port=0", 400), ("&port=65536", 400), ("&enabled=TRUE", 400),
     ("&enabled=1", 400), ("&host=%00", 400), ("&host=%0A", 400),
@@ -321,8 +319,86 @@ def test_existing_artifact_needs_no_params_or_render_and_matches_decoded_filenam
         assert yaml.safe_load(response.text)["proxies"][0]["name"] == "static"
         assert yaml.safe_load(response.text)["values"] == {}
         assert response.headers["content-disposition"] == "attachment"
-        assert client.get(target, params={"token": TOKEN, "unknown": "value"}).status_code == 400
+        response = client.get(target, params={"token": TOKEN, "extra": "value"})
+        assert response.status_code == 200
+        assert yaml.safe_load(response.text)["values"] == {"extra": "value"}
     assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("typed", [False, True])
+def test_parameters_need_no_declarations_except_requested_types_and_defaults(tmp_path, family, typed):
+    path, data = _fixture(tmp_path, family)
+    artifact = data["artifact"][0]
+    if typed:
+        artifact["params"] = {
+            "port": {"type": "integer"}, "enabled": {"type": "boolean"},
+            "region": {"default": "hk"}, "unused": {"type": "integer"},
+        }
+    else:
+        artifact.pop("params")
+        document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+        document["nodes" if family == "subio" else "proxies"][0]["port"] = 1080
+        (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    _save(path, data)
+    special = ' literal + & = % # {{ params.host }} {{ 7 * 7 }} '
+    fields = {
+        "name": special, "host": "proxy.example.test", "username": "synthetic-user",
+        "credential": special, "port": "+1081", "enabled": "false", "empty": "",
+        "number": "00123", "template": "missing.j2", "file": "/etc/passwd",
+        "url": "https://unused.test", "user": "unconfigured", "type": "surge",
+    }
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml", params={"token": TOKEN, **fields})
+        assert response.status_code == 200
+        output = yaml.safe_load(response.text)
+        expected = {**fields, "port": 1081, "enabled": False, "region": "hk"} if typed else fields
+        assert output["values"] == expected
+        assert "token" not in output["values"]
+        assert output["proxies"][0]["password"] == special
+        assert output["proxies"][0]["port"] == (1081 if typed else 1080)
+        assert type(output["values"]["port"]) is (int if typed else str)
+        assert type(output["values"]["enabled"]) is (bool if typed else str)
+        assert "unused" not in output["values"]
+        _headers(response)
+    assert not (tmp_path / "dist").exists()
+
+
+@pytest.mark.parametrize("family", ["mihomo", "subio"])
+@pytest.mark.parametrize("boundary", ["provider", "template"])
+@pytest.mark.parametrize("missing", ["credential", "token"])
+def test_missing_referenced_parameter_is_safe_400_before_staging_and_can_recover(
+    tmp_path, monkeypatch, capsys, caplog, family, boundary, missing
+):
+    path, data = _fixture(tmp_path, family)
+    data["artifact"][0]["params"].pop("credential")
+    if boundary == "provider":
+        document = yaml.safe_load((tmp_path / "nodes.yaml").read_text())
+        document["nodes" if family == "subio" else "proxies"][0]["password"] = "{{ params." + missing + " }}"
+        (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+    else:
+        data["provider"][0]["parameterized"] = False
+        node = {"name": "static", "type": "socks5", "server": "example.test", "port": 1080}
+        document = {"version": 2, "nodes": [node]} if family == "subio" else {"proxies": [node]}
+        (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+        (tmp_path / "client.j2").write_text('{{ params["' + missing + '"] | default("fallback") | tojson }}')
+    _save(path, data)
+    stage = ArtifactGenerationService._stage
+    monkeypatch.setattr(ArtifactGenerationService, "_stage", lambda *_: pytest.fail("Staged missing input"))
+    with caplog.at_level(logging.DEBUG), TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml", params={"token": TOKEN, "other": SECRET})
+        assert response.status_code == 400
+        assert response.json() == {"error": "invalid_request"}
+        _headers(response)
+        monkeypatch.setattr(ArtifactGenerationService, "_stage", stage)
+        if missing == "credential":
+            assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+        else:
+            assert client.get("/subscription/out.yaml?" + _query()).status_code == 400
+    assert not (tmp_path / "dist").exists()
+    captured = capsys.readouterr()
+    application_logs = "\n".join(record.getMessage() for record in caplog.records if record.name != "httpx")
+    assert all(value not in captured.out + captured.err + application_logs for value in (TOKEN, SECRET))
 
 
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
@@ -379,8 +455,6 @@ def test_startup_snapshot_and_secret_are_read_once(tmp_path, monkeypatch):
 @pytest.mark.parametrize("family", ["mihomo", "subio"])
 def test_control_token_is_excluded_but_node_token_can_bind(tmp_path, family):
     path, data = _fixture(tmp_path, family)
-    params = data["artifact"][0]["params"]
-    params["node_token"] = {"type": "string", "required": True}
     node = {"name": "tuic", "type": "tuic", "server": "proxy.example.test", "port": 443,
             "token": "{{ params.node_token }}"}
     if family == "subio":

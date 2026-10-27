@@ -10,6 +10,10 @@ _TOKEN = re.compile(r"{{\s*params\.([A-Za-z_][A-Za-z0-9_]{0,63})\s*}}")
 _PARAMS_START = re.compile(r"{{\s*params\b")
 
 
+class MissingParameterError(ValueError):
+    """A referenced rendering parameter has neither a request value nor a default."""
+
+
 def bind_document_parameters(
     data: Any, node_key: str, parameters: Mapping[str, ParameterValue]
 ) -> Any:
@@ -25,7 +29,7 @@ def bind_document_parameters(
             raise ValueError("Provider parameters are only allowed in node scalar values")
         for match in matches:
             if match[1] not in parameters:
-                raise ValueError("Provider parameter has no declared runtime binding")
+                raise MissingParameterError("Missing rendering parameter")
         if len(matches) == 1 and matches[0].span() == (0, len(value)):
             replacement = parameters[matches[0][1]]
             if type(replacement) not in (str, int, bool):

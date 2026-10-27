@@ -16,27 +16,18 @@ type = "mihomo"
 providers = ["yaml-nodes"]
 template = "client.yaml"
 [artifact.params.name]
-type = "string"
 default = "example"
 [artifact.params.host]
-type = "string"
 default = "proxy.example.test"
 [artifact.params.port]
 type = "integer"
 default = 1080
 min = 1
 max = 65535
-[artifact.params.username]
-type = "string"
-required = true
-[artifact.params.password]
-type = "string"
-required = true
 [artifact.params.udp]
 type = "boolean"
 default = true
 [artifact.params.controller_secret]
-type = "string"
 default = ""
 allow_empty = true
 
@@ -46,26 +37,17 @@ type = "mihomo"
 providers = ["native-nodes"]
 template = "client.yaml"
 [artifact.params.name]
-type = "string"
 default = "example"
 [artifact.params.host]
-type = "string"
 default = "proxy.example.test"
 [artifact.params.port]
 type = "integer"
 default = 1080
 min = 1
 max = 65535
-[artifact.params.username]
-type = "string"
-required = true
-[artifact.params.password]
-type = "string"
-required = true
 [artifact.params.udp]
 type = "boolean"
 default = true
 [artifact.params.controller_secret]
-type = "string"
 default = ""
 allow_empty = true
