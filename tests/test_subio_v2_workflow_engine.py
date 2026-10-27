@@ -531,7 +531,7 @@ def test_upload_failure_aborts_the_run_queue(tmp_path, monkeypatch):
     engine = WorkflowEngine(str(cfg), dry_run=False)
     monkeypatch.setattr(
         "subio_v2.workflow.engine.ProviderLoaderService.load",
-        lambda self, config, loader, *, parameters: ProviderLoadResult({}, {}),
+        lambda self, config, loader: ProviderLoadResult({}, {}),
     )
 
     def generate(self):

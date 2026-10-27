@@ -10,7 +10,7 @@ from subio_v2.adapters.links import codecs as links
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Network
 from subio_v2.workflow.config import ConfigLoader
-from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.rendering import prepare_resources
 from subio_v2.workflow.parameters import normalize_parameters
 
 
@@ -221,13 +221,13 @@ def test_nested_link_errors_block_prepare_and_http_before_partial_staging(
 
     path, config = _fixture(tmp_path, family, case)
     params = normalize_parameters(config.artifacts[0].params, [("value", value)])
-    engine = WorkflowEngine.for_render(str(path), config, "out.txt", params)
+    candidate = prepare_resources(str(path), config).candidates["out.txt"]
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged partial nested-link output"),
     )
     with pytest.raises(ArtifactGenerationError) as error:
-        engine.prepare()
+        candidate.render("out.txt", params)
     assert any(
         issue.field == field and issue.code == "conversion.invalid-value"
         and issue.severity == "error" and issue.stage == "emit"
@@ -254,7 +254,7 @@ def test_parameterized_empty_neighbors_roundtrip_through_prepare_and_http(
 
     path, config = _fixture(tmp_path, family, case, empty_neighbors=True)
     params = normalize_parameters(config.artifacts[0].params, [("value", "")])
-    prepared = WorkflowEngine.for_render(str(path), config, "out.txt", params).prepare()
+    prepared = prepare_resources(str(path), config).candidates["out.txt"].render("out.txt", params)
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)
     with TestClient(server.create_app(str(path))) as client:
@@ -285,7 +285,7 @@ def test_nested_link_safe_neighbors_roundtrip_from_both_providers_over_http(
 
     path, config = _fixture(tmp_path, family, case)
     params = normalize_parameters(config.artifacts[0].params, [("value", value)])
-    prepared = WorkflowEngine.for_render(str(path), config, "out.txt", params).prepare()
+    prepared = prepare_resources(str(path), config).candidates["out.txt"].render("out.txt", params)
     content = prepared.artifact_result.drafts[0].content
     token = "synthetic_nested_link_token_0123456789"
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", token)

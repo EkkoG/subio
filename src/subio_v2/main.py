@@ -137,7 +137,18 @@ def _run_serve(args) -> int:
     if config_path is None:
         logger.error("Render service configuration is invalid")
         return 1
-    return serve(config_path, port=args.port)
+    return serve(config_path, port=args.port, refresh_interval=args.refresh_interval,
+                 max_snapshot_age=args.max_snapshot_age)
+
+
+def _positive_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Seconds must be a positive integer") from None
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("Seconds must be a positive integer")
+    return seconds
 
 
 def _serve_port(value: str) -> int:
@@ -286,6 +297,10 @@ def main():
     serve_parser.add_argument("config", nargs="?", help="Path to config file")
     serve_parser.add_argument("--port", type=_serve_port, default=8000,
                               metavar="PORT", help="Loopback port (default: 8000)")
+    serve_parser.add_argument("--refresh-interval", type=_positive_seconds, default=300,
+                              metavar="SECONDS", help="Wait between resource refreshes (default: 300)")
+    serve_parser.add_argument("--max-snapshot-age", type=_positive_seconds, default=900,
+                              metavar="SECONDS", help="Maximum resource age, at least refresh interval (default: 900)")
 
     check_parser = subparsers.add_parser(
         "check",
@@ -356,6 +371,8 @@ def main():
     decrypt.set_defaults(age_func=_cmd_age_decrypt)
 
     args = parser.parse_args()
+    if args.subcommand == "serve" and args.max_snapshot_age < args.refresh_interval:
+        parser.error("Maximum snapshot age must be at least the refresh interval")
 
     # Handle "age" subcommand
     if args.subcommand == "age":

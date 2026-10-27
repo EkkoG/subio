@@ -25,8 +25,8 @@ from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.workflow.artifacts import ArtifactGenerationService
-from subio_v2.workflow.engine import WorkflowEngine
-from subio_v2.workflow.providers import ProviderLoaderService
+from subio_v2.workflow.providers import PreparedProvider, ProviderLoaderService
+from subio_v2.workflow.rendering import PreparedArtifact
 
 
 TOKEN = "synthetic_service_canary_0123456789"
@@ -125,16 +125,16 @@ def test_headerless_get_decodes_once_and_renders_both_families(tmp_path, monkeyp
     path, _ = _fixture(tmp_path, family, serialization)
     special = ' leading + & = % # " 雪 {{ 7 * 7 }} {{ params.host }} proxies: [injection] '
     calls = []
-    factory = WorkflowEngine.for_render
+    factory = PreparedArtifact.render
 
-    def capture(config_path, config, route, parameters):
+    def capture(prepared, route, parameters):
         calls.append(dict(parameters))
         assert "token" not in parameters
         with pytest.raises(TypeError):
             parameters["host"] = "mutation"
-        return factory(config_path, config, route, parameters)
+        return factory(prepared, route, parameters)
 
-    monkeypatch.setattr(WorkflowEngine, "for_render", capture)
+    monkeypatch.setattr(PreparedArtifact, "render", capture)
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.yaml?" + _query(credential=special, port="+1081", enabled="true"))
         assert response.status_code == 200
@@ -192,15 +192,14 @@ def test_authentication_precedes_route_normalization_admission_and_all_input_io(
     _service(app).routes = Routes()
     _service(app)._slots = Slots()
     monkeypatch.setattr(server, "normalize_parameters", denied)
-    monkeypatch.setattr(WorkflowEngine, "for_render", denied)
+    monkeypatch.setattr(PreparedArtifact, "render", denied)
     for name in ("load_snippets", "load_rulesets", "RunRemoteLoader"):
         monkeypatch.setattr("subio_v2.workflow.engine." + name, denied)
     monkeypatch.setattr(ProviderLoaderService, "_fetch_content", denied)
-    with TestClient(app, cookies={"token": TOKEN}) as client:
-        response = client.get("/unknown?" + query.decode(), headers={"Authorization": TOKEN})
-        assert response.status_code == 401
-        assert response.json() == {"error": "unauthorized"}
-        _headers(response)
+    response = asyncio.run(_raw_request(app, path=b"/unknown", query=query))
+    assert response.status_code == 401
+    assert json.loads(response.content) == {"error": "unauthorized"}
+    _headers(response)
 
 
 @pytest.mark.parametrize("path,query,status", [
@@ -237,7 +236,7 @@ def test_raw_limits_and_encoding_are_checked_before_auth(tmp_path, monkeypatch, 
 def test_semantic_rejections_precede_construction_and_loading(tmp_path, monkeypatch, suffix, status):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
-    monkeypatch.setattr(WorkflowEngine, "for_render", lambda *_: pytest.fail("Constructed invalid render"))
+    monkeypatch.setattr(PreparedArtifact, "render", lambda *_: pytest.fail("Constructed invalid render"))
     with TestClient(app) as client:
         response = client.get("/subscription/out.yaml?" + _query() + suffix)
         assert response.status_code == status
@@ -271,7 +270,7 @@ def test_exact_raw_and_decoded_value_boundaries(tmp_path):
 def test_every_non_get_method_is_fixed_405_without_framework_redirects_or_io(tmp_path, monkeypatch, method):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
-    monkeypatch.setattr(WorkflowEngine, "for_render", lambda *_: pytest.fail("Constructed non-GET render"))
+    monkeypatch.setattr(PreparedArtifact, "render", lambda *_: pytest.fail("Constructed non-GET render"))
     with TestClient(app) as client:
         response = client.request(method, "/subscription/out.yaml?" + _query(), follow_redirects=False)
         assert response.status_code == 405
@@ -292,7 +291,7 @@ def test_every_non_get_method_is_fixed_405_without_framework_redirects_or_io(tmp
 def test_unknown_paths_are_safe_404_with_no_enumeration_or_redirect(tmp_path, monkeypatch, target):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
-    monkeypatch.setattr(WorkflowEngine, "for_render", lambda *_: pytest.fail("Constructed unknown render"))
+    monkeypatch.setattr(PreparedArtifact, "render", lambda *_: pytest.fail("Constructed unknown render"))
     with TestClient(app) as client:
         response = client.get(target + "?" + _query(), follow_redirects=False)
         assert response.status_code == 404
@@ -601,54 +600,49 @@ def test_direct_and_fixed_user_port_validation_returns_422_and_recovers(
     assert all(value not in captured.out + captured.err + application_logs for value in (TOKEN, SECRET))
 
 
-@pytest.mark.parametrize("failure,status", [
-    ("provider", 502), ("ruleset", 502), ("missing_file", 500), ("template", 500), ("internal", 500),
-])
-def test_actual_failure_paths_are_sanitized_and_recover(tmp_path, monkeypatch, capsys, caplog, failure, status):
+@pytest.mark.parametrize("failure", ["provider", "ruleset", "missing_file", "template"])
+def test_resource_startup_failures_are_sanitized_and_actionable(tmp_path, monkeypatch, capsys, caplog, failure):
     path, data = _fixture(tmp_path)
     data["provider"].append({"name": "remote", "type": "mihomo", "url": "https://upstream.test/static"})
     data["artifact"][0]["providers"].append("remote")
     if failure == "ruleset":
         data["ruleset"] = [{"name": "static", "url": "https://upstream.test/rules"}]
     _save(path, data)
-    working = {"value": False}
 
     def fetch(loader, url, *, headers=None):
-        if not working["value"] and failure in {"provider", "ruleset"}:
+        if failure in {"provider", "ruleset"}:
             raise server.RemoteLoadError(SECRET + TOKEN)
-        if url.endswith("rules"):
-            return b"DOMAIN,example.test"
         return b"proxies: [{name: static, type: socks5, server: static.test, port: 1080}]"
 
     monkeypatch.setattr(RunRemoteLoader, "fetch", fetch)
-    original = WorkflowEngine.for_render
-
-    def construct(*args):
-        engine = original(*args)
-        if not working["value"] and failure == "internal":
-            raise RuntimeError(SECRET + TOKEN)
-        return engine
-
-    monkeypatch.setattr(WorkflowEngine, "for_render", construct)
-    original_source = (tmp_path / "nodes.yaml").read_text()
-    original_template = (tmp_path / "client.j2").read_text()
     if failure == "missing_file":
         (tmp_path / "nodes.yaml").unlink()
     if failure == "template":
-        (tmp_path / "client.j2").write_text("{{ " + SECRET + " }}")
-    with caplog.at_level(logging.DEBUG), TestClient(server.create_app(str(path))) as client:
-        response = client.get("/subscription/out.yaml?" + _query())
-        assert response.status_code == status
-        _headers(response)
-        assert response.json() == {"error": "upstream_error" if status == 502 else "internal_error"}
-        working["value"] = True
-        (tmp_path / "nodes.yaml").write_text(original_source)
-        (tmp_path / "client.j2").write_text(original_template)
-        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+        (tmp_path / "client.j2").write_text("{% " + SECRET)
+    app = server.create_app(str(path))
+    with caplog.at_level(logging.DEBUG), pytest.raises(server.ServerPreparationError) as error:
+        with TestClient(app):
+            pytest.fail("Unready service accepted requests")
+    assert "check configured sources and templates" in str(error.value)
+    assert _service(app)._executor is None and _service(app)._refresh_executor is None
     captured = capsys.readouterr()
-    # HTTPX is the test client, and deliberately logs its own outgoing URL at INFO.
     application_logs = "\n".join(record.getMessage() for record in caplog.records if record.name != "httpx")
-    assert all(value not in captured.out + captured.err + application_logs for value in (TOKEN, SECRET))
+    assert all(value not in str(error.value) + captured.out + captured.err + application_logs for value in (TOKEN, SECRET))
+
+
+def test_runtime_template_and_internal_errors_are_sanitized(tmp_path, monkeypatch):
+    path, _ = _fixture(tmp_path)
+    (tmp_path / "client.j2").write_text("{{ unknown_callable() }}")
+    with TestClient(server.create_app(str(path))) as client:
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 500
+
+    def fail(*args):
+        raise RuntimeError(SECRET + TOKEN)
+
+    monkeypatch.setattr(PreparedArtifact, "render", fail)
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml?" + _query())
+        assert response.status_code == 500 and response.json() == {"error": "internal_error"}
 
 
 def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monkeypatch, capsys):
@@ -682,7 +676,7 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
             response = client.get("/subscription/out.yaml?" + _query(credential=credential))
             assert response.status_code == 200
             assert yaml.safe_load(response.text)["values"]["credential"] == credential
-    assert len(upstream) == len(cache) == 2
+    assert len(upstream) == 1 and cache == []
     assert all(TOKEN not in repr(value) and SECRET not in repr(value) for value in (upstream, cache))
     assert all(item[0] == "https://upstream.test/static" for item in upstream)
     assert upstream[0][1]["headers"] == {"User-Agent": "static-agent"}
@@ -701,14 +695,14 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
     data["artifact"].append(second)
     _save(path, data)
     barrier = threading.Barrier(2)
-    load = ProviderLoaderService.load
+    load = PreparedProvider.bind
 
     def parallel_load(*args, **kwargs):
         assert logger._quiet
         barrier.wait(timeout=5)
         return load(*args, **kwargs)
 
-    monkeypatch.setattr(ProviderLoaderService, "load", parallel_load)
+    monkeypatch.setattr(PreparedProvider, "bind", parallel_load)
     previous = logger._quiet
     with TestClient(server.create_app(str(path))) as client:
         assert logger._quiet
@@ -723,7 +717,7 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
             assert output["proxies"][0]["port"] == port
             assert output["proxies"][0]["password"] == credential
         assert logger._quiet
-        monkeypatch.setattr(ProviderLoaderService, "load", load)
+        monkeypatch.setattr(PreparedProvider, "bind", load)
         assert client.get("/subscription/second.yaml?" + _query(port="1080")).status_code == 400
         assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
     assert logger._quiet is previous
@@ -878,7 +872,7 @@ def test_serve_startup_errors_never_echo_secret_configuration(tmp_path, monkeypa
     assert "SUBIO_RENDER_TOKEN is missing or invalid" in capsys.readouterr().out
     monkeypatch.setenv("SUBIO_RENDER_TOKEN", TOKEN)
 
-    def fail(config_path):
+    def fail(config_path, **kwargs):
         raise RuntimeError(SECRET + TOKEN)
 
     monkeypatch.setattr(server, "create_app", fail)

@@ -1,12 +1,8 @@
-import copy
 import os
-from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
-from types import MappingProxyType
 
 from subio_v2.core.errors import ConfigError
-from subio_v2.core.parameters import ParameterValue
 from subio_v2.core.results import (
     WorkflowResult,
 )
@@ -24,7 +20,7 @@ from subio_v2.workflow.artifacts import (
     ArtifactGenerationResult,
     ArtifactGenerationService,
 )
-from subio_v2.workflow.config import ConfigLoader, RunConfig
+from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.manifest import apply_manifest
 from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
@@ -48,16 +44,10 @@ class WorkflowEngine:
         clean_gist: bool = False,
         write_manifest: bool = False,
         clean_dist: bool = False,
-        *,
-        _config: RunConfig | None = None,
-        _parameters: Mapping[str, ParameterValue] | None = None,
     ):
         self.config_path = config_path
-        self.config = _config if _config is not None else ConfigLoader.load(config_path)
-        self._parameters = (
-            MappingProxyType(dict(_parameters)) if _parameters is not None else None
-        )
-        if self._parameters is None and any(
+        self.config = ConfigLoader.load(config_path)
+        if any(
             item.parameterized for item in self.config.providers
         ):
             raise ConfigError(
@@ -104,48 +94,7 @@ class WorkflowEngine:
         else:
             self._local_rulesets = RuleSetStore()
 
-    @classmethod
-    def for_render(
-        cls,
-        config_path: str,
-        config: RunConfig,
-        file_name: str,
-        parameters: Mapping[str, ParameterValue],
-    ) -> "WorkflowEngine":
-        """Create a prepare-only engine from a snapshot and normalized parameters."""
-        selected = next(
-            (
-                (item, user) for item in config.artifacts
-                for output_name, user in item.output_names() if output_name == file_name
-            ),
-            None,
-        )
-        if selected is None:
-            raise ConfigError("Unknown subscription filename")
-        artifact, user = selected
-        selected_artifact = replace(
-            artifact,
-            users=(),
-            user=user,
-            allow_conversion_errors=False,
-            upload=(),
-            options=MappingProxyType(copy.deepcopy(dict(artifact.options))),
-        )
-        selected_config = replace(
-            config,
-            providers=tuple(
-                item for item in config.providers if item.name in artifact.providers
-            ),
-            artifacts=(selected_artifact,),
-            uploaders=(),
-            allow_conversion_errors=False,
-            options=MappingProxyType(copy.deepcopy(dict(config.options))),
-        )
-        return cls(config_path, _config=selected_config, _parameters=parameters)
-
     def run(self) -> WorkflowResult:
-        if self._parameters is not None:
-            raise ConfigError("Scoped rendering requests only support preparation")
         if self.dry_run:
             logger.info("--- Starting SubIO v2 Workflow (DRY-RUN) ---")
         else:
@@ -201,7 +150,7 @@ class WorkflowEngine:
                 self.config_path, self.global_age_secret_key
             )
             provider_result = provider_service.load(
-                self.config, remote_loader, parameters=self._parameters
+                self.config, remote_loader
             )
             artifact_result = ArtifactGenerationService(
                 self.config,
@@ -210,7 +159,6 @@ class WorkflowEngine:
                 self.renderer,
                 rulesets,
                 self.global_age_public_key,
-                parameters=self._parameters,
             ).generate()
             return WorkflowPreparation(
                 provider_result,
@@ -223,8 +171,6 @@ class WorkflowEngine:
     def load_providers(self) -> ProviderLoadResult:
         """Load providers for inspect without generating or publishing artifacts."""
 
-        if self._parameters is not None:
-            raise ConfigError("Scoped rendering requests only support preparation")
         remote_loader = self._remote_loader()
         try:
             return ProviderLoaderService(

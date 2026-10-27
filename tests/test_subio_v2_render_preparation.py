@@ -2,7 +2,6 @@ import json
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
 from types import MappingProxyType
 
 import pytest
@@ -11,7 +10,6 @@ import yaml
 from subio_v2.core.errors import (
     ArtifactGenerationError,
     ConfigError,
-    ProviderLoadError,
     TemplateRenderError,
 )
 from subio_v2.core.parameters import MissingParameterError
@@ -24,6 +22,7 @@ from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.parameters import normalize_parameters
 from subio_v2.workflow.template import TemplateRenderer
+from subio_v2.workflow.rendering import prepare_resources
 
 
 def _fixture(tmp_path, *, native=False, parameterized=True):
@@ -80,14 +79,13 @@ def _snapshot(path, data):
     return ConfigLoader.load(str(path))
 
 
-def _engine(path, config, file_name="out.yaml", pairs=()):
+def _render(path, config, file_name="out.yaml", pairs=()):
     artifact = next(
-        item
-        for item in config.artifacts
+        item for item in config.artifacts
         if any(name == file_name for name, _ in item.output_names())
     )
     parameters = normalize_parameters(artifact.params, pairs)
-    return WorkflowEngine.for_render(str(path), config, file_name, parameters)
+    return prepare_resources(str(path), config).candidates[file_name].render(file_name, parameters)
 
 
 @pytest.mark.parametrize("native", [False, True])
@@ -114,11 +112,9 @@ def test_selected_render_uses_snapshot_and_only_referenced_providers(
     monkeypatch.setattr(
         ConfigLoader, "load", lambda *_: pytest.fail("Snapshot was reread")
     )
-    engine = _engine(
+    result = _render(
         path, config, pairs=[("credential", "literal {{ 7 * 7 }} & + = #")]
     )
-    assert [item.name for item in engine.config.providers] == ["source"]
-    result = engine.prepare()
     assert list(result.provider_result.providers) == ["source"]
     assert len(result.artifact_result.drafts) == 1
     output = yaml.safe_load(result.artifact_result.drafts[0].content)
@@ -141,11 +137,10 @@ def test_selected_render_preserves_shared_rulesets_as_dependencies(
         return b"DOMAIN,example.test"
 
     monkeypatch.setattr(RunRemoteLoader, "fetch", fetch)
-    assert _engine(path, config).prepare().artifact_result.drafts
+    assert _render(path, config).artifact_result.drafts
     assert calls == ["https://unused.test/rules"]
     monkeypatch.setattr(RunRemoteLoader, "fetch", lambda *args, **kwargs: b"")
-    with pytest.raises(ConfigError, match="empty"):
-        _engine(path, config).prepare()
+    assert prepare_resources(str(path), config).failures["out.yaml"].phase == "ruleset"
 
 
 @pytest.mark.parametrize(
@@ -212,23 +207,21 @@ def test_params_namespace_is_nested_immutable_and_always_present(
     )
     config = _snapshot(path, data)
     runtime = dict(normalize_parameters(config.artifacts[0].params, ()))
-    engine = WorkflowEngine.for_render(str(path), config, "out.yaml", runtime)
-    runtime["self"] = "changed after engine construction"
-    render_result = engine.renderer.render_result
+    prepared = prepare_resources(str(path), config).candidates["out.yaml"]
+    render_result = TemplateRenderer.render_result
     contexts = []
 
-    def capture(template, context, *args):
+    def capture(renderer, template, context, *args):
         contexts.append(context)
         with pytest.raises(TypeError):
             context["params"]["credential"] = "changed"
-        return render_result(template, context, *args)
+        runtime["self"] = "changed after render started"
+        return render_result(renderer, template, context, *args)
 
-    monkeypatch.setattr(engine.renderer, "render_result", capture)
-    assert (
-        engine.prepare().artifact_result.drafts[0].content
-        == "self-value|items-value|True"
-    )
+    monkeypatch.setattr(TemplateRenderer, "render_result", capture)
+    assert prepared.render("out.yaml", runtime).artifact_result.drafts[0].content == "self-value|items-value|True"
     assert "self" not in contexts[0] and "credential" not in contexts[0]
+    monkeypatch.setattr(TemplateRenderer, "render_result", render_result)
     data["artifact"][0].pop("params")
     _snapshot(path, data)
     (tmp_path / "client.j2").write_text("{{ params is undefined }}")
@@ -247,8 +240,7 @@ def test_scoped_singbox_json_uses_params_serialization_and_normal_node_fragments
     )
     config = _snapshot(path, data)
     output = (
-        _engine(path, config, "out.json", pairs=[("credential", 'literal " & {{ 7 * 7 }}')])
-        .prepare()
+        _render(path, config, "out.json", pairs=[("credential", 'literal " & {{ 7 * 7 }}')])
         .artifact_result.drafts[0]
         .content
     )
@@ -300,7 +292,7 @@ def test_ruleset_callable_params_collision_fails_without_shadowing(tmp_path):
     (tmp_path / "snippet" / "params").write_text("policy\nDOMAIN,example.test")
     config = _snapshot(path, data)
     with pytest.raises(TemplateRenderError, match="conflicts.*params"):
-        _engine(path, config).prepare()
+        _render(path, config)
 
 
 def test_fixed_user_and_age_reuse_normal_gates_without_publication(
@@ -332,17 +324,13 @@ def test_fixed_user_and_age_reuse_normal_gates_without_publication(
     monkeypatch.setattr(
         "subio_v2.workflow.publication.ArtifactPublisher.commit", denied
     )
-    engine = _engine(path, config, pairs=[("credential", "request-value")])
-    with pytest.raises(ConfigError, match="only support preparation"):
-        engine.run()
-    result = engine.prepare()
+    result = _render(path, config, pairs=[("credential", "request-value")])
     draft = result.artifact_result.drafts[0]
     assert age.is_age_encrypted(draft.content)
     output = yaml.safe_load(age.decrypt_bytes(draft.content.encode(), secret))
     assert output["proxies"][0]["password"] == "alice-request-value"
     assert result.artifact_result.summaries[0].user == "alice"
     assert result.artifact_result.upload_requests == ()
-    assert engine.config.uploaders == ()
     assert not (tmp_path / "dist").exists()
 
 
@@ -382,15 +370,12 @@ def test_scoped_errors_use_strict_existing_gate_despite_static_opt_out(
     assert static_result.drafts and any(
         issue.severity == "error" for issue in static_result.issues
     )
-    engine = _engine(path, config)
-    assert not engine.config.allow_conversion_errors
-    assert not engine.config.artifacts[0].allow_conversion_errors
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged partial output"),
     )
     with pytest.raises(ArtifactGenerationError) as error:
-        engine.prepare()
+        _render(path, config)
     assert any(issue.severity == "error" for issue in error.value.issues)
     assert (
         config.allow_conversion_errors and config.artifacts[0].allow_conversion_errors
@@ -430,13 +415,12 @@ def test_scoped_parameterized_encoding_errors_block_despite_static_opt_out(
     document["proxies"][0][field] = "{{ params." + parameter + " }}"
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     config = _snapshot(path, data)
-    engine = _engine(path, config, pairs=[(parameter, value)])
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged malformed target output"),
     )
     with pytest.raises(ArtifactGenerationError) as error:
-        engine.prepare()
+        _render(path, config, pairs=[(parameter, value)])
     assert any(
         issue.field == field
         and issue.code == "conversion.invalid-value"
@@ -494,15 +478,12 @@ def test_scoped_surge_parameter_errors_block_before_staging_despite_static_opt_o
     node[field] = "{{ params." + parameter + " }}"
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     config = _snapshot(path, data)
-    engine = _engine(path, config, pairs=[(parameter, value)])
-    assert not engine.config.allow_conversion_errors
-    assert not engine.config.artifacts[0].allow_conversion_errors
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged malformed Surge output"),
     )
     with pytest.raises(ArtifactGenerationError) as error:
-        engine.prepare()
+        _render(path, config, pairs=[(parameter, value)])
     assert any(
         issue.field == field and issue.code == "conversion.invalid-value"
         and issue.severity == "error"
@@ -523,9 +504,9 @@ def test_scoped_surge_parameter_neighbors_round_trip_exactly(tmp_path, native, p
     data["artifact"][0]["type"] = "surge"
     (tmp_path / "client.j2").write_text("{{ nodes.render() }}")
     config = _snapshot(path, data)
-    result = _engine(path, config, pairs=[
+    result = _render(path, config, pairs=[
         (parameter, value), ("credential", 'pass=word, with "quotes"'),
-    ]).prepare()
+    ])
     assert not result.artifact_result.issues
     output = result.artifact_result.drafts[0].content
     parsed = get_parser("surge").parse_result(output)
@@ -559,8 +540,8 @@ def test_scoped_tuple_tags_fail_before_staging_despite_static_opt_out(
         "subio_v2.workflow.artifacts.ArtifactGenerationService._stage",
         lambda *args: pytest.fail("Staged an unsupported tuple document"),
     )
-    with pytest.raises(ProviderLoadError, match="Unsupported tuple"):
-        _engine(path, config).prepare()
+    with pytest.raises(ValueError, match="Unsupported tuple"):
+        _render(path, config)
     assert not (tmp_path / "dist").exists()
 
 
@@ -585,23 +566,15 @@ def test_two_routes_get_fresh_concurrent_state_and_independent_defaults(
     config = _snapshot(path, data)
     (tmp_path / "snippet").mkdir()
     (tmp_path / "snippet" / "shared").write_text("policy\nDOMAIN,example.test")
-    engines = [
-        _engine(path, config, file_name, [("credential", value)])
-        for file_name, value in (("out.yaml", "a"), ("b.yaml", "b"))
-    ]
-    assert engines[0].renderer is not engines[1].renderer
-    assert engines[0]._local_rulesets is not engines[1]._local_rulesets
-    engines[0].config.options["nested"]["values"].append("a")
-    engines[0].config.artifacts[0].options["local"]["values"].append("a")
-    assert engines[1].config.options["nested"]["values"] == []
-    assert config.options["nested"]["values"] == []
-    assert config.artifacts[0].options["local"]["values"] == []
+    prepared = prepare_resources(str(path), config)
+    candidates = [prepared.candidates[name] for name in ("out.yaml", "b.yaml")]
     barrier = threading.Barrier(2)
-    from subio_v2.adapters.catalog import get_parser
     from subio_v2.adapters.catalog import get_emitter
+    from subio_v2.workflow.providers import PreparedProvider
 
-    parsers, loaders, emitters, collectors = [], [], [], []
+    emitters, collectors = [], []
     get_callables = RuleSetStore.get_callables
+    bind = PreparedProvider.bind
 
     def collect_callables(store, platform, collector=None):
         collectors.append(collector)
@@ -612,89 +585,39 @@ def test_two_routes_get_fresh_concurrent_state_and_independent_defaults(
         emitters.append(emitter)
         return emitter
 
-    def parser_factory(*args, **kwargs):
-        parser = get_parser(*args, **kwargs)
-        parsers.append(parser)
-        parse_result = parser.parse_result
+    def parallel_bind(provider, parameters):
+        barrier.wait(timeout=5)
+        return bind(provider, parameters)
 
-        def parse(content):
-            barrier.wait(timeout=5)
-            return parse_result(content)
-
-        parser.parse_result = parse
-        return parser
-
-    def loader_factory(engine):
-        loader = RunRemoteLoader()
-        loaders.append(loader)
-        return loader
-
-    monkeypatch.setattr("subio_v2.workflow.providers.get_parser", parser_factory)
+    monkeypatch.setattr(PreparedProvider, "bind", parallel_bind)
     monkeypatch.setattr("subio_v2.workflow.artifacts.get_emitter", emitter_factory)
     monkeypatch.setattr(RuleSetStore, "get_callables", collect_callables)
-    monkeypatch.setattr(WorkflowEngine, "_remote_loader", loader_factory)
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(lambda engine: engine.prepare(), engines))
-    outputs = [
-        yaml.safe_load(result.artifact_result.drafts[0].content) for result in results
+        jobs = [pool.submit(candidate.render, name, normalize_parameters(
+            artifact.params, [("credential", credential)]
+        )) for candidate, name, artifact, credential in zip(
+            candidates, ("out.yaml", "b.yaml"), config.artifacts, ("a", "b")
+        )]
+        results = [job.result(timeout=10) for job in jobs]
+    outputs = [yaml.safe_load(result.artifact_result.drafts[0].content) for result in results]
+    assert [(out["proxies"][0]["name"], out["proxies"][0]["port"],
+             out["proxies"][0]["password"]) for out in outputs] == [
+        ("route-a", 80, "a"), ("route-b", 443, "b")
     ]
-    assert [
-        (
-            out["proxies"][0]["name"],
-            out["proxies"][0]["port"],
-            out["proxies"][0]["password"],
-        )
-        for out in outputs
-    ] == [("route-a", 80, "a"), ("route-b", 443, "b")]
-    assert parsers[0] is not parsers[1] and loaders[0] is not loaders[1]
-    assert emitters[0] is not emitters[1]
-    assert collectors[0] is not collectors[1]
-    assert all(loader._session is None for loader in loaders)
+    assert emitters[0] is not emitters[1] and collectors[0] is not collectors[1]
     nodes = [result.provider_result.providers["source"][0] for result in results]
     assert nodes[0] is not nodes[1] and nodes[0].tls is not nodes[1].tls
     nodes[0].password = "changed"
     assert nodes[1].password == "b"
-    monkeypatch.setattr("subio_v2.workflow.providers.get_parser", get_parser)
-    assert (
-        yaml.safe_load(
-            _engine(path, config).prepare().artifact_result.drafts[0].content
-        )["proxies"][0]["password"]
-        == "synthetic"
-    )
+    assert config.options["nested"]["values"] == []
+    assert config.artifacts[0].options["local"]["values"] == []
+    monkeypatch.setattr(PreparedProvider, "bind", bind)
+    assert yaml.safe_load(_render(path, config).artifact_result.drafts[0].content)["proxies"][0]["password"] == "synthetic"
 
 
-def test_failed_request_closes_loader_and_next_request_has_fresh_nodes(
-    tmp_path, monkeypatch
-):
+def test_unknown_filename_is_rejected_by_prepared_artifact(tmp_path):
     path, data = _fixture(tmp_path)
     config = _snapshot(path, data)
-    loaders = []
-
-    def loader_factory(engine):
-        loader = RunRemoteLoader()
-        loaders.append(loader)
-        return loader
-
-    monkeypatch.setattr(WorkflowEngine, "_remote_loader", loader_factory)
-    failing = _engine(path, config)
-    failing.config = replace(
-        failing.config,
-        artifacts=(replace(failing.config.artifacts[0], template="missing.j2"),),
-    )
-    with pytest.raises(TemplateRenderError):
-        failing.prepare()
-    result = _engine(path, config, pairs=[("credential", "after-failure")]).prepare()
-    assert result.provider_result.providers["source"][0].password == "after-failure"
-    assert loaders[0] is not loaders[1]
-    assert all(loader._session is None for loader in loaders)
-
-
-def test_unknown_filename_is_rejected_before_snippet_io(tmp_path, monkeypatch):
-    path, data = _fixture(tmp_path)
-    config = _snapshot(path, data)
-    monkeypatch.setattr(
-        "subio_v2.workflow.engine.load_snippets",
-        lambda *_: pytest.fail("Loaded snippets"),
-    )
+    candidate = prepare_resources(str(path), config).candidates["out.yaml"]
     with pytest.raises(ConfigError, match="Unknown subscription filename"):
-        WorkflowEngine.for_render(str(path), config, "unconfigured", {})
+        candidate.render("unconfigured", {})

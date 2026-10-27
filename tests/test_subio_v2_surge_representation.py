@@ -9,6 +9,7 @@ from subio_v2.core.nodes import Protocol, TailscaleNode, WireguardNode
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.parameters import normalize_parameters
+from subio_v2.workflow.rendering import prepare_resources
 
 TOKEN = "synthetic_surge_boundary_0123456789"
 SCALARS = [
@@ -96,10 +97,8 @@ def _document_fixture(tmp_path, family, node, *, parameterized=True):
 def _prepare(path, value):
     config = ConfigLoader.load(str(path))
     values = normalize_parameters(config.artifacts[0].params, [("value", value)])
-    engine = WorkflowEngine.for_render(str(path), config, "surge.conf", values)
-    assert not engine.config.allow_conversion_errors
-    assert not engine.config.artifacts[0].allow_conversion_errors
-    return engine.prepare()
+    candidate = prepare_resources(str(path), config).candidates["surge.conf"]
+    return candidate.render("surge.conf", values)
 
 
 def _http(path, value, monkeypatch):
