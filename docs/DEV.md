@@ -416,6 +416,16 @@ age key、密码或私钥。
 `allow_conversion_errors = true` 会放行全部 conversion error，只适合已审阅的调试配置。
 新增 issue 时应使用稳定 code，为后续按 code allowlist 做准备。
 
+`convert --param NAME=VALUE` 可重复，按第一个 `=` 分割并保留字面值，不做 URL 解码。
+入口先用现有 normalizer 检查全部输入，即使没有 artifact 也不能跳过名称、重复或限额校验；
+`WorkflowEngine` 的显式 `parameter_pairs` 上下文（包括空 tuple）再由 artifact owner 独立应用声明和默认值。
+普通源沿用 run loader；参数化源每次运行准备一次未绑定文档，每个输出私有绑定，随后进入原有生成链。
+相同不可变参数 mapping 进入 provider 和最终模板。参数化源的哈希、实际解析/选择计数属于输出摘要和
+manifest 的 `parameterized_providers`，不写入全局普通 provider 计数，不保存参数或 issue message。
+显式参数或参数化源转换静默详细 workflow 日志，只输出固定状态、类别、错误码和计数；
+argparse 的 convert 错误也不回显输入。普通转换保留原有诊断。命令参数仍可能被 shell 历史和进程列表记录，
+产物和配置的上传内容按设计包含绑定值。
+
 ### 7.3 GET 参数化渲染
 
 可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 HTTP 传输。
@@ -456,7 +466,7 @@ parser/emitter 和 Jinja 状态，复用现有 `ArtifactGenerationService`。每
 解密/解码源序列化或解析静态 provider/规则集，不经过 `WorkflowEngine`。
 provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError`，HTTP 沿异常原因链返回固定 400，
 不回显键或值。最终 Jinja 的 `params` 缺失键在过滤器执行前失败；未使用的类型声明无需请求值。
-最终 Jinja 始终获得单一不可变 `params` 命名空间；静态生成使用 artifact 默认值，无声明时为空。
+最终 Jinja 始终获得单一不可变 `params` 命名空间；convert 使用 CLI 值和 artifact 默认值，无声明和输入时为空。
 模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
 或目标 serializer 写入合适上下文。该路径禁止发布、上传、manifest 和请求报告/结果缓存，
 所有 artifact 类型沿用静态生成的转换策略，包括全局或 artifact 级 `allow_conversion_errors`、
@@ -493,8 +503,9 @@ serve 只使用内存资源快照和每轮内存去重，显式关闭远程磁�
 本地源、snippet、模板变化在下次成功刷新后可见；配置或 token 变化须重启。本地多文件读取不是文件系统
 事务；旧版本在已有请求结束前仍可留在内存，包括其源凭据。
 
-静态 `convert/check/inspect` 在加载 provider/ruleset 前拒绝参数化源，即使 artifact 声明了默认值。
-普通源的最终模板可以使用所属 artifact 的参数默认值，引用缺失值在发布前失败。
+`convert` 支持本地参数化源；无参数选项也建立 artifact 上下文，使用各自默认值。
+`check/inspect` 不接受参数选项，在加载 provider/ruleset 前拒绝参数化源，即使 artifact 声明了默认值。
+普通源的最终模板也可以使用所属 artifact 的参数默认值，引用缺失值在发布前失败。
 参数声明只包含 `type/default/choices/min/max`，字符串统一允许空值。远程输入和其他输入族不能启用替换。
 
 专用服务生命周期静默 workflow 日志并关闭框架访问日志；独立 Logger 实例输出带 UTC 时间的生命周期、

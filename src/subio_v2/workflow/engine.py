@@ -20,7 +20,7 @@ from subio_v2.workflow.artifacts import (
     ArtifactGenerationResult,
     ArtifactGenerationService,
 )
-from subio_v2.workflow.config import ConfigLoader
+from subio_v2.workflow.config import ConfigLoader, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.manifest import apply_manifest
 from subio_v2.workflow.providers import ProviderLoaderService, ProviderLoadResult
@@ -46,9 +46,10 @@ class WorkflowEngine:
         clean_dist: bool = False,
         *,
         parameter_pairs: tuple[tuple[str, str], ...] | None = None,
+        config: RunConfig | None = None,
     ):
         self.config_path = config_path
-        self.config = ConfigLoader.load(config_path)
+        self.config = config if config is not None else ConfigLoader.load(config_path)
         if parameter_pairs is None and any(
             item.parameterized for item in self.config.providers
         ):

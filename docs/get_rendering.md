@@ -43,7 +43,8 @@ docker run --rm \
 日志中的 `0.0.0.0` 或 `[::]` 表示监听所有对应网卡，其他机器应使用服务所在机器的实际地址访问。
 
 `--log-level` 控制整个 Web 服务的日志阈值，默认 `info`，可选 `debug`、`info`、`warning`、`error`、
-`critical`，大小写均可。日志带 UTC 时间；静态 `convert/check/inspect` 的日志行为保持不变。
+`critical`，大小写均可。日志带 UTC 时间；普通 `convert/check/inspect` 的日志行为保持不变，
+参数化 convert 使用安全状态、错误类别和计数。
 
 ```bash
 uv run --extra server subio serve example/render/config.toml --log-level debug
@@ -279,12 +280,24 @@ proxy-groups:
 
 ## 静态 CLI 与运行边界
 
-包含参数化源的配置在 `convert`、`check`、`inspect` 入口会于 provider/ruleset I/O 前被拒绝，
-即使所有 artifact 参数都有默认值也一样，因为源不能从不同 artifact 中选择全局默认上下文。只引用普通源的
-artifact 可以在最终模板使用自身的参数默认值；若模板引用没有请求值和默认值的参数，生成失败并
-阻止发布。没有参数声明时，静态模板的 `params` 是空 mapping。
+`convert` 支持 `--param NAME=VALUE`，可重复传入参数，每个值只按第一个 `=` 分割，不做 URL 解码、
+trim、JSON 转型或环境展开；空字符串、空白、Unicode、`=+%&` 和看似 Jinja 的文字保持字面值。
+例如 `--param 'password=example + & = % value' --param 'username='`。未声明参数为字符串；整数、
+布尔值和约束复用前述声明与值域。最多 32 个参数，单值最多 1024 UTF-8 bytes，禁止控制字符、
+非法名称和重复名称。CLI 不需要认证 token，但 `token` 仍是保留名。
 
-每轮准备只加载已配置 artifact 引用的 providers；未引用的 provider 不做 I/O，全部配置 rulesets
+同一组 CLI 输入按每个 artifact 独立应用类型、默认值和约束，再私有绑定其引用的已准备源，
+最终模板获得相同的不可变 `params`。不传 `--param` 也使用各 artifact 自己的默认值；
+引用缺失值会失败。普通源的最终模板同样支持 CLI 值和默认值，无声明和输入时 `params` 为空 mapping。
+`check`、`inspect` 不接受 `--param`，仍于 provider/ruleset I/O 前拒绝参数化源，包括默认值齐全的情况。
+
+convert 完整准备全部 draft 后才入队上传和写文件；后一个 artifact 缺值会阻止整次发布、manifest
+更新和旧文件清理。`--dry-run` 继续写入本地 `dist`，只跳过远程上传。参数化转换静默详细 workflow
+日志，输出固定状态、错误类别、错误码和计数；manifest 的逐输出 `parameterized_providers` 只含源哈希
+及实际解析/选择计数，不记录参数值。产物和配置的上传结果按设计包含渲染后的值。
+CLI 参数可能进入 shell 历史与进程列表，安全日志无法清除这些副本。
+
+HTTP 每轮准备只加载已配置 artifact 引用的 providers；未引用的 provider 不做 I/O，全部配置 rulesets
 仍为共享依赖。请求只选择对应 artifact/user，复用其准备资源，并为节点、参数、options、解析器、
 emitter 和模板状态创建独立副本或实例。HTTP 不调用发布/上传/manifest 路径，不创建请求报告，
 不保存请求参数或结果。请求值不能覆盖配置的源路径、上游请求、根模板、快照版本或刷新调度。

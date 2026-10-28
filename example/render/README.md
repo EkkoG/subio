@@ -56,9 +56,27 @@ template value `controller_secret`, and `to_yaml` for node names. The controller
 is not enabled by this example; its optional client `secret` is separate from
 the service's reserved `token`. The service token never enters the template.
 
-`convert`, `check` and `inspect` intentionally reject this parameterized-source
-configuration before provider/ruleset I/O. Use the HTTP routes to bind it. The
-original `example/config.toml` remains the static CLI example.
+The same configuration supports local conversion of both artifacts:
+
+```bash
+uv run subio convert example/render/config.toml --dry-run --write-manifest \
+  --param 'username=example-user' --param 'password=example + & = % # value' \
+  --param 'port=1081' --param 'udp=false'
+```
+
+Convert splits each parameter at the first equals sign and keeps empty values,
+whitespace, Unicode and later `=+%&` literally, without URL decoding. Types and
+defaults apply independently for each artifact, including when no flags are
+provided. This example still requires username and password because they have
+no defaults. CLI needs no authentication token; `token` remains reserved.
+`--dry-run` writes local files in `dist` and skips remote uploads. The optional
+manifest stores per-output source hashes and actual parsed/selected counts,
+without parameter values. Generated files and configured uploads contain the
+rendered credentials. Parameter-mode diagnostics omit values, but command-line
+values can still appear in shell history and process listings.
+`check` and `inspect` keep rejecting parameterized sources before provider/ruleset
+I/O and do not accept `--param`. The original `example/config.toml` remains the
+ordinary CLI example.
 
 GET URLs can expose credentials through history, process arguments, network or
 proxy logs; `no-store` cannot erase those copies. Read the [operating and

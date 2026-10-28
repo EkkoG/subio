@@ -114,6 +114,27 @@ password = "secret"
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
 跨平台转换，也不会由 SubIO 执行。
 
+#### CLI 参数化生成
+
+`convert` 可重复使用 `--param NAME=VALUE`，将同一组输入按各 artifact 的 `params` 声明独立转换，
+绑定本地参数化 provider，并把相同的不可变 `params` 交给最终模板。无需逐个声明字符串参数；
+`artifact.params` 可补充整数、布尔值、默认值和约束。不传 `--param` 时也会使用各 artifact 自己的默认值。
+
+```bash
+uv run subio convert example/render/config.toml --dry-run \
+  --param 'username=example-user' --param 'password=example + & = % # value' \
+  --param 'port=1081' --param 'udp=false'
+```
+
+每个参数只在第一个 `=` 处分开；空值、空白、Unicode、后续 `=`、`+`、`%`、`&` 和看似 Jinja 的文本
+原样保留，不做 URL 解码或环境展开。请按 shell 规则引用参数。CLI 不需要认证 token，但 `token` 仍为
+保留参数名。名称、重复值、每次最多 32 个参数、单值最多 1024 UTF-8 bytes、类型与约束沿用
+[参数规则](./docs/get_rendering.md#文件名和参数声明)；引用缺失值或非法输入返回非零，并在完整生成前阻止发布。
+`--dry-run` 仍写本地 `dist`，只跳过远程上传。参数化转换仅打印安全状态、错误类别和计数；manifest
+只记录来源哈希及逐输出的解析/选择计数，不记录参数值。生成的文件和配置的上传结果会包含渲染后的凭据。
+命令行参数可能进入 shell 历史和进程列表，应按这些位置的可见范围处理凭据。
+`check`、`inspect` 不接受 `--param`，仍在输入 I/O 前拒绝参数化源。
+
 #### GET 参数化渲染服务
 
 可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...`，无需附加请求头。请求参数
@@ -136,7 +157,7 @@ uv run --extra server subio serve example/render/config.toml
 ```
 
 离线示例包含两个 artifact 和安全模板，见 [GET 示例](./example/render/README.md)。参数声明、URL 编码、
-静态 CLI 拒绝参数化源、token 轮换和 TLS 反向代理设置见 [GET 渲染指南](./docs/get_rendering.md)。
+CLI 与 HTTP 的运行边界、token 轮换和 TLS 反向代理设置见 [GET 渲染指南](./docs/get_rendering.md)。
 一个 token 授权全部已配置 artifact；GET URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
 `no-store` 无法清除这些副本。
 

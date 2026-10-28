@@ -145,9 +145,9 @@ def test_selected_render_preserves_shared_rulesets_as_dependencies(
 
 @pytest.mark.parametrize(
     "arguments",
-    [["convert"], ["check"], ["inspect", "providers"], ["inspect", "artifacts"]],
+    [["check"], ["inspect", "providers"], ["inspect", "artifacts"]],
 )
-def test_static_cli_rejects_parameterized_sources_before_any_input_io(
+def test_diagnostic_cli_rejects_parameterized_sources_before_any_input_io(
     tmp_path, monkeypatch, capsys, arguments
 ):
     path, data = _fixture(tmp_path)

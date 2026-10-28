@@ -67,6 +67,9 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
             clean_gist=False,
             write_manifest=False,
             clean_dist=False,
+            *,
+            parameter_pairs=None,
+            config=None,
         ):
             calls["init"] = {
                 "config_path": config_path,
@@ -74,7 +77,9 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
                 "clean_gist": clean_gist,
                 "write_manifest": write_manifest,
                 "clean_dist": clean_dist,
+                "parameter_pairs": parameter_pairs,
             }
+            assert config.extra["a"] == 1
 
         def run(self):
             calls["ran"] = True
@@ -101,6 +106,7 @@ def test_main_creates_dist_and_runs_engine(tmp_path, monkeypatch):
         "clean_gist": True,
         "write_manifest": False,
         "clean_dist": False,
+        "parameter_pairs": (),
     }
     assert calls["ran"] is True
 

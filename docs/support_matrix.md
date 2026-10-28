@@ -131,7 +131,17 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 
 ## 4. 兼容性
 
-### 4.1 可选 GET 渲染
+### 4.1 convert 参数化生成
+
+`subio convert CONFIG --param NAME=VALUE` 可重复传入最多 32 个字面参数，按第一个 `=` 分割，
+保留空值、空白、Unicode 与后续符号，不做 URL 解码。无声明时为 string，`artifact.params` 可补充
+integer/boolean、默认值和约束；同一输入按每个 artifact 独立归一化，不传选项也应用各自默认值。
+参数化源范围与 GET 相同，最终模板使用相同的不可变 `params`。CLI 无 token 认证，`token` 仍为保留名。
+非法或缺失引用在发布前失败；完整生成成功后才入队上传和发布，`--dry-run` 仍写本地产物。
+参数化转换只记录安全类别/错误码/计数；manifest 逐输出记录源哈希与实际解析/选择计数，不含参数值。
+产物与上传结果包含绑定值，命令行值可能进入 shell 历史与进程列表。
+
+### 4.2 可选 GET 渲染
 
 | 能力 | 当前范围 |
 |---|---|
@@ -159,12 +169,12 @@ URL、配置的根模板、target 或用户选择。原生 v2 字段/节点与�
 模板的 fallback/ignore-missing 只跳过真正不存在的名称；捕获时发现但无法读取/解码的文件被访问时返回
 固定 500，未使用的坏 helper 不阻断其他 artifact。可信模板仍可执行程序行为，没有严格执行期限。
 
-参数化源配置在静态 `convert/check/inspect` 于 provider/ruleset I/O 前拒绝，包括全部有默认值的情况。
-普通源的最终模板可使用自身 params 默认值，引用缺失值会阻止发布；无声明时 params 为空 mapping。源替换只覆盖节点子树标量，
+`check/inspect` 不接受 `--param`，参数化源配置仍于 provider/ruleset I/O 前拒绝，包括全部有默认值的情况。
+普通源的最终模板也可使用自身 params 默认值，引用缺失值会阻止发布；无声明和输入时 params 为空 mapping。源替换只覆盖节点子树标量，
 YAML 循环和会产生 tuple 的 `!!pairs` / `!!omap` 拒绝。部署、编码、限额和 GET 凭据暴露风险见
 [GET 渲染指南](get_rendering.md) 与 [离线示例](../example/render/README.md)。
 
-### 4.2 既有配置与接口
+### 4.3 既有配置与接口
 
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；
 - 新配置应使用 `mihomo`；旧 `clash-meta` 配置继续工作并产生配置级替代提示，内部 issue

@@ -6,10 +6,25 @@ from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 
-from subio_v2.core.errors import WorkflowError
+from subio_v2.core.errors import (
+    ArtifactGenerationError,
+    ConfigError,
+    ProviderLoadError,
+    TemplateRenderError,
+    UploadError,
+    WorkflowError,
+)
+from subio_v2.core.parameters import MissingParameterError
+from subio_v2.core.results import IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import LOG_LEVELS, logger
+from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
+from subio_v2.workflow.parameters import (
+    ParameterError,
+    ParameterLimitError,
+    normalize_parameters,
+)
 from subio_v2.workflow.report import build_report, render_report
 
 # Supported config file extensions in priority order
@@ -70,6 +85,72 @@ def _write_report(report: dict, output_format: str, output: str | None) -> None:
         sys.stdout.write(content)
     else:
         print(content, end="")
+
+
+def _run_convert(args) -> int:
+    parameter_mode = bool(args.param)
+    try:
+        with logger.silenced() if parameter_mode else nullcontext():
+            pairs = []
+            for raw in args.param:
+                name, separator, value = raw.partition("=")
+                if not separator:
+                    raise ParameterError("Rendering parameter must use NAME=VALUE")
+                pairs.append((name, value))
+            parameter_pairs = tuple(pairs)
+            # Check transport-independent limits even when there are no artifacts.
+            normalize_parameters({}, parameter_pairs)
+            config_path = _resolve_config_path(args.config)
+            if config_path is None:
+                if parameter_mode:
+                    raise ConfigError("Config file not found")
+                return 1
+            config = ConfigLoader.load(config_path)
+        parameter_mode = parameter_mode or any(item.parameterized for item in config.providers)
+        with logger.silenced() if parameter_mode else nullcontext():
+            engine = WorkflowEngine(
+                config_path,
+                dry_run=args.dry_run,
+                clean_gist=args.clean_gist,
+                write_manifest=args.write_manifest,
+                clean_dist=args.clean_dist,
+                parameter_pairs=parameter_pairs,
+                config=config,
+            )
+            result = engine.run()
+    except Exception as exc:
+        if not parameter_mode:
+            if not isinstance(exc, WorkflowError):
+                raise
+            logger.error(str(exc))
+            return 1
+        category = next(
+            (code for kind, code in (
+                (ParameterLimitError, "parameter_limit"),
+                (ParameterError, "invalid_parameters"),
+                (MissingParameterError, "missing_parameter"),
+                (ConfigError, "config_error"),
+                (ProviderLoadError, "provider_error"),
+                (TemplateRenderError, "template_error"),
+                (ArtifactGenerationError, "artifact_error"),
+                (UploadError, "upload_error"),
+                (OSError, "io_error"),
+            ) if isinstance(exc, kind)),
+            "internal_error",
+        )
+        issues = tuple(getattr(exc, "issues", ()))
+        codes = ",".join(sorted({issue.code for issue in issues})) or "none"
+        logger.error(f"Conversion failed: {category}; issues={len(issues)}; codes={codes}")
+        return 1
+    if parameter_mode:
+        errors = sum(issue.severity == IssueSeverity.ERROR for issue in result.issues)
+        codes = ",".join(sorted({issue.code for issue in result.issues})) or "none"
+        logger.success(
+            f"Conversion completed: artifacts={len(result.generated)}; "
+            f"uploads={len(result.uploaded)}; issues={len(result.issues)}; "
+            f"errors={errors}; codes={codes}"
+        )
+    return 0
 
 
 def _run_check(args) -> int:
@@ -290,6 +371,13 @@ def main():
         action="store_true",
         help="Remove only stale artifacts recorded by the previous manifest",
     )
+    convert_parser.add_argument(
+        "--param",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="Bind an artifact parameter; repeat for multiple literal values",
+    )
 
     report_formats = ("text", "json")
     serve_parser = subparsers.add_parser(
@@ -375,6 +463,14 @@ def main():
     )
     decrypt.set_defaults(age_func=_cmd_age_decrypt)
 
+    if sys.argv[1:2] == ["convert"]:
+        # argparse otherwise includes unrecognized arguments and their values.
+        def convert_parse_error(_message):
+            convert_parser.exit(
+                2, "subio convert: error: invalid_arguments; use subio convert --help\n"
+            )
+
+        parser.error = convert_parser.error = convert_parse_error
     args = parser.parse_args()
     if args.subcommand == "serve" and args.max_snapshot_age < args.refresh_interval:
         parser.error("Maximum snapshot age must be at least the refresh interval")
@@ -389,23 +485,7 @@ def main():
 
     # Handle "convert" subcommand
     if args.subcommand == "convert":
-        config_path = _resolve_config_path(args.config)
-        if config_path is None:
-            return 1
-
-        try:
-            engine = WorkflowEngine(
-                config_path,
-                dry_run=args.dry_run,
-                clean_gist=args.clean_gist,
-                write_manifest=args.write_manifest,
-                clean_dist=args.clean_dist,
-            )
-            engine.run()
-        except WorkflowError as exc:
-            logger.error(str(exc))
-            return 1
-        return 0
+        return _run_convert(args)
 
     if args.subcommand == "check":
         return _run_check(args)
