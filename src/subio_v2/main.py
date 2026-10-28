@@ -9,6 +9,7 @@ from pathlib import Path
 from subio_v2.core.errors import (
     ArtifactGenerationError,
     ConfigError,
+    ConfigParseError,
     ProviderLoadError,
     TemplateRenderError,
     UploadError,
@@ -118,6 +119,15 @@ def _run_convert(args) -> int:
                 config=config,
             )
             result = engine.run()
+    except ConfigParseError as exc:
+        # Syntax failures can contain defaults before parameter mode is knowable.
+        location = ""
+        if exc.line is not None:
+            location = f"; line={exc.line}"
+            if exc.column is not None:
+                location += f"; column={exc.column}"
+        logger.error(f"Conversion failed: config_error{location}")
+        return 1
     except Exception as exc:
         if not parameter_mode:
             if not isinstance(exc, WorkflowError):

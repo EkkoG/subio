@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 import stat
 import subprocess
 import sys
@@ -258,6 +259,82 @@ def test_explicit_parameters_hide_config_load_failure(tmp_path, monkeypatch, cap
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err
     assert "config_error" in output.out
+
+
+@pytest.mark.parametrize("ending", [
+    '"' + CANARY, "'" + CANARY, '"' + CANARY + '\\q"', '["' + CANARY + '"',
+])
+@pytest.mark.parametrize("explicit", [False, True])
+def test_malformed_yaml_defaults_fail_safely_before_engine(
+    tmp_path, monkeypatch, capsys, ending, explicit
+):
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        "provider: [{name: source, type: mihomo, file: nodes.yaml, parameterized: true}]\n"
+        "artifact:\n"
+        "  - name: out.yaml\n"
+        "    type: mihomo\n"
+        "    providers: [source]\n"
+        "    params:\n"
+        "      credential:\n"
+        "        default: " + ending
+    )
+
+    def denied(*args, **kwargs):
+        pytest.fail("Malformed config reached engine or publication")
+
+    monkeypatch.setattr(main_mod, "WorkflowEngine", denied)
+    for target in ("queue_upload_requests", "apply_manifest"):
+        monkeypatch.setattr("subio_v2.workflow.engine." + target, denied)
+    arguments = ("--param", "unused=" + CANARY) if explicit else ()
+    assert _main(monkeypatch, path, *arguments) == 1
+    captured = capsys.readouterr()
+    assert CANARY not in captured.out + captured.err
+    assert "config_error" in captured.out
+    assert "line=8" in captured.out
+    assert re.search(r"column=[1-9][0-9]*", captured.out)
+    assert "Traceback" not in captured.out + captured.err
+    assert "default:" not in captured.out + captured.err
+    assert not (tmp_path / "dist").exists()
+    logger.info("LOGGER-RESTORED")
+    assert "LOGGER-RESTORED" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("extension,source", [
+    ("yaml", 'credential: "' + CANARY + '\\q"'),
+    ("toml", 'credential = "' + CANARY + '\\q"'),
+    ("json", '{"credential": "' + CANARY + '\\q"}'),
+    ("json5", '{"credential": ' + CANARY + '}'),
+])
+def test_actual_cli_parse_errors_never_print_config_source(tmp_path, extension, source):
+    path = tmp_path / ("config." + extension)
+    path.write_text(source)
+    result = subprocess.run(
+        [sys.executable, "-m", "subio_v2.main", "convert", str(path)],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 1
+    assert CANARY not in result.stdout + result.stderr
+    assert "config_error" in result.stdout
+    if extension == "yaml":
+        column = source.index("\\q") + 2
+        assert "line=1" in result.stdout
+        assert f"column={column}" in result.stdout
+    assert "Traceback" not in result.stdout + result.stderr
+    assert not (tmp_path / "dist").exists()
+
+
+def test_valid_yaml_default_with_literal_escape_still_generates(tmp_path, monkeypatch, capsys):
+    path, data = _fixture(tmp_path, defaults=True)
+    data["artifact"][0]["params"]["credential"]["default"] = CANARY + "\\q"
+    path = path.with_suffix(".yaml")
+    path.write_text(yaml.safe_dump(data))
+    assert _main(monkeypatch, path) == 0
+    output = yaml.safe_load((tmp_path / "dist" / "out.yaml").read_text())
+    assert output["proxies"][0]["password"] == output["values"]["credential"] == CANARY + "\\q"
+    captured = capsys.readouterr()
+    assert CANARY not in captured.out + captured.err
+    assert "Conversion completed" in captured.out
 
 
 def test_missing_final_template_parameter_is_safe_and_blocks_publication(tmp_path, monkeypatch, capsys):
