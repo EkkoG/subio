@@ -80,6 +80,16 @@ def build_manifest(
                 "input_nodes": summary.input_nodes,
                 "supported_nodes": summary.supported_nodes,
                 "issue_codes": list(summary.issue_codes),
+                **({
+                    "parameterized_providers": {
+                        provider.name: {
+                            "content_sha256": provider.content_sha256,
+                            "parsed_nodes": provider.parsed_nodes,
+                            "selected_nodes": provider.selected_nodes,
+                        }
+                        for provider in summary.parameterized_providers
+                    },
+                } if summary.parameterized_providers else {}),
             }
             for summary in summaries
         },

@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from subio_v2.core.errors import ConfigError
@@ -44,15 +44,18 @@ class WorkflowEngine:
         clean_gist: bool = False,
         write_manifest: bool = False,
         clean_dist: bool = False,
+        *,
+        parameter_pairs: tuple[tuple[str, str], ...] | None = None,
     ):
         self.config_path = config_path
         self.config = ConfigLoader.load(config_path)
-        if any(
+        if parameter_pairs is None and any(
             item.parameterized for item in self.config.providers
         ):
             raise ConfigError(
                 "Parameterized providers are only available in scoped rendering requests"
             )
+        self.parameter_pairs = parameter_pairs
         self.dry_run = dry_run
         self.clean_gist = clean_gist
         self.write_manifest = write_manifest or clean_dist
@@ -149,9 +152,20 @@ class WorkflowEngine:
             provider_service = ProviderLoaderService(
                 self.config_path, self.global_age_secret_key
             )
-            provider_result = provider_service.load(
-                self.config, remote_loader
+            prepared_providers = {
+                item.name: provider_service.prepare(item, remote_loader)
+                for item in self.config.providers if item.parameterized
+            }
+            ordinary_config = (
+                replace(
+                    self.config,
+                    providers=tuple(
+                        item for item in self.config.providers if not item.parameterized
+                    ),
+                )
+                if prepared_providers else self.config
             )
+            provider_result = provider_service.load(ordinary_config, remote_loader)
             artifact_result = ArtifactGenerationService(
                 self.config,
                 provider_result.providers,
@@ -159,6 +173,8 @@ class WorkflowEngine:
                 self.renderer,
                 rulesets,
                 self.global_age_public_key,
+                parameter_pairs=self.parameter_pairs,
+                prepared_providers=prepared_providers,
             ).generate()
             return WorkflowPreparation(
                 provider_result,

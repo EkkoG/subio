@@ -23,6 +23,7 @@ from subio_v2.protocols.user_overrides import get_nodes_for_user
 from subio_v2.rules.runtime import RuleSetStore
 from subio_v2.workflow.config import ArtifactConfig, RunConfig
 from subio_v2.workflow.parameters import normalize_parameters
+from subio_v2.workflow.providers import PreparedProvider, ProviderSummary
 from subio_v2.workflow.selectors import SelectorEngine, resolve_duplicate_names
 from subio_v2.workflow.template import TemplateRenderer
 from subio_v2.workflow.template_context import build_template_context
@@ -46,6 +47,7 @@ class ArtifactSummary:
     content_bytes: int
     content_sha256: str
     issue_codes: tuple[str, ...]
+    parameterized_providers: tuple[ProviderSummary, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,8 @@ class ArtifactGenerationService:
         global_age_public_key: str = "",
         *,
         parameters: Mapping[str, ParameterValue] | None = None,
+        parameter_pairs: tuple[tuple[str, str], ...] | None = None,
+        prepared_providers: Mapping[str, PreparedProvider] | None = None,
     ):
         self.config = config
         self.providers = providers
@@ -82,6 +86,8 @@ class ArtifactGenerationService:
         self.rulesets = rulesets
         self.global_age_public_key = global_age_public_key
         self.parameters = parameters
+        self.parameter_pairs = parameter_pairs
+        self.prepared_providers = prepared_providers or {}
         self.selector_engine = SelectorEngine(config.selectors)
 
     def generate(self) -> ArtifactGenerationResult:
@@ -157,15 +163,24 @@ class ArtifactGenerationService:
         artifact_type = artifact_config.artifact_type
         parameters = (
             self.parameters if self.parameters is not None
-            else normalize_parameters(artifact_config.params, ())
+            else normalize_parameters(artifact_config.params, self.parameter_pairs or ())
         )
         nodes: list[Node] = []
+        provider_issues: list[ConversionIssue] = []
+        provider_summaries: list[ProviderSummary] = []
         for provider_name in artifact_config.providers:
-            if provider_name not in self.providers:
+            if provider_name in self.prepared_providers:
+                bound = self.prepared_providers[provider_name].bind(parameters)
+                nodes.extend(bound.providers[provider_name])
+                provider_issues.extend(bound.issues.get(provider_name, ()))
+                provider_summaries.append(bound.summaries[provider_name])
+            elif provider_name in self.providers:
+                nodes.extend(self.providers[provider_name])
+                provider_issues.extend(self.provider_issues.get(provider_name, ()))
+            else:
                 raise ArtifactGenerationError(
                     f"Artifact '{name}' references unloaded provider '{provider_name}'"
                 )
-            nodes.extend(self.providers[provider_name])
         if username:
             try:
                 nodes = get_nodes_for_user(nodes, username)
@@ -226,8 +241,7 @@ class ArtifactGenerationService:
 
         artifact_issues = [
             replace(issue, artifact=name, user=username)
-            for provider_name in artifact_config.providers
-            for issue in self.provider_issues.get(provider_name, [])
+            for issue in provider_issues
         ]
         artifact_issues.extend(preflight_issues)
         artifact_issues.extend(
@@ -285,6 +299,7 @@ class ArtifactGenerationService:
             content_bytes=len(draft.content.encode("utf-8")),
             content_sha256=hashlib.sha256(draft.content.encode("utf-8")).hexdigest(),
             issue_codes=tuple(sorted({issue.code for issue in artifact_issues})),
+            parameterized_providers=tuple(provider_summaries),
         )
         return draft, tuple(artifact_issues), upload_request, summary
 
