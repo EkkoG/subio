@@ -22,6 +22,21 @@ uv run --extra server subio serve example/render/config.toml
 uv run --extra server subio serve example/render/config.toml --host 0.0.0.0 --port 8000
 ```
 
+也可以使用仓库中的 Dockerfile。容器默认读取只读挂载目录 `/config/config.toml`，监听
+`0.0.0.0:8000`；token 通过环境变量注入，不会写入镜像：
+
+```bash
+docker build -t subio:local .
+docker run --rm \
+  --env-file .env \
+  -v "$PWD:/config:ro" \
+  -p 8000:8000 \
+  subio:local
+```
+
+配置、provider、template 和 snippet 使用相对于 `/config/config.toml` 的路径。若配置文件名称不同，
+覆盖容器命令，例如 `subio serve /config/production.toml --host 0.0.0.0 --port 8000`。
+
 启动时会显示 `Preparing subscription resources...`，随后报告更新和已就绪快照数量、准备耗时及刷新
 间隔。看到 `Ready to accept GET requests at http://...` 表示资源预热已完成且端口已实际绑定，可以发起
 请求。部分资源失败时显示警告和安全的阶段类别，仍可请求已就绪的输出；刷新失败时会再次显示警告。
