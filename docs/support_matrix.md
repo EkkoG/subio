@@ -150,6 +150,7 @@ integer/boolean、默认值和约束；同一输入按每个 artifact 独立归�
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
 | 参数值 | 无需逐个声明，默认 string；`artifact.params` 可补充 integer/boolean、默认值或约束；引用缺失参数返回 400，token 仅用于鉴权 |
 | 输出 | `GET /subscription/<file_name>` 直接使用已有输出文件名；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
+| 浏览与订阅名称 | 成功响应为 UTF-8 纯文本原文，浏览器 inline 显示；`Content-Disposition` 中的安全 ASCII `filename` 和 UTF-8 `filename*` 携带输出文件名，包括展开的用户名；Age 显示文本密文 |
 | 生成策略 | 所有现有 artifact 类型沿用静态生成策略；全局或 artifact 级 `allow_conversion_errors`、`allow_empty` 生效，显式放行的转换错误记录安全 WARNING |
 | 资源快照 | 启动/后台准备静态节点、规则/snippet、未绑定参数化文档和模板；warm GET 无源 I/O、源解码或静态解析，每次请求使用一个完整版本 |
 | 刷新与过期 | interval 默认 300 秒，完成后等待，不重叠；max age 默认 900 秒；均为正整数且 max age >= interval；monotonic 年龄从成功轮次开始时计量，失败不更新，过期返回 503 |

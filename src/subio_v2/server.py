@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import MappingProxyType
-from urllib.parse import unquote_to_bytes
+from urllib.parse import quote, unquote_to_bytes
 
 import uvicorn
 from starlette.applications import Starlette
@@ -261,17 +261,14 @@ class _RenderService:
                     f"Render completed with conversion errors (200), artifact #{index}: "
                     f"{summary}; allow_conversion_errors=true"
                 )
-            encrypted = artifact.age_public_key or self.config.age_public_key
-            if encrypted:
-                media_type = "application/octet-stream"
-            elif artifact.artifact_type in {"mihomo", "clash", "clash-meta", "stash"}:
-                media_type = "application/yaml"
-            elif artifact.artifact_type == "sing-box":
-                media_type = "application/json"
-            else:
-                media_type = "text/plain"
-            return Response(drafts[0].content, media_type=media_type,
-                            headers={**_HEADERS, "Content-Disposition": "attachment"})
+            # Keep legacy filename readers usable; filename* preserves the exact UTF-8 name.
+            fallback_name = re.sub(r"[^A-Za-z0-9._ -]", "_", file_name)
+            disposition = (
+                f'inline; filename="{fallback_name}"; '
+                f"filename*=UTF-8''{quote(file_name, safe='')}"
+            )
+            return Response(drafts[0].content, media_type="text/plain",
+                            headers={**_HEADERS, "Content-Disposition": disposition})
         except Exception as exc:
             status = _failure_status(exc)
             index = self.config.artifacts.index(artifact) + 1

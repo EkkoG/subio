@@ -60,8 +60,10 @@ def test_shipped_render_example_is_offline_typed_and_unpublished(
     with TestClient(create_app(str(project / "config.toml"))) as client:
         response = client.get(f"/subscription/{route}?" + urlencode(values))
         assert response.status_code == 200
-        assert response.headers["content-type"] == "application/yaml"
-        assert response.headers["content-disposition"] == "attachment"
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.headers["content-disposition"] == (
+            f'inline; filename="{route}"; filename*=UTF-8\'\'{route}'
+        )
         assert response.headers["cache-control"] == "no-store, private"
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["referrer-policy"] == "no-referrer"

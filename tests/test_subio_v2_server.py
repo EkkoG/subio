@@ -6,6 +6,7 @@ import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from email.message import Message
 from types import SimpleNamespace
 from urllib.error import HTTPError
 from urllib.parse import quote, unquote_to_bytes, urlencode
@@ -143,8 +144,10 @@ def test_headerless_get_decodes_once_and_renders_both_families(tmp_path, monkeyp
         response = client.get("/subscription/out.yaml?" + _query(credential=special, port="+1081", enabled="true"))
         assert response.status_code == 200
         _headers(response)
-        assert response.headers["content-type"] == "application/yaml"
-        assert response.headers["content-disposition"] == "attachment"
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.headers["content-disposition"] == (
+            'inline; filename="out.yaml"; filename*=UTF-8\'\'out.yaml'
+        )
         output = yaml.safe_load(response.text)
         assert len(output["proxies"]) == 1
         assert output["proxies"][0]["password"] == special
@@ -303,7 +306,10 @@ def test_unknown_paths_are_safe_404_with_no_enumeration_or_redirect(tmp_path, mo
         _headers(response)
 
 
-@pytest.mark.parametrize("file_name", ["out.yaml", "\u5ba2\u6237 +%#?.yaml", "%2F.yaml"])
+@pytest.mark.parametrize("file_name", [
+    "out.yaml", "\u5ba2\u6237 +%#?.yaml", "%2F.yaml", 'quoted";name%.yaml',
+    "out\r\nX-Injected: yes.yaml",
+])
 def test_existing_artifact_needs_no_params_or_render_and_matches_decoded_filename(tmp_path, file_name):
     path, data = _fixture(tmp_path)
     data["provider"][0].pop("parameterized")
@@ -319,7 +325,17 @@ def test_existing_artifact_needs_no_params_or_render_and_matches_decoded_filenam
         assert response.status_code == 200
         assert yaml.safe_load(response.text)["proxies"][0]["name"] == "static"
         assert yaml.safe_load(response.text)["values"] == {}
-        assert response.headers["content-disposition"] == "attachment"
+        disposition = response.headers["content-disposition"]
+        metadata = Message()
+        metadata["Content-Disposition"] = disposition
+        assert metadata.get_content_disposition() == "inline"
+        # Legacy clients use the ASCII fallback; current clients decode filename* first.
+        assert metadata.get_filename().isascii()
+        encoded_name = disposition.split("filename*=UTF-8''", 1)[1]
+        assert unquote_to_bytes(encoded_name).decode("utf-8") == file_name
+        assert disposition.isascii() and "\r" not in disposition and "\n" not in disposition
+        assert "x-injected" not in response.headers
+        assert TOKEN not in disposition and SECRET not in disposition
         response = client.get(target, params={"token": TOKEN, "extra": "value"})
         assert response.status_code == 200
         assert yaml.safe_load(response.text)["values"] == {"extra": "value"}
@@ -429,6 +445,9 @@ def test_expanded_filename_selects_one_configured_user(tmp_path, family, batch):
             assert output["proxies"][0]["username"] == user + "-static"
             assert output["proxies"][0]["password"] == user + "-" + SECRET
             assert output["values"]["user"] == "bob"
+            assert response.headers["content-disposition"] == (
+                f'inline; filename="user-{user}.yaml"; filename*=UTF-8\'\'user-{user}.yaml'
+            )
         for file_name in (["user-{user}.yaml", "user-mallory.yaml"] + ([] if batch else ["user-bob.yaml"])):
             response = client.get("/subscription/" + quote(file_name, safe="") + "?" + _query())
             assert response.status_code == 404
@@ -476,10 +495,11 @@ def test_control_token_is_excluded_but_node_token_can_bind(tmp_path, family):
         assert TOKEN not in response.text
 
 
-@pytest.mark.parametrize("target,media", [("mihomo", "application/yaml"), ("stash", "application/yaml"),
-                                         ("sing-box", "application/json"), ("surge", "text/plain; charset=utf-8"),
-                                         ("v2rayn", "text/plain; charset=utf-8"), ("dae", "text/plain; charset=utf-8")])
-def test_success_media_and_attachment_use_configured_target(tmp_path, target, media):
+@pytest.mark.parametrize("target", [
+    name for spec in all_formats() if spec.emitter_factory
+    for name in (spec.name, *sorted(spec.aliases))
+])
+def test_all_targets_are_browsable_text_with_subscription_filename(tmp_path, target):
     path, data = _fixture(tmp_path)
     data["artifact"][0]["type"] = target
     data["artifact"][0]["name"] = "operator-chosen-name"
@@ -492,10 +512,24 @@ def test_success_media_and_attachment_use_configured_target(tmp_path, target, me
         response = client.get("/subscription/operator-chosen-name?" + _query())
         assert response.status_code == 200
         _headers(response)
-        assert response.headers["content-type"] == media
-        assert response.headers["content-disposition"] == "attachment"
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.headers["content-disposition"] == (
+            'inline; filename="operator-chosen-name"; filename*=UTF-8\'\'operator-chosen-name'
+        )
         if target == "sing-box":
             assert len(response.json()["outbounds"]) == 1
+
+
+def test_html_looking_template_output_is_served_as_inert_text(tmp_path):
+    path, _ = _fixture(tmp_path)
+    html = '<script>alert("synthetic")</script>'
+    (tmp_path / "client.j2").write_text(html)
+    with TestClient(server.create_app(str(path))) as client:
+        response = client.get("/subscription/out.yaml?" + _query())
+        assert response.status_code == 200
+        assert response.text == html
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        _headers(response)
 
 
 @pytest.mark.parametrize("target", [
@@ -609,7 +643,7 @@ def test_age_content_and_fixed_user_use_existing_preparation(tmp_path, global_ke
     with TestClient(server.create_app(str(path))) as client:
         response = client.get("/subscription/out.yaml?" + _query())
         assert response.status_code == 200
-        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
         _headers(response)
         decrypted = age.decrypt_bytes(response.content, secret_key).decode()
         assert yaml.safe_load(decrypted)["proxies"][0]["username"] == "fixed-username"

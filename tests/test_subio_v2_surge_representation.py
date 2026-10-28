@@ -148,7 +148,9 @@ def _successful_request(tmp_path, monkeypatch, family, protocol, field, value):
     _round_trip(prepared.drafts[0].content, field, value)
     response = _http(path, value, monkeypatch)
     assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment"
+    assert response.headers["content-disposition"] == (
+        'inline; filename="surge.conf"; filename*=UTF-8\'\'surge.conf'
+    )
     _round_trip(response.text, field, value)
 
 
@@ -300,7 +302,9 @@ def _nested_success(path, value, field, expected, monkeypatch):
     _round_trip(prepared.drafts[0].content, field, expected)
     response = _http(path, value, monkeypatch)
     assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment"
+    assert response.headers["content-disposition"] == (
+        'inline; filename="surge.conf"; filename*=UTF-8\'\'surge.conf'
+    )
     _round_trip(response.text, field, expected)
 
 
@@ -556,7 +560,9 @@ def test_complete_proxy_line_preserves_both_nodes_through_prepare_and_http(
     _assert_proxy_and_following_neighbor(result.drafts[0].content, name, field, expected)
     response = _http(path, value, monkeypatch)
     assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment"
+    assert response.headers["content-disposition"] == (
+        'inline; filename="surge.conf"; filename*=UTF-8\'\'surge.conf'
+    )
     _assert_proxy_and_following_neighbor(response.text, name, field, expected)
     assert not (tmp_path / "dist").exists()
 

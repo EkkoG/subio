@@ -437,6 +437,10 @@ argparse 的 convert 错误也不回显输入。普通转换保留原有诊断�
 `SUBIO_RENDER_TOKEN` 独立于配置参数，原始解码/大小检查后、
 路由查询和渲染前认证，不进入工作流或模板。运行说明与精确限制见 `docs/get_rendering.md`。
 
+成功响应以 `text/plain; charset=utf-8` 和 `Content-Disposition: inline` 显示产物原文，
+包括 Age 文本密文；安全 ASCII `filename` 与 UTF-8 百分号编码的 `filename*` 携带匹配的
+配置输出文件名，供客户端提取订阅名称。保留 nosniff、no-store 和 no-referrer；错误体仍为固定 JSON。
+
 ```text
 ASGI startup / sequential refresh worker
     -> prepare_resources -> providers + rulesets/snippets + finite template bundle

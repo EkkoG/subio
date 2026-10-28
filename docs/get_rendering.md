@@ -313,10 +313,23 @@ emitter 和模板状态创建独立副本或实例。HTTP 不调用发布/上传
 ## 响应与错误
 
 应用响应均带 `Cache-Control: no-store, private`、`X-Content-Type-Options: nosniff` 和
-`Referrer-Policy: no-referrer`；成功响应另带无反射文件名的 `Content-Disposition: attachment`。
-YAML 目标使用 `application/yaml`，完整 sing-box JSON 使用 `application/json`，文本目标使用
-`text/plain; charset=utf-8`，Age 使用 `application/octet-stream`。没有 ETag、Last-Modified、
-CORS 或携带查询的重定向。媒体类型、attachment 和 nosniff 共同限制浏览器解释行为。
+`Referrer-Policy: no-referrer`。成功响应统一使用 `text/plain; charset=utf-8` 与
+`Content-Disposition: inline`，浏览器直接显示 YAML、JSON、其他文本配置或 Age 文本密文；
+响应正文保持原有产物内容，不添加 HTML 包装。
+
+`Content-Disposition` 同时携带 `filename` 和 `filename*`，供 Clash 等客户端识别订阅名称。
+名称取自匹配的配置输出文件名，包括 `{user}` 展开后的名字；不包含 token 或查询参数。
+`filename` 提供仅含安全 ASCII 字符的回退名，其他字符替换为 `_`；`filename*` 按 UTF-8
+百分号编码保留完整文件名，包括中文、空格和特殊字符，防止响应头注入。
+例如输出 `clash-with-tohome.yml` 的响应头为：
+
+```http
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline; filename="clash-with-tohome.yml"; filename*=UTF-8''clash-with-tohome.yml
+```
+
+错误响应仍使用 JSON。没有 ETag、Last-Modified、CORS 或携带查询的重定向。
+纯文本媒体类型和 nosniff 共同防止模板输出被浏览器当作 HTML 执行。
 
 | 状态 | 固定 JSON `error` | 含义 |
 |---|---|---|
