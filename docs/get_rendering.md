@@ -292,8 +292,10 @@ trim、JSON 转型或环境展开；空字符串、空白、Unicode、`=+%&` 和
 `check`、`inspect` 不接受 `--param`，仍于 provider/ruleset I/O 前拒绝参数化源，包括默认值齐全的情况。
 
 convert 完整准备全部 draft 后才入队上传和写文件；后一个 artifact 缺值会阻止整次发布、manifest
-更新和旧文件清理。`--dry-run` 继续写入本地 `dist`，只跳过远程上传。参数化转换静默详细 workflow
-日志，输出固定状态、错误类别、错误码和计数；manifest 的逐输出 `parameterized_providers` 只含源哈希
+更新和旧文件清理。`--dry-run` 继续写入本地 `dist`，只跳过远程上传。参数化转换沿原有流程实时打印
+读取、生成、warning 和具体错误；日志出口将已知参数值、声明默认值、上传 token 和 Age 私钥替换为
+`<redacted>`，包括 repr/JSON 转义形式。字面值匹配不识别任意变换后的凭据，模板和扩展仍不得主动打印
+凭据或正文。配置语法错误保留安全行列号，不回显源片段。manifest 的逐输出 `parameterized_providers` 只含源哈希
 及实际解析/选择计数，不记录参数值。产物和配置的上传结果按设计包含渲染后的值。
 CLI 参数可能进入 shell 历史与进程列表，安全日志无法清除这些副本。
 

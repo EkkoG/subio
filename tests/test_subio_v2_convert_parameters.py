@@ -12,7 +12,7 @@ import yaml
 from subio_v2 import main as main_mod
 from subio_v2.adapters.catalog import get_emitter
 from subio_v2.core.errors import UploadError
-from subio_v2.infrastructure.logging import logger
+from subio_v2.infrastructure.logging import Logger, logger
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow.engine import WorkflowEngine
@@ -86,7 +86,7 @@ def test_actual_cli_keeps_literal_values_and_source_serializations(tmp_path, fam
     )
     assert result.returncode == 0, result.stderr
     assert CANARY not in result.stdout + result.stderr
-    assert "Conversion completed" in result.stdout and "artifacts=1" in result.stdout
+    assert "Generating artifact: out.yaml" in result.stdout and "Finished" in result.stdout
     assert "Traceback" not in result.stderr
     target = tmp_path / "dist" / "out.yaml"
     output = yaml.safe_load(target.read_text())
@@ -119,7 +119,7 @@ def test_cli_normalizes_shared_provider_independently_per_artifact(tmp_path, mon
     assert CANARY not in capsys.readouterr().out
 
 
-def test_defaults_only_convert_loads_config_once_and_silences_constructor_and_run(
+def test_defaults_only_convert_loads_config_once_and_redacts_live_diagnostics(
     tmp_path, monkeypatch, capsys
 ):
     path, _ = _fixture(tmp_path, "clash-meta", defaults=True)
@@ -148,7 +148,8 @@ def test_defaults_only_convert_loads_config_once_and_silences_constructor_and_ru
     assert len(calls) == 1
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err
-    assert "Conversion completed" in output.out
+    assert "constructor <redacted>" in output.out and "run <redacted>" in output.out
+    assert "Generating artifact" in output.out and "Finished" in output.out
     assert yaml.safe_load((tmp_path / "dist" / "out.yaml").read_text())["values"]["credential"] == CANARY
     logger.info("LOGGER-RESTORED")
     assert "LOGGER-RESTORED" in capsys.readouterr().out
@@ -166,6 +167,72 @@ def test_ordinary_convert_keeps_constructor_and_workflow_diagnostics(tmp_path, m
     output = capsys.readouterr().out
     assert "ordinary constructor" in output and "Processing provider" in output
     assert "Generating artifact" in output and "Finished" in output
+
+
+def test_convert_prints_progress_before_failure_and_keeps_the_actual_reason(tmp_path, monkeypatch, capsys):
+    path, _ = _fixture(tmp_path, defaults=True)
+
+    def fail(engine, drafts):
+        progress = capsys.readouterr().out
+        assert "Starting SubIO" in progress and "Generating artifact: out.yaml" in progress
+        assert CANARY not in progress
+        logger.error("Publishing out.yaml failed: permission denied; credential=" + CANARY)
+        raise PermissionError(13, "Permission denied", CANARY)
+
+    monkeypatch.setattr(WorkflowEngine, "_commit_artifacts", fail)
+    assert _main(monkeypatch, path) == 1
+    output = capsys.readouterr()
+    assert "Publishing out.yaml failed: permission denied" in output.out
+    assert "PermissionError" in output.out and "Permission denied" in output.out
+    assert CANARY not in output.out + output.err
+    assert "Conversion failed: io_error" not in output.out
+    assert not (tmp_path / "dist").exists()
+    logger.error("after run " + CANARY)
+    assert CANARY in capsys.readouterr().out
+
+
+def test_log_redaction_covers_escaped_values_and_live_status_then_restores():
+    messages = []
+
+    class Status:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def update(self, message):
+            messages.append(message)
+
+    class Console:
+        def print(self, message):
+            messages.append(message)
+
+        def status(self, message, **kwargs):
+            messages.append(message)
+            return Status()
+
+    log = Logger()
+    log.console = Console()
+    secret = "private\nquote'雪"
+    with pytest.raises(OSError):
+        with log.redacting([secret, "", None]):
+            log.info("info " + secret)
+            log.error("error " + repr(secret))
+            log.dim("detail " + json.dumps(secret))
+            log.step("step " + json.dumps(secret, ensure_ascii=False))
+            with log.status("status " + secret) as status:
+                status.update("update " + repr(secret))
+            with log.redacting(["inner-secret"]):
+                log.warning("nested " + secret + " inner-secret")
+            log.warning("inner-secret")
+            raise OSError("stop")
+    assert len(messages) == 8
+    assert all("<redacted>" in message for message in messages[:-1])
+    assert all("private" not in message for message in messages)
+    assert "inner-secret" in messages[-1]
+    log.info(secret)
+    assert secret in messages[-1]
 
 
 @pytest.mark.parametrize("parameterized", [False, True])
@@ -193,28 +260,28 @@ def test_undeclared_strings_and_empty_values_work_for_both_source_modes(
         assert output["proxies"][0]["name"] == CANARY
     captured = capsys.readouterr()
     assert CANARY not in captured.out + captured.err
-    assert "Processing provider" not in captured.out
+    assert "Generating artifact" in captured.out
 
 
-@pytest.mark.parametrize("arguments,category", [
-    (["--param", CANARY], "invalid_parameters"),
-    (["--param", "token=" + CANARY], "invalid_parameters"),
-    (["--param", "bad-name=" + CANARY], "invalid_parameters"),
-    (["--param", "=wrong-" + CANARY], "invalid_parameters"),
-    (["--param", "credential=" + CANARY, "--param", "credential=duplicate"], "invalid_parameters"),
-    (["--param", "credential=" + CANARY + "\n"], "invalid_parameters"),
-    (["--param", "credential=" + CANARY + "x" * 1024], "parameter_limit"),
-    (["--param", "port=" + CANARY], "invalid_parameters"),
-    (["--param", "port=65536", "--param", "credential=" + CANARY], "invalid_parameters"),
-    (["--param", "enabled=TRUE", "--param", "credential=" + CANARY], "invalid_parameters"),
-    ([argument for i in range(33) for argument in ("--param", f"p{i}=" + CANARY)], "parameter_limit"),
+@pytest.mark.parametrize("arguments,reason", [
+    (["--param", CANARY], "must use NAME=VALUE"),
+    (["--param", "token=" + CANARY], "Invalid or reserved rendering parameter name"),
+    (["--param", "bad-name=" + CANARY], "Invalid or reserved rendering parameter name"),
+    (["--param", "=wrong-" + CANARY], "Invalid or reserved rendering parameter name"),
+    (["--param", "credential=" + CANARY, "--param", "credential=duplicate"], "Duplicate rendering parameter"),
+    (["--param", "credential=" + CANARY + "\n"], "forbidden character"),
+    (["--param", "credential=" + CANARY + "x" * 1024], "size limit"),
+    (["--param", "port=" + CANARY], "signed decimal syntax"),
+    (["--param", "port=65536", "--param", "credential=" + CANARY], "exceeds its maximum"),
+    (["--param", "enabled=TRUE", "--param", "credential=" + CANARY], "boolean must be true or false"),
+    ([argument for i in range(33) for argument in ("--param", f"p{i}=" + CANARY)], "Too many rendering parameter fields"),
 ])
-def test_cli_rejects_invalid_parameters_safely(tmp_path, monkeypatch, capsys, arguments, category):
+def test_cli_rejects_invalid_parameters_safely(tmp_path, monkeypatch, capsys, arguments, reason):
     path, _ = _fixture(tmp_path)
     assert _main(monkeypatch, path, *arguments) == 1
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err and "Traceback" not in output.err
-    assert category in output.out
+    assert reason in output.out
     assert not (tmp_path / "dist").exists()
     logger.info("LOGGER-RESTORED")
     assert "LOGGER-RESTORED" in capsys.readouterr().out
@@ -334,7 +401,7 @@ def test_valid_yaml_default_with_literal_escape_still_generates(tmp_path, monkey
     assert output["proxies"][0]["password"] == output["values"]["credential"] == CANARY + "\\q"
     captured = capsys.readouterr()
     assert CANARY not in captured.out + captured.err
-    assert "Conversion completed" in captured.out
+    assert "Finished" in captured.out
 
 
 def test_missing_final_template_parameter_is_safe_and_blocks_publication(tmp_path, monkeypatch, capsys):
@@ -342,7 +409,7 @@ def test_missing_final_template_parameter_is_safe_and_blocks_publication(tmp_pat
     (tmp_path / "client.j2").write_text("{{ params.absent | default('fallback') }}")
     assert _main(monkeypatch, path) == 1
     captured = capsys.readouterr()
-    assert "template_error" in captured.out
+    assert "Error rendering template 'client.j2': Missing rendering parameter" in " ".join(captured.out.split())
     assert CANARY not in captured.out + captured.err
     assert not (tmp_path / "dist").exists()
 
@@ -358,12 +425,12 @@ def test_diagnostic_commands_do_not_accept_param(tmp_path, monkeypatch, capsys, 
     assert not (tmp_path / "dist").exists()
 
 
-@pytest.mark.parametrize("stage,category", [
-    ("emitter", "artifact_error"), ("template", "template_error"),
-    ("publisher", "io_error"), ("upload", "upload_error"),
+@pytest.mark.parametrize("stage,error_type", [
+    ("emitter", "ArtifactGenerationError"), ("template", "TemplateRenderError"),
+    ("publisher", "OSError"), ("upload", "UploadError"),
 ])
 def test_downstream_failures_hide_values_and_restore_logger(
-    tmp_path, monkeypatch, capsys, stage, category
+    tmp_path, monkeypatch, capsys, stage, error_type
 ):
     path, data = _fixture(tmp_path)
 
@@ -399,13 +466,13 @@ def test_downstream_failures_hide_values_and_restore_logger(
     assert _main(monkeypatch, path, "--param", "credential=" + CANARY) == 1
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err and "Traceback" not in output.err
-    assert category in output.out
+    assert error_type in output.out and "<redacted>" in output.out
     logger.info("LOGGER-RESTORED")
     assert "LOGGER-RESTORED" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("allow_errors", [False, True])
-def test_parameterized_parse_issues_use_safe_codes_and_existing_policy(
+def test_parameterized_parse_issues_print_details_and_preserve_existing_policy(
     tmp_path, monkeypatch, capsys, allow_errors
 ):
     path, data = _fixture(tmp_path, defaults=True)
@@ -415,9 +482,10 @@ def test_parameterized_parse_issues_use_safe_codes_and_existing_policy(
     assert _main(monkeypatch, path, "--param", "port=" + CANARY) == (0 if allow_errors else 1)
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err
-    assert "parse.node" in output.out and "issues=1" in output.out
+    assert "Failed to parse Clash proxy: invalid port:" in output.out
+    assert "<redacted>" in output.out
     if allow_errors:
-        assert "errors=1" in output.out
+        assert "continuing with 1 conversion error(s)" in output.out
         assert yaml.safe_load((tmp_path / "dist" / "out.yaml").read_text())["proxies"] == []
     else:
         assert not (tmp_path / "dist").exists()
@@ -444,7 +512,7 @@ def test_late_missing_cli_binding_blocks_files_manifest_cleanup_and_uploads(tmp_
     monkeypatch.setattr("subio_v2.workflow.publication.ArtifactPublisher.commit", denied)
     assert _main(monkeypatch, path, "--clean-dist") == 1
     output = capsys.readouterr()
-    assert CANARY not in output.out + output.err and "missing_parameter" in output.out
+    assert CANARY not in output.out + output.err and "Missing rendering parameter" in output.out
     assert (dist / "old.yaml").read_text() == "previous"
     assert (dist / MANIFEST_NAME).read_text() == manifest
     assert {item.name for item in dist.iterdir()} == {"old.yaml", MANIFEST_NAME}

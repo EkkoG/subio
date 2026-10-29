@@ -7,23 +7,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from subio_v2.core.errors import (
-    ArtifactGenerationError,
     ConfigError,
     ConfigParseError,
-    ProviderLoadError,
-    TemplateRenderError,
-    UploadError,
     WorkflowError,
 )
-from subio_v2.core.parameters import MissingParameterError
-from subio_v2.core.results import IssueSeverity
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import LOG_LEVELS, logger
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.parameters import (
     ParameterError,
-    ParameterLimitError,
     normalize_parameters,
 )
 from subio_v2.workflow.report import build_report, render_report
@@ -90,8 +83,9 @@ def _write_report(report: dict, output_format: str, output: str | None) -> None:
 
 def _run_convert(args) -> int:
     parameter_mode = bool(args.param)
+    redactions = [raw.partition("=")[2] for raw in args.param]
     try:
-        with logger.silenced() if parameter_mode else nullcontext():
+        with logger.redacting(redactions) if any(redactions) else nullcontext():
             pairs = []
             for raw in args.param:
                 name, separator, value = raw.partition("=")
@@ -108,7 +102,13 @@ def _run_convert(args) -> int:
                 return 1
             config = ConfigLoader.load(config_path)
         parameter_mode = parameter_mode or any(item.parameterized for item in config.providers)
-        with logger.silenced() if parameter_mode else nullcontext():
+        for artifact in config.artifacts:
+            for spec in artifact.params.values():
+                if spec.default is not None:
+                    redactions.append(str(spec.default))
+        redactions.extend([config.age_secret_key, *(provider.age_secret_key for provider in config.providers)])
+        redactions.extend(uploader.token for uploader in config.uploaders)
+        with logger.redacting(redactions) if any(redactions) else nullcontext():
             engine = WorkflowEngine(
                 config_path,
                 dry_run=args.dry_run,
@@ -118,7 +118,7 @@ def _run_convert(args) -> int:
                 parameter_pairs=parameter_pairs,
                 config=config,
             )
-            result = engine.run()
+            engine.run()
     except ConfigParseError as exc:
         # Syntax failures can contain defaults before parameter mode is knowable.
         location = ""
@@ -132,34 +132,9 @@ def _run_convert(args) -> int:
         if not parameter_mode:
             if not isinstance(exc, WorkflowError):
                 raise
-            logger.error(str(exc))
-            return 1
-        category = next(
-            (code for kind, code in (
-                (ParameterLimitError, "parameter_limit"),
-                (ParameterError, "invalid_parameters"),
-                (MissingParameterError, "missing_parameter"),
-                (ConfigError, "config_error"),
-                (ProviderLoadError, "provider_error"),
-                (TemplateRenderError, "template_error"),
-                (ArtifactGenerationError, "artifact_error"),
-                (UploadError, "upload_error"),
-                (OSError, "io_error"),
-            ) if isinstance(exc, kind)),
-            "internal_error",
-        )
-        issues = tuple(getattr(exc, "issues", ()))
-        codes = ",".join(sorted({issue.code for issue in issues})) or "none"
-        logger.error(f"Conversion failed: {category}; issues={len(issues)}; codes={codes}")
+        with logger.redacting(redactions) if any(redactions) else nullcontext():
+            logger.error(f"{type(exc).__name__}: {exc}" if parameter_mode else str(exc))
         return 1
-    if parameter_mode:
-        errors = sum(issue.severity == IssueSeverity.ERROR for issue in result.issues)
-        codes = ",".join(sorted({issue.code for issue in result.issues})) or "none"
-        logger.success(
-            f"Conversion completed: artifacts={len(result.generated)}; "
-            f"uploads={len(result.uploaded)}; issues={len(result.issues)}; "
-            f"errors={errors}; codes={codes}"
-        )
     return 0
 
 
