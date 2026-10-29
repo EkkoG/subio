@@ -66,8 +66,9 @@ def test_usage_parser_normalizes_independent_bounded_fields(monkeypatch, header,
     "1e-999999999999999999999999999999999999999999999999999999999",
     "invalid", "", "1/2",
 ])
-def test_bad_usage_never_rejects_provider_contents(tmp_path, monkeypatch, raw):
-    session = Session([_response(f"upload={raw};upload=3;download=2;total=4;expire=5")])
+@pytest.mark.parametrize("duplicate_suffix", ["", ";upload=3"])
+def test_bad_usage_never_rejects_provider_contents(tmp_path, monkeypatch, raw, duplicate_suffix):
+    session = Session([_response(f"upload={raw}{duplicate_suffix};download=2;total=4;expire=5")])
     monkeypatch.setattr("subio_v2.infrastructure.remote.requests.Session", lambda: session)
     loader = RunRemoteLoader()
     try:
