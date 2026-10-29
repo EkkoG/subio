@@ -197,24 +197,31 @@ def test_usage_summary_changes_disappears_and_expires_with_real_snapshot(tmp_pat
         initial = service._snapshots["out.yaml"]
         assert initial.acquired_at == 0
         assert initial.artifact.subscription_user_info == {"upload": 1, "download": 2, "total": 10, "expire": 5}
-        assert "first" in client.get("/subscription/out.yaml?" + _query()).text
+        first_response = client.get("/subscription/out.yaml?" + _query())
+        assert "first" in first_response.text
+        assert first_response.headers["subscription-userinfo"] == "upload=1; download=2; total=10; expire=5"
 
         clock.now = 10
         client.portal.call(service._refresh)
         changed = service._snapshots["out.yaml"]
         assert changed is not initial and changed.acquired_at == 10
         assert changed.artifact.subscription_user_info == {"upload": 3, "download": 4, "total": 20, "expire": 7}
-        assert "second" in client.get("/subscription/out.yaml?" + _query()).text
+        second_response = client.get("/subscription/out.yaml?" + _query())
+        assert "second" in second_response.text
+        assert second_response.headers["subscription-userinfo"] == "upload=3; download=4; total=20; expire=7"
         assert initial.artifact.subscription_user_info["upload"] == 1
 
         clock.now = 20
         client.portal.call(service._refresh)
         assert service._snapshots["out.yaml"] is changed
         assert changed.artifact.subscription_user_info["upload"] == 3
-        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+        retained = client.head("/subscription/out.yaml?" + _query())
+        assert retained.status_code == 200 and retained.content == b""
+        assert retained.headers["subscription-userinfo"] == second_response.headers["subscription-userinfo"]
         clock.now = 40
         expired = client.get("/subscription/out.yaml?" + _query())
         assert expired.status_code == 503 and expired.json() == {"error": "snapshot_expired"}
+        assert "subscription-userinfo" not in expired.headers
         assert service._snapshots["out.yaml"] is changed
 
         clock.now = 45
@@ -222,7 +229,10 @@ def test_usage_summary_changes_disappears_and_expires_with_real_snapshot(tmp_pat
         without_usage = service._snapshots["out.yaml"]
         assert without_usage is not changed and without_usage.acquired_at == 45
         assert without_usage.artifact.subscription_user_info == {}
-        assert "without-usage" in client.get("/subscription/out.yaml?" + _query()).text
+        recovered = client.get("/subscription/out.yaml?" + _query())
+        assert "without-usage" in recovered.text
+        assert "subscription-userinfo" not in recovered.headers
+        assert "subscription-userinfo" not in client.head("/subscription/out.yaml?" + _query()).headers
     assert all(session.closed for session in sessions)
     assert all(len(session.calls) == 1 for session in sessions)
 
@@ -672,6 +682,11 @@ def test_real_warm_http_has_no_source_io_decode_static_parse_or_workflow(tmp_pat
                     with urlopen(f"http://127.0.0.1:{port}/subscription/{route}?{query}", timeout=3) as response:
                         output = yaml.safe_load(response.read())
                     assert output["values"]["credential"] == credential
+                    with closing(HTTPConnection("127.0.0.1", port, timeout=3)) as connection:
+                        connection.request("HEAD", f"/subscription/{route}?{query}")
+                        response = connection.getresponse()
+                        assert response.status == 200 and response.read() == b""
+                        assert int(response.getheader("Content-Length")) > 0
     finally:
         running.should_exit = True
         thread.join(10)

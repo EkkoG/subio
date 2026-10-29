@@ -394,8 +394,9 @@ Source 输入的 Go/RE2 正则采用保守子集，可能拒绝部分 Go 引擎�
   `subio check` 和 `subio inspect` 只消费该准备结果，`convert` 才进入现有本地写入和 Gist 队列；
 - `RunRemoteLoader` 在一次 run 内复用 HTTP Session，并以 `max_bytes` 限制响应大小；跨 run 磁盘缓存默认关闭，
   显式开启后使用用户私有目录、hash 文件名和 `0600` 文件权限，默认不使用 stale 内容；
-- Provider 的 ETag、Last-Modified、响应长度和 Subscription-UserInfo 只形成结构化 inspect/report 元数据，
-  不进入模板、不转发原始响应，也不转发下游请求信息；
+- Provider 的 ETag、Last-Modified、响应长度和 Subscription-Userinfo 形成结构化 inspect/report 元数据；
+  serve 仅将所引用远程 provider 的有效数值用量汇总为成功 GET/HEAD 的规范响应头，与 artifact 候选同生共灭。
+  元数据不进入模板，不转发原始响应或下游请求信息；
 - `dist/.subio-manifest.json` 只有在显式使用 `--write-manifest` 或 `--clean-dist` 时才生成；清理只针对上一份
   Manifest 记录的受管文件，默认不删除旧文件或手工文件。
 - `ArtifactPublisher` 负责本地文件发布事务；
@@ -426,11 +427,11 @@ manifest 的 `parameterized_providers`，不写入全局普通 provider 计数�
 argparse 的 convert 错误也不回显输入。普通转换保留原有诊断。命令参数仍可能被 shell 历史和进程列表记录，
 产物和配置的上传内容按设计包含绑定值。
 
-### 7.3 GET 参数化渲染
+### 7.3 GET/HEAD 参数化渲染
 
 可选 `server` extra 的 `server.py` 仅由 `serve` 入口惰性导入，Starlette/Uvicorn 负责 HTTP 传输。
 默认绑定 `127.0.0.1`，`--host` 可指定其他网卡、`0.0.0.0` 或 IPv6 地址。
-`GET /subscription/<file_name>` 按已配置输出文件名精确匹配，无需路由声明；
+`GET /subscription/<file_name>` 和同路径 HEAD 按已配置输出文件名精确匹配，无需路由声明；
 请求参数默认按字符串处理，`artifact.params` 可选地补充类型、默认值和约束；
 `workflow.parameters` 统一检查参数名、重复值、类型、默认值和请求限额。
 启动时从同一已验证配置快照构建文件名索引，批量用户按已有命名规则展开并在请求中固定用户；
@@ -446,10 +447,10 @@ ASGI startup / sequential refresh worker
     -> prepare_resources -> providers + rulesets/snippets + finite template bundle
     -> publish complete per-artifact in-memory snapshots
 
-GET -> raw decode/limits -> URL token authentication -> route parameter validation
+GET/HEAD -> raw decode/limits -> URL token authentication -> route parameter validation
     -> capture one available, unexpired artifact snapshot -> render worker
     -> bind/clone -> ArtifactGenerationService -> validation/emission/template/Age
-    -> HTTP response
+    -> HTTP response (HEAD suppresses body, retaining representation headers)
 ```
 
 `workflow.rendering.prepare_resources()` 只加载已配置 artifact 引用的 providers，并保留全部已配置
@@ -457,6 +458,13 @@ rulesets 及本地 snippets 的共享依赖。静态 provider 在准备时完成
 provider transforms；请求只克隆节点等可变状态。规则集和 snippets 在准备时解析，使用不可变模型，
 每次请求创建自己的 callable 和 issue collector。每轮独占并最终关闭一个 `RunRemoteLoader`/Session，
 成功快照不保留 loader、参数、目标编码结果或发布能力。
+
+每个 `PreparedArtifact` 在构造时从自己的 providers 计算一次不可变 `subscription_user_info`，以
+精确 URL 和有效显式 User-Agent 去重（空值等价于未设置），不按正文哈希或推测的账号归并。
+只有完整的 upload/download/total 才参与流量求和；total=0 表示不限量，汇总溢出则省略流量三字段。
+expire 独立取最早正数（含已过期值），没有正数时才保留显式零。新候选无元数据会移除旧用量，失败刷新
+及过期沿用整个快照的已有规则，不另建 TTL。HTTP 仅按固定字段顺序输出规范整数；字段、单位和已知信息
+覆盖范围见 `docs/get_rendering.md`。
 
 本地 `parameterized = true` provider 仅允许 Mihomo/Clash YAML 与 native SubIO v2。准备时由 adapter
 原有 decoder 解码并私有保存未绑定文档；请求调用 `core.parameters.bind_document_parameters()`，
@@ -470,6 +478,8 @@ parser/emitter 和 Jinja 状态，复用现有 `ArtifactGenerationService`。每
 解密/解码源序列化或解析静态 provider/规则集，不经过 `WorkflowEngine`。
 provider 和最终模板直接引用缺失参数时抛出 `MissingParameterError`，HTTP 沿异常原因链返回固定 400，
 不回显键或值。最终 Jinja 的 `params` 缺失键在过滤器执行前失败；未使用的类型声明无需请求值。
+HEAD 经过相同检查、完整渲染和名额限制，warm 路径同样没有源 I/O；只在 Response 构造后清空实际发送
+正文（含错误），保留本次 GET 表示的 Content-Length。Age 的随机填充可能使独立请求的密文长度不同。
 最终 Jinja 始终获得单一不可变 `params` 命名空间；convert 使用 CLI 值和 artifact 默认值，无声明和输入时为空。
 模板仍是可信代码，任意值须由 `tojson`、`to_yaml`
 或目标 serializer 写入合适上下文。该路径禁止发布、上传、manifest 和请求报告/结果缓存，

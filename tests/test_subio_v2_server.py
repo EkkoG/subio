@@ -144,6 +144,7 @@ def test_headerless_get_decodes_once_and_renders_both_families(tmp_path, monkeyp
         response = client.get("/subscription/out.yaml?" + _query(credential=special, port="+1081", enabled="true"))
         assert response.status_code == 200
         _headers(response)
+        assert "subscription-userinfo" not in response.headers
         assert response.headers["content-type"] == "text/plain; charset=utf-8"
         assert response.headers["content-disposition"] == (
             'inline; filename="out.yaml"; filename*=UTF-8\'\'out.yaml'
@@ -273,17 +274,16 @@ def test_exact_raw_and_decoded_value_boundaries(tmp_path):
         assert response.status_code == 413
 
 
-@pytest.mark.parametrize("method", ["HEAD", "OPTIONS", "POST", "PUT", "DELETE", "TRACE", "PATCH"])
-def test_every_non_get_method_is_fixed_405_without_framework_redirects_or_io(tmp_path, monkeypatch, method):
+@pytest.mark.parametrize("method", ["OPTIONS", "POST", "PUT", "DELETE", "TRACE", "PATCH"])
+def test_unsupported_methods_are_fixed_405_without_framework_redirects_or_io(tmp_path, monkeypatch, method):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
-    monkeypatch.setattr(PreparedArtifact, "render", lambda *_: pytest.fail("Constructed non-GET render"))
+    monkeypatch.setattr(PreparedArtifact, "render", lambda *_: pytest.fail("Constructed unsupported-method render"))
     with TestClient(app) as client:
         response = client.request(method, "/subscription/out.yaml?" + _query(), follow_redirects=False)
         assert response.status_code == 405
         _headers(response)
-        if method != "HEAD":
-            assert response.json() == {"error": "method_not_allowed"}
+        assert response.json() == {"error": "method_not_allowed"}
         response = client.request(method, "/subscription/out.yaml?token=wrong")
         assert response.status_code == 401
 
@@ -899,7 +899,10 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
 
     def get(session, url, **kwargs):
         upstream.append((url, kwargs))
-        return SimpleNamespace(status_code=200, headers={}, raise_for_status=lambda: None,
+        return SimpleNamespace(status_code=200, headers={
+                                   "Subscription-Userinfo": "upload=1;download=2;total=10;expire=0;unknown=raw-header-canary",
+                                   "Set-Cookie": "raw-header-canary", "ETag": "raw-header-canary",
+                               }, raise_for_status=lambda: None,
                                content=b"proxies: [{name: static, type: socks5, server: static.test, port: 1080}]")
 
     def denied(*args, **kwargs):
@@ -915,9 +918,21 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
     before = {item.relative_to(tmp_path) for item in tmp_path.rglob("*")}
     with TestClient(server.create_app(str(path))) as client:
         for credential in (SECRET, "second_request_canary"):
-            response = client.get("/subscription/out.yaml?" + _query(credential=credential))
-            assert response.status_code == 200
-            assert yaml.safe_load(response.text)["values"]["credential"] == credential
+            for method in ("GET", "HEAD"):
+                response = client.request(method, "/subscription/out.yaml?" + _query(credential=credential), headers={
+                    "Authorization": "Bearer client-header-canary", "Cookie": "client-header-canary",
+                    "User-Agent": "client-header-canary",
+                })
+                assert response.status_code == 200
+                assert response.headers["subscription-userinfo"] == "upload=1; download=2; total=10; expire=0"
+                assert all(value not in repr(response.headers) for value in (
+                    credential, TOKEN, "raw-header-canary", "client-header-canary", "upstream.test",
+                ))
+                assert "set-cookie" not in response.headers
+                if method == "GET":
+                    assert yaml.safe_load(response.text)["values"]["credential"] == credential
+                else:
+                    assert response.content == b""
     assert len(upstream) == 1 and cache == []
     assert all(TOKEN not in repr(value) and SECRET not in repr(value) for value in (upstream, cache))
     assert all(item[0] == "https://upstream.test/static" for item in upstream)
@@ -925,7 +940,9 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
     assert before == {item.relative_to(tmp_path) for item in tmp_path.rglob("*")}
     assert not (tmp_path / "dist").exists()
     captured = capsys.readouterr()
-    assert TOKEN not in captured.out + captured.err and SECRET not in captured.out + captured.err
+    assert all(value not in captured.out + captured.err for value in (
+        TOKEN, SECRET, "upstream.test", "raw-header-canary", "client-header-canary",
+    ))
 
 
 def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(tmp_path, monkeypatch):
@@ -965,7 +982,8 @@ def test_parallel_routes_have_isolated_defaults_parameters_and_logger_lifetime(t
     assert logger._quiet is previous
 
 
-def test_four_actual_workers_hold_slots_after_disconnect_and_cancellation_then_recover(tmp_path, monkeypatch):
+@pytest.mark.parametrize("method", ["GET", "HEAD"])
+def test_four_actual_workers_hold_slots_after_disconnect_and_cancellation_then_recover(tmp_path, monkeypatch, method):
     path, _ = _fixture(tmp_path)
     app = server.create_app(str(path))
     started = threading.Barrier(5)
@@ -995,13 +1013,16 @@ def test_four_actual_workers_hold_slots_after_disconnect_and_cancellation_then_r
 
     async def exercise():
         async with app.router.lifespan_context(app):
-            tasks = [asyncio.create_task(_raw_request(app, query=_query(credential=str(index)).encode(), disconnect=True)) for index in range(4)]
+            tasks = [asyncio.create_task(_raw_request(app, query=_query(credential=str(index)).encode(), method=method, disconnect=True)) for index in range(4)]
             try:
                 await asyncio.to_thread(started.wait, 5)
                 overflow = await _raw_request(app, query=_query().encode())
                 assert overflow.status_code == 503
                 assert json.loads(overflow.content) == {"error": "busy"}
                 _headers(overflow)
+                head_overflow = await _raw_request(app, query=_query().encode(), method="HEAD")
+                assert head_overflow.status_code == 503 and head_overflow.content == b""
+                assert head_overflow.headers == overflow.headers
                 # The event loop remains responsive while four synchronous threads block.
                 assert (await _raw_request(app, query=b"token=wrong")).status_code == 401
                 assert (await _raw_request(app, query=_query(port="0").encode())).status_code == 400
@@ -1013,6 +1034,8 @@ def test_four_actual_workers_hold_slots_after_disconnect_and_cancellation_then_r
                 release.set()
                 results = await asyncio.wait_for(asyncio.gather(*tasks[1:]), timeout=10)
                 assert all(result.status_code == 200 for result in results)
+                if method == "HEAD":
+                    assert all(result.content == b"" for result in results)
                 assert await asyncio.to_thread(exited.wait, 5)
                 monkeypatch.setattr(service, "_render", original)
                 # The cancelled request's worker must also finish before all four slots recover.

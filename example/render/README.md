@@ -1,4 +1,4 @@
-# Offline GET render example
+# Offline GET/HEAD render example
 
 Run from the repository root. The two routes load separate local sources:
 `/subscription/yaml-client.yaml` uses Mihomo YAML, and `/subscription/native-client.yaml` uses native SubIO v2
@@ -14,7 +14,7 @@ export SUBIO_RENDER_TOKEN="$(uv run python -c 'import secrets; print(secrets.tok
 uv run --extra server subio serve example/render/config.toml
 ```
 
-Startup prepares in-memory resources; later GETs bind parameters and render
+Startup prepares in-memory resources; later GET/HEAD requests bind parameters and render
 from one complete snapshot. Source, snippet and template edits become visible
 after a successful background refresh. The default `--refresh-interval 300`
 waits 300 seconds after each round completes; `--max-snapshot-age 900` rejects
@@ -46,6 +46,12 @@ curl --get 'http://127.0.0.1:8000/subscription/native-client.yaml' \
 ```
 
 These are synthetic credentials and a reserved hostname, not a usable proxy.
+Add `--head` to either request to receive the same status and representation
+headers without a response body, including on errors. HEAD still validates all
+parameters and performs the full render, using one of the same four worker slots.
+These local-only routes have no `Subscription-Userinfo` header. Artifacts that
+reference remote providers can report known upstream usage; aggregation rules
+and freshness limits are in the [guide](../../docs/get_rendering.md#订阅用量响应头).
 The second request demonstrates defaults. Username and password have no
 declarations; omitting either fails because the provider references it.
 The quoted port and UDP placeholders become an integer and a boolean after
@@ -78,7 +84,7 @@ values can still appear in shell history and process listings.
 I/O and do not accept `--param`. The original `example/config.toml` remains the
 ordinary CLI example.
 
-GET URLs can expose credentials through history, process arguments, network or
+GET/HEAD URLs can expose credentials through history, process arguments, network or
 proxy logs; `no-store` cannot erase those copies. Read the [operating and
 security guide](../../docs/get_rendering.md) before using real credentials or a
 TLS reverse proxy.

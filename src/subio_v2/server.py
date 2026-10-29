@@ -267,8 +267,15 @@ class _RenderService:
                 f'inline; filename="{fallback_name}"; '
                 f"filename*=UTF-8''{quote(file_name, safe='')}"
             )
+            headers = {**_HEADERS, "Content-Disposition": disposition}
+            info = snapshot.artifact.subscription_user_info
+            if info:
+                headers["Subscription-Userinfo"] = "; ".join(
+                    f"{key}={info[key]}"
+                    for key in ("upload", "download", "total", "expire") if key in info
+                )
             return Response(drafts[0].content, media_type="text/plain",
-                            headers={**_HEADERS, "Content-Disposition": disposition})
+                            headers=headers)
         except Exception as exc:
             status = _failure_status(exc)
             index = self.config.artifacts.index(artifact) + 1
@@ -300,6 +307,9 @@ class _RenderService:
                 _service_logger.error(f"HTTP request failed: {type(exc).__name__}")
                 response = _error(500)
             status = response.status_code
+            if scope["method"] == "HEAD":
+                # Keep the GET representation's headers, including Content-Length.
+                response.body = b""
             try:
                 await response(scope, receive, send)
             except Exception as exc:
@@ -331,7 +341,7 @@ class _RenderService:
             return _error(404)
         index = self.config.artifacts.index(artifact) + 1
         _service_logger.debug(f"Selected artifact #{index}")
-        if scope["method"] != "GET":
+        if scope["method"] not in {"GET", "HEAD"}:
             return _error(405)
         try:
             parameters = normalize_parameters(

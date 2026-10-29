@@ -1,6 +1,6 @@
-# GET 参数化渲染
+# GET/HEAD 参数化渲染
 
-`subio serve` 提供带 URL token 认证的 `GET /subscription/<file_name>`。请求参数替换本地节点文件中的
+`subio serve` 提供带 URL token 认证的 `GET /subscription/<file_name>` 和同路径的 `HEAD`。请求参数替换本地节点文件中的
 标量占位符，再经过现有节点解码、校验、目标编码和可信模板，返回一个完整 artifact。
 无需附加请求头、登录或 Cookie。可运行的离线配置见 [example/render](../example/render/README.md)。
 
@@ -79,7 +79,7 @@ uv run --extra server subio serve example/render/config.toml --log-level debug
 
 ## 资源刷新与可用性
 
-服务启动时预先获取并准备资源，GET 使用每个 artifact 的内存快照。普通 warm 请求不下载源、不读取
+服务启动时预先获取并准备资源，GET/HEAD 使用每个 artifact 的内存快照。普通 warm 请求不下载源、不读取
 provider/snippet/template 文件、不重新解密或解码源序列化，也不重新解析静态节点和规则集。
 参数化源保存未绑定文档，每次请求仍需绑定参数、解析节点并经过原有目标校验、模板和可选 Age 加密。
 渲染结果、请求参数和目标编码结果不进入共享快照。
@@ -98,7 +98,7 @@ uv run --extra server subio serve example/render/config.toml \
 
 只有一个刷新 worker，轮次不会重叠或积压，且独立于四个渲染 worker。资源年龄使用 monotonic 时间，
 从该 artifact 最近一次成功准备的轮次开始时计量，慢速获取也计入年龄。刷新在后台构造完整候选，
-成功后按 artifact 替换；一次 GET 始终使用同一版本的节点、规则和模板。文件的多次读取不是文件系统
+成功后按 artifact 替换；一次 GET/HEAD 始终使用同一版本的节点、规则、模板和订阅用量。文件的多次读取不是文件系统
 事务，修改多个相互依赖文件时需由操作者协调。
 
 至少一个输出准备成功就会启动，其他尚无快照的已配置路由返回 `503 not_ready`；全部输出均无法准备时，
@@ -328,7 +328,59 @@ Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline; filename="clash-with-tohome.yml"; filename*=UTF-8''clash-with-tohome.yml
 ```
 
-错误响应仍使用 JSON。没有 ETag、Last-Modified、CORS 或携带查询的重定向。
+HEAD 与 GET 使用相同的 URL 解码、token、路由、参数、快照、转换检查和四个渲染名额；仍会完整绑定、
+渲染并执行可选 Age 加密，只省去传输正文，不节省渲染 CPU。所有 HEAD 响应（含错误）均不发送正文，
+状态和响应头对应本次生成的 GET 表示，`Content-Length` 保留该表示的字节数。Age 加密的随机填充可能
+使两次独立请求的密文和长度不同。可对前面的 curl 请求增加 `--head` 读取响应头，仍需提供相同参数。
+
+### 订阅用量响应头
+
+当 artifact 引用的远程 provider 提供有效用量时，成功 GET/HEAD 自动返回规范化的
+`Subscription-Userinfo`，无需新配置；所有输出类型、兼容别名和 Age 文本密文均适用。例如：
+
+```http
+Subscription-Userinfo: upload=1024; download=2048; total=10737418240; expire=1893456000
+```
+
+| 字段 | 单位和含义 |
+|---|---|
+| `upload` | 上游报告的已上传字节数 |
+| `download` | 上游报告的已下载字节数 |
+| `total` | 上游报告的配额字节数；显式 `0` 表示不限量 |
+| `expire` | Unix 时间戳（秒）；正数可已过期，显式 `0` 表示无到期时间 |
+
+用量只来自该 artifact 实际引用的远程 provider，不包含规则集，也不为本地节点或未报告的来源推算用量。
+只有 `upload/download/total` 全部有效的来源才参与流量汇总，缺失或无效字段不会补零；上传和下载分别
+求和，配额求和，但任一完整来源的 `total=0` 会使汇总配额为 `0`。任一汇总计数超过 `2^63-1` 时，
+省略整组流量字段。各 provider 的配额独立，汇总容量不是可在来源间互相调剂的余额。
+
+到期时间独立汇总：取所有已知正数中的最早值，包括已过期的时间；没有正数但存在显式零时才返回
+`expire=0`。最早到期只表示某个已知来源到期，不表示全部节点同时失效。没有任何有效汇总字段时不返回
+该头；错误响应也不返回。它只覆盖已知信息，不能代表全部输出节点或某个用户的完整账单。
+
+相同 URL 与相同有效显式 `user_agent` 的来源（含别名和重复引用）只计算一次；未设置和空 UA 等价。
+不同 URL 或不同显式 UA 分别计入，即使正文完全相同；服务无法判断它们是否共享付费账号。
+节点过滤、选择数量和 `{user}` 展开均不缩放上游账号配额。若上游需要指定客户端标识，可在已有的
+provider 配置中设置 `user_agent`；客户端请求中的 UA、Cookie、Authorization 和 token 不会转发给上游：
+
+```toml
+[[provider]]
+name = "remote"
+type = "mihomo"
+url = "https://provider.example/subscription"
+user_agent = "configured-client"
+```
+
+上游字段名不区分大小写，接受非负、有限且数学上为整数的十进制值（含 `.0` 和科学计数法），范围为
+`[0, 2^63-1]`；响应只输出普通十进制整数。原始头超过 1024 字符时忽略，单个数字 token 最多 64 字符。
+重复或无效的已知字段独立省略，未知字段忽略；元数据错误不阻止正常节点加载。不会转发原始头或其他
+上游响应头、来源 URL、token、ETag、Cookie 等数据，也不把元数据暴露给模板。
+
+用量与节点保存在同一资源快照中，只在成功的后台准备时更新，存在已有刷新间隔带来的延迟，并非实时
+计费。成功响应不再提供元数据时，新快照会移除旧字段；刷新失败保留旧完整快照至其过期，不另设用量
+TTL。静态 CLI 文件和 Gist 上传不能携带 HTTP 响应头，内容中也不会插入用量注释或虚构节点。
+
+GET 错误响应仍使用 JSON，HEAD 保留相同错误头但无正文。没有 ETag、Last-Modified、CORS 或携带查询的重定向。
 纯文本媒体类型和 nosniff 共同防止模板输出被浏览器当作 HTML 执行。
 
 | 状态 | 固定 JSON `error` | 含义 |
@@ -336,7 +388,7 @@ Content-Disposition: inline; filename="clash-with-tohome.yml"; filename*=UTF-8''
 | 400 | `invalid_request` | 编码/参数错误，或引用了没有请求值和默认值的参数 |
 | 401 | `unauthorized` | token 缺少、空、错误或重复 |
 | 404 | `not_found` | 认证后没有对应路由 |
-| 405 | `method_not_allowed` | 认证后的已知路由使用非 GET 方法 |
+| 405 | `method_not_allowed` | 认证后的已知路由使用 GET/HEAD 以外的方法 |
 | 413 | `request_too_large` | 原始请求、字段数或字符串超限 |
 | 422 | `conversion_rejected` | artifact 的既有生成策略拒绝了转换结果，未返回部分成功内容 |
 | 500 | `internal_error` | 本地配置、模板或内部故障 |

@@ -135,9 +135,9 @@ uv run subio convert example/render/config.toml --dry-run \
 命令行参数可能进入 shell 历史和进程列表，应按这些位置的可见范围处理凭据。
 `check`、`inspect` 不接受 `--param`，仍在输入 I/O 前拒绝参数化源。
 
-#### GET 参数化渲染服务
+#### GET/HEAD 参数化渲染服务
 
-可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...`，无需附加请求头。请求参数
+可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...` 和同路径 HEAD，无需附加请求头。请求参数
 默认按字符串处理，无需预先逐个声明；仅在需要类型、默认值或约束时补充 `artifact.params`。
 参数可替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，引用缺失参数直接报错。
 `token` 专用于鉴权，不进入模板参数。
@@ -156,9 +156,11 @@ export SUBIO_RENDER_TOKEN="$(uv run python -c 'import secrets; print(secrets.tok
 uv run --extra server subio serve example/render/config.toml
 ```
 
-离线示例包含两个 artifact 和安全模板，见 [GET 示例](./example/render/README.md)。参数声明、URL 编码、
-CLI 与 HTTP 的运行边界、token 轮换和 TLS 反向代理设置见 [GET 渲染指南](./docs/get_rendering.md)。
-一个 token 授权全部已配置 artifact；GET URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
+引用远程 provider 的 artifact 会在成功响应中汇总已知用量为 `Subscription-Userinfo`；本地和未知用量不推算。
+HEAD 执行相同完整渲染与检查，只省去传输正文。离线示例包含两个 artifact 和安全模板，见
+[GET/HEAD 示例](./example/render/README.md)。用量字段与限制、参数声明、URL 编码、CLI 与 HTTP 的运行边界、
+token 轮换和 TLS 反向代理设置见 [GET/HEAD 渲染指南](./docs/get_rendering.md)。
+一个 token 授权全部已配置 artifact；GET/HEAD URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
 `no-store` 无法清除这些副本。
 
 #### 规则集输入
@@ -262,7 +264,7 @@ subio convert example/config.toml --clean-gist
 
 - [开发约束与架构](./docs/DEV.md)
 - [SubIO 节点文件格式 v2](./docs/subio_node_format.md)
-- [GET 参数化渲染与安全部署](./docs/get_rendering.md)
+- [GET/HEAD 参数化渲染与安全部署](./docs/get_rendering.md)
 - [支持矩阵](./docs/support_matrix.md)
 - [端到端测试](./docs/e2e_testing.md)
 - [文档索引](./docs/README.md)

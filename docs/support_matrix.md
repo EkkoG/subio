@@ -141,7 +141,7 @@ integer/boolean、默认值和约束；同一输入按每个 artifact 独立归�
 参数化转换只记录安全类别/错误码/计数；manifest 逐输出记录源哈希与实际解析/选择计数，不含参数值。
 产物与上传结果包含绑定值，命令行值可能进入 shell 历史与进程列表。
 
-### 4.2 可选 GET 渲染
+### 4.2 可选 GET/HEAD 渲染
 
 | 能力 | 当前范围 |
 |---|---|
@@ -149,10 +149,12 @@ integer/boolean、默认值和约束；同一输入按每个 artifact 独立归�
 | 认证 | URL 中唯一 `token`，来自 `SUBIO_RENDER_TOKEN`；无需附加头，一个 token 授权全部已配置 artifact |
 | 参数化源 | 显式 `parameterized = true` 的本地 `mihomo` / `clash-meta` / `clash` YAML 与 `subio` v2 TOML/JSON/JSON5/YAML |
 | 参数值 | 无需逐个声明，默认 string；`artifact.params` 可补充 integer/boolean、默认值或约束；引用缺失参数返回 400，token 仅用于鉴权 |
-| 输出 | `GET /subscription/<file_name>` 直接使用已有输出文件名；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
+| 输出 | `GET /subscription/<file_name>` 和同路径 HEAD 直接使用已有输出文件名；固定 `user`、批量 `users` 展开后的单文件及 Age 均支持 |
 | 浏览与订阅名称 | 成功响应为 UTF-8 纯文本原文，浏览器 inline 显示；`Content-Disposition` 中的安全 ASCII `filename` 和 UTF-8 `filename*` 携带输出文件名，包括展开的用户名；Age 显示文本密文 |
 | 生成策略 | 所有现有 artifact 类型沿用静态生成策略；全局或 artifact 级 `allow_conversion_errors`、`allow_empty` 生效，显式放行的转换错误记录安全 WARNING |
-| 资源快照 | 启动/后台准备静态节点、规则/snippet、未绑定参数化文档和模板；warm GET 无源 I/O、源解码或静态解析，每次请求使用一个完整版本 |
+| 资源快照 | 启动/后台准备静态节点、规则/snippet、未绑定参数化文档和模板；warm GET/HEAD 无源 I/O、源解码或静态解析，每次请求使用一个完整版本 |
+| 订阅用量 | 成功 GET/HEAD 从同一 artifact 快照返回规范 `Subscription-Userinfo`；按精确 URL/有效显式 UA 去重，只汇总远程来源的完整流量组与已知 expiry，不推算本地或未知用量；无有效字段和错误响应省略 |
+| HEAD | 同 GET 的鉴权、参数、转换、快照和名额限制，完整渲染但所有响应无正文；Content-Length 为本次 GET 表示长度，不节省渲染 CPU |
 | 刷新与过期 | interval 默认 300 秒，完成后等待，不重叠；max age 默认 900 秒；均为正整数且 max age >= interval；monotonic 年龄从成功轮次开始时计量，失败不更新，过期返回 503 |
 | 就绪与错误 | 至少一个输出准备成功可启动，未就绪路由 503，全部未就绪则安全启动失败；返回 ParseResult ERROR/fatal_result 属成功获取并更新年龄，由既有 artifact 策略决定是否拒绝，默认 422 |
 | 模板 | 可信最终 Jinja 获得不可变 `params`；有限内存命名空间含现有 loader 枚举名称及配置根模板，不递归目录 symlink 查找 helper；provider 只支持一次标量替换，不执行 Jinja |
