@@ -10,6 +10,7 @@ import tempfile
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -58,16 +59,32 @@ def _header(headers: Mapping[str, Any], name: str) -> str | None:
 
 
 def _parse_subscription_user_info(value: str | None) -> dict[str, int] | None:
-    if not value:
+    if not value or len(value) > 1024:
         return None
     result: dict[str, int] = {}
+    seen: set[str] = set()
     for item in value.replace(",", ";").split(";"):
         key, separator, raw = item.strip().partition("=")
-        if not separator or key not in {"upload", "download", "total", "expire"}:
+        key = key.strip().casefold()
+        if key not in {"upload", "download", "total", "expire"}:
+            continue
+        if key in seen:
+            result.pop(key, None)
+            continue
+        seen.add(key)
+        raw = raw.strip()
+        if not separator or not raw or len(raw) > 64:
             continue
         try:
-            result[key] = int(raw)
-        except ValueError:
+            number = Decimal(raw)
+            if (
+                not number.is_finite()
+                or not 0 <= number <= 2**63 - 1
+                or number != number.to_integral_value()
+            ):
+                continue
+            result[key] = int(number)
+        except InvalidOperation:
             continue
     return result or None
 

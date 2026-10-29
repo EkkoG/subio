@@ -48,6 +48,12 @@ class PreparedArtifact:
     _providers: tuple[PreparedProvider, ...] = field(repr=False)
     _rulesets: RuleSetStore = field(repr=False)
     _templates: PreparedTemplates = field(repr=False)
+    subscription_user_info: Mapping[str, int] = field(init=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "subscription_user_info", _aggregate_subscription_user_info(self._providers)
+        )
 
     def render(
         self, file_name: str, parameters: Mapping[str, ParameterValue]
@@ -95,6 +101,45 @@ class PreparedArtifact:
             parameters=parameters,
         ).generate()
         return PreparedRenderResult(providers, result)
+
+
+def _aggregate_subscription_user_info(
+    providers: tuple[PreparedProvider, ...],
+) -> Mapping[str, int]:
+    seen: set[tuple[str, str]] = set()
+    upload = download = total = 0
+    has_traffic = unlimited = False
+    expire = None
+    for provider in providers:
+        if not provider.config.url:
+            continue
+        identity = (provider.config.url, provider.config.user_agent or "")
+        if identity in seen:
+            continue
+        seen.add(identity)
+        info = provider.metadata.subscription_user_info if provider.metadata else None
+        if not info:
+            continue
+        # Incomplete counters cannot describe a consistent used/quota relationship.
+        if all(key in info for key in ("upload", "download", "total")):
+            has_traffic = True
+            upload += info["upload"]
+            download += info["download"]
+            total += info["total"]
+            unlimited = unlimited or info["total"] == 0
+        reported_expire = info.get("expire")
+        if reported_expire is not None:
+            if expire is None or expire == 0:
+                expire = reported_expire
+            elif 0 < reported_expire < expire:
+                expire = reported_expire
+    total = 0 if unlimited else total
+    result = {}
+    if has_traffic and max(upload, download, total) <= 2**63 - 1:
+        result.update(upload=upload, download=download, total=total)
+    if expire is not None:
+        result["expire"] = expire
+    return MappingProxyType(result)
 
 
 @dataclass(frozen=True)

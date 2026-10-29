@@ -26,6 +26,7 @@ from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.infrastructure.remote import RunRemoteLoader
 from subio_v2.workflow.providers import ProviderLoaderService
 from subio_v2.workflow.rendering import PreparedArtifact
+from tests.test_subio_v2_remote_cache import Response, Session
 from tests.test_subio_v2_server import SECRET, TOKEN, _fixture, _headers, _query, _raw_request, _save, _service
 
 
@@ -173,6 +174,57 @@ def _source(tmp_path, family="mihomo", *, name="first", invalid=False, fatal=Fal
     if fatal:
         document = {"version": 1, "nodes": []}
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
+
+
+def test_usage_summary_changes_disappears_and_expires_with_real_snapshot(tmp_path, monkeypatch):
+    path, data = _static(tmp_path)
+    data["provider"][0].pop("file")
+    data["provider"][0]["url"] = "https://example.test/subscription"
+    _save(path, data)
+    content = (tmp_path / "nodes.yaml").read_bytes()
+    sessions = [
+        Session([Response(content=content, headers={"Subscription-Userinfo": "upload=1;download=2;total=10;expire=5"})]),
+        Session([Response(content=content.replace(b"first", b"second"), headers={"Subscription-Userinfo": "upload=3;download=4;total=20;expire=7"})]),
+        Session([Response(content=b"", headers={"Subscription-Userinfo": "upload=999;download=999;total=999"})]),
+        Session([Response(content=content.replace(b"first", b"without-usage"))]),
+    ]
+    remaining = iter(sessions)
+    monkeypatch.setattr("subio_v2.infrastructure.remote.requests.Session", lambda: next(remaining))
+    clock = _clock(monkeypatch)
+    app = server.create_app(str(path), refresh_interval=10, max_snapshot_age=30)
+    service = _service(app)
+    with TestClient(app) as client:
+        initial = service._snapshots["out.yaml"]
+        assert initial.acquired_at == 0
+        assert initial.artifact.subscription_user_info == {"upload": 1, "download": 2, "total": 10, "expire": 5}
+        assert "first" in client.get("/subscription/out.yaml?" + _query()).text
+
+        clock.now = 10
+        client.portal.call(service._refresh)
+        changed = service._snapshots["out.yaml"]
+        assert changed is not initial and changed.acquired_at == 10
+        assert changed.artifact.subscription_user_info == {"upload": 3, "download": 4, "total": 20, "expire": 7}
+        assert "second" in client.get("/subscription/out.yaml?" + _query()).text
+        assert initial.artifact.subscription_user_info["upload"] == 1
+
+        clock.now = 20
+        client.portal.call(service._refresh)
+        assert service._snapshots["out.yaml"] is changed
+        assert changed.artifact.subscription_user_info["upload"] == 3
+        assert client.get("/subscription/out.yaml?" + _query()).status_code == 200
+        clock.now = 40
+        expired = client.get("/subscription/out.yaml?" + _query())
+        assert expired.status_code == 503 and expired.json() == {"error": "snapshot_expired"}
+        assert service._snapshots["out.yaml"] is changed
+
+        clock.now = 45
+        client.portal.call(service._refresh)
+        without_usage = service._snapshots["out.yaml"]
+        assert without_usage is not changed and without_usage.acquired_at == 45
+        assert without_usage.artifact.subscription_user_info == {}
+        assert "without-usage" in client.get("/subscription/out.yaml?" + _query()).text
+    assert all(session.closed for session in sessions)
+    assert all(len(session.calls) == 1 for session in sessions)
 
 
 @pytest.mark.parametrize("family,invalid_kind", [("mihomo", "node"), ("subio", "node"), ("subio", "fatal")])
