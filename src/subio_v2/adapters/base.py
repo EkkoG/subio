@@ -66,12 +66,14 @@ class BaseEmitter(ABC):
         issues: list[ConversionIssue] = []
         if not self._conversion.common_policy.dialer_proxy:
             return retained, issues
-        counts = Counter(node.name for node in candidates)
+        counts = Counter(node.name for node in candidates if isinstance(node.name, str))
         dependents: dict[str, list[int]] = defaultdict(list)
         for index, node in enumerate(candidates):
-            if node.dialer_proxy:
+            if isinstance(node.dialer_proxy, str) and node.dialer_proxy:
                 dependents[node.dialer_proxy].append(index)
-        missing = deque(sorted({node.name for node in source} - counts.keys()))
+        # Rejected source nodes can still contain malformed fields from a parser.
+        source_names = {node.name for node in source if isinstance(node.name, str)}
+        missing = deque(sorted(source_names - counts.keys()))
         while missing:
             for index in dependents.get(missing.popleft(), ()):
                 if index not in retained:
@@ -83,9 +85,10 @@ class BaseEmitter(ABC):
                     f"Dialer proxy '{node.dialer_proxy}' was not emitted",
                     field="dialer_proxy", code="conversion.missing-dialer-proxy",
                 ))
-                counts[node.name] -= 1
-                if counts[node.name] == 0:
-                    missing.append(node.name)
+                if isinstance(node.name, str):
+                    counts[node.name] -= 1
+                    if counts[node.name] == 0:
+                        missing.append(node.name)
         return retained, issues
 
     @staticmethod

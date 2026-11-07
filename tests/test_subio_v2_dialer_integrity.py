@@ -1,8 +1,9 @@
 import json
 
 import pytest
+import yaml
 
-from subio_v2.adapters.catalog import get_emitter
+from subio_v2.adapters.catalog import get_emitter, get_parser
 from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import ShadowsocksNode
@@ -151,3 +152,69 @@ def test_surge_selector_accepts_static_template_group(tmp_path):
     result = WorkflowEngine(str(path)).prepare().artifact_result
     assert not result.issues
     assert "underlying-proxy=StaticGroup" in result.drafts[0].content
+
+
+@pytest.mark.parametrize("target", ["mihomo", "stash", "surge", "sing-box"])
+@pytest.mark.parametrize("names", [(None, "bad"), (42, "bad"), (None, "")])
+def test_rejected_mixed_names_do_not_break_relation_checks(target, names):
+    parsed = get_parser("mihomo").parse_result({"proxies": [
+        {"name": name, "type": "ss", "server": "example.test", "port": 8388,
+         "cipher": "aes-256-gcm", "password": "" if name != "safe" else "synthetic"}
+        for name in (*names, "safe")
+    ]})
+    assert not parsed.issues
+    result = get_emitter(target).emit_result(parsed.nodes)
+    assert [node.name for node in result.supported_nodes] == ["safe"]
+    assert result.errors
+    assert not any(issue.field == "dialer_proxy" for issue in result.issues)
+
+
+@pytest.mark.parametrize("reference", [[], {}, ["upstream"], {"name": "upstream"}])
+def test_emitter_does_not_hash_container_references(reference):
+    result = get_emitter("mihomo").emit_result([ss("candidate", reference), ss("safe")])
+    assert "safe" in {node.name for node in result.supported_nodes}
+
+
+@pytest.mark.parametrize("mode", ["ordinary", "prepared", "parameterized"])
+@pytest.mark.parametrize("allow_errors", [False, True])
+@pytest.mark.parametrize("malformed", [
+    {"name": None},
+    {"dialer-proxy": []},
+    {"dialer-proxy": {}},
+    {"dialer-proxy": ["upstream"]},
+    {"dialer-proxy": {"name": "upstream"}},
+])
+def test_invalid_nodes_keep_structured_errors_and_safe_output(
+    tmp_path, mode, allow_errors, malformed,
+):
+    bad = {"name": "bad", "type": "ss", "server": "example.test", "port": 8388,
+           "cipher": "aes-256-gcm", "password": ""}
+    nodes = [{**bad, **malformed}]
+    if "name" in malformed:
+        nodes.append(bad)
+    nodes.append({**bad, "name": "safe", "password": "synthetic"})
+    (tmp_path / "nodes.json").write_text(json.dumps({"proxies": nodes}))
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({
+        "provider": [{"name": "source", "type": "mihomo", "file": "nodes.json",
+                      "parameterized": mode == "parameterized"}],
+        "artifact": [{"name": "out.yaml", "type": "mihomo", "providers": ["source"],
+                      "allow_conversion_errors": allow_errors}],
+    }))
+
+    def generate():
+        if mode == "ordinary":
+            return WorkflowEngine(str(path)).prepare().artifact_result
+        prepared = prepare_resources(str(path), ConfigLoader.load(str(path)))
+        return prepared.candidates["out.yaml"].render("out.yaml", {}).artifact_result
+
+    if allow_errors:
+        result = generate()
+        output = yaml.safe_load(result.drafts[0].content)
+        assert [node["name"] for node in output["proxies"]] == ["safe"]
+        assert any(issue.field == "password" for issue in result.issues)
+    else:
+        with pytest.raises(ArtifactGenerationError) as exc:
+            generate()
+        assert any(issue.field == "password" for issue in exc.value.issues)
+        assert not isinstance(exc.value.__cause__, TypeError)

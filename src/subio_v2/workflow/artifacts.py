@@ -414,7 +414,7 @@ class ArtifactGenerationService:
             names = {node.name for node in selected}
             removed = known_node_names - names
             for node in selected:
-                if node.dialer_proxy in removed:
+                if isinstance(node.dialer_proxy, str) and node.dialer_proxy in removed:
                     issues.append(
                         ConversionIssue(
                             severity=IssueSeverity.ERROR,
