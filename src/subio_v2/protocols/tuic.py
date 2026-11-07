@@ -4,7 +4,8 @@ from typing import Any, Dict
 
 from subio_v2.core.nodes import Node, Protocol, TUICNode
 from subio_v2.core.results import IssueDraft, IssueSeverity
-from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.core.validation import NodeValidationError
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -14,8 +15,52 @@ from subio_v2.protocols._fields import (
 )
 from subio_v2.protocols.spec import ProtocolSpec
 
+
+def _validate(node: Node) -> list[NodeValidationError]:
+    errors: list[NodeValidationError] = []
+    if not isinstance(node, TUICNode):
+        return errors
+    if node.version == 4:
+        if not node.token:
+            errors.append(NodeValidationError("token", "TUIC v4 requires a token"))
+        if node.uuid or node.password:
+            errors.append(
+                NodeValidationError(
+                    "uuid", "TUIC v4 cannot use v5 UUID/password credentials"
+                )
+            )
+        return errors
+    if node.version == 5:
+        if not node.uuid:
+            errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
+        if not node.password:
+            errors.append(
+                NodeValidationError("password", "TUIC v5 requires a password")
+            )
+        if node.token:
+            errors.append(
+                NodeValidationError("token", "TUIC v5 cannot use a v4 token")
+            )
+        return errors
+    if node.uuid or node.password:
+        if not node.uuid:
+            errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
+        if not node.password:
+            errors.append(
+                NodeValidationError("password", "TUIC v5 requires a password")
+            )
+    elif not node.token:
+        errors.append(
+            NodeValidationError(
+                "token", "TUIC requires either a v4 token or v5 UUID/password"
+            )
+        )
+    return errors
+
+
 SPEC = ProtocolSpec(
     protocol=Protocol.TUIC,
+    validator=_validate,
     node_class=TUICNode,
     user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
@@ -99,47 +144,6 @@ class TUICCodec(StructuredClashProtocolCodec):
         else:
             kwargs["version"] = None
         return kwargs
-
-    def validate(self, node: Node) -> list[NodeValidationError]:
-        errors = super().validate(node)
-        if not isinstance(node, TUICNode):
-            return errors
-        if node.version == 4:
-            if not node.token:
-                errors.append(NodeValidationError("token", "TUIC v4 requires a token"))
-            if node.uuid or node.password:
-                errors.append(
-                    NodeValidationError(
-                        "uuid", "TUIC v4 cannot use v5 UUID/password credentials"
-                    )
-                )
-            return errors
-        if node.version == 5:
-            if not node.uuid:
-                errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
-            if not node.password:
-                errors.append(
-                    NodeValidationError("password", "TUIC v5 requires a password")
-                )
-            if node.token:
-                errors.append(
-                    NodeValidationError("token", "TUIC v5 cannot use a v4 token")
-                )
-            return errors
-        if node.uuid or node.password:
-            if not node.uuid:
-                errors.append(NodeValidationError("uuid", "TUIC v5 requires a UUID"))
-            if not node.password:
-                errors.append(
-                    NodeValidationError("password", "TUIC v5 requires a password")
-                )
-        elif not node.token:
-            errors.append(
-                NodeValidationError(
-                    "token", "TUIC requires either a v4 token or v5 UUID/password"
-                )
-            )
-        return errors
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, TUICNode):

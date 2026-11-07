@@ -13,19 +13,11 @@ from subio_v2.core.nodes import (
     Protocol,
 )
 from subio_v2.core.results import IssueDraft, IssueSeverity
-from subio_v2.protocols._base import NodeValidationError, StructuredClashProtocolCodec
+from subio_v2.core.validation import NodeValidationError
+from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
-
-SPEC = ProtocolSpec(
-    protocol=Protocol.MIERU,
-    node_class=MieruNode,
-    requires_endpoint=False,
-    user_override_fields=frozenset({"server", "port", "username", "password"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
-    terminal_native_fields=frozenset({"handshake_mode", "multiplexing", "password", "port_range", "smux", "traffic_pattern", "transport", "username"}),
-)
 
 
 def _decode_optional_enum(enum_type: type, value: Any) -> Any:
@@ -34,6 +26,65 @@ def _decode_optional_enum(enum_type: type, value: Any) -> Any:
 
 def _encode_enum(value: Any) -> str:
     return value.value
+
+
+def _validate(node: Node) -> list[NodeValidationError]:
+    errors: list[NodeValidationError] = []
+    if not isinstance(node, MieruNode):
+        return errors
+    if not isinstance(node.server, str) or not node.server:
+        errors.append(NodeValidationError("server", "Server is required"))
+
+    has_port = node.port is not None
+    has_port_range = node.port_range not in {None, ""}
+    if has_port == has_port_range:
+        errors.append(
+            NodeValidationError(
+                "port_range", "Mieru requires exactly one of port or port-range"
+            )
+        )
+        return errors
+
+    if has_port and (
+        not isinstance(node.port, int)
+        or isinstance(node.port, bool)
+        or not 1 <= node.port <= 65535
+    ):
+        errors.append(
+            NodeValidationError(
+                "port", f"Port must be between 1 and 65535, got {node.port!r}"
+            )
+        )
+    if has_port_range and not _valid_port_range(node.port_range):
+        errors.append(
+            NodeValidationError(
+                "port_range", f"Invalid Mieru port range: {node.port_range!r}"
+            )
+        )
+    return errors
+
+
+def _valid_port_range(value: str | None) -> bool:
+    if value is None:
+        return False
+    parts = value.split("-", 1)
+    if not all(part.isdigit() for part in parts):
+        return False
+    start = int(parts[0])
+    end = int(parts[-1])
+    return 1 <= start <= end <= 65535
+
+
+SPEC = ProtocolSpec(
+    protocol=Protocol.MIERU,
+    required_fields=("transport", "username", "password"),
+    validator=_validate,
+    node_class=MieruNode,
+    requires_endpoint=False,
+    user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
+    terminal_native_fields=frozenset({"handshake_mode", "multiplexing", "password", "port_range", "smux", "traffic_pattern", "transport", "username"}),
+)
 
 
 class MieruCodec(StructuredClashProtocolCodec):
@@ -94,13 +145,12 @@ class MieruCodec(StructuredClashProtocolCodec):
             decode=lambda value: _decode_optional_enum(MieruTransport, value),
             encode=_encode_enum,
             emit_policy=EmitPolicy.NOT_NONE,
-            required=True,
         ),
         scalar_field(
-            "username", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "username", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field(
             "multiplexing",
@@ -144,41 +194,6 @@ class MieruCodec(StructuredClashProtocolCodec):
         if node.port is None:
             out.pop("port", None)
 
-    def validate(self, node: Node) -> list[NodeValidationError]:
-        errors = super().validate(node)
-        if not isinstance(node, MieruNode):
-            return errors
-        if not isinstance(node.server, str) or not node.server:
-            errors.append(NodeValidationError("server", "Server is required"))
-
-        has_port = node.port is not None
-        has_port_range = node.port_range not in {None, ""}
-        if has_port == has_port_range:
-            errors.append(
-                NodeValidationError(
-                    "port_range", "Mieru requires exactly one of port or port-range"
-                )
-            )
-            return errors
-
-        if has_port and (
-            not isinstance(node.port, int)
-            or isinstance(node.port, bool)
-            or not 1 <= node.port <= 65535
-        ):
-            errors.append(
-                NodeValidationError(
-                    "port", f"Port must be between 1 and 65535, got {node.port!r}"
-                )
-            )
-        if has_port_range and not self._valid_port_range(node.port_range):
-            errors.append(
-                NodeValidationError(
-                    "port_range", f"Invalid Mieru port range: {node.port_range!r}"
-                )
-            )
-        return errors
-
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, MieruNode):
             return []
@@ -221,17 +236,6 @@ class MieruCodec(StructuredClashProtocolCodec):
                 )
             )
         return warnings
-
-    @staticmethod
-    def _valid_port_range(value: str | None) -> bool:
-        if value is None:
-            return False
-        parts = value.split("-", 1)
-        if not all(part.isdigit() for part in parts):
-            return False
-        start = int(parts[0])
-        end = int(parts[-1])
-        return 1 <= start <= end <= 65535
 
 
 CODEC = MieruCodec()

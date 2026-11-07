@@ -69,7 +69,7 @@ Config / local snippet
 | `src/subio_v2/core/` | 跨平台节点语义、共享设置、结构化结果和目标无关校验 |
 | `src/subio_v2/infrastructure/` | Age、remote loader 和日志等低层外部副作用 |
 | `src/subio_v2/adapters/` | 格式 catalog、target validation、checked emitter 和各格式 family adapter |
-| `src/subio_v2/protocols/` | Clash-family 协议 codec、逐目标约束和 Stash 字段合同 |
+| `src/subio_v2/protocols/` | 逐协议 SPEC/语义校验、Clash-family codec、逐目标约束和 Stash 字段合同 |
 | `src/subio_v2/adapters/links/` | v2rayN/dae document adapter 与逐协议 link codec |
 | `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/adapters/surge/` | Surge document adapter、词法、codec 规格、安全门禁和节点附件 |
@@ -160,7 +160,7 @@ Mihomo alias。`src/subio_v2/adapters/subio/schema.py` 是公开字段 allowlist
 schema 生成命令，并由测试证明快照、协议注册表和 runtime 字段一致。
 
 JSON Schema 只描述结构、允许字段、基础类型和 enum，不为组合校验建立复杂 conditional 生成器。
-required、范围和协议组合以 `validate_node()` 及 codec validation 为准；用户文档必须明确这
+required、范围和协议组合以 `validate_node()` 及 `ProtocolSpec.validate()` 为准；用户文档必须明确这
 两层职责，不能把 schema 单独描述为完整语义验证器。
 
 公开格式只包含 concrete Node、公开 dataclass 嵌套设置和受限 mapping。Reality、ECH、Brutal、
@@ -172,7 +172,9 @@ External 固定排除。`SSH.keystore_id`、`TLSSettings.client_cert_ref` 和 Ta
 `interactive_login` 依赖本机 Surge 资源或状态，也固定排除。不要为了原生输入再建立一套 protocol
 codec；native codec 从 `ProtocolSpec` 取得 Node class，但不能借用 Clash 字段规格。
 
-目标无关语义由 `src/subio_v2/core/validation.py` 校验，`TargetValidationService.encode_node()` 随后调用实际
+目标无关语义由 `src/subio_v2/core/validation.py` 调用逐协议 `ProtocolSpec` 校验，通用必需字段与组合规则
+直接声明在协议本地，不从 Clash 字段规格推导。定义注册与 Clash codec 注册独立；Naive、OpenConnect、
+ShadowTLS 只注册定义，不提供占位 Clash codec。`TargetValidationService.encode_node()` 随后调用实际
 target codec 完成支持、约束检查和编码。含 `users` 的原生节点按每个声明用户应用 override 后校验，允许凭据只存在于用户级；
 native override 字段由逐协议 `ProtocolSpec.user_override_fields` 明确列出，并且必须仍是 Node
 模型与通用 clone 机制支持的字段，不能再依靠全局字段名交集推断。新协议或字段进入 Node IR 时，
@@ -240,8 +242,9 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 `ClashParser` 和 `ClashEmitter` 通过 `src/subio_v2/protocols/` 分发：
 
 - 强类型协议继承 `StructuredClashProtocolCodec`；
-- `ClashFieldSpec` 同时驱动 consumed keys、parse、emit 和 required 校验；
-- 特殊语义使用 codec hook 或 `check()`，不要在 document Parser/Emitter 重建协议分支；
+- `ClashFieldSpec` 同时驱动 consumed keys、parse 和 emit；
+- 通用语义由协议本地 `SPEC.required_fields` 和 validator 定义；平台表示差异使用 codec hook 或 `check()`，
+  不要在 document Parser/Emitter 重建协议分支；
 - 固定 schema 中的全部已知 type 都使用结构化 codec，即使当前只有 Mihomo 能输出；
 - 未来未知 type 不进入 codec 注册表，由 Parser 创建 `SourcePassthroughNode`，且只能回到
   `source_context` 所记录的规范来源平台。
@@ -249,7 +252,7 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 `consumed_keys` 只能包含已经写入 IR、并能从同一规格重新生成的字段。未强类型化字段应留给
 `extra`，否则会出现“解析时消费、生成时丢失”。
 
-目标支持由实际 target codec 派生；不建立独立 capability snapshot 或手写平台协议集合。协议的组合条件
+目标支持由实际 target codec 派生；不建立独立 capability snapshot 或手写平台协议集合。目标特定的组合条件
 与对应 target codec 共置，编码和诊断通过同一 checked encode result 返回。
 
 未知 transport 和非 active transport option block 必须完整保留，不能降级为 TCP，也不能

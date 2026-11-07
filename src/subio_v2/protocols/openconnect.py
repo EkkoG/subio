@@ -4,7 +4,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from subio_v2.core.nodes import Node, OpenConnectNode, Protocol
-from subio_v2.protocols._base import ClashProtocolCodec, NodeValidationError
+from subio_v2.core.validation import NodeValidationError
 from subio_v2.protocols.spec import ProtocolSpec
 
 _FLAVORS = frozenset({"anyconnect", "gp", "fortinet", "f5", "pulse", "nc"})
@@ -46,8 +46,51 @@ def is_valid_openconnect_server(value: Any) -> bool:
     )
 
 
+def _validate(node: Node) -> list[NodeValidationError]:
+    if not isinstance(node, OpenConnectNode):
+        return []
+    errors: list[NodeValidationError] = []
+    if not is_valid_openconnect_server(node.server):
+        errors.append(
+            NodeValidationError(
+                "server",
+                "OpenConnect server must be an HTTPS URL without user information, query, fragment, or whitespace",
+            )
+        )
+    if node.port is not None:
+        errors.append(
+            NodeValidationError(
+                "port", "OpenConnect server includes its endpoint in 'server'"
+            )
+        )
+    if node.flavor is not None and (
+        not isinstance(node.flavor, str) or node.flavor not in _FLAVORS
+    ):
+        errors.append(
+            NodeValidationError("flavor", "Unsupported OpenConnect flavor")
+        )
+    for field in ("username", "password", "auth_group", "cookie"):
+        value = getattr(node, field)
+        if value is not None and not isinstance(value, str):
+            errors.append(
+                NodeValidationError(
+                    field, f"OpenConnect {field.replace('_', '-')} must be a string"
+                )
+            )
+    if node.mtu is not None and (
+        type(node.mtu) is not int or not 0 <= node.mtu <= _UINT32_MAX
+    ):
+        errors.append(
+            NodeValidationError(
+                "mtu", f"OpenConnect mtu must be between 0 and {_UINT32_MAX}"
+            )
+        )
+    return errors
+
+
 SPEC = ProtocolSpec(
     protocol=Protocol.OPENCONNECT,
+    validator=_validate,
     node_class=OpenConnectNode,
     requires_endpoint=False,
     user_override_fields=frozenset({"server", "port", "username", "password"}),
@@ -56,61 +99,3 @@ SPEC = ProtocolSpec(
     ),
     native_public=False,
 )
-
-
-class OpenConnectCodec(ClashProtocolCodec):
-    spec = SPEC
-    protocol = Protocol.OPENCONNECT
-    clash_type = "openconnect"
-    dynamic_clash_type = True
-    clash_dialects = frozenset()
-
-    def parse_clash(self, data: dict[str, Any], context=None) -> Node:
-        raise ValueError("OpenConnect is not a Clash-family protocol")
-
-    def emit_clash(self, node: Node, context=None) -> dict[str, Any]:
-        raise ValueError("OpenConnect is not a Clash-family protocol")
-
-    def validate(self, node: Node) -> list[NodeValidationError]:
-        if not isinstance(node, OpenConnectNode):
-            return []
-        errors: list[NodeValidationError] = []
-        if not is_valid_openconnect_server(node.server):
-            errors.append(
-                NodeValidationError(
-                    "server",
-                    "OpenConnect server must be an HTTPS URL without user information, query, fragment, or whitespace",
-                )
-            )
-        if node.port is not None:
-            errors.append(
-                NodeValidationError(
-                    "port", "OpenConnect server includes its endpoint in 'server'"
-                )
-            )
-        if node.flavor is not None and (
-            not isinstance(node.flavor, str) or node.flavor not in _FLAVORS
-        ):
-            errors.append(
-                NodeValidationError("flavor", "Unsupported OpenConnect flavor")
-            )
-        for field in ("username", "password", "auth_group", "cookie"):
-            value = getattr(node, field)
-            if value is not None and not isinstance(value, str):
-                errors.append(
-                    NodeValidationError(
-                        field, f"OpenConnect {field.replace('_', '-')} must be a string"
-                    )
-                )
-        if node.mtu is not None and (
-            type(node.mtu) is not int or not 0 <= node.mtu <= _UINT32_MAX
-        ):
-            errors.append(
-                NodeValidationError(
-                    "mtu", f"OpenConnect mtu must be between 0 and {_UINT32_MAX}"
-                )
-            )
-        return errors
-
-
-CODEC = OpenConnectCodec()

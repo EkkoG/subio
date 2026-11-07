@@ -17,6 +17,7 @@ from subio_v2.protocols.spec import ProtocolSpec
 
 SPEC = ProtocolSpec(
     protocol=Protocol.SNELL,
+    required_fields=("psk",),
     node_class=SnellNode,
     user_override_fields=frozenset({"server", "port", "psk"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "psk"}),
@@ -81,7 +82,7 @@ class SnellCodec(StructuredClashProtocolCodec):
         },
     }
     fields = (
-        scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field("psk", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("version", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("reuse", emit_policy=EmitPolicy.NOT_NONE),
         field_group(

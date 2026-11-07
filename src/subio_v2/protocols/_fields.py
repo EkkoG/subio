@@ -33,7 +33,6 @@ class ClashFieldSpec:
 
     consumed_keys: frozenset[str]
     node_attrs: frozenset[str]
-    required_attrs: frozenset[str]
     parse_kwargs: FieldParser
     emit_into: FieldEmitter
 
@@ -48,7 +47,6 @@ def scalar_field(
     encode: Callable[[Any], Any] | None = None,
     emit_policy: EmitPolicy = EmitPolicy.NOT_NONE,
     emit_if: Callable[[Node, Any], bool] | None = None,
-    required: bool = False,
 ) -> ClashFieldSpec:
     attr = attr or key.replace("-", "_")
     keys = (key, *aliases)
@@ -78,7 +76,6 @@ def scalar_field(
     return ClashFieldSpec(
         consumed_keys=frozenset(keys),
         node_attrs=frozenset({attr}),
-        required_attrs=frozenset({attr}) if required else frozenset(),
         parse_kwargs=parse_kwargs,
         emit_into=emit_into,
     )
@@ -90,12 +87,10 @@ def field_group(
     node_attrs: tuple[str, ...],
     parse_kwargs: FieldParser,
     emit_into: FieldEmitter,
-    required_attrs: tuple[str, ...] = (),
 ) -> ClashFieldSpec:
     return ClashFieldSpec(
         consumed_keys=frozenset(consumed_keys),
         node_attrs=frozenset(node_attrs),
-        required_attrs=frozenset(required_attrs),
         parse_kwargs=parse_kwargs,
         emit_into=emit_into,
     )

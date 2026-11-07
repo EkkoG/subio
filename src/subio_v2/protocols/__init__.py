@@ -52,6 +52,39 @@ __all__ = [
     "register",
 ]
 
+_SPECS: tuple[ProtocolSpec, ...] = (
+    anytls.SPEC,
+    direct.SPEC,
+    dns.SPEC,
+    gost_relay.SPEC,
+    http.SPEC,
+    hysteria.SPEC,
+    hysteria2.SPEC,
+    juicity.SPEC,
+    masque.SPEC,
+    mieru.SPEC,
+    naive.SPEC,
+    openconnect.SPEC,
+    openvpn.SPEC,
+    reject.SPEC,
+    rematch.SPEC,
+    shadowquic.SPEC,
+    shadowtls.SPEC,
+    shadowsocks.SPEC,
+    shadowsocksr.SPEC,
+    snell.SPEC,
+    socks5.SPEC,
+    ssh.SPEC,
+    sudoku.SPEC,
+    tailscale.SPEC,
+    trojan.SPEC,
+    trusttunnel.SPEC,
+    tuic.SPEC,
+    vless.SPEC,
+    vmess.SPEC,
+    wireguard.SPEC,
+)
+
 _CODECS: tuple[ClashProtocolCodec, ...] = (
     anytls.CODEC,
     direct.CODEC,
@@ -63,13 +96,10 @@ _CODECS: tuple[ClashProtocolCodec, ...] = (
     juicity.CODEC,
     masque.CODEC,
     mieru.CODEC,
-    naive.CODEC,
-    openconnect.CODEC,
     openvpn.CODEC,
     reject.CODEC,
     rematch.CODEC,
     shadowquic.CODEC,
-    shadowtls.CODEC,
     shadowsocks.CODEC,
     shadowsocksr.CODEC,
     snell.CODEC,
@@ -85,6 +115,7 @@ _CODECS: tuple[ClashProtocolCodec, ...] = (
     wireguard.CODEC,
 )
 
+_definitions = {spec.protocol: spec for spec in _SPECS}
 _registry: dict[Protocol, ClashProtocolCodec] = {}
 _clash_type_index: dict[str, ClashProtocolCodec] = {}
 
@@ -98,9 +129,10 @@ def register(codec: ClashProtocolCodec) -> None:
         raise ValueError(f"Clash type already registered: {codec.clash_type}")
     if codec.spec is None:
         raise ValueError(f"Protocol has no definition: {codec.protocol!r}")
+    if _definitions.get(codec.protocol) is not codec.spec:
+        raise ValueError(f"Protocol definition does not match: {codec.protocol!r}")
     _registry[codec.protocol] = codec
-    if not codec.dynamic_clash_type:
-        _clash_type_index[codec.clash_type] = codec
+    _clash_type_index[codec.clash_type] = codec
 
 
 for _codec in _CODECS:
@@ -112,10 +144,7 @@ def get(protocol: Protocol) -> ClashProtocolCodec | None:
 
 
 def get_definition(protocol: Protocol) -> ProtocolSpec | None:
-    codec = _registry.get(protocol)
-    if codec is not None and codec.spec is not None:
-        return codec.spec
-    return None
+    return _definitions.get(protocol)
 
 
 def target_codec(target: str, protocol: Protocol) -> ClashTargetCodec | None:
@@ -134,7 +163,7 @@ def target_codecs_for(target: str) -> dict[Protocol, ClashTargetCodec]:
 
 
 def all_definitions() -> tuple[ProtocolSpec, ...]:
-    return tuple(codec.spec for codec in _registry.values() if codec.spec is not None)
+    return tuple(_definitions.values())
 
 
 def by_clash_type(clash_type: str) -> ClashProtocolCodec | None:

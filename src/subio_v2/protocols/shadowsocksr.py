@@ -10,6 +10,7 @@ from subio_v2.protocols.values import SS_CIPHERS_STASH
 
 SPEC = ProtocolSpec(
     protocol=Protocol.SHADOWSOCKSR,
+    required_fields=("cipher", "password"),
     node_class=ShadowsocksRNode,
     user_override_fields=frozenset({"server", "port", "cipher", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "cipher", "password"}),
@@ -35,10 +36,10 @@ class ShadowsocksRCodec(StructuredClashProtocolCodec):
     target_constraints = {"stash": {"ciphers": SS_CIPHERS_STASH}}
     fields = (
         scalar_field(
-            "cipher", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "cipher", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field("obfs", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field(

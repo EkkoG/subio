@@ -21,6 +21,7 @@ from subio_v2.protocols.values import (
 
 SPEC = ProtocolSpec(
     protocol=Protocol.TROJAN,
+    required_fields=("password",),
     node_class=TrojanNode,
     user_override_fields=frozenset({"server", "port", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "password"}),
@@ -57,7 +58,7 @@ class TrojanCodec(StructuredClashProtocolCodec):
     }
     fields = (
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         tls_group(),
         transport_group(

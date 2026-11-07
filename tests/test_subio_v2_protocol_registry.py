@@ -59,10 +59,7 @@ def test_registry_is_bidirectionally_unique():
     assert len(clash_types) == len(set(clash_types))
     for codec in codecs:
         assert registry.get(codec.protocol) is codec
-        if codec.dynamic_clash_type:
-            assert registry.by_clash_type(codec.clash_type) is None
-        else:
-            assert registry.by_clash_type(codec.clash_type) is codec
+        assert registry.by_clash_type(codec.clash_type) is codec
 
 
 def test_protocol_definitions_are_complete_and_authoritative():
@@ -109,6 +106,7 @@ def test_user_override_policy_preserves_previous_runtime_behavior():
 
     for definition in registry.all_definitions():
         model_fields = frozenset(get_type_hints(definition.node_class))
+        assert set(definition.required_fields) <= model_fields
         assert definition.user_override_fields == previous_fields & model_fields
         assert definition.terminal_native_user_override_fields <= model_fields
 

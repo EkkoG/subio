@@ -24,6 +24,7 @@ from subio_v2.protocols.values import (
 
 SPEC = ProtocolSpec(
     protocol=Protocol.VMESS,
+    required_fields=("uuid",),
     node_class=VmessNode,
     user_override_fields=frozenset(
         {"server", "port", "uuid", "alter_id", "cipher"}
@@ -90,7 +91,7 @@ class VmessCodec(StructuredClashProtocolCodec):
         },
     }
     fields = (
-        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field(
             "alterId",
             "alter_id",

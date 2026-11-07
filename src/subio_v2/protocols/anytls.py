@@ -17,6 +17,7 @@ from subio_v2.protocols.spec import ProtocolSpec
 
 SPEC = ProtocolSpec(
     protocol=Protocol.ANYTLS,
+    required_fields=("password",),
     node_class=AnyTLSNode,
     user_override_fields=frozenset({"server", "port", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "password"}),
@@ -44,7 +45,7 @@ class AnyTLSCodec(StructuredClashProtocolCodec):
     dialect_fields = {"stash": stash_fields("password", tls=True)}
     fields = (
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         tls_group(
             consumed_keys=(

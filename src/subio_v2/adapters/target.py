@@ -73,7 +73,6 @@ class TargetValidationService:
         for error in validate_node(
             node,
             definition=protocol_registry.get_definition(node.type),
-            descriptor=protocol_registry.get(node.type),
         ):
             result.add_error(error.message, field=error.field)
 
@@ -106,13 +105,12 @@ class TargetValidationService:
             )
             return result
 
-        descriptor = protocol_registry.get(node.type)
         if self.platform in {"mihomo", "clash", "stash", "sing-box"}:
             for warning in target_codec.check(node):
                 result.warnings.append(warning)
                 if warning.severity == IssueSeverity.ERROR:
                     result.supported = False
-        elif descriptor:
+        elif clash_codec := protocol_registry.get(node.type):
             if self.platform in {"surge", "dae", "v2rayn"}:
                 protocol_capabilities = (
                     dict(target_codec.target_constraints)
@@ -121,14 +119,14 @@ class TargetValidationService:
                 )
             else:
                 protocol_capabilities = dict(
-                    descriptor.constraints_for_target(self.platform)
+                    clash_codec.constraints_for_target(self.platform)
                 )
             if self.platform == "surge" and isinstance(node, VmessNode):
                 # Mihomo's auto cipher is Surge's default aes-128-gcm when emitted.
                 protocol_capabilities["ciphers"] = set(
                     protocol_capabilities.get("ciphers", set())
                 ) | {"auto"}
-            for warning in descriptor.check(node, protocol_capabilities, self.platform):
+            for warning in clash_codec.check(node, protocol_capabilities, self.platform):
                 result.warnings.append(warning)
                 if warning.severity == IssueSeverity.ERROR:
                     result.supported = False

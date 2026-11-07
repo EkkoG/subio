@@ -15,7 +15,6 @@ from subio_v2.adapters.clash_family.fields import (
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import BaseNode, Node, Protocol
 from subio_v2.core.results import IssueDraft
-from subio_v2.core.validation import NodeValidationError
 from subio_v2.protocols._fields import ClashFieldSpec
 from subio_v2.protocols.spec import ProtocolSpec
 
@@ -47,7 +46,6 @@ class ClashProtocolCodec(ABC):
 
     protocol: Protocol
     clash_type: str
-    dynamic_clash_type: bool = False
     clash_dialects: frozenset[str] = frozenset({"mihomo"})
     target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
     dialect_fields: Mapping[str, frozenset[str]] = MappingProxyType({})
@@ -108,9 +106,6 @@ class ClashProtocolCodec(ABC):
     ) -> list[IssueDraft]:
         return []
 
-    def validate(self, node: Node) -> list[NodeValidationError]:
-        return []
-
 
 class StructuredClashProtocolCodec(ClashProtocolCodec):
     """Codec whose handled, parse, and emit behavior share one field spec."""
@@ -121,19 +116,6 @@ class StructuredClashProtocolCodec(ClashProtocolCodec):
     def consumed_keys(self) -> frozenset[str]:
         return frozenset(key for field in self.fields for key in field.consumed_keys)
 
-    def validate(self, node: Node) -> list[NodeValidationError]:
-        errors: list[NodeValidationError] = []
-        for field in self.fields:
-            for attr in field.required_attrs:
-                value = getattr(node, attr)
-                if value is None or value == "":
-                    errors.append(
-                        NodeValidationError(
-                            field=attr,
-                            message=f"Required field '{attr}' is missing",
-                        )
-                    )
-        return errors
 
     def prepare_parse_kwargs(
         self, data: Dict[str, Any], kwargs: Dict[str, Any]

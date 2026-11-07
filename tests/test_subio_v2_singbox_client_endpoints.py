@@ -12,7 +12,7 @@ from subio_v2.adapters.target import TargetValidationService
 from subio_v2.adapters.singbox.outbound import SingBoxCodecError
 from subio_v2.core.nodes import OpenConnectNode, OpenVPNNode, Protocol
 from subio_v2.core.results import IssueSeverity
-from subio_v2.protocols.openvpn import CODEC as OPENVPN_CODEC
+from subio_v2.protocols.openvpn import SPEC as OPENVPN_SPEC
 
 
 def _openconnect() -> dict:
@@ -163,7 +163,7 @@ def test_shared_openvpn_validation_preserves_legacy_cipher_contract():
     node.data_ciphers = ["AES-CBC"]
     node.data_ciphers_fallback = "custom-cipher"
 
-    errors = OPENVPN_CODEC.validate(node)
+    errors = OPENVPN_SPEC.validate(node)
 
     assert {error.field for error in errors}.isdisjoint(
         {"data_ciphers", "data_ciphers_fallback"}
@@ -172,7 +172,7 @@ def test_shared_openvpn_validation_preserves_legacy_cipher_contract():
     node.cipher = "BF-CBC"
     node.data_ciphers = ["BF-CBC"]
     node.data_ciphers_fallback = []
-    error_fields = {error.field for error in OPENVPN_CODEC.validate(node)}
+    error_fields = {error.field for error in OPENVPN_SPEC.validate(node)}
     assert error_fields >= {"cipher", "data_ciphers_fallback"}
     assert "data_ciphers" not in error_fields
 

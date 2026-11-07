@@ -14,6 +14,7 @@ from subio_v2.protocols.spec import ProtocolSpec
 
 SPEC = ProtocolSpec(
     protocol=Protocol.HYSTERIA2,
+    required_fields=("password",),
     node_class=Hysteria2Node,
     user_override_fields=frozenset({"server", "port", "password", "obfs_password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "password", "obfs_password"}),
@@ -75,7 +76,7 @@ class Hysteria2Codec(StructuredClashProtocolCodec):
     }
     fields = (
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field("ports", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("hop-interval", "hop_interval", emit_policy=EmitPolicy.NOT_NONE),

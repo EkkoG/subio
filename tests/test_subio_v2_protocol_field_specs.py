@@ -108,7 +108,6 @@ def test_structured_codec_specs_reference_real_unique_node_fields():
         consumed: set[str] = set()
         for field_spec in codec.fields:
             assert field_spec.node_attrs <= node_fields
-            assert field_spec.required_attrs <= field_spec.node_attrs
             assert not consumed.intersection(field_spec.consumed_keys)
             consumed.update(field_spec.consumed_keys)
         assert codec.consumed_keys == frozenset(consumed)

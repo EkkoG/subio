@@ -23,6 +23,7 @@ from subio_v2.protocols.values import (
 
 SPEC = ProtocolSpec(
     protocol=Protocol.VLESS,
+    required_fields=("uuid",),
     node_class=VlessNode,
     user_override_fields=frozenset({"server", "port", "uuid"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "uuid"}),
@@ -79,7 +80,7 @@ class VlessCodec(StructuredClashProtocolCodec):
         },
     }
     fields = (
-        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("flow", emit_policy=EmitPolicy.TRUTHY),
         scalar_field(
             "packet-encoding", "packet_encoding", emit_policy=EmitPolicy.TRUTHY

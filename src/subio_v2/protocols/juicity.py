@@ -6,6 +6,7 @@ from subio_v2.protocols.spec import ProtocolSpec
 
 SPEC = ProtocolSpec(
     protocol=Protocol.JUICITY,
+    required_fields=("uuid", "password"),
     node_class=JuicityNode,
     user_override_fields=frozenset({"server", "port", "uuid", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "uuid", "password"}),
@@ -29,9 +30,9 @@ class JuicityCodec(StructuredClashProtocolCodec):
     }
     clash_dialects = frozenset({"stash"})
     fields = (
-        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS, required=True),
+        scalar_field("uuid", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         tls_group(
             consumed_keys=(

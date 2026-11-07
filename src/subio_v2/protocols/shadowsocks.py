@@ -5,6 +5,7 @@ import binascii
 
 from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.core.validation import NodeValidationError
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
@@ -15,8 +16,19 @@ from subio_v2.protocols.values import (
     SS_CIPHERS_STASH,
 )
 
+
+def _validate(node: Node) -> list[NodeValidationError]:
+    if isinstance(node, ShadowsocksNode) and node.cipher != "none" and (
+        node.password is None or node.password == ""
+    ):
+        return [NodeValidationError("password", "Required field 'password' is missing")]
+    return []
+
+
 SPEC = ProtocolSpec(
     protocol=Protocol.SHADOWSOCKS,
+    required_fields=("cipher",),
+    validator=_validate,
     node_class=ShadowsocksNode,
     user_override_fields=frozenset({"server", "port", "cipher", "password"}),
     terminal_native_user_override_fields=frozenset(
@@ -85,10 +97,9 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
             "cipher",
             default="chacha20-ietf-poly1305",
             emit_policy=EmitPolicy.ALWAYS,
-            required=True,
         ),
         scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS, required=True
+            "password", default="", emit_policy=EmitPolicy.ALWAYS
         ),
         scalar_field("plugin", emit_policy=EmitPolicy.TRUTHY),
         scalar_field(
@@ -99,12 +110,6 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
         ),
         smux_group(),
     )
-
-    def validate(self, node: Node):
-        errors = super().validate(node)
-        if isinstance(node, ShadowsocksNode) and node.cipher == "none":
-            return [error for error in errors if error.field != "password"]
-        return errors
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, ShadowsocksNode):

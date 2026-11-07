@@ -28,26 +28,32 @@ def test_representative_protocol_specs_are_local_and_authoritative():
         }
 
 
-def test_all_protocol_codecs_have_local_specs():
+def test_protocol_definitions_do_not_require_clash_codecs():
     codecs = tuple(registry.all())
-    assert len(codecs) == 30
+    assert len(codecs) == 27
     assert all(codec.spec is not None for codec in codecs)
     assert len(registry.all_definitions()) == 30
 
-    clash_codecs = tuple(codec for codec in codecs if not codec.dynamic_clash_type)
-    assert len(clash_codecs) == 27
-
-    runtime_only = tuple(codec for codec in codecs if codec.dynamic_clash_type)
-    assert {codec.protocol for codec in runtime_only} == {
+    runtime_only = {
         Protocol.NAIVE,
         Protocol.OPENCONNECT,
         Protocol.SHADOWTLS,
     }
-    assert all(codec.clash_dialects == frozenset() for codec in runtime_only)
-    assert all(
-        codec.spec is not None and not codec.spec.native_public
-        for codec in runtime_only
-    )
+    for protocol in runtime_only:
+        assert registry.get(protocol) is None
+        spec = registry.get_definition(protocol)
+        assert spec is not None and not spec.native_public
+
+
+def test_semantic_validation_does_not_use_clash_fields(monkeypatch):
+    from subio_v2.core.validation import validate_node
+
+    codec = registry.get(Protocol.VMESS)
+    monkeypatch.setattr(codec, "fields", ())
+    node = VmessNode(name="vmess", server="example.test", port=443, uuid="")
+    errors = validate_node(node, definition=VMESS_SPEC)
+    assert [error.field for error in errors] == ["uuid"]
+    assert not hasattr(codec, "validate")
 
 
 def test_concrete_nodes_have_protocol_defaults_without_type_argument():

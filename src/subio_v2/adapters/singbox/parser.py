@@ -127,7 +127,6 @@ class SingBoxParser:
             validation_errors = validate_node(
                 node,
                 definition=protocol_registry.get_definition(node.type),
-                descriptor=protocol_registry.get(node.type),
             )
             if validation_errors:
                 issues.extend(

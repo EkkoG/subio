@@ -244,7 +244,6 @@ class SubioNodeCodec:
             for error in validate_node(
                 candidate,
                 definition=protocol_registry.get_definition(protocol),
-                descriptor=protocol_registry.get(protocol),
             ):
                 message = error.message
                 if username is not None:

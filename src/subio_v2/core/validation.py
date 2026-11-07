@@ -20,8 +20,6 @@ class NodeValidationError:
 class ProtocolDefinitionLike(TypingProtocol):
     requires_endpoint: bool
 
-
-class DescriptorValidatorLike(TypingProtocol):
     def validate(self, node: Node) -> list[NodeValidationError]: ...
 
 
@@ -29,7 +27,6 @@ def validate_node(
     node: Node,
     *,
     definition: ProtocolDefinitionLike | None = None,
-    descriptor: DescriptorValidatorLike | None = None,
 ) -> list[NodeValidationError]:
     """Validate generic node structure plus explicitly supplied protocol semantics."""
 
@@ -60,6 +57,6 @@ def validate_node(
                 )
             )
 
-    if descriptor is not None:
-        errors.extend(descriptor.validate(node))
+    if definition is not None:
+        errors.extend(definition.validate(node))
     return errors
