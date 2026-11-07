@@ -374,7 +374,8 @@ def test_singbox_artifact_reports_detour_to_filtered_outbound(tmp_path, monkeypa
         WorkflowEngine(str(config_path), dry_run=True).run()
 
     assert any(
-        issue.code == "conversion.invalid-endpoint-detour"
+        issue.code == "conversion.missing-dialer-proxy"
+        and issue.stage == "selection"
         and issue.field == "dialer_proxy"
         for issue in exc_info.value.issues
     )

@@ -176,6 +176,7 @@ class WorkflowEngine:
                 self.global_age_public_key,
                 parameter_pairs=self.parameter_pairs,
                 prepared_providers=prepared_providers,
+                provider_node_names=provider_result.known_node_names,
             ).generate()
             return WorkflowPreparation(
                 provider_result,

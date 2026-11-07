@@ -91,6 +91,7 @@ class PreparedArtifact:
             providers.issues.update(bound.issues)
             providers.metadata.update(bound.metadata)
             providers.summaries.update(bound.summaries)
+            providers.known_node_names.update(bound.known_node_names)
         result = ArtifactGenerationService(
             config,
             providers.providers,
@@ -99,6 +100,7 @@ class PreparedArtifact:
             self._rulesets,
             config.age_public_key,
             parameters=parameters,
+            provider_node_names=providers.known_node_names,
         ).generate()
         return PreparedRenderResult(providers, result)
 

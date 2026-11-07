@@ -180,6 +180,11 @@ YAML 循环和会产生 tuple 的 `!!pairs` / `!!omap` 拒绝。部署、编码�
 
 ### 4.3 既有配置与接口
 
+- provider/user/global filter/selector 删除已知 dialer 上游时，产物在选择阶段失败；目标编码失败导致的
+  悬空依赖会级联淘汰并产生 ERROR，允许转换错误时也不会保留这些节点或附件。未知名称仍可由模板
+  静态策略组提供；dae 链与 sing-box endpoint 的更严格限制保持不变。
+- `match_original_name = true` 对未改名节点使用当前名称，对已改名节点使用保存的原名。
+
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；
 - 新配置应使用 `mihomo`；旧 `clash-meta` 配置继续工作并产生配置级替代提示，内部 issue
   target 统一为 `mihomo`；

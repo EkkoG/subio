@@ -100,6 +100,7 @@ class SurgeEmitter(BaseEmitter):
         emitted_nodes: list[Node] = []
         emitted_policy_name_set: set[str] = set()
         emitted_attachments = SurgeNodeAttachments()
+        attachments_by_node: list[SurgeNodeAttachments] = []
 
         for node in nodes:
             if node.name in emitted_policy_name_set:
@@ -146,6 +147,17 @@ class SurgeEmitter(BaseEmitter):
             emitted_nodes.append(node)
             emitted_policy_name_set.add(node.name)
             emitted_attachments = merged_attachments
+            attachments_by_node.append(node_attachments)
+
+        retained, relation_issues = self.retain_dialer_indices(nodes, emitted_nodes)
+        issues.extend(relation_issues)
+        lines = [line for index, line in enumerate(lines) if index in retained]
+        emitted_nodes = [node for index, node in enumerate(emitted_nodes) if index in retained]
+        # Rebuild only from survivors; conflict decisions above retain source order.
+        emitted_attachments = SurgeNodeAttachments()
+        for index, attachments in enumerate(attachments_by_node):
+            if index in retained:
+                emitted_attachments.merge(attachments)
 
         if emitted_attachments.keystore:
             lines.append("")

@@ -188,8 +188,11 @@ class SelectorEngine:
 
     @staticmethod
     def _selector_name(item: Any, spec: SelectorSpec) -> str:
-        field = "original_name" if spec.match_original_name else "name"
-        return _value(item, field) or ""
+        if spec.match_original_name:
+            original = _value(item, "original_name")
+            if original is not None:
+                return original
+        return _value(item, "name") or ""
 
     def _sort(self, items: list[Any], fields: Sequence[str]) -> list[Any]:
         result = list(items)

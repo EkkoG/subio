@@ -34,6 +34,7 @@ class ProviderLoadResult:
     issues: dict[str, list[ConversionIssue]]
     metadata: dict[str, RemoteMetadata] = field(default_factory=dict)
     summaries: dict[str, ProviderSummary] = field(default_factory=dict)
+    known_node_names: dict[str, frozenset[str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,7 @@ class ProviderLoaderService:
         provider_issues: dict[str, list[ConversionIssue]] = {}
         provider_metadata: dict[str, RemoteMetadata] = {}
         provider_summaries: dict[str, ProviderSummary] = {}
+        known_node_names: dict[str, frozenset[str]] = {}
         with logger.status("[bold green]Loading providers...") as status:
             for provider_config in config.providers:
                 name = provider_config.name
@@ -167,6 +169,7 @@ class ProviderLoaderService:
                 nodes = result.providers[name]
                 provider_issues.update(result.issues)
                 provider_summaries.update(result.summaries)
+                known_node_names.update(result.known_node_names)
                 logger.info(
                     f"Provider [bold cyan]{name}[/bold cyan] loaded: "
                     f"[bold]{len(nodes)}[/bold] nodes"
@@ -177,6 +180,7 @@ class ProviderLoaderService:
             provider_issues,
             provider_metadata,
             provider_summaries,
+            known_node_names,
         )
 
     @staticmethod
@@ -195,6 +199,7 @@ class ProviderLoaderService:
             {name: [replace(issue, source=name) for issue in result.issues]},
             {name: metadata} if metadata is not None else {},
             {name: ProviderSummary(name, digest, len(result.nodes), len(nodes))},
+            {name: frozenset(node.name for node in result.nodes)},
         )
 
     @staticmethod

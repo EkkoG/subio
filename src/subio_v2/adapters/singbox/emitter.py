@@ -84,11 +84,17 @@ class SingBoxEmitter(BaseEmitter):
             encoded = self.encode_node(node, encode_outbound)
             issues.extend(encoded.issues)
 
+        candidates = [node for index, node in enumerate(nodes) if index in accepted_indices]
+        retained, relation_issues = self.retain_dialer_indices(nodes, candidates)
+        issues.extend(relation_issues)
+        supported_nodes = [node for index, node in enumerate(candidates) if index in retained]
+        final_tags = {node.name for node in supported_nodes}
         return EmissionResult(
-            content={"outbounds": outbounds, "endpoints": endpoints},
-            supported_nodes=[
-                node for index, node in enumerate(nodes) if index in accepted_indices
-            ],
+            content={
+                "outbounds": [item for item in outbounds if item["tag"] in final_tags],
+                "endpoints": [item for item in endpoints if item["tag"] in final_tags],
+            },
+            supported_nodes=supported_nodes,
             issues=issues,
         )
 

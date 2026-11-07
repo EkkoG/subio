@@ -78,6 +78,7 @@ class ArtifactGenerationService:
         parameters: Mapping[str, ParameterValue] | None = None,
         parameter_pairs: tuple[tuple[str, str], ...] | None = None,
         prepared_providers: Mapping[str, PreparedProvider] | None = None,
+        provider_node_names: Mapping[str, frozenset[str]] | None = None,
     ):
         self.config = config
         self.providers = providers
@@ -88,6 +89,7 @@ class ArtifactGenerationService:
         self.parameters = parameters
         self.parameter_pairs = parameter_pairs
         self.prepared_providers = prepared_providers or {}
+        self.provider_node_names = provider_node_names or {}
         self.selector_engine = SelectorEngine(config.selectors)
 
     def generate(self) -> ArtifactGenerationResult:
@@ -168,19 +170,23 @@ class ArtifactGenerationService:
         nodes: list[Node] = []
         provider_issues: list[ConversionIssue] = []
         provider_summaries: list[ProviderSummary] = []
+        known_node_names: set[str] = set()
         for provider_name in artifact_config.providers:
             if provider_name in self.prepared_providers:
                 bound = self.prepared_providers[provider_name].bind(parameters)
                 nodes.extend(bound.providers[provider_name])
                 provider_issues.extend(bound.issues.get(provider_name, ()))
                 provider_summaries.append(bound.summaries[provider_name])
+                known_node_names.update(bound.known_node_names.get(provider_name, ()))
             elif provider_name in self.providers:
                 nodes.extend(self.providers[provider_name])
                 provider_issues.extend(self.provider_issues.get(provider_name, ()))
+                known_node_names.update(self.provider_node_names.get(provider_name, ()))
             else:
                 raise ArtifactGenerationError(
                     f"Artifact '{name}' references unloaded provider '{provider_name}'"
                 )
+        known_node_names.update(node.name for node in nodes)
         if username:
             try:
                 nodes = get_nodes_for_user(nodes, username)
@@ -215,7 +221,7 @@ class ArtifactGenerationService:
             artifact_config.on_duplicate_name,
             name,
             username,
-            check_dialer_relations=bool(artifact_config.selector),
+            known_node_names=known_node_names,
         )
         if any(issue.severity == IssueSeverity.ERROR for issue in preflight_issues):
             raise ArtifactGenerationError(
@@ -376,7 +382,7 @@ class ArtifactGenerationService:
         duplicate_policy: str,
         artifact_name: str,
         username: str | None,
-        check_dialer_relations: bool,
+        known_node_names: set[str],
     ) -> tuple[list[Node], list[ConversionIssue]]:
         selected, duplicates = resolve_duplicate_names(nodes, duplicate_policy)
         target = normalize_format(artifact_type)
@@ -404,10 +410,11 @@ class ArtifactGenerationService:
             )
 
         policy = common_policy_for_format(artifact_type)
-        if check_dialer_relations and policy is not None and policy.dialer_proxy:
+        if policy is not None and policy.dialer_proxy:
             names = {node.name for node in selected}
+            removed = known_node_names - names
             for node in selected:
-                if node.dialer_proxy and node.dialer_proxy not in names:
+                if node.dialer_proxy in removed:
                     issues.append(
                         ConversionIssue(
                             severity=IssueSeverity.ERROR,

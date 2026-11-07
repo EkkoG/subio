@@ -84,8 +84,8 @@ def test_artifact_selector_rejects_missing_dialer_target(tmp_path, monkeypatch):
     _engine, service = _service(tmp_path, monkeypatch, artifact_type="mihomo")
     monkeypatch.chdir(tmp_path)
     chained = _node("HK-1", Protocol.TROJAN)
-    chained.dialer_proxy = "missing"
-    service.providers = {"source": [chained]}
+    chained.dialer_proxy = "US-1"
+    service.providers = {"source": [chained, _node("US-1")]}
 
     with pytest.raises(ArtifactGenerationError) as exc_info:
         service.generate()

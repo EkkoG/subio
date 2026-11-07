@@ -50,9 +50,11 @@ class ClashEmitter(BaseEmitter):
                         code="conversion.unconsumed-source-field",
                     )
                 )
+        retained, relation_issues = self.retain_dialer_indices(nodes, emitted_nodes)
+        issues.extend(relation_issues)
         return EmissionResult(
-            content={"proxies": proxies},
-            supported_nodes=emitted_nodes,
+            content={"proxies": [proxy for index, proxy in enumerate(proxies) if index in retained]},
+            supported_nodes=[node for index, node in enumerate(emitted_nodes) if index in retained],
             issues=issues,
         )
 

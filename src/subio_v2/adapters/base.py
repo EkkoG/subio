@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import Counter, defaultdict, deque
 from collections.abc import Callable
 from typing import Any
 
@@ -56,6 +57,36 @@ class BaseEmitter(ABC):
         self, node: Node, encoder: Callable[[Node], object]
     ):
         return self._conversion.encode_node(node, encoder, self.check_node)
+
+    def retain_dialer_indices(
+        self, source: list[Node], candidates: list[Node]
+    ) -> tuple[set[int], list[ConversionIssue]]:
+        """Remove dependencies on rejected internal nodes; external names stay local to templates."""
+        retained = set(range(len(candidates)))
+        issues: list[ConversionIssue] = []
+        if not self._conversion.common_policy.dialer_proxy:
+            return retained, issues
+        counts = Counter(node.name for node in candidates)
+        dependents: dict[str, list[int]] = defaultdict(list)
+        for index, node in enumerate(candidates):
+            if node.dialer_proxy:
+                dependents[node.dialer_proxy].append(index)
+        missing = deque(sorted({node.name for node in source} - counts.keys()))
+        while missing:
+            for index in dependents.get(missing.popleft(), ()):
+                if index not in retained:
+                    continue
+                retained.remove(index)
+                node = candidates[index]
+                issues.append(self.issue_for_node(
+                    node, IssueSeverity.ERROR,
+                    f"Dialer proxy '{node.dialer_proxy}' was not emitted",
+                    field="dialer_proxy", code="conversion.missing-dialer-proxy",
+                ))
+                counts[node.name] -= 1
+                if counts[node.name] == 0:
+                    missing.append(node.name)
+        return retained, issues
 
     @staticmethod
     def log_issues(issues: list[ConversionIssue]) -> None:

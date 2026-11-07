@@ -407,6 +407,14 @@ Source 输入的 Go/RE2 正则采用保守子集，可能拒绝部分 Go 引擎�
 application service 只通过 `adapters.catalog.get_parser()`、`adapters.catalog.get_emitter()` 和窄结果类型访问 adapter，不导入具体
 Surge/Clash/link 实现。一次 run 的 loader、parser、emitter 和 uploader 状态不得泄漏到下一次运行。
 
+Provider 结果只保留改名后、过滤前的已知节点名称，供 artifact 在 provider/user/global filter/selector
+之后检查内部 dialer 引用；该集合不进入模板或 manifest。选择阶段删除已知上游会在 preflight 失败，
+与是否启用 selector 无关。Emitter 在实际编码后级联移除依赖失败上游的节点及其附件，并产生 ERROR；
+即使允许转换错误也不输出已确认悬空的节点。同名成功节点仍可提供上游。
+未知名称留给模板定义，特别是 Surge 静态策略组；不解析完整配置或新增通用循环检查。
+dae 完整链和 sing-box endpoint 必须引用成功 outbound 的既有约束仍生效。
+`match_original_name` 在节点尚未改名时使用当前名称。
+
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并
 阻止部分发布。
 

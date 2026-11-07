@@ -64,6 +64,19 @@ def test_selector_inline_query_and_template_safe_summary_fields():
     assert [item.name for item in selected] == ["JP-1"]
 
 
+def test_original_name_selector_falls_back_only_when_original_name_is_missing():
+    unchanged = node("HK-original", Protocol.SHADOWSOCKS, "source")
+    renamed = node("prefix-HK-renamed", Protocol.SHADOWSOCKS, "source")
+    renamed.original_name = "HK-renamed"
+    engine = SelectorEngine({
+        "original": SelectorSpec(name_regex=("^HK-",), match_original_name=True),
+        "current": SelectorSpec(name_regex=("^HK-",)),
+    })
+
+    assert engine.select([unchanged, renamed], "original") == [unchanged, renamed]
+    assert engine.select([unchanged, renamed], "current") == [unchanged]
+
+
 def test_selector_rejects_unknown_and_cyclic_references():
     with pytest.raises(ConfigError, match="unknown selector"):
         SelectorEngine({"a": SelectorSpec(all_of=("missing",))})
