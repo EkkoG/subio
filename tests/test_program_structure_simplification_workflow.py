@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def test_provider_transforms_are_pure_functions_without_processor_abc():
+def test_provider_transforms_are_functions_without_processor_abc():
     root = Path(__file__).parents[1]
     assert not (root / "src/subio_v2/processor/base.py").exists()
     assert not (root / "src/subio_v2/processor/common.py").exists()

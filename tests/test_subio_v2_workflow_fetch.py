@@ -4,7 +4,7 @@ import pytest
 
 from subio_v2.core.errors import ProviderLoadError
 from subio_v2.infrastructure.remote import RemoteLoadError, RunRemoteLoader
-from subio_v2.workflow.config import ProviderConfig
+from subio_v2.workflow.config import ConfigLoader, ProviderConfig
 from subio_v2.workflow.engine import WorkflowEngine
 from subio_v2.workflow.providers import ProviderLoaderService
 
@@ -222,3 +222,38 @@ def test_provider_decode_accepts_utf8_bom_and_rejects_invalid_utf8(tmp_path):
         service._decode_content(
             b"\xff", ProviderConfig(name="invalid", provider_type="mihomo")
         )
+
+
+@pytest.mark.parametrize("parameterized", [False, True])
+def test_repeated_load_is_fresh_and_does_not_change_prepared_snapshot(tmp_path, parameterized):
+    cfg = write(tmp_path, "config.toml", f"""
+[[provider]]
+name = "source"
+type = "mihomo"
+file = "nodes.yaml"
+parameterized = {str(parameterized).lower()}
+[provider.rename]
+add_prefix = "prefix-"
+[[artifact]]
+name = "out.yaml"
+type = "mihomo"
+providers = ["source"]
+""")
+    config = ConfigLoader.load(str(cfg))
+    path = write(tmp_path, "nodes.yaml", "proxies: [{name: first, type: direct}]")
+    service = ProviderLoaderService(str(cfg))
+    loader = RunRemoteLoader()
+    try:
+        prepared = service.prepare(config.providers[0], loader)
+        first = service.load(config, loader, parameters={})
+        path.write_text("proxies: [{name: second, type: direct}]")
+        second = service.load(config, loader, parameters={})
+        assert first.providers["source"][0].name == "prefix-first"
+        assert second.providers["source"][0].name == "prefix-second"
+        assert second.known_node_names["source"] == frozenset({"prefix-second"})
+        assert first.summaries["source"].content_sha256 != second.summaries["source"].content_sha256
+        bound = prepared.bind({})
+        bound.providers["source"][0].name = "changed"
+        assert prepared.bind({}).providers["source"][0].name == "prefix-first"
+    finally:
+        loader.close()

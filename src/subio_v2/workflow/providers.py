@@ -70,17 +70,27 @@ class ProviderLoaderService:
     def prepare(
         self, config: ProviderConfig, remote_loader: RunRemoteLoader
     ) -> PreparedProvider:
-        parser = get_parser(
-            config.provider_type,
-            source_kind="remote" if config.url else "local",
-            allow_unsafe_external=config.allow_unsafe_external,
-            parameterized=config.parameterized,
-            parameters={} if config.parameterized else None,
-        )
+        return self._prepare(config, remote_loader, cache_local=True)
+
+    def _prepare(
+        self, config: ProviderConfig, remote_loader: RunRemoteLoader, *, cache_local: bool
+    ) -> PreparedProvider:
+        try:
+            parser = get_parser(
+                config.provider_type,
+                source_kind="remote" if config.url else "local",
+                allow_unsafe_external=config.allow_unsafe_external,
+                parameterized=config.parameterized,
+                parameters={} if config.parameterized else None,
+            )
+        except ValueError as exc:
+            raise ProviderLoadError(str(exc)) from exc
         if parser is None:
-            raise ProviderLoadError("Unsupported provider type")
+            raise ProviderLoadError(
+                f"Unsupported provider type '{config.provider_type}' for provider '{config.name}'"
+            )
         source_key = (config.url, config.file, config.user_agent)
-        if config.url:
+        if config.url or not cache_local:
             # The run loader owns remote deduplication and last-result metadata.
             content_bytes = self._fetch_content(config, remote_loader)
         else:
@@ -88,20 +98,26 @@ class ProviderLoaderService:
                 self._prepared_content[source_key] = self._fetch_content(config, remote_loader)
             content_bytes = self._prepared_content[source_key]
         if not content_bytes:
-            raise ProviderLoadError("Provider returned empty content")
+            raise ProviderLoadError(f"Provider '{config.name}' returned empty content")
         content = self._decode_content(content_bytes, config)
         digest = hashlib.sha256(content_bytes).hexdigest()
         metadata = (
             remote_loader.last_result.metadata
             if config.url and remote_loader.last_result is not None else None
         )
-        if config.parameterized:
-            return PreparedProvider(
-                config, digest, metadata, _document=parser.decode_source(content)
-            )
+        try:
+            if config.parameterized:
+                return PreparedProvider(
+                    config, digest, metadata, _document=parser.decode_source(content)
+                )
+            parsed = parser.parse_result(content)
+        except Exception as exc:
+            raise ProviderLoadError(
+                f"Failed to parse provider '{config.name}': {exc}"
+            ) from exc
         return PreparedProvider(
             config, digest, metadata,
-            _static=self._finish_parse(parser.parse_result(content), config, digest, metadata),
+            _static=self._finish_parse(parsed, config, digest, metadata),
         )
 
     def load(
@@ -135,39 +151,19 @@ class ProviderLoaderService:
                         "the generated Surge configuration may contain program entries "
                         "supplied by that remote provider"
                     )
-                try:
-                    parser = get_parser(
-                        provider_type,
-                        source_kind="remote" if provider_config.url else "local",
-                        allow_unsafe_external=provider_config.allow_unsafe_external,
-                        parameterized=provider_config.parameterized,
-                        parameters=parameters if provider_config.parameterized else None,
-                    )
-                except ValueError as exc:
-                    raise ProviderLoadError(str(exc)) from exc
-                content_bytes = self._fetch_content(provider_config, remote_loader)
-                if provider_config.url and remote_loader.last_result is not None:
-                    provider_metadata[name] = remote_loader.last_result.metadata
-                if not content_bytes:
-                    raise ProviderLoadError(f"Provider '{name}' returned empty content")
-                content = self._decode_content(content_bytes, provider_config)
-                if parser is None:
-                    raise ProviderLoadError(
-                        f"Unsupported provider type '{provider_type}' for provider "
-                        f"'{name}'"
-                    )
-                try:
-                    parse_result = parser.parse_result(content)
-                except Exception as exc:
-                    raise ProviderLoadError(
-                        f"Failed to parse provider '{name}': {exc}"
-                    ) from exc
-                result = self._finish_parse(
-                    parse_result, provider_config,
-                    hashlib.sha256(content_bytes).hexdigest(),
-                )
+                prepared = self._prepare(provider_config, remote_loader, cache_local=False)
+                # A one-shot load owns this result; no reusable snapshot needs a copy.
+                result = prepared._static
+                if result is None:
+                    try:
+                        result = prepared.bind(parameters or {})
+                    except Exception as exc:
+                        raise ProviderLoadError(
+                            f"Failed to parse provider '{name}': {exc}"
+                        ) from exc
                 nodes = result.providers[name]
                 provider_issues.update(result.issues)
+                provider_metadata.update(result.metadata)
                 provider_summaries.update(result.summaries)
                 known_node_names.update(result.known_node_names)
                 logger.info(

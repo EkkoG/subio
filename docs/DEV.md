@@ -37,7 +37,7 @@ Config
   -> Provider
   -> Parser
   -> Node IR
-  -> pure transforms (filter / rename / dialer relation)
+  -> provider-owned transforms (filter / rename / dialer relation)
   -> TargetValidationService.encode_node (semantic + target codec validation/encode)
   -> Target Emitter
   -> Artifact
@@ -414,6 +414,13 @@ Provider 结果只保留改名后、过滤前的已知节点名称，供 artifac
 未知名称留给模板定义，特别是 Surge 静态策略组；不解析完整配置或新增通用循环检查。
 dae 完整链和 sing-box endpoint 必须引用成功 outbound 的既有约束仍生效。
 `match_original_name` 在节点尚未改名时使用当前名称。
+
+`ProviderLoaderService.load()` 与 `prepare()` 共用单 provider 获取/解码/解析实现。`load()` 每次重新读取
+本地文件，远程去重由本轮 `RunRemoteLoader` 持有；`prepare()` 在同一 service 实例内复用本地 bytes，
+每轮准备必须创建新实例。准备结果不持有 loader；warm 请求只对私有快照执行 bind。
+`rename_nodes` 和 `set_dialer_proxy` 就地修改 parser/binder 本轮私有节点，`filter_nodes` 只选择节点。
+Artifact 把传入 provider 节点视为只读，用户 override 使用独立 clone；`PreparedProvider.bind()` 每次返回
+独立可变状态。这里不承诺节点不可变或变换是纯函数。
 
 模板使用严格未定义变量；provider、parse、artifact 和 upload 的必需步骤失败时，CLI 返回非零并
 阻止部分发布。
