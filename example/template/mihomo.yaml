@@ -1,18 +1,18 @@
 proxies:
-{{ proxies }}
+{{ proxies | indent(2, true) }}
 
 proxy-groups:
   - name: Example
     type: select
-    proxies: {{ proxies_names }}
+    proxies: {{ nodes.names(fallback=['DIRECT']) }}
     url: {{ options.proxy_test_url }}
 {% if options.get('work', false) %}
   - name: Work
     type: select
-    proxies: {{ filter.regex_filter(proxies_names, 'portable.*') }}
+    proxies: {{ filter.regex_filter(proxies_names, 'portable.*') or ['DIRECT'] }}
   - name: WithoutHTTP
     type: select
-    proxies: {{ filter.exclude(proxies_names, 'http') }}
+    proxies: {{ filter.exclude(proxies_names, 'http') or ['DIRECT'] }}
   - name: Composed
     type: select
     proxies: {{ ['DIRECT'] + filter.chain(filter.keyword('portable'), filter.excluding('http'))(proxies_names) }}

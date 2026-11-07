@@ -24,6 +24,7 @@ class ArtifactPublisher:
                 fd, temp_name = tempfile.mkstemp(
                     prefix=f".{filename}.", suffix=".tmp", dir=dist_dir
                 )
+                prepared.append((temp_name, target))
                 try:
                     os.fchmod(fd, 0o600)
                     with os.fdopen(fd, "w", encoding="utf-8") as output:
@@ -36,7 +37,6 @@ class ArtifactPublisher:
                     except OSError:
                         pass
                     raise
-                prepared.append((temp_name, target))
 
             for temp_name, target in prepared:
                 os.replace(temp_name, target)

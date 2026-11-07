@@ -1,5 +1,5 @@
 proxies:
-{{ proxies }}
+{{ proxies | indent(2, true) }}
 
 rules:
 {{ remote_rules("DIRECT") }}

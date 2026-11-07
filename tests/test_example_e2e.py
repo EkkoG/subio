@@ -5,17 +5,41 @@ import shutil
 import stat
 import subprocess
 import threading
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import pytest
 import toml
 import yaml
 
 from subio_v2.adapters.surge.parser import SurgeParser
 from subio_v2.infrastructure import age
+from subio_v2.workflow.config import FilterConfig
+from subio_v2.workflow.engine import WorkflowEngine
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = REPO_ROOT / "example"
+
+
+@pytest.mark.parametrize("platform", ["mihomo", "stash"])
+def test_example_yaml_templates_support_empty_nodes(platform):
+    engine = WorkflowEngine(str(EXAMPLE_DIR / "config.toml"))
+    artifact = next(
+        item for item in engine.config.artifacts if item.name == platform + ".yaml"
+    )
+    engine.config = replace(
+        engine.config,
+        artifacts=(replace(artifact, allow_empty=True),),
+        filters=FilterConfig(exclude=".*"),
+    )
+
+    result = engine.prepare().artifact_result
+
+    document = yaml.safe_load(result.drafts[0].content)
+    assert document["proxies"] == []
+    assert all(group["proxies"] == ["DIRECT"] for group in document["proxy-groups"])
+    assert result.issues == ()
 
 
 def run_subio(

@@ -39,7 +39,7 @@ credentials. They are test data, not usable endpoints.
 [`render/`](render/README.md) is a separate offline GET service example. It
 requires the optional `server` extra and a generated `SUBIO_RENDER_TOKEN`, and
 binds typed query parameters into local Mihomo YAML or native SubIO v2 TOML.
-Its parameterized sources are intentionally rejected by static CLI commands;
-use its HTTP routes. The original examples remain runnable as shown here.
+Use its HTTP routes or `convert --param` for local output. `check` and `inspect`
+reject parameterized sources. The original examples remain runnable as shown here.
 The service prepares memory snapshots at startup and refreshes them in the
 background; local resource edits take effect after a successful refresh.

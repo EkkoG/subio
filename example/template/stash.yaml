@@ -1,10 +1,10 @@
 proxies:
-{{ proxies }}
+{{ proxies | indent(2, true) }}
 
 proxy-groups:
   - name: Example
     type: select
-    proxies: {{ proxies_names }}
+    proxies: {{ nodes.names(fallback=['DIRECT']) }}
     url: {{ options.proxy_test_url }}
 
 rules:
