@@ -70,10 +70,10 @@ class ProviderLoaderService:
     def prepare(
         self, config: ProviderConfig, remote_loader: RunRemoteLoader
     ) -> PreparedProvider:
-        return self._prepare(config, remote_loader, cache_local=True)
+        return self._prepare(config, remote_loader, snapshot=True)
 
     def _prepare(
-        self, config: ProviderConfig, remote_loader: RunRemoteLoader, *, cache_local: bool
+        self, config: ProviderConfig, remote_loader: RunRemoteLoader, *, snapshot: bool
     ) -> PreparedProvider:
         try:
             parser = get_parser(
@@ -84,13 +84,15 @@ class ProviderLoaderService:
                 parameters={} if config.parameterized else None,
             )
         except ValueError as exc:
+            if snapshot:
+                raise
             raise ProviderLoadError(str(exc)) from exc
         if parser is None:
             raise ProviderLoadError(
                 f"Unsupported provider type '{config.provider_type}' for provider '{config.name}'"
             )
         source_key = (config.url, config.file, config.user_agent)
-        if config.url or not cache_local:
+        if config.url or not snapshot:
             # The run loader owns remote deduplication and last-result metadata.
             content_bytes = self._fetch_content(config, remote_loader)
         else:
@@ -112,6 +114,9 @@ class ProviderLoaderService:
                 )
             parsed = parser.parse_result(content)
         except Exception as exc:
+            # Snapshot diagnostics retain parser categories and YAML locations.
+            if snapshot:
+                raise
             raise ProviderLoadError(
                 f"Failed to parse provider '{config.name}': {exc}"
             ) from exc
@@ -151,7 +156,7 @@ class ProviderLoaderService:
                         "the generated Surge configuration may contain program entries "
                         "supplied by that remote provider"
                     )
-                prepared = self._prepare(provider_config, remote_loader, cache_local=False)
+                prepared = self._prepare(provider_config, remote_loader, snapshot=False)
                 # A one-shot load owns this result; no reusable snapshot needs a copy.
                 result = prepared._static
                 if result is None:
