@@ -480,6 +480,16 @@
         "early_data_header_name": {
           "type": "string"
         },
+        "grpc_authority": {
+          "type": "string"
+        },
+        "grpc_mode": {
+          "enum": [
+            "gun",
+            "multi"
+          ],
+          "type": "string"
+        },
         "grpc_service_name": {
           "type": "string"
         },

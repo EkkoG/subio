@@ -16,7 +16,7 @@ def test_target_validation_protocols_derive_from_actual_target_codecs():
     assert set(dae.protocol_codecs) == {
         codec.protocol for codec in all_codecs() if "dae" in codec.targets
     }
-    assert Protocol.VLESS not in surge.protocol_codecs
+    assert Protocol.VLESS in surge.protocol_codecs
     assert Protocol.VLESS in dae.protocol_codecs
     mihomo = TargetValidationService("mihomo")
     assert set(mihomo.protocol_codecs) == {

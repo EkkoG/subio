@@ -13,7 +13,7 @@ def test_surge_executable_codec_registry_owns_parser_and_emitter_paths():
     assert {protocol for protocol in SURGE_PROTOCOL_CODECS} == {
         item.protocol for item in node_specs
     }
-    assert Protocol.VLESS not in SURGE_PROTOCOL_CODECS
+    assert SURGE_PROTOCOL_CODECS[Protocol.VLESS].keyword == "vless"
 
 
 def test_surge_document_adapters_have_no_parallel_protocol_maps():

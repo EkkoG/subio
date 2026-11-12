@@ -34,6 +34,7 @@ from subio_v2.core.nodes import (
     TailscaleNode,
     TrustTunnelNode,
     VmessNode,
+    VlessNode,
     WireguardNode,
 )
 from subio_v2.core.results import EmissionResult, IssueSeverity
@@ -666,7 +667,7 @@ class SurgeEmitter(BaseEmitter):
         config_parts: list[str] = []
         tls = getattr(node, "tls", None)
         if tls:
-            if isinstance(node, VmessNode) and tls.enabled:
+            if isinstance(node, (VmessNode, VlessNode)) and tls.enabled:
                 config_parts.append("tls=true")
             if tls.skip_cert_verify:
                 config_parts.append("skip-cert-verify=true")

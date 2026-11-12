@@ -23,6 +23,7 @@ from subio_v2.core.nodes import (
     SourcePassthroughNode,
     SurgePolicyOptions,
     VmessNode,
+    VlessNode,
 )
 from subio_v2.core.results import (
     ConversionIssue,
@@ -75,6 +76,22 @@ class TargetValidationService:
             definition=protocol_registry.get_definition(node.type),
         ):
             result.add_error(error.message, field=error.field)
+
+        transport = getattr(node, "transport", None)
+        for attr in ("grpc_mode", "grpc_authority"):
+            value = getattr(transport, attr, None)
+            if value is None:
+                continue
+            field = f"transport.{attr}"
+            if transport.network_value != "grpc":
+                result.add_error("gRPC parameters require the gRPC transport", field=field)
+            elif not isinstance(value, str) or (attr == "grpc_mode" and value not in {"gun", "multi"}):
+                result.add_error("Invalid gRPC parameter", field=field)
+            elif not (isinstance(node, VlessNode) and self.platform in {"surge", "v2rayn", "dae"}):
+                result.add_error(
+                    f"This gRPC field cannot be represented by {self.platform}",
+                    field=field, code="conversion.unsupported-platform-field",
+                )
 
         if self.platform == "surge":
             for issue in validate_surge_node(node):
@@ -188,6 +205,14 @@ class TargetValidationService:
         self, node: Node, result: TargetCheckResult
     ) -> None:
         global_features = self.common_policy.as_feature_map()
+
+        if isinstance(node, VlessNode) and self.platform in {"dae", "v2rayn"}:
+            for attr in ("verify_name", "certificate_sha256", "client_cert_ref", "certificate", "private_key", "ech_opts", "sni_disabled"):
+                if getattr(node.tls, attr):
+                    result.add_error(
+                        "VLESS links cannot preserve this TLS setting",
+                        field=f"tls.{attr}", code="conversion.unsupported-platform-field",
+                    )
 
         unsupported_fields: list[str] = []
         if self.platform != "surge":

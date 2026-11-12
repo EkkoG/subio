@@ -46,8 +46,12 @@ def build(node: Node) -> str:
         if node.transport.headers and "Host" in node.transport.headers:
             params["host"] = node.transport.headers["Host"]
     elif node.transport.network == Network.GRPC:
-        if node.transport.grpc_service_name:
+        if node.transport.grpc_service_name is not None:
             params["serviceName"] = node.transport.grpc_service_name
+        if node.transport.grpc_mode is not None:
+            params["mode"] = node.transport.grpc_mode
+        if node.transport.grpc_authority is not None:
+            params["authority"] = node.transport.grpc_authority
     elif node.transport.network == Network.H2:
         if node.transport.path:
             params["path"] = str(node.transport.path)
@@ -77,8 +81,34 @@ def build(node: Node) -> str:
 def parse(line: str) -> Node | None:
     try:
         url = urllib.parse.urlparse(line)
-        query = urllib.parse.parse_qs(url.query)
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        if any(len(values) != 1 for values in query.values()):
+            return None
+        if query.get("encryption", ["none"])[0] != "none":
+            return None
+        security = query.get("security", ["none"])[0]
+        if security not in {"none", "tls", "reality"}:
+            return None
+        # These fields carry security guarantees that the current IR cannot encode.
+        if any(query.get(key, [""])[0] for key in ("pcs", "vcn", "ech", "pqv", "fm")) or "spx" in query:
+            return None
+        if security != "reality" and any(key in query for key in ("pbk", "sid")):
+            return None
+        if security == "reality" and not query.get("pbk", [""])[0]:
+            return None
+        insecure = query.get("allowInsecure", ["0"])[0]
+        if insecure not in {"0", "1"} or (insecure == "1" and security == "none"):
+            return None
+        alpn = query["alpn"][0].split(",") if "alpn" in query else None
+        if alpn is not None and any(not value or value != value.strip() for value in alpn):
+            return None
         network = query.get("type", ["tcp"])[0]
+        if network == "raw":
+            network = "tcp"
+        if any(key in query for key in ("mode", "authority", "serviceName")) and network != "grpc":
+            return None
+        if "mode" in query and query["mode"][0] not in {"gun", "multi"}:
+            return None
         try:
             network_value: Network | str = Network(network)
         except ValueError:
@@ -94,12 +124,13 @@ def parse(line: str) -> Node | None:
                 transport.host = query["host"][0].split(",")
         elif network == Network.GRPC.value:
             transport.grpc_service_name = query.get("serviceName", [None])[0]
+            transport.grpc_mode = query.get("mode", [None])[0]
+            transport.grpc_authority = query.get("authority", [None])[0]
         elif network == Network.HTTP.value:
             path = query.get("path", [None])[0]
             transport.path = path.split(",") if path else None
             if query.get("host"):
                 transport.headers = {"Host": query["host"][0]}
-        security = query.get("security", ["none"])[0]
         return VlessNode(
             name=(
                 urllib.parse.unquote(url.fragment)
@@ -110,12 +141,13 @@ def parse(line: str) -> Node | None:
             server=url.hostname,
             port=url.port,
             uuid=urllib.parse.unquote(url.username) if url.username else url.username,
-            flow=query.get("flow", [None])[0],
+            flow=query.get("flow", [None])[0] or None,
             transport=transport,
             tls=TLSSettings(
                 enabled=security in {"tls", "reality"},
-                server_name=query.get("sni", [None])[0],
-                skip_cert_verify=query.get("allowInsecure", ["0"])[0] == "1",
+                server_name=query.get("sni", [url.hostname if security == "reality" else None])[0],
+                skip_cert_verify=insecure == "1",
+                alpn=alpn,
                 client_fingerprint=query.get("fp", [None])[0],
                 reality_opts=(
                     {

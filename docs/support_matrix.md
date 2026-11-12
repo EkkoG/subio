@@ -23,11 +23,11 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 
 | `artifact.type` | 状态 | 当前协议能力 |
 |---|---|---|
-| `mihomo` | 推荐 | 26 种当前 schema type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；未来未知 type 仅允许 Mihomo 同方言保真 |
+| `mihomo` | 推荐 | 固定 schema 快照中的 26 种结构化 type：SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria、Hysteria2、TUIC、Gost Relay、Snell、WireGuard、SSH、AnyTLS、Mieru、Rematch、Sudoku、MASQUE、TrustTunnel、OpenVPN、Tailscale、ShadowQUIC、Direct、Reject、DNS；EasyTier、ZeroTier 及其他未建模 type 仅允许 Mihomo 同方言透传 |
 | `clash-meta` | 兼容别名 | 与 `mihomo` 使用同一 target codec、emitter 和规则输出，加载配置时产生替代提示 |
 | `clash` | 已废弃但仍支持 | SS、VMess、Trojan、HTTP、SOCKS5；保持原版 Clash 的独立能力边界 |
 | `stash` | 支持 | SS、SSR、VMess、VLESS、Trojan、HTTP、SOCKS5、Snell、WireGuard、Hysteria、Hysteria2、TUIC、SSH、AnyTLS、Direct、Mieru、Juicity、Tailscale、MASQUE、TrustTunnel |
-| `surge` | 支持 | SS、VMess、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
+| `surge` | 支持 | SS、VMess、VLESS、Trojan、HTTP/HTTPS/H2 CONNECT、SOCKS5、Snell、TUIC、Hysteria2、SSH、AnyTLS、WireGuard、Tailscale、MASQUE、TrustTunnel、Direct、Reject、External |
 | `sing-box` | 支持 | JSON outbounds：AnyTLS、Block、Direct、HTTP、Hysteria、Hysteria2、Naive、SS、ShadowTLS、Snell、SOCKS、SSH、Trojan、TUIC、VLESS、VMess；endpoints：`openconnect`、`openvpn-client`、`tailscale`、`wireguard` |
 | `dae` | 支持 | SS、VMess、VLESS、Trojan、HTTP、SOCKS5、Hysteria2、TUIC、AnyTLS |
 | `v2rayn` | 支持 | SS、VMess、VLESS、Trojan、SOCKS5 |
@@ -56,6 +56,28 @@ target codec 和 emitter 能生成目标格式；同名协议的具体 method、
 中的其他部分；这不是完整 sing-box 配置导入、全量配置 IR 或无损往返能力。路由规则只输出能够
 精确表示的 sing-box client matcher，并使用 sing-box `route` action；不支持的 matcher/option 会产生
 conversion issue，默认阻止产物发布。
+
+### 1.3 Surge VLESS
+
+依据 [Surge VLESS 官方文档](https://manual.nssurge.com/policies/vless.html)，要求 Surge iOS 6.0.0
+或 Mac 6.12.0 及以上版本。支持 TCP 明文/TLS/REALITY、WebSocket 明文/TLS、gRPC TLS/REALITY；
+`xtls-rprx-vision` 和 `xtls-rprx-vision-udp443` 仅用于 TCP + TLS/REALITY。不支持 XHTTP、
+HTTPUpgrade、mKCP 或 VLESS Encryption；`encryption` 只能省略或为 `none`。
+
+Surge `username` 接受 UUID 或 1..30 UTF-8 字节短 ID；短 ID 按 Xray 的全零 namespace UUIDv5
+规范化，输出文本可以变化，认证身份保持不变。REALITY 校验 X25519 公钥、short ID 和 SNI；
+源 Surge 配置中无效的证书校验参数会带诊断省略，跨平台明确请求无法应用的证书保证则拒绝。
+Surge 使用自己的 TLS ClientHello，不能选择 `client_fingerprint`，会对此给出诊断。
+
+gRPC 保留完整 `grpc_service_name`（含 `/` 开头的自定义路径）、`grpc_mode`（`gun` / `multi`）和
+`grpc_authority`；authority 不推断为 SNI。后两个字段当前可输出到 Surge VLESS 和 VLESS 分享链接，
+其他目标或协议产生字段级 ERROR。VLESS 链接保留 ALPN，`type=raw` 规范化为 TCP；重复参数、
+未知/空 `security`、不支持的 `encryption`，以及未建模的非空 `pcs` / `vcn` / `ech` / `pqv` / `fm`
+或 `spx` 会产生 parse issue，不能降级输出。
+
+Surge 自动使用 XUDP，输出不写 `udp-relay`；只接受省略或 `xudp` 的 packet encoding。
+Surge 没有 VLESS 逐节点关闭 UDP 的参数，`udp = false` 会收到明确诊断，实际仍为自动 XUDP。
+TCP-based VLESS 可使用现有 Shadow TLS 字段及共用校验。
 
 ## 2. 可分享规则集输入
 

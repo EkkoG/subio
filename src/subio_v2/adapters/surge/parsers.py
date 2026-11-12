@@ -19,8 +19,9 @@ from subio_v2.core.nodes import (
     TrojanNode,
     TUICNode,
     VmessNode,
+    VlessNode,
 )
-from subio_v2.adapters.surge.validation import _strict_bool
+from subio_v2.adapters.surge.validation import _strict_bool, normalize_vless_uuid
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,41 @@ def parse_vmess(context: SurgeProtocolParseContext) -> Node:
         tls=context.build_tls(),
         transport=context.build_transport(),
         udp=True,
+    )
+
+
+def parse_vless(context: SurgeProtocolParseContext) -> Node:
+    values = context.values
+    tls = context.build_tls()
+    if values.get("reality-public-key") is not None:
+        tls.enabled = True
+        tls.reality_opts = {
+            "public-key": values["reality-public-key"],
+            "short-id": values.get("reality-short-id", ""),
+        }
+        # Surge ignores certificate-store checks during the REALITY handshake.
+        tls.skip_cert_verify = False
+        tls.certificate_sha256 = None
+        tls.verify_name = None
+    transport = context.build_transport()
+    if context.get_bool("grpc"):
+        transport = TransportSettings(
+            network=Network.GRPC,
+            grpc_service_name=values.get("grpc-service-name"),
+            grpc_mode=values.get("grpc-mode"),
+            grpc_authority=values.get("grpc-authority"),
+        )
+    return VlessNode(
+        name=context.record.name,
+        type=Protocol.VLESS,
+        server=context.server,
+        port=context.port,
+        uuid=normalize_vless_uuid(values.get("username", "")),
+        flow=values.get("flow"),
+        tls=tls,
+        transport=transport,
+        udp=True,
+        packet_encoding="xudp",
     )
 
 

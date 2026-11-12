@@ -358,7 +358,6 @@ def test_vless_reality_contract_uses_client_fingerprint():
         uuid="u",
         tls=TLSSettings(
             enabled=True,
-            certificate_sha256="AA:BB",
             client_fingerprint="chrome",
             reality_opts={"public-key": "pk", "short-id": "sid"},
         ),
@@ -374,6 +373,12 @@ def test_vless_reality_contract_uses_client_fingerprint():
     assert query["pbk"] == ["pk"]
     assert query["sid"] == ["sid"]
     assert query["fp"] == ["chrome"]
+
+    node.tls.certificate_sha256 = "AA:BB"
+    for platform in LINK_PLATFORMS:
+        result = NodeConversionService(platform).check_node(node)
+        assert not result.supported
+        assert any(issue.field == "tls.certificate_sha256" for issue in result.warnings)
 
 
 @pytest.mark.parametrize("protocol", [Protocol.VMESS, Protocol.TROJAN])

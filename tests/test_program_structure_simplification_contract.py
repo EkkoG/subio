@@ -35,7 +35,7 @@ def test_structure_simplification_external_contract_fixture(tmp_path: Path):
     assert "[Dry-run] Would upload 1 file(s) to Gist fixture-gist" in (
         completed.stdout + completed.stderr
     )
-    assert "Protocol 'vless' is not supported by surge" in (
+    assert "Protocol 'vless' is not supported by surge" not in (
         completed.stdout + completed.stderr
     )
     assert "Legacy SubIO" not in (completed.stdout + completed.stderr)
@@ -75,7 +75,7 @@ def test_structure_simplification_external_contract_fixture(tmp_path: Path):
     assert "ss-main =" in surge_text
     assert "vmess-main =" in surge_text
     assert "wg-main =" in surge_text
-    assert "vless-main =" not in surge_text
+    assert "vless-main = vless, vless.example.test, 443" in surge_text
     assert "[WireGuard fixture-wg]" in surge_text
 
     dae_lines = (dist / "dae.txt").read_text().splitlines()

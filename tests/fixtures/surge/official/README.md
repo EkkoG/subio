@@ -17,6 +17,16 @@ Sources were reviewed on 2026-08-21:
 - https://wiki.metacubex.one/config/proxies/masque/
 - https://wiki.metacubex.one/config/proxies/trusttunnel/
 
+VLESS sources were reviewed on 2026-11-12:
+
+- https://manual.nssurge.com/policies/vless.html
+- https://manual.nssurge.com/policies/tls.html
+- https://manual.nssurge.com/policies/udp.html
+- https://github.com/XTLS/Xray-core/blob/main/common/uuid/uuid.go
+
+`vless.conf` uses the four official VLESS examples with test endpoints and a
+public test identity. VLESS requires Surge iOS 6.0.0 or Mac 6.12.0.
+
 The fixture files contain minimal, non-secret examples distilled from the
 official syntax. Tests must not fetch the documentation at runtime.
 

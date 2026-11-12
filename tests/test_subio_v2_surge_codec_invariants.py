@@ -75,6 +75,7 @@ def test_every_node_codec_has_protocol_and_emitter():
             Protocol.SHADOWSOCKS,
         ),
         ("vmess", "node = vmess, example.com, 443, username=u", Protocol.VMESS),
+        ("vless", "node = vless, example.com, 443, username=u", Protocol.VLESS),
         ("trojan", "node = trojan, example.com, 443, password=p", Protocol.TROJAN),
         ("socks5", "node = socks5, example.com, 1080", Protocol.SOCKS5),
         (
@@ -141,6 +142,7 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
     sampled = {
         "ss",
         "vmess",
+        "vless",
         "trojan",
         "socks5",
         "socks5-tls",
@@ -198,6 +200,7 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
             SurgeUdpBehavior.AUTOMATIC,
             {
                 "vmess",
+                "vless",
                 "trojan",
                 "tuic",
                 "tuic-v5",

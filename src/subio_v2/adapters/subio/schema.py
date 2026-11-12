@@ -206,6 +206,7 @@ PUBLIC_FIELD_ENUMS: dict[tuple[type, str], tuple[Any, ...]] = {
         "ipv6-prefer",
     ),
     (TransportSettings, "network"): tuple(item.value for item in Network),
+    (TransportSettings, "grpc_mode"): ("gun", "multi"),
     (SmuxSettings, "protocol"): ("smux", "yamux", "h2mux"),
     (ShadowTLSSettings, "version"): (1, 2, 3),
     (ShadowsocksNode, "plugin"): (

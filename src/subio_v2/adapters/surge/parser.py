@@ -31,6 +31,7 @@ from subio_v2.adapters.surge.validation import (
     SURGE_RESERVED_POLICY_NAMES,
     parse_surge_ip_version,
     validate_surge_parameters,
+    validate_surge_node,
 )
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import (
@@ -48,6 +49,7 @@ from subio_v2.core.nodes import (
     TailscaleNode,
     TLSSettings,
     TrustTunnelNode,
+    VlessNode,
     WireguardNode,
     WireguardPeer,
 )
@@ -232,7 +234,7 @@ class SurgeParser:
                                 protocol=protocol,
                                 source=None,
                                 target=None,
-                                field=f"lines[{index}]",
+                                field=getattr(exc, "field", f"lines[{index}]"),
                                 message=f"Invalid Surge policy parameter: {exc}",
                                 stage="parse",
                                 code="parse.protocol-parameter",
@@ -376,6 +378,29 @@ class SurgeParser:
                 try:
                     node = self._parse_line(line)
                     if node:
+                        if isinstance(node, VlessNode):
+                            node_issues = validate_surge_node(node)
+                            if node.tls.reality_opts is not None:
+                                for key, field in (
+                                    ("skip-cert-verify", "tls.skip_cert_verify"),
+                                    ("server-cert-fingerprint-sha256", "tls.certificate_sha256"),
+                                    ("server-cert-verify-name", "tls.verify_name"),
+                                ):
+                                    if record.parameters.get(key) is not None:
+                                        issues.append(ConversionIssue(
+                                            severity=IssueSeverity.WARNING,
+                                            node=name, protocol=protocol, source=None, target=None,
+                                            field=field,
+                                            message="Surge ignores this certificate setting with REALITY; it was omitted",
+                                            stage="parse", code="parse.normalized-inapplicable-field",
+                                        ))
+                            issues.extend(ConversionIssue(
+                                severity=issue.severity, node=name, protocol=protocol,
+                                source=None, target=None, field=issue.field,
+                                message=issue.message, stage="parse", code="parse.protocol-parameter",
+                            ) for issue in node_issues)
+                            if any(issue.severity == IssueSeverity.ERROR for issue in node_issues):
+                                continue
                         retain_node(node, index)
                         continue
                 except (TypeError, ValueError) as exc:
@@ -996,7 +1021,10 @@ class SurgeParser:
             for index, parameter in enumerate(record.parameters)
             if parameter.key
             not in SURGE_MULTI_VALUE_PARAMETERS.get(p_type, frozenset())
-            and (parameter.key not in consumed or index != last_indexes[parameter.key])
+            and (
+                parameter.key not in consumed
+                or (p_type != "vless" and index != last_indexes[parameter.key])
+            )
         ]
         semantic_fields = [
             key

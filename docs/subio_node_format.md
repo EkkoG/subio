@@ -170,10 +170,15 @@ early_data_header_name = "Sec-WebSocket-Protocol"
 | `host` | string 或 string[] | `null` | H2/XHTTP host |
 | `method` | string | `GET` | HTTP transport 方法 |
 | `grpc_service_name` | string | `null` | gRPC service name |
+| `grpc_mode` | string enum | `null` | `gun` 或 `multi`；仅用于 gRPC |
+| `grpc_authority` | string | `null` | gRPC `:authority`；不推断为 SNI |
 | `xhttp_mode` | string | `null` | XHTTP mode |
 | `max_early_data` | integer | `null` | WebSocket early data 最大字节数 |
 | `early_data_header_name` | string | `null` | WebSocket early data header 名 |
 <!-- /nested-fields -->
+
+`grpc_mode` 和 `grpc_authority` 当前只由 Surge VLESS 与 VLESS 分享链接读写。其他目标或协议
+无法表示这些字段时产生字段级 ERROR；省略时由客户端使用默认值。
 
 ### 4.3 `smux`
 
@@ -741,7 +746,7 @@ server_name = "www.example.com"
 client_fingerprint = "chrome"
 
 [nodes.tls.reality_opts]
-public_key = "reality-public-key"
+public_key = "dwrjY6KiAMPxKdlF7T4AWFXXBtsxeHCXtBQYeCOdZV4"
 short_id = "0123456789abcdef"
 ```
 <!-- /subio-example -->
@@ -758,6 +763,21 @@ short_id = "0123456789abcdef"
 <!-- /protocol-fields -->
 
 可按用户覆盖：`port`、`server`、`uuid`。
+
+Surge VLESS 要求 iOS 6.0.0 / Mac 6.12.0 及以上版本；传输、安全组合和自动 XUDP 限制见
+[支持矩阵](support_matrix.md#13-surge-vless)。使用 gRPC + TLS 时，可在 VLESS 节点中设置：
+
+```toml
+[nodes.tls]
+enabled = true
+server_name = "vless.example.com"
+
+[nodes.transport]
+network = "grpc"
+grpc_service_name = "/my/path/tun|tunmulti"
+grpc_mode = "multi"
+grpc_authority = "edge.example.com"
+```
 
 ### 6.26 `vmess`
 

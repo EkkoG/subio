@@ -22,6 +22,7 @@ from subio_v2.adapters.surge.emitters import (
     emit_trust_tunnel,
     emit_tuic,
     emit_vmess,
+    emit_vless,
     emit_wireguard,
 )
 from subio_v2.adapters.surge.parsers import (
@@ -35,6 +36,7 @@ from subio_v2.adapters.surge.parsers import (
     parse_trojan,
     parse_tuic,
     parse_vmess,
+    parse_vless,
 )
 from subio_v2.core.nodes import Protocol
 
@@ -176,6 +178,29 @@ SURGE_CODEC_SPECS = (
         constraints={
             "ciphers": {"aes-128-gcm", "chacha20-ietf-poly1305"},
             "transports": {"tcp", "ws"},
+        },
+    ),
+    _spec(
+        "vless",
+        protocol=Protocol.VLESS,
+        udp=SurgeUdpBehavior.AUTOMATIC,
+        parser=parse_vless,
+        emitter=emit_vless,
+        consumed=(
+            "username", "flow", "tls", "ws", "ws-path", "ws-headers",
+            "grpc", "grpc-service-name", "grpc-mode", "grpc-authority",
+            "reality-public-key", "reality-short-id", "encryption",
+        ),
+        emitted=(
+            "username", "flow", "tls", "ws", "ws-path", "ws-headers",
+            "grpc", "grpc-service-name", "grpc-mode", "grpc-authority",
+            "reality-public-key", "reality-short-id",
+        ),
+        normalized=(("encryption", "omitted (none)"),),
+        constraints={
+            "transports": {"tcp", "ws", "grpc"},
+            "features": {"reality"},
+            "flows": {"xtls-rprx-vision", "xtls-rprx-vision-udp443"},
         },
     ),
     _spec(

@@ -147,6 +147,8 @@ class TransportSettings:
     host: Optional[Union[str, List[str]]] = None  # h2/xhttp host
     method: Optional[str] = "GET"  # http method
     grpc_service_name: Optional[str] = None
+    grpc_mode: Optional[str] = None
+    grpc_authority: Optional[str] = None
     xhttp_mode: Optional[str] = None
     max_early_data: Optional[int] = None
     early_data_header_name: Optional[str] = None

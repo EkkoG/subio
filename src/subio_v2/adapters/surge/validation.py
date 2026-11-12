@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 from collections.abc import Mapping
+from uuid import UUID, uuid5
 
 from subio_v2.adapters.surge.syntax import validate_proxy_name
 from subio_v2.core.nodes import (
@@ -15,6 +18,7 @@ from subio_v2.core.nodes import (
     ShadowsocksNode,
     SnellNode,
     TrustTunnelNode,
+    VlessNode,
 )
 from subio_v2.core.results import IssueDraft, IssueSeverity
 
@@ -46,6 +50,7 @@ SURGE_BOOLEAN_PARAMETERS = frozenset(
         "udp-relay",
         "h3",
         "ws",
+        "grpc",
         "always-use-connect",
     }
 )
@@ -61,6 +66,7 @@ SURGE_SHADOW_TLS_PROTOCOLS = frozenset(
     {
         Protocol.SHADOWSOCKS,
         Protocol.VMESS,
+        Protocol.VLESS,
         Protocol.TROJAN,
         Protocol.SOCKS5,
         Protocol.HTTP,
@@ -88,6 +94,23 @@ _TOS_RE = re.compile(r"^(?:0[xX][0-9a-fA-F]+|[0-9]+)$")
 _TEST_UDP_RE = re.compile(
     r"^(?P<hostname>[^@\s,:]+)@(?P<address>[0-9]{1,3}(?:\.[0-9]{1,3}){3})$"
 )
+
+
+class SurgeVlessParameterError(ValueError):
+    def __init__(self, message: str, field: str):
+        super().__init__(message)
+        self.field = field
+
+
+def normalize_vless_uuid(value: str) -> str:
+    if isinstance(value, str):
+        if re.fullmatch(r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}", value):
+            return str(UUID(value))
+        if 1 <= len(value.encode("utf-8")) <= 30:
+            return str(uuid5(UUID(int=0), value))
+    raise SurgeVlessParameterError(
+        "VLESS username must be a UUID or a string of 1 to 30 UTF-8 bytes", "uuid"
+    )
 
 
 def parse_surge_ip_version(value: str | None) -> str | None:
@@ -190,7 +213,28 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
     }.get(p_type, p_type)
     for key in SURGE_BOOLEAN_PARAMETERS:
         if key in values:
-            _strict_bool(values[key], key)
+            try:
+                _strict_bool(values[key], key)
+            except ValueError as exc:
+                if p_type == "vless":
+                    field = {"grpc": "transport.network", "ws": "transport.network", "tls": "tls.enabled"}.get(key, key)
+                    raise SurgeVlessParameterError(str(exc), field) from exc
+                raise
+
+    if p_type == "vless":
+        normalize_vless_uuid(values.get("username", ""))
+        if values.get("encryption", "none") != "none":
+            raise SurgeVlessParameterError("Surge VLESS only supports encryption=none", "encryption")
+        if values.get("ws") == "true" and values.get("grpc") == "true":
+            raise SurgeVlessParameterError("VLESS ws and grpc are mutually exclusive", "transport.network")
+        if "reality-short-id" in values and "reality-public-key" not in values:
+            raise SurgeVlessParameterError("REALITY short ID requires a public key", "tls.reality_opts.short-id")
+        for key in ("grpc-service-name", "grpc-mode", "grpc-authority"):
+            if key in values and values.get("grpc") != "true":
+                raise SurgeVlessParameterError("gRPC parameters require grpc=true", "transport." + key.replace("-", "_"))
+        for key, attr in (("ws-path", "path"), ("ws-headers", "headers")):
+            if key in values and values.get("ws") != "true":
+                raise SurgeVlessParameterError("WebSocket parameters require ws=true", f"transport.{attr}")
 
     if "always-use-connect" in values and p_type not in {"http", "https"}:
         raise ValueError("always-use-connect is only supported by Surge http/https")
@@ -446,7 +490,108 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
                     )
                 )
         _validate_node_obfs_uri(node.obfs_uri, node.obfs, errors)
+    if isinstance(node, VlessNode):
+        errors.extend(_validate_vless(node))
     return errors
+
+
+def _validate_vless(node: VlessNode) -> list[IssueDraft]:
+    issues: list[IssueDraft] = []
+    try:
+        normalize_vless_uuid(node.uuid)
+    except (ValueError, UnicodeError):
+        issues.append(_error("VLESS username must be a UUID or a string of 1 to 30 UTF-8 bytes", "uuid"))
+    tls, transport = node.tls, node.transport
+    if node.extra.get("encryption", "none") != "none":
+        issues.append(_error("Surge VLESS only supports encryption=none", "encryption"))
+    network = transport.network_value
+    if network not in {"tcp", "ws", "grpc"}:
+        issues.append(_error("Surge VLESS supports TCP, WebSocket and gRPC", "transport.network"))
+    if network == "grpc" and not tls.enabled:
+        issues.append(_error("VLESS gRPC requires TLS or REALITY", "tls.enabled"))
+    if node.flow is not None and (
+        node.flow not in {"xtls-rprx-vision", "xtls-rprx-vision-udp443"}
+        or network != "tcp" or not tls.enabled
+    ):
+        issues.append(_error("VLESS Vision requires TCP with TLS or REALITY and a supported flow", "flow"))
+    if node.packet_encoding not in {None, "xudp"}:
+        issues.append(_error("Surge VLESS only supports XUDP packet encoding", "packet_encoding"))
+    if node.smux.enabled:
+        issues.append(_error("Surge VLESS cannot preserve smux settings", "smux"))
+    for attr in ("path", "headers", "host", "xhttp_mode", "max_early_data", "early_data_header_name"):
+        value = getattr(transport, attr)
+        if value is not None and not (network == "ws" and attr in {"path", "headers"}):
+            issues.append(_error("Surge VLESS cannot preserve this transport field", f"transport.{attr}"))
+    if transport.method not in {None, "GET"}:
+        issues.append(_error("Surge VLESS cannot set the transport method", "transport.method"))
+    if transport.path is not None and not isinstance(transport.path, str):
+        issues.append(_error("VLESS WebSocket path must be a string", "transport.path"))
+    if node.udp is False:
+        issues.append(IssueDraft(
+            severity=IssueSeverity.WARNING,
+            message="Surge VLESS enables XUDP automatically; UDP cannot be disabled per node",
+            field="udp", code="conversion.automatic-udp",
+        ))
+    for attr in ("grpc_mode", "grpc_authority", "grpc_service_name"):
+        value = getattr(transport, attr)
+        if value is not None and network != "grpc":
+            issues.append(_error("gRPC parameters require the gRPC transport", f"transport.{attr}"))
+    if transport.grpc_mode is not None and (
+        not isinstance(transport.grpc_mode, str) or transport.grpc_mode not in {"gun", "multi"}
+    ):
+        issues.append(_error("gRPC mode must be gun or multi", "transport.grpc_mode"))
+    if tls.client_fingerprint:
+        issues.append(IssueDraft(
+            severity=IssueSeverity.WARNING,
+            message="Surge uses its own TLS ClientHello and cannot select a client fingerprint",
+            field="tls.client_fingerprint", code="conversion.unsupported-platform-field",
+        ))
+    for attr in ("ech_opts", "certificate", "private_key"):
+        if getattr(tls, attr):
+            issues.append(_error("Surge VLESS cannot preserve this TLS field", f"tls.{attr}"))
+    if not tls.enabled:
+        for attr in ("alpn", "skip_cert_verify", "client_fingerprint", "verify_name", "certificate_sha256", "client_cert_ref"):
+            if getattr(tls, attr):
+                issues.append(_error("This VLESS TLS field requires TLS to be enabled", f"tls.{attr}"))
+    reality = tls.reality_opts
+    if reality is not None:
+        if not isinstance(reality, Mapping):
+            issues.append(_error("REALITY options must be a mapping", "tls.reality_opts"))
+            return issues
+        public_key = reality.get("public-key")
+        try:
+            if not isinstance(public_key, str) or not public_key:
+                raise ValueError
+            decoded = base64.b64decode(public_key + "=" * (-len(public_key) % 4), altchars=b"-_", validate=True)
+            if len(decoded) != 32:
+                raise ValueError
+        except (ValueError, binascii.Error):
+            issues.append(_error("REALITY requires a Base64 X25519 public key of 32 bytes", "tls.reality_opts.public-key"))
+        short_id = reality.get("short-id", "")
+        if not isinstance(short_id, str) or re.fullmatch(r"[0-9a-fA-F]{0,16}", short_id) is None:
+            issues.append(_error("REALITY short ID must contain up to 16 hexadecimal digits", "tls.reality_opts.short-id"))
+        for key in reality.keys() - {"public-key", "short-id"}:
+            issues.append(_error("Surge VLESS cannot preserve this REALITY option", f"tls.reality_opts.{key}"))
+        if not tls.enabled:
+            issues.append(_error("REALITY requires TLS to be enabled", "tls.enabled"))
+        valid_sni = False
+        if isinstance(tls.server_name, str):
+            try:
+                hostname = tls.server_name.encode("idna").decode("ascii").removesuffix(".")
+                valid_sni = 0 < len(hostname) <= 253 and all(
+                    re.fullmatch(r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?", label)
+                    for label in hostname.split(".")
+                )
+            except UnicodeError:
+                pass
+        if not valid_sni or tls.server_name == "off" or tls.sni_disabled:
+            issues.append(_error("REALITY requires a valid SNI hostname", "tls.server_name"))
+        if network == "ws":
+            issues.append(_error("Surge VLESS does not support WebSocket with REALITY", "transport.network"))
+        for attr in ("skip_cert_verify", "certificate_sha256", "verify_name", "client_cert_ref"):
+            if getattr(tls, attr):
+                issues.append(_error("REALITY cannot apply this certificate verification setting", f"tls.{attr}"))
+    return issues
 
 
 def _validate_node_obfs_uri(

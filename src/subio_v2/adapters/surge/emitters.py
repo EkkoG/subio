@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from subio_v2.adapters.surge.validation import normalize_vless_uuid
 from subio_v2.core.nodes import (
     AnyTLSNode,
     DirectNode,
@@ -20,6 +21,7 @@ from subio_v2.core.nodes import (
     TrustTunnelNode,
     TUICNode,
     VmessNode,
+    VlessNode,
     WireguardNode,
 )
 
@@ -106,6 +108,36 @@ def emit_vmess(node: Node, _: dict[int, str]) -> list[str]:
                 node.transport.headers, separator="|", field="transport.headers"
             )
             parts.append(f"ws-headers={headers}")
+    return parts
+
+
+def emit_vless(node: Node, _: dict[int, str]) -> list[str]:
+    assert isinstance(node, VlessNode)
+    parts = ["vless", _server_str(node), str(node.port),
+             f"username={normalize_vless_uuid(node.uuid)}"]
+    if node.flow:
+        parts.append(f"flow={node.flow}")
+    if node.tls.reality_opts:
+        parts.append(f"reality-public-key={node.tls.reality_opts['public-key']}")
+        if node.tls.reality_opts.get("short-id"):
+            parts.append(f"reality-short-id={node.tls.reality_opts['short-id']}")
+    if node.transport.network == Network.WS:
+        parts.append("ws=true")
+        if node.transport.path is not None:
+            parts.append(f"ws-path={node.transport.path}")
+        if node.transport.headers:
+            parts.append("ws-headers=" + _serialize_headers(
+                node.transport.headers, separator="|", field="transport.headers"
+            ))
+    elif node.transport.network == Network.GRPC:
+        parts.append("grpc=true")
+        for key, value in (
+            ("grpc-service-name", node.transport.grpc_service_name),
+            ("grpc-mode", node.transport.grpc_mode),
+            ("grpc-authority", node.transport.grpc_authority),
+        ):
+            if value is not None:
+                parts.append(f"{key}={value}")
     return parts
 
 
