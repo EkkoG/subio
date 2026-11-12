@@ -206,7 +206,25 @@ class TargetValidationService:
     ) -> None:
         global_features = self.common_policy.as_feature_map()
 
+        if (
+            isinstance(node, VlessNode)
+            and self.platform in {"mihomo", "stash"}
+            and node.tls.sni_disabled
+        ):
+            result.add_error(
+                "This target cannot preserve the VLESS SNI disable setting",
+                field="tls.sni_disabled", code="conversion.unsupported-platform-field",
+            )
+
         if isinstance(node, VlessNode) and self.platform in {"dae", "v2rayn"}:
+            headers = node.transport.headers
+            if node.transport.network_value == "ws" and headers and (
+                set(headers) != {"Host"} or not isinstance(headers["Host"], str)
+            ):
+                result.add_error(
+                    "VLESS links can only preserve a single string Host header",
+                    field="transport.headers", code="conversion.unsupported-platform-field",
+                )
             for attr in ("verify_name", "certificate_sha256", "client_cert_ref", "certificate", "private_key", "ech_opts", "sni_disabled"):
                 if getattr(node.tls, attr):
                     result.add_error(

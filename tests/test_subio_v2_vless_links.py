@@ -152,6 +152,82 @@ def test_surge_certificate_guarantee_cannot_be_dropped_by_link_output(target):
     assert any(issue.field == "tls.certificate_sha256" for issue in output.errors)
 
 
+@pytest.mark.parametrize("target", ["v2rayn", "dae"])
+@pytest.mark.parametrize(
+    "headers",
+    [
+        "X-Token:test",
+        "Host:edge.example.com|X-Token:test",
+        "host:edge.example.com",
+        "Host:first.example.com|host:second.example.com",
+        "Host:edge.example.com",
+        None,
+    ],
+)
+def test_vless_websocket_headers_are_preserved_or_rejected(target, headers):
+    source = f"node = vless, example.com, 443, username={USER_ID}, tls=true, ws=true"
+    if headers is not None:
+        source += f", ws-headers={headers}"
+    parsed = SurgeParser().parse_result(source)
+    assert parsed.issues == []
+    output = get_emitter(target).emit_result(parsed.nodes)
+    if headers in {None, "Host:edge.example.com"}:
+        assert output.errors == []
+        link = output.fragments.plain_list or output.fragments.subscription
+        again = V2RayNParser().parse_result(link)
+        assert again.issues == []
+        assert again.nodes[0].transport.headers == parsed.nodes[0].transport.headers
+    else:
+        assert output.supported_nodes == []
+        assert any(issue.field == "transport.headers" for issue in output.errors)
+
+
+@pytest.mark.parametrize("target", ["v2rayn", "dae"])
+def test_vless_link_rejects_a_host_header_list(target):
+    parsed = SurgeParser().parse_result(
+        f"node = vless, example.com, 443, username={USER_ID}, tls=true, ws=true"
+    )
+    parsed.nodes[0].transport.headers = {"Host": ["edge.example.com"]}
+    output = get_emitter(target).emit_result(parsed.nodes)
+    assert output.supported_nodes == []
+    assert any(issue.field == "transport.headers" for issue in output.errors)
+
+
+@pytest.mark.parametrize("target", ["mihomo", "stash"])
+@pytest.mark.parametrize("transport", ["", ", ws=true", ", grpc=true"])
+@pytest.mark.parametrize("disable_sni", [False, True])
+def test_vless_sni_off_is_rejected_by_targets_without_a_serializer(
+    target, transport, disable_sni
+):
+    source = f"node = vless, example.com, 443, username={USER_ID}, tls=true{transport}"
+    source += ", sni=off" if disable_sni else ", sni=edge.example.com"
+    parsed = SurgeParser().parse_result(source)
+    assert parsed.issues == []
+    output = get_emitter(target).emit_result(parsed.nodes)
+    if disable_sni:
+        assert output.supported_nodes == []
+        assert any(issue.field == "tls.sni_disabled" for issue in output.errors)
+    else:
+        assert output.errors == []
+        assert len(output.supported_nodes) == 1
+        sni_field = "sni" if target == "stash" else "servername"
+        assert output.content["proxies"][0][sni_field] == "edge.example.com"
+
+
+@pytest.mark.parametrize("target", ["surge", "sing-box"])
+def test_vless_sni_off_keeps_supported_target_behavior(target):
+    parsed = SurgeParser().parse_result(
+        f"node = vless, example.com, 443, username={USER_ID}, tls=true, sni=off"
+    )
+    assert parsed.issues == []
+    output = get_emitter(target).emit_result(parsed.nodes)
+    assert output.errors == []
+    if target == "surge":
+        assert "sni=off" in output.content
+    else:
+        assert output.content["outbounds"][0]["tls"]["disable_sni"] is True
+
+
 @pytest.mark.parametrize("invalid", [False, True])
 def test_vless_link_workflow_preserves_grpc_or_blocks_publication(
     tmp_path, monkeypatch, invalid

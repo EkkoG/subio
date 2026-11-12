@@ -79,6 +79,11 @@ Surge 自动使用 XUDP，输出不写 `udp-relay`；只接受省略或 `xudp` �
 Surge 没有 VLESS 逐节点关闭 UDP 的参数，`udp = false` 会收到明确诊断，实际仍为自动 XUDP。
 TCP-based VLESS 可使用现有 Shadow TLS 字段及共用校验。
 
+VLESS 分享链接的 WebSocket header 当前只能表示精确键名为 `Host` 的单个字符串值；其他 header、
+大小写不同或冲突的 Host 会产生 `transport.headers` ERROR。Surge 的 `sni=off` 可保留到 Surge
+和 sing-box 当前支持的 TCP 路径；Mihomo、Stash 及链接目标无法表示该语义时产生 `tls.sni_disabled`
+ERROR，不输出语义改变的节点。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |
