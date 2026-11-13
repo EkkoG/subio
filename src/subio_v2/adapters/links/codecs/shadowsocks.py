@@ -27,7 +27,11 @@ def build(node: Node) -> str:
                     "Plugin option is not representable in a share link",
                     field="plugin_opts",
                 )
-            plugin.append(f"{key}={value}")
+            if isinstance(value, bool):
+                if value:
+                    plugin.append(key)
+            else:
+                plugin.append(f"{key}={value}")
         url += f"/?plugin={urllib.parse.quote(';'.join(plugin), safe='')}"
     return f"{url}#{quote_name(node.name)}"
 
@@ -35,16 +39,16 @@ def build(node: Node) -> str:
 def parse(line: str) -> Node | None:
     try:
         url = urllib.parse.urlparse(line)
-        if not url.hostname:
-            decoded = base64.b64decode(
+        if "@" not in url.netloc:
+            decoded = base64.urlsafe_b64decode(
                 url.netloc + "=" * ((4 - len(url.netloc) % 4) % 4)
             ).decode()
             if "@" not in decoded:
                 return None
-            userinfo, hostport = decoded.split("@", 1)
+            userinfo, hostport = decoded.rsplit("@", 1)
             method, password = userinfo.split(":", 1)
-            server, port_text = hostport.split(":", 1)
-            port = int(port_text)
+            authority = urllib.parse.urlsplit("//" + hostport)
+            server, port = authority.hostname, authority.port
         else:
             server, port = url.hostname, url.port
             if url.username and ":" not in url.username and not url.password:
@@ -53,7 +57,8 @@ def parse(line: str) -> Node | None:
                 ).decode()
                 method, password = auth.split(":", 1)
             else:
-                method, password = url.username, url.password
+                method = urllib.parse.unquote(url.username or "")
+                password = urllib.parse.unquote(url.password or "")
         name = urllib.parse.unquote(url.fragment) if url.fragment else f"{server}:{port}"
         query = urllib.parse.parse_qs(url.query)
         plugin_value = query.get("plugin", [None])[0]
@@ -62,9 +67,12 @@ def parse(line: str) -> Node | None:
         if plugin_value:
             parts = plugin_value.split(";")
             plugin = parts[0]
-            plugin_opts = dict(
-                part.split("=", 1) for part in parts[1:] if "=" in part
-            )
+            plugin_opts = {}
+            for part in parts[1:]:
+                if not part:
+                    return None
+                key, separator, value = part.partition("=")
+                plugin_opts[key] = value if separator else True
         return ShadowsocksNode(
             name=name,
             type=Protocol.SHADOWSOCKS,

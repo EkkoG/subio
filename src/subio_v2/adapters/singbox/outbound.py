@@ -517,6 +517,8 @@ class SingBoxOutboundCodec:
                 unsupported.append(item.name)
         if self.tcp_only and node.udp:
             unsupported.append("udp")
+        if not self.tcp_only and not self.network and not node.udp:
+            unsupported.append("udp")
         tls = getattr(node, "tls", None)
         if isinstance(tls, TLSSettings):
             advanced_tls = (

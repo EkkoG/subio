@@ -75,6 +75,7 @@ def parse(line: str) -> Node | None:
         elif network == Network.GRPC.value:
             transport.grpc_service_name = query.get("serviceName", [None])[0]
         security = query.get("security", ["tls"])[0]
+        alpn = query["alpn"][0].split(",") if "alpn" in query else None
         return TrojanNode(
             name=(
                 urllib.parse.unquote(url.fragment)
@@ -88,6 +89,7 @@ def parse(line: str) -> Node | None:
             transport=transport,
             tls=TLSSettings(
                 enabled=True,
+                alpn=alpn,
                 server_name=query.get("sni", [None])[0] or url.hostname,
                 skip_cert_verify=query.get("allowInsecure", ["0"])[0] == "1",
                 client_fingerprint=query.get("fp", [None])[0],

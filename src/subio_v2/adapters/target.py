@@ -17,6 +17,8 @@ from subio_v2.core.dialect import (
 )
 from subio_v2.core.nodes import (
     HttpNode,
+    Hysteria2Node,
+    SSHNode,
     Node,
     ShadowsocksNode,
     SnellNode,
@@ -216,21 +218,47 @@ class TargetValidationService:
                 field="tls.sni_disabled", code="conversion.unsupported-platform-field",
             )
 
-        if isinstance(node, VlessNode) and self.platform in {"dae", "v2rayn"}:
-            headers = node.transport.headers
-            if node.transport.network_value == "ws" and headers and (
-                set(headers) != {"Host"} or not isinstance(headers["Host"], str)
+        if self.platform in {"dae", "v2rayn"}:
+            transport = getattr(node, "transport", None)
+            headers = getattr(transport, "headers", None)
+            if headers and (
+                transport.network_value not in {"ws", "http"}
+                or set(headers) != {"Host"} or not isinstance(headers["Host"], str)
             ):
                 result.add_error(
-                    "VLESS links can only preserve a single string Host header",
+                    "Links can only preserve a single string Host header for WS/HTTP transport",
                     field="transport.headers", code="conversion.unsupported-platform-field",
                 )
+            if isinstance(node, HttpNode) and node.headers:
+                result.add_error(
+                    "HTTP links cannot preserve required headers",
+                    field="headers", code="conversion.unsupported-platform-field",
+                )
+            tls = getattr(node, "tls", None)
             for attr in ("verify_name", "certificate_sha256", "client_cert_ref", "certificate", "private_key", "ech_opts", "sni_disabled"):
-                if getattr(node.tls, attr):
+                if getattr(tls, attr, None):
                     result.add_error(
-                        "VLESS links cannot preserve this TLS setting",
+                        "Links cannot preserve this TLS setting",
                         field=f"tls.{attr}", code="conversion.unsupported-platform-field",
                     )
+            if isinstance(node, Hysteria2Node):
+                for attr in ("ports", "hop_interval"):
+                    if getattr(node, attr) is not None:
+                        result.add_error(
+                            "This link cannot preserve port hopping",
+                            field=attr, code="conversion.unsupported-platform-field",
+                        )
+
+        if isinstance(node, SSHNode) and self.platform in {"mihomo", "stash"} and node.server_fingerprints:
+            result.add_error(
+                "This target cannot preserve SSH server fingerprints",
+                field="server_fingerprints", code="conversion.unsupported-platform-field",
+            )
+        if isinstance(node, ShadowsocksNode) and self.platform in {"mihomo", "clash", "stash", "dae", "v2rayn"} and node.udp_port is not None:
+            result.add_error(
+                "This target cannot preserve a separate UDP port",
+                field="udp_port", code="conversion.unsupported-platform-field",
+            )
 
         unsupported_fields: list[str] = []
         if self.platform != "surge":

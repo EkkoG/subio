@@ -105,6 +105,11 @@ def parse(line: str) -> Node | None:
         network = query.get("type", ["tcp"])[0]
         if network == "raw":
             network = "tcp"
+        if network == "tcp" and (
+            query.get("headerType", ["none"])[0] != "none"
+            or any(key in query for key in ("host", "path"))
+        ):
+            return None
         if any(key in query for key in ("mode", "authority", "serviceName")) and network != "grpc":
             return None
         if "mode" in query and query["mode"][0] not in {"gun", "multi"}:
