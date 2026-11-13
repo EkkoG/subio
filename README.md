@@ -114,6 +114,22 @@ password = "secret"
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
 跨平台转换，也不会由 SubIO 执行。
 
+#### Age 密钥与解密
+
+可用身份文件避免把私钥放入命令行参数。文件只包含一个 X25519 identity，允许空行和以 `#` 开头的注释；
+`age keygen` 的输出可直接作为身份文件。请限制该文件的读取权限。
+
+```bash
+umask 077
+subio age keygen > identity.txt
+subio age convert --identity-file identity.txt
+subio age decrypt --identity-file identity.txt subscription.age subscription.yaml
+```
+
+解密省略目标文件时写到 stdout，来源或目标为 `-` 时使用 stdin 或 stdout。
+旧用法 `subio age convert SECRET_KEY` 和 `subio age decrypt SECRET_KEY SOURCE [TARGET]` 继续支持，
+但会把私钥放入进程 argv，也可能进入 shell 历史。推荐使用 `--identity-file`。
+
 #### CLI 参数化生成
 
 `convert` 可重复使用 `--param NAME=VALUE`，将同一组输入按各 artifact 的 `params` 声明独立转换，

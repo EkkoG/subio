@@ -254,11 +254,25 @@ def _cmd_age_keygen(args):
 def _cmd_age_convert(args):
     """Convert a secret key to its public key."""
     try:
-        public_key = age.secret_key_to_public(args.secret_key)
+        public_key = age.secret_key_to_public(_age_identity(args))
     except Exception as e:
-        logger.error(f"Failed to convert secret key: {e}")
+        logger.error(f"Failed to convert secret key ({type(e).__name__})")
         sys.exit(1)
     print(public_key)
+
+
+def _age_identity(args) -> str:
+    if args.identity_file is None:
+        return args.secret_key
+    try:
+        content = Path(args.identity_file).read_text(encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ValueError("Cannot read identity file") from exc
+    identities = [line.strip() for line in content.splitlines()
+                  if line.strip() and not line.lstrip().startswith("#")]
+    if len(identities) != 1 or age.verify_secret_key(identities[0]) is not None:
+        raise ValueError("Identity file requires one valid X25519 identity")
+    return identities[0]
 
 
 def _cmd_age_encrypt(args):
@@ -297,7 +311,12 @@ def _cmd_age_encrypt(args):
 
 def _cmd_age_decrypt(args):
     """Decrypt an age-encrypted file with a secret key."""
-    secret_key, source, target = args.secret_key, args.source, args.target
+    source, target = args.source, args.target
+    try:
+        secret_key = _age_identity(args)
+    except Exception as exc:
+        logger.error(f"Failed to load secret key ({type(exc).__name__})")
+        sys.exit(1)
 
     if source == "-":
         data = sys.stdin.buffer.read()
@@ -315,7 +334,7 @@ def _cmd_age_decrypt(args):
     try:
         decrypted = age.decrypt_bytes(data, secret_key)
     except Exception as e:
-        logger.error(f"Decryption failed: {e}")
+        logger.error(f"Decryption failed ({type(e).__name__})")
         sys.exit(1)
 
     if target == "-":
@@ -432,7 +451,8 @@ def main():
     keygen.set_defaults(age_func=_cmd_age_keygen)
 
     convert = age_sub.add_parser("convert", help="Convert secret key to public key")
-    convert.add_argument("secret_key", help="Age secret key (AGE-SECRET-KEY-1...)")
+    convert.add_argument("secret_key", nargs="?", help="Legacy age secret key in argv")
+    convert.add_argument("--identity-file", help="File with one X25519 identity")
     convert.set_defaults(age_func=_cmd_age_convert)
 
     encrypt = age_sub.add_parser("encrypt", help="Encrypt a file with age public key")
@@ -447,14 +467,9 @@ def main():
     encrypt.set_defaults(age_func=_cmd_age_encrypt)
 
     decrypt = age_sub.add_parser("decrypt", help="Decrypt an age-encrypted file")
-    decrypt.add_argument("secret_key", help="Age secret key (AGE-SECRET-KEY-1...)")
-    decrypt.add_argument("source", help="Source file path (or '-' for stdin)")
-    decrypt.add_argument(
-        "target",
-        nargs="?",
-        default="-",
-        help="Target file path (or '-' for stdout, default: '-')",
-    )
+    decrypt.add_argument("--identity-file", help="File with one X25519 identity")
+    decrypt.add_argument("paths", nargs="*", metavar="ARG",
+                         help="SOURCE [TARGET], or legacy SECRET_KEY SOURCE [TARGET]; '-' uses stdin/stdout")
     decrypt.set_defaults(age_func=_cmd_age_decrypt)
 
     if sys.argv[1:2] == ["convert"]:
@@ -465,12 +480,31 @@ def main():
             )
 
         parser.error = convert_parser.error = convert_parse_error
+    elif sys.argv[1:2] == ["age"]:
+        def age_parse_error(_message):
+            age_parser.exit(2, "subio age: error: invalid_arguments; use subio age --help\n")
+
+        for command_parser in (parser, age_parser, keygen, convert, encrypt, decrypt):
+            command_parser.error = age_parse_error
     args = parser.parse_args()
     if args.subcommand == "serve" and args.max_snapshot_age < args.refresh_interval:
         parser.error("Maximum snapshot age must be at least the refresh interval")
 
     # Handle "age" subcommand
     if args.subcommand == "age":
+        if args.age_command == "convert":
+            if (args.identity_file is not None) == (args.secret_key is not None):
+                convert.error("Select one identity input")
+        elif args.age_command == "decrypt":
+            paths = args.paths
+            if args.identity_file is None:
+                if not 2 <= len(paths) <= 3:
+                    decrypt.error("Expected SECRET_KEY SOURCE [TARGET]")
+                args.secret_key, *paths = paths
+            elif not 1 <= len(paths) <= 2:
+                decrypt.error("Expected SOURCE [TARGET]")
+            args.source = paths[0]
+            args.target = paths[1] if len(paths) == 2 else "-"
         if hasattr(args, "age_func"):
             args.age_func(args)
         else:
