@@ -57,6 +57,29 @@ def test_domain_does_not_depend_on_application_or_infrastructure():
     assert violations == {}
 
 
+def test_protocol_codecs_do_not_import_the_registry_or_peer_codecs():
+    violations = {}
+    adapters = REPO_ROOT / "src" / "subio_v2" / "adapters"
+    for family in ("clash_family", "surge", "singbox", "links"):
+        prefix = f"subio_v2.adapters.{family}.codecs"
+        for path in (adapters / family / "codecs").glob("*.py"):
+            if path.name.startswith("_"):
+                continue
+            forbidden = {
+                module
+                for module in _imports(path)
+                if module == prefix
+                or (
+                    module.startswith(f"{prefix}.")
+                    and not module.removeprefix(f"{prefix}.").startswith("_")
+                )
+            }
+            if forbidden:
+                violations[str(path.relative_to(REPO_ROOT))] = sorted(forbidden)
+
+    assert violations == {}
+
+
 def test_top_level_directory_boundaries_are_explicit():
     root = REPO_ROOT / "src" / "subio_v2"
     actual = {
@@ -174,6 +197,12 @@ def test_obsolete_internal_authorities_are_absent():
         "src/subio_v2/protocols/_base.py",
         "src/subio_v2/protocols/_fields.py",
         "src/subio_v2/protocols/_dialects.py",
+        "src/subio_v2/adapters/surge/codecs.py",
+        "src/subio_v2/adapters/surge/parsers.py",
+        "src/subio_v2/adapters/surge/emitters.py",
+        "src/subio_v2/adapters/surge/protocol_checks.py",
+        "src/subio_v2/adapters/singbox/outbound.py",
+        "src/subio_v2/adapters/singbox/endpoint.py",
         "src/subio_v2/emitter/link.py",
         "src/subio_v2/parser/base.py",
     )

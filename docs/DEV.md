@@ -301,8 +301,9 @@ Clash codec 的基类、字段规格和方言合同也由该 family 维护：
 
 1. 从官方文档建立字段矩阵；没有官方资料的平台只维持现有 serializer/contract 已证明的能力；
 2. 判断字段属于跨平台语义、来源 preservation 还是平台附件；
-3. 在 semantic Node/共享 value object 增加字段，并在唯一 `ProtocolSpec` 明确 terminal native
-   public/excluded 与 user override 决策；
+3. 在 semantic Node/共享 value object 增加字段，并在 `protocols/<protocol>.py` 的唯一 `ProtocolSpec`
+   明确 terminal native public/excluded 与 user override 决策；新增协议定义时加入
+   `protocols/__init__.py` 的显式语义注册，公共协议模块不得导入 adapter；
 4. 更新实际支持该字段的 Clash/Surge/Link/sing-box target codec；目标支持由实际 codec 派生，不新增全局
    target protocol set；
 5. 为字段增加 parse/emit、值域/组合、same-dialect preservation 和 cross-target issue tests；
