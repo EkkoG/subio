@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ipaddress import ip_interface
+from ipaddress import ip_interface, ip_network
 from typing import Any
 
 from subio_v2.adapters.singbox.codecs._base import (
@@ -40,6 +40,17 @@ def _collapse(values: list[str]) -> str | list[str] | None:
     if not values:
         return None
     return values[0] if len(values) == 1 else values
+
+
+def _valid_prefixes(values: list[str]) -> bool:
+    try:
+        for value in values:
+            if "/" not in value:
+                return False
+            ip_network(value, strict=False)
+    except ValueError:
+        return False
+    return True
 
 
 def _node_addresses(node: WireguardNode) -> list[tuple[str, int]] | None:
@@ -126,9 +137,14 @@ def _parse_peer(data: Any, index: int) -> WireguardPeer:
             "Sing-box WireGuard peer port must be between 1 and 65535",
             "parse.singbox.invalid-field",
         )
+    if not _valid_prefixes(allowed_ips):
+        raise SingBoxCodecError(
+            f"{field}.allowed_ips", "WireGuard allowed_ips must contain IP prefixes",
+            "parse.singbox.invalid-field",
+        )
     reserved = data.get("reserved")
     if reserved is not None:
-        if not isinstance(reserved, list) or any(
+        if not isinstance(reserved, list) or len(reserved) not in {0, 3} or any(
             type(value) is not int or not 0 <= value <= 255 for value in reserved
         ):
             raise SingBoxCodecError(
@@ -219,6 +235,7 @@ class SingBoxWireguardEndpointCodec(SingBoxEndpointCodec):
                 not isinstance(peer.allowed_ips, list)
                 or not peer.allowed_ips
                 or not all(isinstance(value, str) for value in peer.allowed_ips)
+                or not _valid_prefixes(peer.allowed_ips)
             ):
                 unsupported.append(f"peers[{index}].allowed_ips")
             if peer.preshared_key is not None and not isinstance(
@@ -227,6 +244,7 @@ class SingBoxWireguardEndpointCodec(SingBoxEndpointCodec):
                 unsupported.append(f"peers[{index}].preshared_key")
             if peer.reserved is not None and (
                 not isinstance(peer.reserved, list)
+                or len(peer.reserved) not in {0, 3}
                 or any(
                     type(value) is not int or not 0 <= value <= 255
                     for value in peer.reserved

@@ -30,6 +30,21 @@ def grpc_parameters(node: Node) -> list[IssueDraft]:
     return issues
 
 
+def vless_security_requirements(node: Node) -> list[IssueDraft]:
+    issues = []
+    if node.flow and (not node.tls.enabled or node.transport.network_value != "tcp"):
+        issues.append(IssueDraft(
+            IssueSeverity.ERROR, "VLESS Vision requires TCP with TLS or REALITY", "flow",
+            code="conversion.unsupported-field-combination",
+        ))
+    if node.tls.reality_opts and not node.tls.reality_opts.get("public-key"):
+        issues.append(IssueDraft(
+            IssueSeverity.ERROR, "VLESS REALITY requires a public key",
+            "tls.reality_opts.public-key", code="conversion.invalid-value",
+        ))
+    return issues
+
+
 def network_features(node: Node, policy, target: str) -> list[IssueDraft]:
     return [
         IssueDraft(

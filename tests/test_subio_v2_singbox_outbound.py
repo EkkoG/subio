@@ -82,6 +82,8 @@ def _mixed_outbounds() -> list[dict]:
             "server": "hy.example",
             "server_port": 443,
             "auth_str": "hy-secret",
+            "up_mbps": 100,
+            "down_mbps": 200,
             "tls": tls,
         },
         {

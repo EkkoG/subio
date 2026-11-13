@@ -1,4 +1,5 @@
 from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.adapters.checks import vless_security_requirements
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import (
@@ -189,7 +190,7 @@ def parse(line: str) -> Node | None:
 def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
     if not isinstance(node, VlessNode):
         return []
-    warnings: list[IssueDraft] = []
+    warnings = vless_security_requirements(node)
     supported_transports = proto_caps.get("transports", set())
     network = node.transport.network_value if node.transport else "tcp"
     if supported_transports and network not in supported_transports:

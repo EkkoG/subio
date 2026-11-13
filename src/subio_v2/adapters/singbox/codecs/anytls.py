@@ -38,6 +38,5 @@ CODEC = SingBoxOutboundCodec(
     _keys("password", "tls"),
     parse_fields=_parse_anytls,
     emit_fields=_emit_anytls,
-    tcp_only=True,
     force_tls=True,
 )

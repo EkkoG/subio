@@ -175,6 +175,14 @@ class SingBoxOutboundCodec:
                 0 <= node.routing_mark <= _ROUTING_MARK_MAX
             ):
                 unsupported.append("routing_mark")
+        if self.common_options:
+            for attr in ("dialer_proxy", "interface_name"):
+                value = getattr(node, attr)
+                if value is not None and not isinstance(value, str):
+                    unsupported.append(attr)
+            for attr in ("udp", "tfo", "mptcp"):
+                if type(getattr(node, attr)) is not bool:
+                    unsupported.append(attr)
         unsupported.extend(self.check_fields(node))
         return [
             IssueDraft(

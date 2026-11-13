@@ -115,6 +115,12 @@ Trojan gRPC mode/authority 保留到目标检查，当前无法表示的目标�
 Surge 对已发现的对应 SMUX、握手、AnyTLS 会话和 VMess 封装字段返回 ERROR；自动 UDP 协议无法关闭
 UDP 时拒绝，Surge VLESS 继续使用已记录的自动 XUDP warning 策略。
 
+sing-box AnyTLS 使用协议实际的 TCP/UDP 能力；当前无等价 UDP 禁用字段时拒绝 `udp = false`。
+Hysteria v1 必须有正数上下行带宽，使用现有 `up`/`down` 单位字符串或 `up_speed`/`down_speed`
+Mbps 整数字段；sing-box 输入对应 `up_mbps`/`down_mbps`。VLESS 保留空 `packet_encoding`（关闭封装），
+sing-box flow 只允许 `xtls-rprx-vision`；Vision 要求 TCP + TLS，链接 REALITY 必须有公钥。
+sing-box WireGuard `allowed_ips` 必须是 IP prefix，非空 `reserved` 必须包含三个字节。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |
