@@ -2,7 +2,7 @@ import ipaddress
 import re
 import urllib.parse
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -18,7 +18,7 @@ class LinkCodec:
     build: Callable[[Node], str | None]
     schemes: frozenset[str] = frozenset()
     parse: LinkParser | None = None
-    target_constraints: Mapping[str, Mapping[str, Any]] = MappingProxyType({})
+    target_constraints: Mapping[str, Mapping[str, Any]] = field(default_factory=lambda: MappingProxyType({}))
 
 
 def quote_name(name: str) -> str:

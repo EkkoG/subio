@@ -104,14 +104,14 @@ class ArtifactConfig:
     providers: tuple[str, ...] = ()
     users: tuple[str, ...] = ()
     user: str | None = None
-    options: Mapping[str, Any] = MappingProxyType({})
+    options: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     allow_conversion_errors: bool = False
     allow_empty: bool = False
     age_public_key: str | None = None
     upload: tuple[UploadConfig, ...] = ()
     selector: str | None = None
     on_duplicate_name: str = "error"
-    params: Mapping[str, ParameterSpec] = field(default=MappingProxyType({}), repr=False)
+    params: Mapping[str, ParameterSpec] = field(default_factory=lambda: MappingProxyType({}), repr=False)
 
     def output_names(self) -> tuple[tuple[str, str | None], ...]:
         """Pair each configured output filename with its fixed user context."""

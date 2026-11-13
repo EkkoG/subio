@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
@@ -65,7 +65,7 @@ class SurgeCodecSpec:
     emitted_parameters: frozenset[str] = frozenset()
     normalized_parameters: tuple[tuple[str, str], ...] = ()
     multi_value_parameters: frozenset[str] = frozenset()
-    target_constraints: Mapping[str, Any] = MappingProxyType({})
+    target_constraints: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     parser: Callable[[Any], Any] | None = None
     emitter: Callable[[Any, dict[int, str]], list[str]] | None = None
 
