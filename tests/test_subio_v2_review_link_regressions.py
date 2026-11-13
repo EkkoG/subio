@@ -74,6 +74,17 @@ def test_legacy_ss_full_payload_base64():
     assert (node.server, node.port, node.cipher, node.password) == ('::1', 443, 'aes-128-gcm', 'secret')
 
 
+@pytest.mark.parametrize('encode', [base64.b64encode, base64.urlsafe_b64encode])
+@pytest.mark.parametrize('authority', ['example.test:443', '[::1]:443'])
+def test_legacy_ss_preserves_standard_base64_slash(encode, authority):
+    payload = encode(f'aes-128-gcm:???@{authority}'.encode()).decode()
+    parsed = V2RayNParser().parse_result(f'ss://{payload}#legacy')
+    assert not parsed.issues
+    node = parsed.nodes[0]
+    assert node.password == '???'
+    assert node.server == ('::1' if authority.startswith('[') else 'example.test')
+
+
 def test_trojan_alpn_roundtrip():
     node = links.parse_url('trojan://pw@example.test:443?alpn=h2%2Chttp%2F1.1')
     assert node.tls.alpn == ['h2', 'http/1.1']

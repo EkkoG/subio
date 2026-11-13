@@ -259,6 +259,9 @@ def _load_yaml_payload(content: bytes, name: str) -> list[str]:
         raise ConfigError(f"Ruleset {name!r} YAML payload must be a non-empty list")
     if any(not isinstance(value, str) for value in payload):
         raise ConfigError(f"Ruleset {name!r} YAML payload items must be strings")
+    for index, value in enumerate(payload, start=1):
+        if any(char in value for char in "\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"):
+            raise ConfigError(f"Ruleset {name!r} YAML payload item {index} must be a single line")
     return payload
 
 

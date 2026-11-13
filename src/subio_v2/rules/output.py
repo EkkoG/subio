@@ -88,7 +88,7 @@ class RuleOutputDialect:
             if rule_type in {"IP-CIDR", "IP-CIDR6"}:
                 try:
                     ipaddress.ip_network(matcher, strict=False)
-                    safe_matcher = True
+                    safe_matcher = re.fullmatch(r"[0-9A-Fa-f:./]+", matcher)
                 except ValueError:
                     safe_matcher = False
             if not safe_policy or (rule_type != "MATCH" and not safe_matcher):
@@ -129,7 +129,7 @@ class RuleOutputDialect:
                 or any(not char.isprintable() for char in content)
                 or content != content.rstrip()
             ):
-                content = json.dumps(content, ensure_ascii=False)
+                content = json.dumps(content, ensure_ascii=True)
             content = f"{self.line_prefix}{content}"
         return content, ()
 

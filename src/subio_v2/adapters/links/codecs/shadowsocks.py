@@ -40,8 +40,9 @@ def parse(line: str) -> Node | None:
     try:
         url = urllib.parse.urlparse(line)
         if "@" not in url.netloc:
+            payload = urllib.parse.unquote(url.netloc + url.path)
             decoded = base64.urlsafe_b64decode(
-                url.netloc + "=" * ((4 - len(url.netloc) % 4) % 4)
+                payload + "=" * ((4 - len(payload) % 4) % 4)
             ).decode()
             if "@" not in decoded:
                 return None
