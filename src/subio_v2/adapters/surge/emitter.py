@@ -7,7 +7,7 @@ from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.surge.codecs import (
     DEFAULT_SURGE_TARGET,
 )
-from subio_v2.adapters.surge.codecs._shared import _SurgeEmissionError
+from subio_v2.adapters.surge.codecs._shared import _server_str, _SurgeEmissionError
 from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -62,13 +62,6 @@ class SurgeEmitter(BaseEmitter):
         content = f"{node.name}:{node.private_key}"
         hash_obj = hashlib.md5(content.encode("utf-8"))
         return hash_obj.hexdigest()[:8]
-
-    @staticmethod
-    def _server_str(node: Node) -> str:
-        server = node.server
-        if isinstance(server, list):
-            return str(server[0])
-        return str(server)
 
     @staticmethod
     def _section_name(node: Node) -> str:
@@ -549,7 +542,7 @@ class SurgeEmitter(BaseEmitter):
         else:
             peer_models = [
                 {
-                    "server": SurgeEmitter._server_str(node),
+                    "server": _server_str(node),
                     "port": node.port,
                     "public-key": node.public_key,
                     "preshared-key": node.preshared_key,

@@ -16,6 +16,10 @@ def check_tailscale(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, TailscaleNode):
         return []
     warnings: list[IssueDraft] = []
+    if node.mtu is not None and (type(node.mtu) is not int or not 576 <= node.mtu <= 1420):
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+                                  "Tailscale mtu must be an integer from 576 to 1420",
+                                  "mtu", code="conversion.invalid-value"))
     if node.exit_node_auto_fallback:
         warnings.append(
             IssueDraft(

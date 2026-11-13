@@ -69,6 +69,25 @@ def check_masque(node: Node, constraints) -> list[IssueDraft]:
             )
         ]
     issues = []
+    for field in (
+        "connect_uri", "private_key", "public_key", "interface_ip", "interface_ipv6",
+        "mtu", "remote_dns_resolve", "dns_servers", "congestion_controller",
+        "cwnd", "bbr_profile", "handshake_timeout",
+    ):
+        value = getattr(node, field)
+        if value is not None and value is not False:
+            issues.append(IssueDraft(
+                IssueSeverity.ERROR,
+                f"Surge MASQUE cannot represent '{field}'",
+                field,
+                code="conversion.unsupported-platform-field",
+            ))
+    if node.hop_interval is not None and (
+        type(node.hop_interval) is not int or node.hop_interval <= 0
+    ):
+        issues.append(IssueDraft(IssueSeverity.ERROR,
+                                "MASQUE hop_interval must be a positive integer",
+                                "hop_interval", code="conversion.invalid-value"))
     if node.transport != "h3":
         issues.append(
             IssueDraft(

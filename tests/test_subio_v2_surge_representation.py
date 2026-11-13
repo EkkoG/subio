@@ -34,7 +34,7 @@ def _source_node(family, protocol, *, peers=False):
     node = {"name": "safe", "type": protocol}
     fields = {
         "socks5": {"server": "example.test", "port": 1080, "username": "user", "password": "password"},
-        "tailscale": {"auth_key": "auth", "hostname": "client", "control_url": "https://control.test", "exit_node": "exit"},
+        "tailscale": {"auth_key": "auth", "hostname": "client", "control_url": "https://control.test", "exit_node": "exit", "udp": True},
         "wireguard": {
             "server": "example.test", "port": 51820, "private_key": "private",
             "public_key": "public", "preshared_key": "shared",
@@ -517,7 +517,7 @@ def test_client_id_guard_does_not_add_numeric_or_byte_validation(value):
 def _section_like_proxy(family, name, case, value):
     protocol = "http" if case == "headers" else ("anytls" if case == "anytls-password" else "socks5")
     node = _nested_node(family, protocol)
-    node.update(name=name, udp=False)
+    node.update(name=name, udp=protocol == "anytls")
     if case in {"password", "anytls-password"}:
         node["password"] = value
         field = ("password",)

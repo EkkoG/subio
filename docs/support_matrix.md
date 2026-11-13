@@ -121,6 +121,11 @@ Mbps 整数字段；sing-box 输入对应 `up_mbps`/`down_mbps`。VLESS 保留�
 sing-box flow 只允许 `xtls-rprx-vision`；Vision 要求 TCP + TLS，链接 REALITY 必须有公钥。
 sing-box WireGuard `allowed_ips` 必须是 IP prefix，非空 `reserved` 必须包含三个字节。
 
+Surge TUIC 省略版本时按凭据推断 v4/v5，校验和输出使用同一版本。Surge 只接受单地址端点；
+MASQUE 跳跃间隔、TrustTunnel max-streams 必须为正整数，Tailscale MTU 范围为 576..1420。
+MASQUE 无法表示的 CONNECT-IP/平台专属字段、SSH 私钥解密口令与 AmneziaWG 选项返回字段级 ERROR。
+Surge 序列化拒绝所有会被文档解析器拆行的物理行分隔符。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |

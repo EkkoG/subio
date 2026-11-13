@@ -42,16 +42,19 @@ def parse_tuic(context: SurgeProtocolParseContext) -> Node:
     )
 
 
+def _effective_version(node: TUICNode) -> int | None:
+    if node.version is not None:
+        return node.version
+    if node.uuid or node.password:
+        return 5
+    return 4 if node.token else None
+
+
 def check_tuic(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, TUICNode):
         return []
     warnings: list[IssueDraft] = []
-    actual_version = node.version
-    if actual_version is None:
-        if node.uuid or node.password:
-            actual_version = 5
-        elif node.token:
-            actual_version = 4
+    actual_version = _effective_version(node)
     if actual_version:
         supported_versions = proto_caps.get("versions", set())
         if supported_versions and actual_version not in supported_versions:
@@ -76,7 +79,7 @@ def check_tuic(node: Node, proto_caps: dict) -> list[IssueDraft]:
 
 def emit_tuic(node: Node, _: dict[int, str]) -> list[str]:
     assert isinstance(node, TUICNode)
-    if node.version == 5:
+    if _effective_version(node) == 5:
         parts = ["tuic-v5", _server_str(node), str(node.port)]
         if node.password:
             parts.append(f"password={node.password}")

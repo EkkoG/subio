@@ -201,6 +201,7 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
 
     p_type = p_type.lower()
     protocol_for_common = {
+        "ss": Protocol.SHADOWSOCKS.value,
         "https": "http",
         "h2-connect": "http",
         "socks5-tls": "socks5",

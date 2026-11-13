@@ -54,6 +54,12 @@ def check_trusttunnel(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, TrustTunnelNode):
         return []
     warnings: list[IssueDraft] = []
+    if node.max_streams is not None and (
+        type(node.max_streams) is not int or node.max_streams <= 0
+    ):
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+                                  "Trust Tunnel max_streams must be a positive integer",
+                                  "max_streams", code="conversion.invalid-value"))
     if node.udp:
         warnings.append(
             IssueDraft(

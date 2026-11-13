@@ -275,7 +275,7 @@ def _encode_atom(
 ) -> str:
     if not isinstance(value, str):
         raise TypeError("Surge syntax values must be strings")
-    if "\n" in value or "\r" in value:
+    if any(char in value for char in "\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029"):
         raise ValueError("Surge syntax values cannot contain newlines")
 
     needs_quotes = (
@@ -299,7 +299,7 @@ def validate_proxy_name(name: str) -> None:
 
     if not name:
         raise ValueError("Surge proxy name is required")
-    if "=" in name or "\n" in name or "\r" in name:
+    if "=" in name or name.splitlines() != [name]:
         raise ValueError("Surge proxy name cannot contain '=' or newlines")
     if name != name.strip() or name.startswith(("#", "//")):
         raise ValueError(
@@ -312,7 +312,8 @@ def _validate_identity(name: str, proxy_type: str) -> None:
     if not proxy_type:
         raise ValueError("Surge proxy type is required")
     if (
-        any(char in proxy_type for char in ',="\n\r')
+        any(char in proxy_type for char in ',="')
+        or proxy_type.splitlines() != [proxy_type]
         or proxy_type != proxy_type.strip()
     ):
         raise ValueError("Surge proxy type contains invalid syntax characters")

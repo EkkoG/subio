@@ -301,6 +301,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         Network,
         Protocol,
         TransportSettings,
+        TLSSettings,
         TrojanNode,
         VmessNode,
     )
@@ -314,6 +315,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         server="server",
         port=443,
         password="example",
+        tls=TLSSettings(enabled=True),
         transport=TransportSettings(network=Network.WS, path=None),
     )
     output1 = emitter.emit_result([node1]).content
@@ -327,6 +329,7 @@ def test_surge_emitter_ws_path_only_when_has_value():
         server="server",
         port=443,
         password="example",
+        tls=TLSSettings(enabled=True),
         transport=TransportSettings(network=Network.WS, path="/path"),
     )
     output2 = emitter.emit_result([node2]).content
@@ -398,7 +401,7 @@ ssh2 = ssh, 1.1.1.1, 22, username=root, private-key=111
 
 
 def test_surge_node_attachment_rebuilds_keystore_without_parser_state():
-    result = SurgeParser().parse_result(
+    result = SurgeParser(source_kind="local").parse_result(
         """
 [Proxy]
 ssh = ssh, example.com, 22, username=root, private-key=key-id
@@ -438,7 +441,7 @@ client-cert = type = p12, base64 = Q0VSVA==, password = "a,b"
 
 
 def test_surge_parser_keystore_attachments_are_isolated_between_parse_calls():
-    parser = SurgeParser()
+    parser = SurgeParser(source_kind="local")
     first = parser.parse_result(
         """
 [Proxy]

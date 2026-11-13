@@ -91,6 +91,8 @@ class SurgeServerError(ValueError):
 
 def _server_str(node: Node) -> str:
     server = node.server
+    if isinstance(server, list) and len(server) != 1:
+        raise SurgeServerError("Surge requires exactly one server address")
     value = str(server[0]) if isinstance(server, list) else str(server)
     if "=" in value:
         raise SurgeServerError("Surge positional server cannot contain '='")
