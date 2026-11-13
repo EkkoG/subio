@@ -6,6 +6,7 @@ from subio_v2.adapters.catalog import get_format, resolve_format
 from subio_v2.core.errors import ConfigError
 from subio_v2.infrastructure.logging import logger
 from subio_v2.workflow.parameters import parse_parameter_specs
+from subio_v2.workflow.selectors import validate_selector_graph
 
 
 class ConfigValidator:
@@ -344,6 +345,7 @@ class ConfigValidator:
         if not isinstance(value, dict):
             raise ConfigError("Config section 'selectors' must be an object")
         selector_names = set(value)
+        references = {}
         for name, selector in value.items():
             if not isinstance(name, str) or not name:
                 raise ConfigError("Selector names must be non-empty strings")
@@ -394,31 +396,21 @@ class ConfigValidator:
                 raise ConfigError(
                     f"Selector '{name}' match_original_name must be a boolean"
                 )
+            selector_refs = []
             for ref_key in ("all_of", "any_of", "not"):
                 refs = selector.get(ref_key, [])
                 if isinstance(refs, str):
                     refs = [refs]
+                selector_refs.extend(refs)
                 missing = sorted(set(refs) - selector_names)
                 if missing:
                     raise ConfigError(
                         f"Selector '{name}' references unknown selector(s): "
                         + ", ".join(missing)
                     )
+            references[name] = selector_refs
 
-        def visit(name: str, stack: tuple[str, ...]) -> None:
-            if name in stack:
-                cycle = " -> ".join((*stack, name))
-                raise ConfigError(f"Selector reference cycle: {cycle}")
-            selector = value[name]
-            for ref_key in ("all_of", "any_of", "not"):
-                refs = selector.get(ref_key, [])
-                if isinstance(refs, str):
-                    refs = [refs]
-                for ref in refs:
-                    visit(ref, (*stack, name))
-
-        for name in value:
-            visit(name, ())
+        validate_selector_graph(references)
 
     @staticmethod
     def _validate_remote(value: Any) -> None:

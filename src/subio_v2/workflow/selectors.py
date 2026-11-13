@@ -80,22 +80,41 @@ def _value(item: Any, field: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def validate_selector_graph(references: Mapping[str, Sequence[str]]) -> None:
+    active: set[str] = set()
+    finished: set[str] = set()
+    for root in references:
+        if root in finished:
+            continue
+        active.add(root)
+        stack = [(root, iter(references[root]))]
+        while stack:
+            name, children = stack[-1]
+            try:
+                ref = next(children)
+            except StopIteration:
+                active.remove(name)
+                finished.add(name)
+                stack.pop()
+                continue
+            if ref not in references:
+                raise ConfigError(f"Selector {name!r} references unknown selector {ref!r}")
+            if ref in active:
+                raise ConfigError(f"Selector reference cycle includes {ref!r}")
+            if ref not in finished:
+                active.add(ref)
+                stack.append((ref, iter(references[ref])))
+
+
 class SelectorEngine:
     def __init__(self, selectors: Mapping[str, SelectorSpec] | None = None):
         self._selectors = dict(selectors or {})
         self._compiled: dict[str, tuple[re.Pattern[str], ...]] = {}
         self._compiled_exclude: dict[str, tuple[re.Pattern[str], ...]] = {}
         for name, spec in self._selectors.items():
-            try:
-                self._compiled[name] = tuple(
-                    re.compile(pattern, re.IGNORECASE) for pattern in spec.name_regex
-                )
-                self._compiled_exclude[name] = tuple(
-                    re.compile(pattern, re.IGNORECASE)
-                    for pattern in spec.exclude_name_regex
-                )
-            except (re.error, OverflowError, RecursionError) as exc:
-                raise ConfigError(f"Selector {name!r} contains an invalid regex") from exc
+            self._compiled[name], self._compiled_exclude[name] = self._compile_patterns(
+                spec, f"Selector {name!r}",
+            )
         self._validate_references()
 
     def select(
@@ -116,13 +135,14 @@ class SelectorEngine:
             protocols=tuple(protocols or ()),
             providers=tuple(providers or ()),
         )
+        include_patterns, exclude_patterns = self._compile_patterns(inline, "Inline selector")
         selected = [
             item
             for item in items
             if self._matches_spec(
                 item, self._selectors.get(selector), set(), selector
             )
-            and self._matches_atomic(item, inline, None)
+            and self._matches_atomic(item, inline, include_patterns, exclude_patterns)
         ]
         if selector:
             spec = self._selectors[selector]
@@ -140,7 +160,10 @@ class SelectorEngine:
     ) -> bool:
         if spec is None:
             return True
-        if not self._matches_atomic(item, spec, selector_name):
+        if not self._matches_atomic(
+            item, spec, self._compiled.get(selector_name, ()),
+            self._compiled_exclude.get(selector_name, ()),
+        ):
             return False
         for ref in spec.all_of:
             if not self._matches_named(item, ref, stack):
@@ -159,23 +182,10 @@ class SelectorEngine:
         return self._matches_spec(item, self._selectors[name], {*stack, name}, name)
 
     def _matches_atomic(
-        self, item: Any, spec: SelectorSpec, selector_name: str | None
+        self, item: Any, spec: SelectorSpec,
+        include: tuple[re.Pattern[str], ...], exclude: tuple[re.Pattern[str], ...],
     ) -> bool:
         selected_name = self._selector_name(item, spec)
-        if selector_name is None:
-            try:
-                include = tuple(
-                    re.compile(pattern, re.IGNORECASE) for pattern in spec.name_regex
-                )
-                exclude = tuple(
-                    re.compile(pattern, re.IGNORECASE)
-                    for pattern in spec.exclude_name_regex
-                )
-            except (re.error, OverflowError, RecursionError) as exc:
-                raise ConfigError("Inline selector contains an invalid regex") from exc
-        else:
-            include = self._compiled.get(selector_name, ())
-            exclude = self._compiled_exclude.get(selector_name, ())
         if include and not any(pattern.search(selected_name) for pattern in include):
             return False
         if exclude and any(pattern.search(selected_name) for pattern in exclude):
@@ -187,6 +197,16 @@ class SelectorEngine:
         return not spec.providers or provider in spec.providers
 
     @staticmethod
+    def _compile_patterns(spec: SelectorSpec, label: str):
+        try:
+            return (
+                tuple(re.compile(pattern, re.IGNORECASE) for pattern in spec.name_regex),
+                tuple(re.compile(pattern, re.IGNORECASE) for pattern in spec.exclude_name_regex),
+            )
+        except (re.error, OverflowError, RecursionError) as exc:
+            raise ConfigError(f"{label} contains an invalid regex") from exc
+
+    @staticmethod
     def _selector_name(item: Any, spec: SelectorSpec) -> str:
         if spec.match_original_name:
             original = _value(item, "original_name")
@@ -195,29 +215,19 @@ class SelectorEngine:
         return _value(item, "name") or ""
 
     def _sort(self, items: list[Any], fields: Sequence[str]) -> list[Any]:
-        result = list(items)
+        result = list(enumerate(items))
         for field in reversed(tuple(fields)):
             if field == "source_order":
-                continue
-            result.sort(key=lambda item: (_value(item, field) or "").casefold())
-        return result
+                result.sort(key=lambda pair: pair[0])
+            else:
+                result.sort(key=lambda pair: (_value(pair[1], field) or "").casefold())
+        return [item for _, item in result]
 
     def _validate_references(self) -> None:
-        for name, spec in self._selectors.items():
-            for ref in (*spec.all_of, *spec.any_of, *spec.not_of):
-                if ref not in self._selectors:
-                    raise ConfigError(
-                        f"Selector {name!r} references unknown selector {ref!r}"
-                    )
-        for name in self._selectors:
-            self._walk(name, set())
-
-    def _walk(self, name: str, stack: set[str]) -> None:
-        if name in stack:
-            raise ConfigError(f"Selector reference cycle includes {name!r}")
-        spec = self._selectors[name]
-        for ref in (*spec.all_of, *spec.any_of, *spec.not_of):
-            self._walk(ref, {*stack, name})
+        validate_selector_graph({
+            name: (*spec.all_of, *spec.any_of, *spec.not_of)
+            for name, spec in self._selectors.items()
+        })
 
 
 def resolve_duplicate_names(
