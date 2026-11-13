@@ -26,6 +26,12 @@ _PEER_KEYS = {
 }
 
 
+def _decode_allowed_ips(value: Any) -> list[str] | None:
+    if value is not None and not isinstance(value, list):
+        raise ValueError("WireGuard allowed-ips must be a list")
+    return value
+
+
 def _decode_peers(value: Any) -> list[WireguardPeer] | None:
     if value is None:
         return None
@@ -35,9 +41,7 @@ def _decode_peers(value: Any) -> list[WireguardPeer] | None:
     for index, peer in enumerate(value):
         if not isinstance(peer, dict):
             raise ValueError(f"WireGuard peer {index} must be an object")
-        allowed_ips = peer.get("allowed-ips")
-        if not isinstance(allowed_ips, list):
-            allowed_ips = []
+        allowed_ips = _decode_allowed_ips(peer.get("allowed-ips"))
         peers.append(
             WireguardPeer(
                 server=peer.get("server", ""),
@@ -45,7 +49,7 @@ def _decode_peers(value: Any) -> list[WireguardPeer] | None:
                 public_key=peer.get("public-key", ""),
                 preshared_key=peer.get("pre-shared-key") or peer.get("preshared-key"),
                 reserved=peer.get("reserved"),
-                allowed_ips=allowed_ips,
+                allowed_ips=allowed_ips if allowed_ips is not None else [],
             )
         )
     return peers
@@ -156,7 +160,7 @@ class WireguardCodec(StructuredClashProtocolCodec):
         scalar_field(
             "allowed-ips",
             "allowed_ips",
-            decode=lambda value: list(value) if isinstance(value, list) else None,
+            decode=_decode_allowed_ips,
             emit_policy=EmitPolicy.NOT_NONE,
         ),
         scalar_field("reserved", emit_policy=EmitPolicy.TRUTHY),

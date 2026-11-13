@@ -169,6 +169,7 @@ class SmuxSettings:
     max_streams: int = 0
     padding: bool = False
     brutal_opts: Optional[Dict[str, Any]] = None
+    extra: Dict[str, Any] = field(default_factory=dict, repr=False)
 
 
 @dataclass

@@ -60,7 +60,7 @@ class Hysteria2Codec(StructuredClashProtocolCodec):
         )
     }
     target_constraints = {
-        "mihomo": {"features": {"obfs"}},
+        "mihomo": {"features": {"obfs", "smux"}, "obfs_modes": {"salamander", "gecko"}},
         "stash": {
             "features": {"obfs"},
             "obfs_modes": {"salamander", "gecko"},

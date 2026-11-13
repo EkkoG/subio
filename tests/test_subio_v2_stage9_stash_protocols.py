@@ -220,7 +220,7 @@ def test_stage9_atomically_exposes_stash_parser_emitter_and_capabilities():
 
 
 def test_stash_shared_protocols_parse_emit_and_round_trip():
-    parser = StashParser()
+    parser = StashParser(source_kind="local")
     parsed = parser.parse_result(_stash_nodes())
 
     assert parsed.issues == []
@@ -253,7 +253,7 @@ def test_stash_shared_protocols_parse_emit_and_round_trip():
 
 
 def test_stash_semantic_aliases_convert_to_mihomo_names():
-    parsed = StashParser().parse_result(_stash_nodes())
+    parsed = StashParser(source_kind="local").parse_result(_stash_nodes())
     emission = ClashEmitter("clash-meta").emit_result(parsed.nodes)
     assert len(emission.errors) == 1
     assert emission.errors[0].node == "vless"

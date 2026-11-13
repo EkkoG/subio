@@ -101,6 +101,12 @@ Clash-family 仅从活动 transport 块提取模型字段，其他块只按同�
 未知嵌套字段绑定来源方言，模型值优先；跨方言有 issue。Surge 多 peer 不同 keepalive 在同方言保留，
 不能表达差异的目标拒绝。Stash Tailscale 的 `exit-node: none` 无已证明的选择语义，拒绝输出。
 
+Mihomo Hysteria2 和 TrustTunnel 保留已启用的 SMUX。SMUX 和 Snell obfs 的未知子字段仅在同方言
+保留，模型覆盖优先；跨方言产生未消费字段 issue。未来 transport 只允许已证明的 Mihomo 同方言回放。
+Clash-family SSH 无法表示 `idle_timeout` 时返回 ERROR；Stash Snell 省略版本按 v1 检查，不能绕过
+v3/v4 限制。MASQUE `h3-l4proxy` 要求 h3；当前固定规范未定义 MASQUE 跳跃端口，`ports` 和
+`hop_interval` 返回字段级 ERROR。WireGuard 显式非列表 `allowed-ips` 产生逐项 parse issue。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |

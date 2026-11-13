@@ -26,6 +26,7 @@ class TrustTunnelCodec(StructuredClashProtocolCodec):
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
+    target_constraints = {"mihomo": {"features": {"smux"}}}
     dialect_fields = {
         "stash": stash_fields(
             "name",

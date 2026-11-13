@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
@@ -11,6 +12,7 @@ from subio_v2.adapters.clash_family.codecs._fields import (
     scalar_field,
     smux_group,
 )
+from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node, Protocol, SnellNode, TLSSettings
 from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols.snell import SPEC
@@ -23,16 +25,15 @@ def _parse_obfs_opts(data: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "obfs": value.get("mode"),
         "obfs_host": value.get("host"),
-        "obfs_opts": value,
+        "obfs_opts": {key: copy.deepcopy(value[key]) for key in ("mode", "host") if key in value},
     }
 
 
 def _emit_obfs_opts(out: MutableMapping[str, Any], node: Node) -> None:
     assert isinstance(node, SnellNode)
-    if node.obfs_opts:
-        out["obfs-opts"] = node.obfs_opts
-    elif node.obfs:
+    if node.obfs:
         out["obfs-opts"] = {
+            **copy.deepcopy(node.obfs_opts or {}),
             "mode": node.obfs,
             "host": node.obfs_host or "bing.com",
         }
@@ -69,6 +70,26 @@ class SnellCodec(StructuredClashProtocolCodec):
         smux_group(),
     )
 
+    def after_parse(self, node: Node, data: dict[str, Any]) -> Node:
+        raw = data.get("obfs-opts")
+        if isinstance(raw, dict):
+            unknown = {key: copy.deepcopy(value) for key, value in raw.items()
+                       if key not in {"mode", "host"}}
+            if unknown:
+                node.source_extensions.setdefault(node.source_context.dialect, {}).update(
+                    obfs=unknown, semantic_fields=[f"obfs-opts.{key}" for key in unknown],
+                )
+        return node
+
+    def emit_clash(self, node: Node, context: DialectContext | None = None) -> dict[str, Any]:
+        context = context or DialectContext("mihomo", "yaml")
+        out = super().emit_clash(node, context)
+        if node.source_context and node.source_context.dialect == context.dialect:
+            unknown = node.source_extensions.get(context.dialect, {}).get("obfs", {})
+            if unknown:
+                out["obfs-opts"] = {**copy.deepcopy(unknown), **out.get("obfs-opts", {})}
+        return out
+
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         if not isinstance(node, SnellNode):
             return []
@@ -77,20 +98,19 @@ class SnellCodec(StructuredClashProtocolCodec):
             warnings.append(IssueDraft(IssueSeverity.ERROR,
                 "Snell cannot preserve an additional TLS layer", "tls",
                 code="conversion.unsupported-platform-field"))
-        version = node.version or 1
-        if node.version:
-            supported_versions = proto_caps.get("versions", set())
-            if supported_versions and node.version not in supported_versions:
-                warnings.append(
-                    IssueDraft(
-                        severity=IssueSeverity.ERROR,
-                        message=f"Snell version {node.version} is not supported by {platform}",
-                        field="version",
-                        suggestion=(
-                            f"Supported versions: {', '.join(str(v) for v in sorted(supported_versions))}"
-                        ),
-                    )
+        version = node.version if node.version is not None else 1
+        supported_versions = proto_caps.get("versions", set())
+        if supported_versions and version not in supported_versions:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=f"Snell version {version} is not supported by {platform}",
+                    field="version",
+                    suggestion=(
+                        f"Supported versions: {', '.join(str(v) for v in sorted(supported_versions))}"
+                    ),
                 )
+            )
         if node.obfs:
             by_version = proto_caps.get("obfs_modes_by_version", {})
             supported_obfs = by_version.get(

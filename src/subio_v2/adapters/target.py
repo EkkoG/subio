@@ -206,6 +206,16 @@ class TargetValidationService:
                 )
 
             source_context = node.source_context
+            smux = getattr(node, "smux", None)
+            if (smux is not None and smux.extra and source_context is not None
+                    and source_context.dialect != self.target_context.dialect):
+                issues.append(self.issue_for_node(
+                    node, IssueSeverity.WARNING,
+                    "Source-only SMUX fields cannot be represented by this target: "
+                    + ", ".join(sorted(smux.extra)),
+                    field=f"smux.extra.{source_context.dialect}", stage="conversion",
+                    code="conversion.unconsumed-source-field",
+                ))
             if (
                 node.extra
                 and source_context is not None

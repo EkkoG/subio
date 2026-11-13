@@ -93,7 +93,7 @@ def test_subio_format_document_examples_cover_every_public_protocol():
         protocol.value for protocol in PUBLIC_PROTOCOLS
     }
 
-    parser = SubioParser()
+    parser = SubioParser(source_kind="local")
     for name, content in examples:
         result = parser.parse_result(content)
         assert result.issues == [], (name, result.issues)

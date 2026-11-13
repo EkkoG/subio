@@ -45,6 +45,13 @@ def post_descriptor_emit(
         output.pop("smux", None)
         dropped.add("smux")
 
+    smux = getattr(node, "smux", None)
+    if (smux is not None and smux.extra and node.source_context is not None
+            and node.source_context.dialect != context.dialect):
+        for key in smux.extra:
+            if isinstance(output.get("smux"), dict):
+                output["smux"].pop(key, None)
+
     # ECH is currently a Mihomo semantic. Stash gets its own field map in stage 8.
     if "ech-opts" in output and context.dialect != "mihomo":
         output.pop("ech-opts", None)

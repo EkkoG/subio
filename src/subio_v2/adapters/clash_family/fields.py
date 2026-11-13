@@ -181,6 +181,11 @@ def parse_smux(data: Dict[str, Any]) -> SmuxSettings:
         max_streams=int(smux_data.get("max-streams", 0)),
         padding=bool(smux_data.get("padding", False)),
         brutal_opts=smux_data.get("brutal-opts"),
+        extra={
+            key: copy.deepcopy(value) for key, value in smux_data.items()
+            if key not in {"enabled", "protocol", "max-connections", "min-streams",
+                           "max-streams", "padding", "brutal-opts"}
+        },
     )
 
 
@@ -311,10 +316,11 @@ def emit_transport(
 
 
 def emit_smux(base: Dict[str, Any], smux: Optional[SmuxSettings]) -> None:
-    if not smux or not smux.enabled:
+    if not smux or (not smux.enabled and not smux.extra):
         return
     payload: Dict[str, Any] = {
-        "enabled": True,
+        **copy.deepcopy(smux.extra),
+        "enabled": smux.enabled,
         "protocol": smux.protocol,
         "max-connections": smux.max_connections,
         "min-streams": smux.min_streams,

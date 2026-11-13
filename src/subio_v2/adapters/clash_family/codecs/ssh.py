@@ -59,6 +59,11 @@ class SSHCodec(StructuredClashProtocolCodec):
         if not isinstance(node, SSHNode):
             return []
         warnings: list[IssueDraft] = []
+        if node.idle_timeout is not None:
+            warnings.append(IssueDraft(
+                IssueSeverity.ERROR, "This target cannot preserve the SSH idle timeout",
+                "idle_timeout", code="conversion.unsupported-platform-field",
+            ))
         if platform == "stash":
             warnings.extend(
                 IssueDraft(IssueSeverity.ERROR, "Stash cannot preserve this SSH host key requirement",

@@ -79,6 +79,8 @@ class MasqueCodec(StructuredClashProtocolCodec):
     }
     fields = (
         scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("ports", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("hop-interval", "hop_interval", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("private-key", "private_key", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("public-key", "public_key", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("ip", "interface_ip", emit_policy=EmitPolicy.NOT_NONE),
@@ -139,6 +141,17 @@ class MasqueCodec(StructuredClashProtocolCodec):
             "stash": {MasqueMode.CONNECT_IP},
         }.get(platform)
         warnings: list[IssueDraft] = []
+        for attr in ("ports", "hop_interval"):
+            if getattr(node, attr) is not None:
+                warnings.append(IssueDraft(
+                    IssueSeverity.ERROR, f"MASQUE port hopping cannot be represented by {platform}",
+                    attr, code="conversion.unsupported-platform-field",
+                ))
+        if node.mode == MasqueMode.H3_L4_PROXY and node.transport != "h3":
+            warnings.append(IssueDraft(
+                IssueSeverity.ERROR, "MASQUE h3-l4proxy requires h3 transport", "transport",
+                code="conversion.unsupported-field-combination",
+            ))
         if supported_modes is not None and node.mode not in supported_modes:
             warnings.append(
                 IssueDraft(

@@ -100,7 +100,7 @@ def test_stash_unknowns_do_not_leak_to_mihomo_but_shared_tls_does():
     )
 
 
-def test_internal_stash_emitter_crops_unsupported_shared_common_fields():
+def test_internal_stash_emitter_rejects_tls_loss_and_crops_other_common_fields():
     node = HttpNode(
         name="http",
         type=Protocol.HTTP,
@@ -117,6 +117,10 @@ def test_internal_stash_emitter_crops_unsupported_shared_common_fields():
 
     emission = StashEmitter().emit_result([node])
 
+    assert not emission.supported_nodes
+    assert {i.field for i in emission.errors} >= {"tls.verify_name", "tls.certificate"}
+    node.tls.verify_name = node.tls.certificate = None
+    emission = StashEmitter().emit_result([node])
     proxy = emission.content["proxies"][0]
     assert proxy["server-cert-fingerprint"] == "AA:BB"
     assert "name-cert-verify" not in proxy

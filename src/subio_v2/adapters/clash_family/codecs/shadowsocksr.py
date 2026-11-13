@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from subio_v2.adapters.clash_family.codecs._base import StructuredClashProtocolCodec
 from subio_v2.adapters.clash_family.codecs._dialects import (
-    SS_CIPHERS_STASH,
     stash_fields,
 )
 from subio_v2.adapters.clash_family.codecs._fields import (
@@ -30,7 +29,13 @@ class ShadowsocksRCodec(StructuredClashProtocolCodec):
             "protocol-param",
         )
     }
-    target_constraints = {"stash": {"ciphers": SS_CIPHERS_STASH}}
+    target_constraints = {"stash": {"ciphers": {
+        "aes-128-cfb", "aes-192-cfb", "aes-256-cfb",
+        "aes-128-ctr", "aes-192-ctr", "aes-256-ctr", "rc4-md5",
+        "chacha20", "chacha20-ietf", "xchacha20", "salsa20",
+        "none", "table", "rc4", "bf-cfb", "cast5-cfb", "des-cfb",
+        "rc2-cfb", "seed-cfb",
+    }}}
     fields = (
         scalar_field("cipher", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("password", default="", emit_policy=EmitPolicy.ALWAYS),

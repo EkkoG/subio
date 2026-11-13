@@ -100,7 +100,8 @@ class VlessCodec(StructuredClashProtocolCodec):
         if (
             supported_transports
             and network not in supported_transports
-            and not (platform == "mihomo" and unknown_network)
+            and not (platform == "mihomo" and unknown_network and node.source_context is not None
+                     and node.source_context.dialect == platform)
         ):
             warnings.append(
                 IssueDraft(

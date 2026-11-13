@@ -59,7 +59,7 @@ def test_field_spec_derives_alias_handling_extra_and_emit_policies():
 
 
 def test_migrated_codecs_roundtrip_fields_and_unknown_extensions():
-    nodes = ClashParser().parse_result(
+    nodes = ClashParser(source_kind="local").parse_result(
         """
 proxies:
   - name: http-fields
