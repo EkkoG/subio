@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import copy
 from typing import Any, Dict
 
 from subio_v2.core.nodes import Node, Protocol, WireguardNode, WireguardPeer
 from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.validation import NodeValidationError
+from subio_v2.core.dialect import DialectContext
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
+
+_PEER_KEYS = {"server", "port", "public-key", "pre-shared-key", "preshared-key", "reserved", "allowed-ips"}
 
 
 def _decode_peers(value: Any) -> list[WireguardPeer] | None:
@@ -154,6 +158,28 @@ class WireguardCodec(StructuredClashProtocolCodec):
     protocol = Protocol.WIREGUARD
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "wireguard"
+
+    def after_parse(self, node: Node, data: dict[str, Any]) -> Node:
+        raw = data.get("peers")
+        if isinstance(raw, list):
+            unknown = [{key: copy.deepcopy(value) for key, value in peer.items() if key not in _PEER_KEYS} for peer in raw]
+            if any(unknown):
+                node.source_extensions.setdefault(node.source_context.dialect, {}).update(
+                    peers=unknown,
+                    semantic_fields=[f"peers[{index}].{key}" for index, peer in enumerate(unknown) for key in peer],
+                )
+        return node
+
+    def emit_clash(self, node: Node, context: DialectContext | None = None) -> dict[str, Any]:
+        context = context or DialectContext("mihomo", "yaml")
+        out = super().emit_clash(node, context)
+        if node.source_context and node.source_context.dialect == context.dialect and isinstance(out.get("peers"), list):
+            unknown = node.source_extensions.get(context.dialect, {}).get("peers", [])
+            for peer, extra in zip(out["peers"], unknown):
+                for key, value in extra.items():
+                    if key not in _PEER_KEYS:
+                        peer.setdefault(key, copy.deepcopy(value))
+        return out
     dialect_fields = {
         "stash": stash_fields(
             "ip",

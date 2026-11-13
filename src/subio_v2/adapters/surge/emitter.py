@@ -582,6 +582,7 @@ class SurgeEmitter(BaseEmitter):
             else:
                 values.pop("preshared-key", None)
             reserved = model.get("reserved")
+            values.pop("client-id", None)
             if reserved:
                 if isinstance(reserved, list) and any("/" in str(value) for value in reserved):
                     raise _SurgeEmissionError(
@@ -595,6 +596,8 @@ class SurgeEmitter(BaseEmitter):
                     else str(reserved)
                 )
             keepalive = model.get("keepalive")
+            if not node.peers:
+                values.pop("keepalive", None)
             if keepalive is not None:
                 values["keepalive"] = str(keepalive)
 

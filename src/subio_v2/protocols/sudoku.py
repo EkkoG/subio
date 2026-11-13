@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
@@ -10,6 +11,7 @@ from subio_v2.core.nodes import (
     SudokuNode,
 )
 from subio_v2.core.validation import NodeValidationError
+from subio_v2.core.dialect import DialectContext
 from subio_v2.protocols._base import StructuredClashProtocolCodec
 from subio_v2.protocols._fields import (
     EmitPolicy,
@@ -32,6 +34,7 @@ _TABLE_TYPES = {
 _HTTP_MASK_MODES = {"legacy", "stream", "poll", "auto", "ws"}
 _MULTIPLEX_MODES = {"off", "auto", "on"}
 _LEGACY_HTTP_MASK_STRATEGIES = {"random", "post", "websocket"}
+_HTTPMASK_KEYS = {"disable", "mode", "tls", "host", "path-root", "multiplex"}
 
 
 def _parse_httpmask(data: Mapping[str, Any]) -> dict[str, object]:
@@ -229,6 +232,26 @@ class SudokuCodec(StructuredClashProtocolCodec):
     spec = SPEC
     protocol = Protocol.SUDOKU
     clash_type = "sudoku"
+
+    def after_parse(self, node: Node, data: dict[str, Any]) -> Node:
+        raw = data.get("httpmask")
+        if isinstance(raw, Mapping):
+            unknown = {key: copy.deepcopy(value) for key, value in raw.items() if key not in _HTTPMASK_KEYS}
+            if unknown:
+                node.source_extensions.setdefault(node.source_context.dialect, {}).update(
+                    httpmask=unknown, semantic_fields=[f"httpmask.{key}" for key in unknown]
+                )
+        return node
+
+    def emit_clash(self, node: Node, context: DialectContext | None = None) -> dict[str, Any]:
+        context = context or DialectContext("mihomo", "yaml")
+        out = super().emit_clash(node, context)
+        if node.source_context and node.source_context.dialect == context.dialect and isinstance(out.get("httpmask"), dict):
+            unknown = node.source_extensions.get(context.dialect, {}).get("httpmask", {})
+            for key, value in unknown.items():
+                if key not in _HTTPMASK_KEYS:
+                    out["httpmask"].setdefault(key, copy.deepcopy(value))
+        return out
     target_constraints = {"mihomo": {"features": {"smux"}}}
     fields = (
         scalar_field("key", default="", emit_policy=EmitPolicy.ALWAYS),

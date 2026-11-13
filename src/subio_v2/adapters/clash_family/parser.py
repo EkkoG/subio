@@ -97,8 +97,8 @@ class ClashParser:
 
     def _parse_node(self, data: Dict[str, Any]):
         node_type = data.get("type")
-        if not node_type:
-            return None
+        if not isinstance(node_type, str) or not node_type.strip():
+            raise ValueError("Proxy type must be a non-empty string")
 
         desc = protocol_registry.by_clash_type(str(node_type))
         if not desc:

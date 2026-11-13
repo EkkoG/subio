@@ -103,11 +103,11 @@ def parse_transport(data: Dict[str, Any]) -> TransportSettings:
         if isinstance(value, dict):
             option_blocks[key] = value
 
-    ws_opts = option_blocks.get("ws-opts", {})
-    h2_opts = option_blocks.get("h2-opts", {})
-    http_opts = option_blocks.get("http-opts", {})
-    grpc_opts = option_blocks.get("grpc-opts", {})
-    xhttp_opts = option_blocks.get("xhttp-opts", {})
+    ws_opts = option_blocks.get("ws-opts", {}) if net == "ws" else {}
+    h2_opts = option_blocks.get("h2-opts", {}) if net == "h2" else {}
+    http_opts = option_blocks.get("http-opts", {}) if net == "http" else {}
+    grpc_opts = option_blocks.get("grpc-opts", {}) if net == "grpc" else {}
+    xhttp_opts = option_blocks.get("xhttp-opts", {}) if net == "xhttp" else {}
 
     modeled_keys = {
         "ws-opts": {

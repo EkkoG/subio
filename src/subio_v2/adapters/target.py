@@ -26,6 +26,7 @@ from subio_v2.core.nodes import (
     SurgePolicyOptions,
     VmessNode,
     VlessNode,
+    WireguardNode,
 )
 from subio_v2.core.results import (
     ConversionIssue,
@@ -207,6 +208,15 @@ class TargetValidationService:
         self, node: Node, result: TargetCheckResult
     ) -> None:
         global_features = self.common_policy.as_feature_map()
+
+        if isinstance(node, WireguardNode) and self.platform != "surge":
+            peers = node.source_extensions.get("surge", {}).get("wireguard", {}).get("peers", [])
+            keepalives = {peer.get("keepalive") for peer in peers}
+            if len(keepalives) > 1:
+                result.add_error(
+                    "This target cannot preserve different per-peer keepalive settings",
+                    field="persistent_keepalive", code="conversion.unsupported-platform-field",
+                )
 
         if (
             isinstance(node, VlessNode)

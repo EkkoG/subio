@@ -620,7 +620,8 @@ class SurgeParser:
             for dns_line in values.get("dns-server", [])
             for server in split_comma_separated(dns_line)
         ]
-        keepalive = surge_peers[0].get("keepalive")
+        keepalives = [int(peer["keepalive"]) if peer.get("keepalive") else None for peer in surge_peers]
+        keepalive = keepalives[0] if all(value == keepalives[0] for value in keepalives) else None
         node = WireguardNode(
             name=record.name,
             type=Protocol.WIREGUARD,
@@ -663,6 +664,8 @@ class SurgeParser:
         ]
         if "prefer-ipv6" in values:
             semantic_fields.append("wireguard.prefer-ipv6")
+        if len(set(keepalives)) > 1:
+            semantic_fields.append("wireguard.peers.keepalive")
         if semantic_fields:
             node.source_extensions["surge"]["semantic_fields"] = semantic_fields
         get_surge_node_attachments(node).named_sections[section_key] = copy.deepcopy(

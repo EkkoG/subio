@@ -226,7 +226,7 @@ class TailscaleCodec(StructuredClashProtocolCodec):
                         code="conversion.unsupported-auth-profile",
                     )
                 )
-            if node.exit_node in {"auto", "auto:any"}:
+            if node.exit_node in {"auto", "auto:any", "none"}:
                 warnings.append(
                     IssueDraft(
                         severity=IssueSeverity.ERROR,
