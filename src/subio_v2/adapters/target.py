@@ -210,9 +210,8 @@ class TargetValidationService:
         global_features = self.common_policy.as_feature_map()
 
         if isinstance(node, WireguardNode) and self.platform != "surge":
-            peers = node.source_extensions.get("surge", {}).get("wireguard", {}).get("peers", [])
-            keepalives = {peer.get("keepalive") for peer in peers}
-            if len(keepalives) > 1:
+            fields = extension_semantic_fields(node.source_extensions.get("surge", {}))
+            if "wireguard.peers.keepalive" in fields:
                 result.add_error(
                     "This target cannot preserve different per-peer keepalive settings",
                     field="persistent_keepalive", code="conversion.unsupported-platform-field",

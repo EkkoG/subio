@@ -637,7 +637,7 @@ class SurgeParser:
             allowed_ips=(first.allowed_ips if len(wireguard_peers) == 1 else None),
             reserved=(first.reserved if len(wireguard_peers) == 1 else None),
             mtu=(int(values["mtu"][-1]) if values.get("mtu") else None),
-            persistent_keepalive=(int(keepalive) if keepalive else None),
+            persistent_keepalive=keepalive,
             peers=(wireguard_peers if len(wireguard_peers) > 1 else None),
             remote_dns_resolve=bool(dns_servers),
             dns_servers=dns_servers or None,

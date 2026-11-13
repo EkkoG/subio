@@ -26,14 +26,61 @@ def test_missing_or_invalid_proxy_type_has_local_error(value):
     assert result.issues[0].severity.value == 'error'
 
 
-def _wg(second=''):
-    return SurgeParser().parse_result('''[Proxy]
+def _wg(second='', *, keepalive='25', options=''):
+    keepalive_option = f', keepalive = {keepalive}' if keepalive is not None else ''
+    return SurgeParser().parse_result(f'''[Proxy]
 wg = wireguard, section-name=office
 [WireGuard office]
 private-key = synthetic
 self-ip = 10.0.0.2
-peer = (public-key = peer-a, allowed-ips = 0.0.0.0/0, endpoint = a.test:443, client-id = 1/2/3, keepalive = 25)
+{options}
+peer = (public-key = peer-a, allowed-ips = 0.0.0.0/0, endpoint = a.test:443, client-id = 1/2/3{keepalive_option})
 ''' + second)
+
+
+@pytest.mark.parametrize('first,second,value', [
+    ('25', '25', 25), ('25', '025', 25), ('025', '25', 25),
+    ('25', '+25', 25), ('+25', '25', 25),
+    ('0', '0', 0), ('0', '00', 0), ('00', '0', 0),
+    ('0', '+0', 0), ('+0', '0', 0), (None, None, None),
+])
+def test_equal_peer_keepalives_use_numeric_semantics(first, second, value):
+    option = f', keepalive = {second}' if second is not None else ''
+    parsed = _wg(f'peer = (public-key = peer-b, allowed-ips = 10.0.0.0/8, endpoint = b.test:443{option})', keepalive=first)
+    assert not parsed.issues
+    assert parsed.nodes[0].persistent_keepalive == value
+    result = get_emitter('mihomo').emit_result(parsed.nodes)
+    assert not result.errors and len(result.supported_nodes) == 1
+    assert result.content['proxies'][0].get('persistent-keepalive') == value
+
+
+@pytest.mark.parametrize('value', ['0', '00', '+0', '25', None])
+@pytest.mark.parametrize('options', ['', 'allow-peer-access = true', 'accept-incoming = true', 'listen-port = 51820'])
+def test_single_peer_explicit_zero_survives_peer_access(value, options):
+    parsed = _wg(keepalive=value, options=options)
+    expected = int(value) if value is not None else None
+    assert not parsed.issues
+    assert parsed.nodes[0].persistent_keepalive == expected
+    result = get_emitter('surge').emit_result(parsed.nodes)
+    assert not result.errors
+    if options:
+        assert options in result.content
+    if value is None:
+        assert 'keepalive' not in result.content
+    else:
+        assert f'keepalive = {expected}' in result.content
+    again = SurgeParser().parse_result('[Proxy]\n' + result.content)
+    assert not again.issues and again.nodes[0].persistent_keepalive == expected
+
+
+@pytest.mark.parametrize('first,second', [('25', '60'), ('25', None), ('0', None)])
+def test_different_peer_keepalives_remain_rejected(first, second):
+    option = f', keepalive = {second}' if second is not None else ''
+    parsed = _wg(f'peer = (public-key = peer-b, allowed-ips = 10.0.0.0/8, endpoint = b.test:443{option})', keepalive=first)
+    assert not parsed.issues
+    result = get_emitter('mihomo').emit_result(parsed.nodes)
+    assert not result.supported_nodes
+    assert any(issue.field == 'persistent_keepalive' for issue in result.errors)
 
 
 def test_surge_different_keepalives_survive_or_are_rejected():
@@ -48,8 +95,9 @@ def test_surge_different_keepalives_survive_or_are_rejected():
     assert any(i.field == 'persistent_keepalive' for i in result.errors)
 
 
-def test_cleared_wireguard_values_do_not_return_from_attachment():
-    parsed = _wg()
+@pytest.mark.parametrize('keepalive', ['0', '25'])
+def test_cleared_wireguard_values_do_not_return_from_attachment(keepalive):
+    parsed = _wg(keepalive=keepalive)
     node = parsed.nodes[0]
     node.reserved = node.persistent_keepalive = None
     result = get_emitter('surge').emit_result([node])
