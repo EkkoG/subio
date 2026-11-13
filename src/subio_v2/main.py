@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 import tempfile
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -81,6 +81,16 @@ def _write_report(report: dict, output_format: str, output: str | None) -> None:
         print(content, end="")
 
 
+def _config_secrets(config):
+    return [
+        config.age_secret_key,
+        *(provider.age_secret_key for provider in config.providers),
+        *(uploader.token for uploader in config.uploaders),
+        *(str(spec.default) for artifact in config.artifacts
+          for spec in artifact.params.values() if spec.default is not None),
+    ]
+
+
 def _run_convert(args) -> int:
     parameter_mode = bool(args.param)
     redactions = [raw.partition("=")[2] for raw in args.param]
@@ -102,12 +112,7 @@ def _run_convert(args) -> int:
                 return 1
             config = ConfigLoader.load(config_path)
         parameter_mode = parameter_mode or any(item.parameterized for item in config.providers)
-        for artifact in config.artifacts:
-            for spec in artifact.params.values():
-                if spec.default is not None:
-                    redactions.append(str(spec.default))
-        redactions.extend([config.age_secret_key, *(provider.age_secret_key for provider in config.providers)])
-        redactions.extend(uploader.token for uploader in config.uploaders)
+        redactions.extend(_config_secrets(config))
         with logger.redacting(redactions) if any(redactions) else nullcontext():
             engine = WorkflowEngine(
                 config_path,
@@ -141,13 +146,15 @@ def _run_convert(args) -> int:
 def _run_check(args) -> int:
     quiet = args.report_format == "json" and args.output is None
     context = logger.silenced() if quiet else nullcontext()
-    with context:
+    with context, ExitStack() as scopes:
         config_path = _resolve_config_path(args.config)
         if config_path is None:
             report = build_report(fatal_error="Config file not found")
         else:
             try:
-                engine = WorkflowEngine(config_path, dry_run=True)
+                config = ConfigLoader.load(config_path)
+                scopes.enter_context(logger.redacting(_config_secrets(config)))
+                engine = WorkflowEngine(config_path, dry_run=True, config=config)
                 preparation = engine.prepare()
                 report = build_report(
                     preparation.provider_result,
@@ -167,13 +174,15 @@ def _run_check(args) -> int:
 def _run_inspect(args) -> int:
     quiet = args.report_format == "json" and args.output is None
     context = logger.silenced() if quiet else nullcontext()
-    with context:
+    with context, ExitStack() as scopes:
         config_path = _resolve_config_path(args.config)
         if config_path is None:
             report = build_report(fatal_error="Config file not found")
         else:
             try:
-                engine = WorkflowEngine(config_path, dry_run=True)
+                config = ConfigLoader.load(config_path)
+                scopes.enter_context(logger.redacting(_config_secrets(config)))
+                engine = WorkflowEngine(config_path, dry_run=True, config=config)
                 if args.inspect_command == "providers":
                     provider_result = engine.load_providers()
                     report = build_report(provider_result)

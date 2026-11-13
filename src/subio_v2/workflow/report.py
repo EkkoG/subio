@@ -10,6 +10,7 @@ from typing import Any
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
 from subio_v2.infrastructure.remote import RemoteMetadata
+from subio_v2.infrastructure.logging import logger
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
 from subio_v2.workflow.manifest import MANIFEST_NAME, read_manifest
 from subio_v2.workflow.providers import ProviderLoadResult
@@ -162,7 +163,7 @@ def build_report(
             report["orphan_files"] = []
     if fatal_error:
         report["error"] = fatal_error
-    return report
+    return logger.redact(report)
 
 
 def _stale_issue(kind: str, name: str) -> ConversionIssue:

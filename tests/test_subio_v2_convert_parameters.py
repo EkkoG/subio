@@ -482,8 +482,7 @@ def test_parameterized_parse_issues_print_details_and_preserve_existing_policy(
     assert _main(monkeypatch, path, "--param", "port=" + CANARY) == (0 if allow_errors else 1)
     output = capsys.readouterr()
     assert CANARY not in output.out + output.err
-    assert "Failed to parse Clash proxy: invalid port:" in output.out
-    assert "<redacted>" in output.out
+    assert "Failed to parse Clash proxy (ValueError)" in output.out
     if allow_errors:
         assert "continuing with 1 conversion error(s)" in output.out
         assert yaml.safe_load((tmp_path / "dist" / "out.yaml").read_text())["proxies"] == []

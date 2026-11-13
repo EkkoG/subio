@@ -93,7 +93,7 @@ class ClashParser:
                         source=None,
                         target=None,
                         field=f"proxies[{index}]",
-                        message=f"Failed to parse Clash proxy: {exc}",
+                        message=f"Failed to parse Clash proxy ({type(exc).__name__})",
                         stage="parse",
                         code="parse.node",
                     )

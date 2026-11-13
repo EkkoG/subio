@@ -81,6 +81,15 @@ class Logger:
             message = message.replace(value, "<redacted>")
         return message
 
+    def redact(self, value):
+        if isinstance(value, str):
+            return self._redact(value)
+        if isinstance(value, dict):
+            return {key: self.redact(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self.redact(item) for item in value]
+        return value
+
     @contextmanager
     def at_level(self, level: str):
         previous = self._level
