@@ -153,7 +153,7 @@ class TransportSettings:
     max_early_data: Optional[int] = None
     early_data_header_name: Optional[str] = None
     # Unmapped nested transport fields, keyed by Clash option block (e.g. ws-opts).
-    extra: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    extra: Dict[str, Dict[str, Any]] = field(default_factory=dict, repr=False)
 
     @property
     def network_value(self) -> str:
@@ -396,7 +396,7 @@ class TrustTunnelNode(BaseNode):
     type: Protocol = field(default=Protocol.TRUSTTUNNEL)
     username: str = ""
     password: str = field(default="", repr=False)
-    headers: Optional[str] = None
+    headers: Optional[str] = field(default=None, repr=False)
     max_streams: Optional[int] = None
     quic: bool = False
     websocket: bool = False

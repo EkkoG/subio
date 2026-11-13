@@ -13,7 +13,7 @@ from subio_v2 import main
 from subio_v2.core.errors import ConfigError, UploadError
 from subio_v2.core.nodes import TLSSettings, ShadowsocksRNode, HttpNode
 from subio_v2.infrastructure.logging import Logger
-from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
+from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig, RunConfig
 from subio_v2.workflow.config_validation import ConfigValidator
 from subio_v2.workflow import manifest
 from subio_v2.workflow.uploader import GistBatchUploader
@@ -44,6 +44,52 @@ def test_nested_reprs_hide_credentials():
         HttpNode(name='http', headers={'Authorization': secret},
                  tls=TLSSettings(private_key=secret), users={'user': {'password': secret}})]
     assert secret not in repr(nodes)
+
+
+@pytest.mark.parametrize('command', [['check'], ['inspect', 'providers']])
+@pytest.mark.parametrize('format', ['text', 'json'])
+@pytest.mark.parametrize('tag', ['!!int', '!!float'])
+@pytest.mark.parametrize('remote', [False, True])
+def test_yaml_scalar_constructor_errors_are_safe(tmp_path, monkeypatch, capsys, command, format, tag, remote):
+    from subio_v2.infrastructure.remote import RunRemoteLoader
+    secret = 'synthetic-private-token'
+    content = f'proxies: [{{name: n, type: ss, password: {tag} {secret}}}]'
+    provider = {'name': 'source', 'type': 'mihomo'}
+    if remote:
+        provider['url'] = 'https://synthetic.test/sub'
+        monkeypatch.setattr(RunRemoteLoader, 'fetch', lambda *_args, **_kwargs: content.encode())
+    else:
+        provider['file'] = 'nodes.yaml'
+        (tmp_path / 'nodes.yaml').write_text(content)
+    config = tmp_path / 'config.yaml'
+    config.write_text(yaml.safe_dump({'provider': [provider]}))
+    monkeypatch.setattr(sys, 'argv', ['subio', *command, str(config), '--format', format])
+    assert main.main() == 1
+    captured = capsys.readouterr()
+    assert secret not in captured.out + captured.err
+    assert 'ValueError' in captured.out
+
+
+def test_real_source_and_nested_config_reprs_hide_secrets():
+    from subio_v2.adapters.catalog import get_parser
+    secret = 'synthetic-private-token'
+    result = get_parser('mihomo').parse_result({'proxies': [{
+        'name': 'vm', 'type': 'vmess', 'server': 'example.test', 'port': 443,
+        'uuid': 'synthetic', 'network': 'tcp', 'ws-opts': {'headers': {'Authorization': secret}},
+    }]})
+    assert not result.issues and secret not in repr(result.nodes)
+    result = get_parser('surge').parse_result(
+        f'node = trust-tunnel, example.test, 443, username=u, password=p, headers=Authorization:{secret}'
+    )
+    assert not result.issues and secret not in repr(result.nodes)
+    config = RunConfig.from_mapping({
+        'age_secret_key': secret,
+        'provider': [{'name': 'source', 'type': 'mihomo', 'url': f'https://synthetic.test/{secret}', 'age_secret_key': secret}],
+        'uploader': [{'name': 'gist', 'type': 'gist', 'id': 'synthetic', 'token': secret}],
+    })
+    assert secret not in repr(config)
+    assert secret not in repr(config.providers)
+    assert secret not in repr(config.uploaders)
 
 
 def test_dynamic_rich_messages_are_literal_including_status(monkeypatch):

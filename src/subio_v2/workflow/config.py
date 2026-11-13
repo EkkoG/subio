@@ -69,10 +69,10 @@ class UploadConfig:
 class ProviderConfig:
     name: str
     provider_type: str
-    url: str | None = None
+    url: str | None = field(default=None, repr=False)
     file: str | None = None
     user_agent: str | None = None
-    age_secret_key: str | None = None
+    age_secret_key: str | None = field(default=None, repr=False)
     allow_unsafe_external: bool = False
     filters: FilterConfig | None = None
     rename: RenameConfig | None = None
@@ -151,7 +151,7 @@ class UploaderConfig:
     name: str
     uploader_type: str
     id: str | None = None
-    token: str = ""
+    token: str = field(default="", repr=False)
     clean: bool = False
 
     @classmethod
@@ -190,7 +190,7 @@ class RunConfig:
     options: Mapping[str, Any]
     filters: FilterConfig | None
     allow_conversion_errors: bool
-    age_secret_key: str
+    age_secret_key: str = field(repr=False)
     age_public_key: str
     log_level: str | None
     extra: Mapping[str, Any]

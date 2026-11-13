@@ -286,7 +286,7 @@ def load_rulesets(
             raise ConfigError(str(exc)) from exc
 
         codec = registry.get(selection)
-        logger.info(f"Loading ruleset: [cyan]{name}[/cyan]")
+        logger.info(f"Loading ruleset: {name}")
         content = load_remote_resource(
             url,
             user_agent,
