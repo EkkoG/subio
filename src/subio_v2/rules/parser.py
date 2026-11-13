@@ -493,7 +493,7 @@ class ClassicalRuleParser:
                 self._fail(source, line_number, f"{rule_type} cannot be a logical sub-rule")
             self._validate_options(rule_type, options, source, line_number)
             return (
-                Predicate(rule_type=rule_type, source_line=line_number),
+                Predicate(rule_type=rule_type, options=options, source_line=line_number),
                 binding,
             )
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ipaddress
+import json
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -80,6 +82,21 @@ class RuleOutputDialect:
                     ),
                 )
 
+        if self.name == "dae":
+            safe_policy = policy is not None and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", policy)
+            safe_matcher = re.fullmatch(r"[A-Za-z0-9_.-]+", matcher)
+            if rule_type in {"IP-CIDR", "IP-CIDR6"}:
+                try:
+                    ipaddress.ip_network(matcher, strict=False)
+                    safe_matcher = True
+                except ValueError:
+                    safe_matcher = False
+            if not safe_policy or (rule_type != "MATCH" and not safe_matcher):
+                return None, (_issue(
+                    source, expression, self.name, "ruleset.invalid-target-value",
+                    "Rule matcher or policy cannot be represented safely in dae",
+                ),)
+
         if isinstance(expression, LogicalExpression):
             operands: list[str] = []
             issues: list[ConversionIssue] = []
@@ -107,6 +124,12 @@ class RuleOutputDialect:
             tuple(operands),
         )
         if not nested:
+            if self.line_prefix == "- " and (
+                re.search(r":(?:\s|$)|\s#", content)
+                or any(not char.isprintable() for char in content)
+                or content != content.rstrip()
+            ):
+                content = json.dumps(content, ensure_ascii=False)
             content = f"{self.line_prefix}{content}"
         return content, ()
 
