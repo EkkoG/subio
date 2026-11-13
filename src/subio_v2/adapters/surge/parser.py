@@ -13,9 +13,11 @@ from subio_v2.adapters.surge.codecs import (
     SurgeUdpBehavior,
     get_surge_codec,
 )
-from subio_v2.adapters.surge.parsers import (
+from subio_v2.adapters.surge.codecs._shared import (
     SurgeProtocolParseContext,
+    _parameter_bool,
 )
+from subio_v2.adapters.surge.codecs.vless import validate_surge_node
 from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -31,24 +33,16 @@ from subio_v2.adapters.surge.validation import (
     SURGE_RESERVED_POLICY_NAMES,
     parse_surge_ip_version,
     validate_surge_parameters,
-    validate_surge_node,
 )
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import (
-    DirectNode,
-    MasqueMode,
-    MasqueNode,
     Node,
     Protocol,
-    RejectMode,
-    RejectNode,
     ShadowTLSSettings,
     SourcePassthroughNode,
     SSHNode,
     SurgePolicyOptions,
     TailscaleNode,
-    TLSSettings,
-    TrustTunnelNode,
     VlessNode,
     WireguardNode,
     WireguardPeer,
@@ -283,10 +277,9 @@ class SurgeParser:
                     continue
                 if protocol in {"masque", "trust-tunnel"}:
                     try:
-                        node = (
-                            self._parse_masque(record)
-                            if protocol == "masque"
-                            else self._parse_trust_tunnel(record)
+                        codec = get_surge_codec(protocol)
+                        node = self._apply_common_options(
+                            codec.parser(record), record, protocol
                         )
                         retain_node(node, index)
                     except (TypeError, ValueError) as exc:
@@ -673,32 +666,6 @@ class SurgeParser:
         )
         return self._apply_common_options(node, record, "wireguard")
 
-    @staticmethod
-    def _strict_bool(
-        values: dict[str, str], key: str, *, default: bool = False
-    ) -> bool:
-        value = values.get(key)
-        if value is None:
-            return default
-        normalized = value.lower()
-        if normalized not in {"true", "false"}:
-            raise ValueError(f"{key} must be true or false")
-        return normalized == "true"
-
-    @staticmethod
-    def _surge_tls(values: dict[str, str], *, enabled: bool = True) -> TLSSettings:
-        sni = values.get("sni")
-        alpn = values.get("alpn")
-        return TLSSettings(
-            enabled=enabled,
-            server_name=None if sni == "off" else sni,
-            skip_cert_verify=values.get("skip-cert-verify") == "true",
-            alpn=[part.strip() for part in alpn.split(",")] if alpn else None,
-            sni_disabled=sni == "off",
-            verify_name=values.get("server-cert-verify-name"),
-            certificate_sha256=values.get("server-cert-fingerprint-sha256"),
-            client_cert_ref=values.get("client-cert"),
-        )
 
     def _parse_tailscale(
         self,
@@ -717,7 +684,7 @@ class SurgeParser:
         values = self._section_values(section)
         last_values = {key: entries[-1] for key, entries in values.items()}
         auth_key = last_values.get("auth-key") or None
-        interactive_login = self._strict_bool(
+        interactive_login = _parameter_bool(
             last_values, "interactive-login", default=False
         )
         if bool(auth_key) == interactive_login:
@@ -749,14 +716,14 @@ class SurgeParser:
             interactive_login=interactive_login,
             control_url=last_values.get("control-url"),
             exit_node=last_values.get("exit-node"),
-            derp_only=self._strict_bool(last_values, "derp-only"),
+            derp_only=_parameter_bool(last_values, "derp-only"),
             auto_add_magic_dns_rule=(
-                self._strict_bool(last_values, "auto-add-magic-dns-rule")
+                _parameter_bool(last_values, "auto-add-magic-dns-rule")
                 if "auto-add-magic-dns-rule" in last_values
                 else None
             ),
             idle_keepalive=idle_keepalive,
-            prefer_ipv6=self._strict_bool(last_values, "prefer-ipv6"),
+            prefer_ipv6=_parameter_bool(last_values, "prefer-ipv6"),
             dns_servers=dns_servers or None,
             mtu=mtu,
         )
@@ -788,81 +755,6 @@ class SurgeParser:
         )
         return self._apply_common_options(node, record, "tailscale")
 
-    @staticmethod
-    def _validate_opaque_endpoint(record: SurgeProxyRecord) -> None:
-        if len(record.positional) < 2:
-            raise ValueError("host and port are required")
-        port = int(record.positional[1])
-        if not record.positional[0] or not 1 <= port <= 65535:
-            raise ValueError("host or port is invalid")
-
-    def _parse_masque(self, record: SurgeProxyRecord) -> MasqueNode:
-        self._validate_opaque_endpoint(record)
-        values = record.parameters.last_values
-        if values.get("port-hopping") and values.get("underlying-proxy"):
-            raise ValueError("port-hopping cannot be combined with underlying-proxy")
-        hop_interval = (
-            int(values["port-hopping-interval"])
-            if values.get("port-hopping-interval") is not None
-            else None
-        )
-        if hop_interval is not None and hop_interval <= 0:
-            raise ValueError("port-hopping-interval must be positive")
-        if values.get("shadow-tls-password"):
-            raise ValueError("Shadow TLS cannot be combined with MASQUE")
-        username = values.get("username")
-        password = values.get("password")
-        if bool(username) != bool(password):
-            raise ValueError(
-                "MASQUE Basic authentication requires both username and password"
-            )
-        node = MasqueNode(
-            name=record.name,
-            type=Protocol.MASQUE,
-            server=record.positional[0],
-            port=int(record.positional[1]),
-            udp=True,
-            mode=MasqueMode.FORWARD_PROXY,
-            transport="h3",
-            username=username,
-            password=password,
-            ports=values.get("port-hopping"),
-            hop_interval=hop_interval,
-            tls=self._surge_tls(values),
-        )
-        return self._apply_common_options(node, record, "masque")
-
-    def _parse_trust_tunnel(self, record: SurgeProxyRecord) -> TrustTunnelNode:
-        self._validate_opaque_endpoint(record)
-        values = record.parameters.last_values
-        if not values.get("username") or not values.get("password"):
-            raise ValueError("username and password are required")
-        h3 = self._strict_bool(values, "h3")
-        websocket = self._strict_bool(values, "ws")
-        if h3 and websocket:
-            raise ValueError("h3 and ws cannot be enabled together")
-        max_streams = (
-            int(values["max-streams"])
-            if values.get("max-streams") is not None
-            else None
-        )
-        if max_streams is not None and max_streams <= 0:
-            raise ValueError("max-streams must be positive")
-        node = TrustTunnelNode(
-            name=record.name,
-            type=Protocol.TRUSTTUNNEL,
-            server=record.positional[0],
-            port=int(record.positional[1]),
-            udp=False,
-            username=values["username"],
-            password=values["password"],
-            headers=values.get("headers"),
-            max_streams=max_streams,
-            quic=h3,
-            websocket=websocket,
-            tls=self._surge_tls(values),
-        )
-        return self._apply_common_options(node, record, "trust-tunnel")
 
     def _parse_external(self, record: SurgeProxyRecord) -> SourcePassthroughNode:
         values = record.parameters.last_values
@@ -934,29 +826,14 @@ class SurgeParser:
         except Exception:
             return None
 
-    def _parse_builtin_alias(self, record: SurgeProxyRecord) -> DirectNode | RejectNode:
+    def _parse_builtin_alias(self, record: SurgeProxyRecord) -> Node:
         if record.positional:
             raise ValueError(
                 f"Surge {record.type.lower()} does not accept positional arguments"
             )
         protocol = record.type.lower()
-        if protocol == "direct":
-            node: DirectNode | RejectNode = DirectNode(
-                name=record.name,
-                type=Protocol.DIRECT,
-                server=None,
-                port=None,
-                udp=True,
-            )
-        else:
-            node = RejectNode(
-                name=record.name,
-                type=Protocol.REJECT,
-                server=None,
-                port=None,
-                udp=False,
-                mode=RejectMode(protocol),
-            )
+        codec = get_surge_codec(protocol)
+        node = codec.parser(record)
         return self._apply_common_options(node, record, protocol)
 
     @staticmethod

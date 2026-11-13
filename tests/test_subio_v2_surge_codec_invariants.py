@@ -66,6 +66,32 @@ def test_every_node_codec_has_protocol_and_emitter():
         assert codec.emitter is not None
 
 
+def test_protocol_callables_belong_to_their_codec_module():
+    for codec in SURGE_CODEC_SPECS:
+        owner = f"subio_v2.adapters.surge.codecs.{codec.protocol.value}"
+        assert codec.emitter.__module__ == owner
+        if codec.parser is not None:
+            assert codec.parser.__module__ == owner
+        for check in (codec.check, codec.precheck):
+            assert check.__module__ in {owner, "subio_v2.adapters.surge.codecs._base"}
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "bad = masque, example.com, 443, port-hopping=8443, underlying-proxy=upstream",
+        "bad = trust-tunnel, example.com, 443, username=u, password=p, h3=true, ws=true",
+    ],
+)
+def test_opaque_protocol_parse_errors_keep_their_document_diagnostics(line):
+    result = SurgeParser().parse_result(f"[Proxy]\n{line}")
+
+    assert not result.nodes
+    assert [(issue.code, issue.field, issue.severity.value) for issue in result.issues] == [
+        ("parse.protocol", "lines[1]", "error")
+    ]
+
+
 @pytest.mark.parametrize(
     ("keyword", "line", "protocol"),
     [
@@ -173,15 +199,7 @@ def test_parser_path_samples_cover_all_non_resource_node_codecs():
     parser_keywords = {
         codec.keyword for codec in SURGE_CODEC_SPECS if codec.parser is not None
     }
-    assert parser_keywords == registered - {
-        "direct",
-        "reject",
-        "reject-drop",
-        "reject-no-drop",
-        "reject-tinygif",
-        "masque",
-        "trust-tunnel",
-    }
+    assert parser_keywords == registered
     assert all(
         callable(codec.parser)
         for codec in SURGE_CODEC_SPECS

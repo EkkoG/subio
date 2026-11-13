@@ -317,18 +317,21 @@ schema 元数据机械复制进 IR。
 
 Surge 代理行不能使用普通 `split(",")`。值可以包含逗号、等号、引号和重复参数。
 `src/subio_v2/adapters/surge/syntax.py` 负责 tokenizer/serializer，
-`src/subio_v2/adapters/surge/codecs.py` 负责 keyword、协议、参数集合、UDP 行为、parser/emitter callable 和
-Surge target constraints 的唯一 executable codec。
+`src/subio_v2/adapters/surge/codecs/<protocol>.py` 集中维护该协议的解析、检查、编码、typed precheck
+和 `SurgeCodecSpec`，包含 keyword、参数集合、UDP 行为和 target constraints。
+`codecs/__init__.py` 只显式汇总这些规格并派生查询索引；基类与共享编解码 helper 分别在
+`codecs/_base.py` 和 `codecs/_shared.py`。参数语法安全和目标公共校验仍由 `validation.py` 维护。
 
 新增或修改 Surge 协议时：
 
-1. 先更新对应 `SurgeCodecSpec`；
-2. 在 `adapters/surge/parsers.py` 和 `adapters/surge/emitters.py` 实现 callable，并绑定到同一 spec；
+1. 在 `adapters/surge/codecs/<protocol>.py` 更新该协议实现及对应 `SurgeCodecSpec`；
+2. 在同模块的 `CODECS` 中绑定 callable；新增协议模块时加入 `codecs/__init__.py` 的显式汇总；
 3. 更新官方离线 fixture 和 codec invariant；不要把 Surge constraints 放回 Clash protocol codec；
 4. 运行 `tests/test_subio_v2_surge_codec_invariants.py`。
 
 Codec registry 是实际 parser/emitter/target 支持入口，不允许再建立平行 handler map；协议特殊资源仍由
-document adapter 按节点附件所有权处理。
+document adapter 按节点附件所有权处理。External 的来源授权和透传仍属于 document adapter，
+不进入 codec registry。
 
 分享链接位于 `src/subio_v2/adapters/links/codecs/`。每种协议拥有独立 `LinkCodec`；支持输入的 codec 同时声明
 scheme parser、dae/v2rayN 输出能力和 target constraints，均由 codec target registration 派生。不要在 document parser、

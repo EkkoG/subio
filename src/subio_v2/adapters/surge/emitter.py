@@ -7,7 +7,7 @@ from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.surge.codecs import (
     DEFAULT_SURGE_TARGET,
 )
-from subio_v2.adapters.surge.emitters import _SurgeEmissionError
+from subio_v2.adapters.surge.codecs._shared import _SurgeEmissionError
 from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -32,8 +32,8 @@ from subio_v2.core.nodes import (
     SSHNode,
     TailscaleNode,
     TrustTunnelNode,
-    VmessNode,
     VlessNode,
+    VmessNode,
     WireguardNode,
 )
 from subio_v2.core.results import EmissionResult, IssueSeverity

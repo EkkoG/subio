@@ -18,14 +18,14 @@ def test_surge_executable_codec_registry_owns_parser_and_emitter_paths():
 
 def test_surge_document_adapters_have_no_parallel_protocol_maps():
     root = Path(__file__).parents[1] / "src/subio_v2/adapters/surge"
-    parser_source = (root / "parsers.py").read_text()
-    emitter_source = (root / "emitters.py").read_text()
-    codec_source = (root / "codecs.py").read_text()
+    codec_source = "\n".join(
+        path.read_text() for path in sorted((root / "codecs").glob("*.py"))
+    )
     parser_adapter = (root / "parser.py").read_text()
     emitter_adapter = (root / "emitter.py").read_text()
 
-    assert "SURGE_PROTOCOL_PARSERS" not in parser_source
-    assert "SURGE_PROTOCOL_EMITTERS" not in emitter_source
+    assert "SURGE_PROTOCOL_PARSERS" not in codec_source
+    assert "SURGE_PROTOCOL_EMITTERS" not in codec_source
     assert "_SURGE_PARSERS" not in codec_source
     assert "_SURGE_EMITTERS" not in codec_source
     assert "get_surge_protocol_codec" not in emitter_adapter
