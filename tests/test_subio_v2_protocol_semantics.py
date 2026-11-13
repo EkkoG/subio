@@ -3,6 +3,7 @@ from dataclasses import replace
 
 import pytest
 
+import subio_v2.adapters.clash_family.codecs as clash_registry
 import subio_v2.protocols as registry
 from subio_v2.adapters.catalog import get_emitter, get_parser
 from subio_v2.core.nodes import (
@@ -99,7 +100,7 @@ from subio_v2.core.validation import validate_node
 def test_conditional_semantics_do_not_need_any_clash_codec(
     monkeypatch, node, change, field
 ):
-    monkeypatch.setattr(registry, "_registry", {})
+    monkeypatch.setattr(clash_registry, "_registry", {})
     definition = registry.get_definition(node.type)
     assert definition is not None
     assert validate_node(node, definition=definition) == []
@@ -110,7 +111,7 @@ def test_conditional_semantics_do_not_need_any_clash_codec(
 
 
 def test_native_and_singbox_consumers_validate_without_clash_registry(monkeypatch):
-    monkeypatch.setattr(registry, "_registry", {})
+    monkeypatch.setattr(clash_registry, "_registry", {})
     native = get_parser("subio").parse_result(
         json.dumps(
             {

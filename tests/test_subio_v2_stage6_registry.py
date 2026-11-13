@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-import subio_v2.protocols as registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
+from subio_v2.adapters.clash_family.codecs._base import StructuredClashProtocolCodec
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.adapters.surge.parser import SurgeParser
@@ -21,19 +22,16 @@ from subio_v2.core.nodes import (
     SudokuHTTPMaskSettings,
     SudokuNode,
 )
-from subio_v2.protocols._base import StructuredClashProtocolCodec
 from tests.support_target_views import all_platform_capabilities
 
 PLATFORM_CAPABILITIES = all_platform_capabilities()
 
-SCHEMA_SNAPSHOT = (
-    Path(__file__).parent / "fixtures/mihomo/schema/proxies-88d5239.json"
-)
+SCHEMA_SNAPSHOT = Path(__file__).parent / "fixtures/mihomo/schema/proxies-88d5239.json"
 
 
 def test_mihomo_schema_types_have_explicit_registry_strategies():
     snapshot = json.loads(SCHEMA_SNAPSHOT.read_text())
-    codecs = list(registry.all())
+    codecs = list(clash_registry.all())
     known_types = {
         codec.clash_type
         for codec in codecs
@@ -47,13 +45,13 @@ def test_mihomo_schema_types_have_explicit_registry_strategies():
         isinstance(codec, StructuredClashProtocolCodec)
         for codec in codecs
     )
-    assert registry.get(Protocol.MIERU).node_class is MieruNode
-    assert registry.get(Protocol.REJECT).node_class is RejectNode
-    assert registry.get(Protocol.REJECT).requires_endpoint is False
-    assert registry.get(Protocol.DNS).node_class is DNSNode
-    assert registry.get(Protocol.SHADOWQUIC).node_class is ShadowQUICNode
-    assert registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
-    assert registry.get(Protocol.SUDOKU).node_class is SudokuNode
+    assert clash_registry.get(Protocol.MIERU).node_class is MieruNode
+    assert clash_registry.get(Protocol.REJECT).node_class is RejectNode
+    assert clash_registry.get(Protocol.REJECT).requires_endpoint is False
+    assert clash_registry.get(Protocol.DNS).node_class is DNSNode
+    assert clash_registry.get(Protocol.SHADOWQUIC).node_class is ShadowQUICNode
+    assert clash_registry.get(Protocol.OPENVPN).node_class is OpenVPNNode
+    assert clash_registry.get(Protocol.SUDOKU).node_class is SudokuNode
     registered_protocols = {
         codec.protocol.value
         for codec in codecs
@@ -470,4 +468,4 @@ def test_future_unknown_type_uses_source_bound_passthrough():
     assert isinstance(node, SourcePassthroughNode)
     assert node.type is Protocol.SOURCE_PASSTHROUGH
     assert node.original_type == "future-protocol"
-    assert registry.get(Protocol.SOURCE_PASSTHROUGH) is None
+    assert clash_registry.get(Protocol.SOURCE_PASSTHROUGH) is None

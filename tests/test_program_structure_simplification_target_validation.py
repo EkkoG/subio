@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.links.codecs import all_codecs
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
 from subio_v2.adapters.target import TargetValidationService
@@ -21,7 +21,7 @@ def test_target_validation_protocols_derive_from_actual_target_codecs():
     mihomo = TargetValidationService("mihomo")
     assert set(mihomo.protocol_codecs) == {
         codec.protocol
-        for codec in protocol_registry.all()
+        for codec in clash_registry.all()
         if codec.supports_dialect("mihomo")
     }
 

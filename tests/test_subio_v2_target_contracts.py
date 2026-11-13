@@ -3,9 +3,9 @@ from dataclasses import replace
 import pytest
 
 from subio_v2.adapters.catalog import get_emitter, get_target
+from subio_v2.adapters.clash_family.codecs.vless import VlessCodec
 from subio_v2.adapters.target import TargetValidationService
 from subio_v2.core.nodes import Protocol, TLSSettings, TransportSettings, VlessNode
-from subio_v2.protocols.vless import VlessCodec
 from tests.test_subio_v2_capability_invariants import _base_node_factories
 
 
@@ -86,9 +86,9 @@ def test_vless_contract_rejects_grpc_fields_on_other_transports(target):
 
 @pytest.mark.parametrize("target", ["surge", "dae", "v2rayn"])
 def test_foreign_protocol_bindings_do_not_call_clash_checkers(target, monkeypatch):
-    import subio_v2.protocols as registry
+    import subio_v2.adapters.clash_family.codecs as clash_registry
 
-    for codec in registry.all():
+    for codec in clash_registry.all():
         monkeypatch.setattr(
             codec, "check", lambda *_: pytest.fail("Clash checker called")
         )

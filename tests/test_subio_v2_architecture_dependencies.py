@@ -4,8 +4,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOMAIN_FILES = (
     *sorted((REPO_ROOT / "src" / "subio_v2" / "core").glob("*.py")),
-    REPO_ROOT / "src" / "subio_v2" / "protocols" / "definitions.py",
-    REPO_ROOT / "src" / "subio_v2" / "protocols" / "user_overrides.py",
+    *sorted((REPO_ROOT / "src" / "subio_v2" / "protocols").rglob("*.py")),
 )
 RULES_FILES = tuple(sorted((REPO_ROOT / "src" / "subio_v2" / "rules").glob("*.py")))
 
@@ -21,8 +20,7 @@ FORBIDDEN_IMPORTS = (
     "subio_v2.infrastructure",
     "subio_v2.emitter",
     "subio_v2.parser",
-    "subio_v2.adapters.subio",
-    "subio_v2.adapters.surge",
+    "subio_v2.adapters",
     "subio_v2.workflow",
 )
 
@@ -39,6 +37,8 @@ def _imports(path: Path) -> set[str]:
 
 
 def _is_forbidden(module: str) -> bool:
+    if module == "urllib.parse":
+        return False
     return any(
         module == prefix or module.startswith(f"{prefix}.")
         for prefix in FORBIDDEN_IMPORTS
@@ -171,6 +171,9 @@ def test_obsolete_internal_authorities_are_absent():
         "src/subio_v2/capabilities/definitions.py",
         "src/subio_v2/target_registry.py",
         "src/subio_v2/conversion_service.py",
+        "src/subio_v2/protocols/_base.py",
+        "src/subio_v2/protocols/_fields.py",
+        "src/subio_v2/protocols/_dialects.py",
         "src/subio_v2/emitter/link.py",
         "src/subio_v2/parser/base.py",
     )

@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import pytest
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.links import codecs as link
 from subio_v2.adapters.target import TargetValidationService as NodeConversionService
 from subio_v2.core.nodes import (
@@ -174,7 +174,7 @@ def test_capability_tables_only_keep_runtime_feature_flags():
 
 
 def test_protocol_target_constraints_only_cover_registered_targets():
-    for descriptor in protocol_registry.all():
+    for descriptor in clash_registry.all():
         for target in descriptor.target_constraints:
             assert descriptor.protocol.value in PLATFORM_CAPABILITIES[target][
                 "protocols"

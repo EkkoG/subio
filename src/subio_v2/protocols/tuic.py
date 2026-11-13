@@ -1,18 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict
-
 from subio_v2.core.nodes import Node, Protocol, TUICNode
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.validation import NodeValidationError
-from subio_v2.protocols._base import StructuredClashProtocolCodec
-from subio_v2.protocols._dialects import stash_fields
-from subio_v2.protocols._fields import (
-    EmitPolicy,
-    scalar_field,
-    smux_group,
-    tls_group,
-)
 from subio_v2.protocols.spec import ProtocolSpec
 
 
@@ -38,9 +27,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
                 NodeValidationError("password", "TUIC v5 requires a password")
             )
         if node.token:
-            errors.append(
-                NodeValidationError("token", "TUIC v5 cannot use a v4 token")
-            )
+            errors.append(NodeValidationError("token", "TUIC v5 cannot use a v4 token"))
         return errors
     if node.uuid or node.password:
         if not node.uuid:
@@ -63,120 +50,10 @@ SPEC = ProtocolSpec(
     validator=_validate,
     node_class=TUICNode,
     user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "token", "uuid", "password"}),
-    terminal_native_fields=frozenset({"hop_interval", "password", "ports", "smux", "tls", "token", "uuid", "version"}),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "token", "uuid", "password"}
+    ),
+    terminal_native_fields=frozenset(
+        {"hop_interval", "password", "ports", "smux", "tls", "token", "uuid", "version"}
+    ),
 )
-
-
-class TUICCodec(StructuredClashProtocolCodec):
-    spec = SPEC
-
-    def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
-        if "version" not in data:
-            return data
-        try:
-            version = int(data.pop("version"))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("Stash TUIC version must be 4 or 5") from exc
-        if version not in {4, 5}:
-            raise ValueError("Stash TUIC version must be 4 or 5")
-        inferred = 5 if data.get("uuid") or data.get("password") else 4
-        if version != inferred:
-            raise ValueError(
-                f"Stash TUIC version {version} does not match its credentials"
-            )
-        return data
-
-    def post_stash_emit(
-        self, data: dict[str, object], node: Node
-    ) -> tuple[dict[str, object], tuple[str, ...]]:
-        data["version"] = node.version or (5 if data.get("uuid") else 4)
-        return data, ()
-    protocol = Protocol.TUIC
-    clash_dialects = frozenset({"mihomo", "stash"})
-    clash_type = "tuic"
-    dialect_fields = {
-        "stash": stash_fields(
-            "version",
-            "uuid",
-            "password",
-            "token",
-            "ports",
-            "hop-interval",
-            tls=True,
-        )
-    }
-    target_constraints = {
-        "mihomo": {"versions": {4, 5}},
-        "stash": {"versions": {4, 5}},
-    }
-    fields = (
-        scalar_field("token", emit_policy=EmitPolicy.TRUTHY),
-        scalar_field("uuid", emit_policy=EmitPolicy.TRUTHY),
-        scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
-        scalar_field("ports", emit_policy=EmitPolicy.TRUTHY),
-        scalar_field("hop-interval", "hop_interval", emit_policy=EmitPolicy.NOT_NONE),
-        tls_group(
-            consumed_keys=(
-                "tls",
-                "sni",
-                "skip-cert-verify",
-                "fingerprint",
-                "client-fingerprint",
-                "name-cert-verify",
-                "alpn",
-                "certificate",
-                "private-key",
-                "ech-opts",
-            ),
-            default_enabled=True,
-        ),
-        smux_group(),
-    )
-
-    def prepare_parse_kwargs(
-        self, data: Dict[str, Any], kwargs: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        if data.get("uuid") or data.get("password"):
-            kwargs["version"] = 5
-        elif data.get("token"):
-            kwargs["version"] = 4
-        else:
-            kwargs["version"] = None
-        return kwargs
-
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
-        if not isinstance(node, TUICNode):
-            return []
-        warnings: list[IssueDraft] = []
-        actual_version = node.version
-        if actual_version is None:
-            if node.uuid or node.password:
-                actual_version = 5
-            elif node.token:
-                actual_version = 4
-        if actual_version:
-            supported_versions = proto_caps.get("versions", set())
-            if supported_versions and actual_version not in supported_versions:
-                warnings.append(
-                    IssueDraft(
-                        severity=IssueSeverity.ERROR,
-                        message=f"TUIC version {actual_version} is not supported by {platform}",
-                        field="version",
-                        suggestion=(
-                            f"Supported versions: {', '.join(str(v) for v in sorted(supported_versions))}"
-                        ),
-                    )
-                )
-        if platform != "stash" and node.dialer_proxy and node.ports:
-            warnings.append(
-                IssueDraft(
-                    severity=IssueSeverity.ERROR,
-                    message="TUIC port hopping cannot be combined with underlying-proxy",
-                    field="ports",
-                )
-            )
-        return warnings
-
-
-CODEC = TUICCodec()

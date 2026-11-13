@@ -2,12 +2,12 @@ from dataclasses import dataclass, fields
 
 import pytest
 
-import subio_v2.protocols as registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
+from subio_v2.adapters.clash_family.codecs._base import StructuredClashProtocolCodec
+from subio_v2.adapters.clash_family.codecs._fields import EmitPolicy, scalar_field
 from subio_v2.adapters.clash_family.emitter import ClashEmitter
 from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.core.nodes import BaseNode, Protocol, ShadowsocksNode
-from subio_v2.protocols._base import StructuredClashProtocolCodec
-from subio_v2.protocols._fields import EmitPolicy, scalar_field
 
 
 @dataclass
@@ -101,7 +101,7 @@ proxies:
 
 
 def test_structured_codec_specs_reference_real_unique_node_fields():
-    for codec in registry.all():
+    for codec in clash_registry.all():
         if not isinstance(codec, StructuredClashProtocolCodec):
             continue
         node_fields = {item.name for item in fields(codec.node_class)}
@@ -115,14 +115,14 @@ def test_structured_codec_specs_reference_real_unique_node_fields():
 
 def test_stash_codecs_own_their_output_field_contracts():
     stash_codecs = [
-        codec for codec in registry.all() if codec.supports_dialect("stash")
+        codec for codec in clash_registry.all() if codec.supports_dialect("stash")
     ]
 
     assert len(stash_codecs) == 20
     assert all(codec.fields_for_dialect("stash") for codec in stash_codecs)
     assert all(
         not codec.fields_for_dialect("stash")
-        for codec in registry.all()
+        for codec in clash_registry.all()
         if not codec.supports_dialect("stash")
     )
 

@@ -22,12 +22,6 @@ SS_CIPHERS_2022 = {
     "2022-blake3-aes-256-gcm",
     "2022-blake3-chacha20-poly1305",
 }
-SS_CIPHERS_STASH = SS_CIPHERS_EXTENDED | {
-    "aes-192-gcm",
-    "chacha20",
-    "2022-blake3-aes-128-gcm",
-    "2022-blake3-aes-256-gcm",
-}
 
 VMESS_CIPHERS = {
     "auto",
@@ -36,7 +30,6 @@ VMESS_CIPHERS = {
     "none",
     "zero",
 }
-VMESS_CIPHERS_STASH = VMESS_CIPHERS - {"zero"}
 
 TRANSPORT_TCP = "tcp"
 TRANSPORT_WS = "ws"

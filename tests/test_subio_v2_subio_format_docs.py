@@ -5,7 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
@@ -114,7 +114,7 @@ def test_subio_format_document_protocol_fields_match_runtime_contract():
 
     for name, body in tables:
         protocol = Protocol(name)
-        descriptor = protocol_registry.get(protocol)
+        descriptor = clash_registry.get(protocol)
         assert descriptor is not None
         hints = get_type_hints(descriptor.node_class)
         rows = _table_rows(body)

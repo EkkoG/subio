@@ -1,13 +1,13 @@
 import pytest
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.catalog import all_formats, common_policy_for_format
 from subio_v2.adapters.links import codecs as links
-from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
-from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.links.codecs import (
     protocols_for_target as link_protocols_for_target,
 )
+from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
+from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
 from subio_v2.adapters.surge.codecs import SURGE_NODE_PROTOCOLS
 from tests.support_target_views import all_platform_capabilities, protocols_for_target
 
@@ -36,7 +36,7 @@ def test_target_registry_owns_platform_common_policy():
 def test_clash_family_targets_match_registered_dialect_codecs(dialect):
     registered = {
         descriptor.protocol.value
-        for descriptor in protocol_registry.all()
+        for descriptor in clash_registry.all()
         if descriptor.supports_dialect(dialect)
     }
     assert protocols_for_target(dialect) == registered

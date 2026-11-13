@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.surge.codecs import SURGE_CODEC_SPECS, SURGE_PROTOCOL_CODECS
 from subio_v2.core.nodes import Protocol
 
@@ -36,5 +36,5 @@ def test_surge_document_adapters_have_no_parallel_protocol_maps():
 
 def test_clash_protocol_codecs_do_not_declare_surge_target_constraints():
     assert all(
-        "surge" not in codec.target_constraints for codec in protocol_registry.all()
+        "surge" not in codec.target_constraints for codec in clash_registry.all()
     )

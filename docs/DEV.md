@@ -69,7 +69,8 @@ Config / local snippet
 | `src/subio_v2/core/` | 跨平台节点语义、共享设置、结构化结果和目标无关校验 |
 | `src/subio_v2/infrastructure/` | Age、remote loader 和日志等低层外部副作用 |
 | `src/subio_v2/adapters/` | 格式 catalog、target validation、checked emitter 和各格式 family adapter |
-| `src/subio_v2/protocols/` | 逐协议 SPEC/语义校验、Clash-family codec、逐目标约束和 Stash 字段合同 |
+| `src/subio_v2/protocols/` | 逐协议 SPEC、公共语义校验、native 字段策略与独立语义注册表 |
+| `src/subio_v2/adapters/clash_family/codecs/` | 逐协议 Clash-family 编解码、目标约束、Stash 字段合同与 codec 注册表 |
 | `src/subio_v2/adapters/links/` | v2rayN/dae document adapter 与逐协议 link codec |
 | `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/adapters/surge/` | Surge document adapter、词法、codec 规格、安全门禁和节点附件 |
@@ -97,7 +98,7 @@ Emitter 消费绑定返回的编码结果，继续拥有文档组装、dialer �
 
 | 目标 | 实际绑定与协议检查 owner | 既有规范依据与实现范围 |
 |---|---|---|
-| Mihomo / Clash / Stash | `adapters/clash_family/target.py` 与 `protocols/` 的 Clash-family codec | Mihomo 快照 `tests/fixtures/mihomo/schema/README.md` 的 `88d5239`；Clash/Stash 按支持矩阵和现有合同 |
+| Mihomo / Clash / Stash | `adapters/clash_family/target.py` 与 `adapters/clash_family/codecs/` | Mihomo 快照 `tests/fixtures/mihomo/schema/README.md` 的 `88d5239`；Clash/Stash 按支持矩阵和现有合同 |
 | Surge | `adapters/surge/target.py`、`SurgeCodecSpec` 与同目录协议检查/校验函数 | `tests/fixtures/surge/official/README.md`；VLESS 的版本范围见支持矩阵 |
 | dae / v2rayN | `adapters/links/target.py` 与 `links/codecs/` 的逐协议 `LinkCodec` | 支持矩阵、现有分享链接 serializer/contract；不推断其他客户端同名字段 |
 | sing-box | `adapters/singbox/target.py` 与 outbound/endpoint codec | `tests/fixtures/singbox/` 的 v1.14.3 provenance；仅已实现字段组合 |
@@ -273,7 +274,9 @@ git -C vendor/meta-json-schema checkout --detach 88d5239
 
 ### 4.3 Clash codec 注册表
 
-`ClashParser` 和 `ClashEmitter` 通过 `src/subio_v2/protocols/` 分发：
+`ClashParser` 和 `ClashEmitter` 通过 `src/subio_v2/adapters/clash_family/codecs/` 分发。
+各协议模块引用 `protocols/<protocol>.py` 中唯一的公共 `SPEC`；语义注册表不导入 adapter。
+Clash codec 的基类、字段规格和方言合同也由该 family 维护：
 
 - 强类型协议继承 `StructuredClashProtocolCodec`；
 - `ClashFieldSpec` 同时驱动 consumed keys、parse 和 emit；

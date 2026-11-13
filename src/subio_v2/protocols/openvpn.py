@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
-
 from subio_v2.core.nodes import Node, OpenVPNNode, Protocol
-from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.core.validation import NodeValidationError
-from subio_v2.protocols._base import StructuredClashProtocolCodec
-from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
 
-
 _PROTOS = {"udp", "udp4", "tcp", "tcp-client", "tcp4", "tcp4-client"}
+
+
 _DEVICES = {"tun"}
+
+
 _CIPHERS = {
     "AES-128-GCM",
     "AES-192-GCM",
@@ -22,13 +20,15 @@ _CIPHERS = {
     "AES-256-CBC",
     "CHACHA20-POLY1305",
 }
+
+
 _AUTH_METHODS = {"MD5", "SHA1", "SHA256", "SHA384", "SHA512"}
+
+
 _COMP_LZO_MODES = {"yes", "no", "adaptive"}
+
+
 _KEY_DIRECTIONS = {"0", "1"}
-
-
-def _optional_string(value: Any) -> str | None:
-    return None if value is None else str(value)
 
 
 def _validate(node: Node) -> list[NodeValidationError]:
@@ -42,9 +42,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
     _validate_enum(errors, "auth", node.auth, _AUTH_METHODS)
     _validate_enum(errors, "comp_lzo", node.comp_lzo, _COMP_LZO_MODES)
     if node.key_direction is not None:
-        _validate_enum(
-            errors, "key_direction", node.key_direction, _KEY_DIRECTIONS
-        )
+        _validate_enum(errors, "key_direction", node.key_direction, _KEY_DIRECTIONS)
 
     if node.data_ciphers is not None:
         if not isinstance(node.data_ciphers, list):
@@ -55,9 +53,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
             )
         else:
             unsupported = [
-                cipher
-                for cipher in node.data_ciphers
-                if not isinstance(cipher, str)
+                cipher for cipher in node.data_ciphers if not isinstance(cipher, str)
             ]
             if unsupported:
                 errors.append(
@@ -116,9 +112,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
             NodeValidationError("peer_info", "OpenVPN peer-info must be a mapping")
         )
     if node.dns_servers is not None and not isinstance(node.dns_servers, list):
-        errors.append(
-            NodeValidationError("dns_servers", "OpenVPN dns must be a list")
-        )
+        errors.append(NodeValidationError("dns_servers", "OpenVPN dns must be a list"))
     return errors
 
 
@@ -177,81 +171,3 @@ SPEC = ProtocolSpec(
         }
     ),
 )
-
-
-class OpenVPNCodec(StructuredClashProtocolCodec):
-    spec = SPEC
-    protocol = Protocol.OPENVPN
-    clash_type = "openvpn"
-    target_constraints = {"mihomo": {"features": {"smux"}}}
-    fields = (
-        scalar_field("proto", default="udp", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field("dev", default="tun", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field("cipher", default="AES-128-GCM", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field("data-ciphers", "data_ciphers", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field(
-            "data-ciphers-fallback",
-            "data_ciphers_fallback",
-            emit_policy=EmitPolicy.NOT_NONE,
-        ),
-        scalar_field("auth", default="SHA256", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field(
-            "comp-lzo", "comp_lzo", default="no", emit_policy=EmitPolicy.ALWAYS
-        ),
-        scalar_field("ca", default="", emit_policy=EmitPolicy.ALWAYS),
-        scalar_field("cert", "certificate", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("key", "private_key", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("tls-auth", "tls_auth", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field(
-            "key-direction",
-            "key_direction",
-            decode=_optional_string,
-            emit_policy=EmitPolicy.NOT_NONE,
-        ),
-        scalar_field("tls-crypt", "tls_crypt", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("tls-crypt-v2", "tls_crypt_v2", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("username", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("password", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("peer-info", "peer_info", emit_policy=EmitPolicy.NOT_NONE),
-        scalar_field("ping", default=0, emit_policy=EmitPolicy.ALWAYS),
-        scalar_field(
-            "ping-restart", "ping_restart", default=0, emit_policy=EmitPolicy.ALWAYS
-        ),
-        scalar_field(
-            "handshake-timeout",
-            "handshake_timeout",
-            default=0,
-            emit_policy=EmitPolicy.ALWAYS,
-        ),
-        scalar_field("mtu", default=1500, emit_policy=EmitPolicy.ALWAYS),
-        scalar_field(
-            "remote-dns-resolve",
-            "remote_dns_resolve",
-            default=False,
-            emit_policy=EmitPolicy.ALWAYS,
-        ),
-        scalar_field("dns", "dns_servers", emit_policy=EmitPolicy.NOT_NONE),
-        smux_group(),
-    )
-
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
-        if (
-            not isinstance(node, OpenVPNNode)
-            or node.data_ciphers is None
-            or not isinstance(node.data_ciphers, list)
-        ):
-            return []
-        unsupported = [cipher for cipher in node.data_ciphers if cipher not in _CIPHERS]
-        if not unsupported:
-            return []
-        return [
-            IssueDraft(
-                IssueSeverity.ERROR,
-                "Unsupported OpenVPN data cipher(s): "
-                + ", ".join(map(str, unsupported)),
-                "data_ciphers",
-            )
-        ]
-
-
-CODEC = OpenVPNCodec()

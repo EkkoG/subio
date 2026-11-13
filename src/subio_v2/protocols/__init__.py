@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 from subio_v2.core.nodes import Protocol
 from subio_v2.protocols import (
     anytls,
@@ -20,9 +18,9 @@ from subio_v2.protocols import (
     reject,
     rematch,
     shadowquic,
-    shadowtls,
     shadowsocks,
     shadowsocksr,
+    shadowtls,
     snell,
     socks5,
     ssh,
@@ -35,22 +33,10 @@ from subio_v2.protocols import (
     vmess,
     wireguard,
 )
-from subio_v2.protocols._base import ClashProtocolCodec, ClashTargetCodec
 from subio_v2.protocols.definitions import ProtocolDefinition
 from subio_v2.protocols.spec import ProtocolSpec
 
-__all__ = [
-    "ProtocolDefinition",
-    "ProtocolSpec",
-    "all",
-    "all_definitions",
-    "by_clash_type",
-    "get",
-    "get_definition",
-    "target_codec",
-    "target_codecs_for",
-    "register",
-]
+__all__ = ["ProtocolDefinition", "ProtocolSpec", "all_definitions", "get_definition"]
 
 _SPECS: tuple[ProtocolSpec, ...] = (
     anytls.SPEC,
@@ -85,90 +71,12 @@ _SPECS: tuple[ProtocolSpec, ...] = (
     wireguard.SPEC,
 )
 
-_CODECS: tuple[ClashProtocolCodec, ...] = (
-    anytls.CODEC,
-    direct.CODEC,
-    dns.CODEC,
-    gost_relay.CODEC,
-    http.CODEC,
-    hysteria.CODEC,
-    hysteria2.CODEC,
-    juicity.CODEC,
-    masque.CODEC,
-    mieru.CODEC,
-    openvpn.CODEC,
-    reject.CODEC,
-    rematch.CODEC,
-    shadowquic.CODEC,
-    shadowsocks.CODEC,
-    shadowsocksr.CODEC,
-    snell.CODEC,
-    socks5.CODEC,
-    ssh.CODEC,
-    sudoku.CODEC,
-    tailscale.CODEC,
-    trojan.CODEC,
-    trusttunnel.CODEC,
-    tuic.CODEC,
-    vless.CODEC,
-    vmess.CODEC,
-    wireguard.CODEC,
-)
-
 _definitions = {spec.protocol: spec for spec in _SPECS}
-_registry: dict[Protocol, ClashProtocolCodec] = {}
-_clash_type_index: dict[str, ClashProtocolCodec] = {}
-
-
-def register(codec: ClashProtocolCodec) -> None:
-    existing_protocol = _registry.get(codec.protocol)
-    if existing_protocol is not None and existing_protocol is not codec:
-        raise ValueError(f"Protocol already registered: {codec.protocol.value}")
-    existing_type = _clash_type_index.get(codec.clash_type)
-    if existing_type is not None and existing_type is not codec:
-        raise ValueError(f"Clash type already registered: {codec.clash_type}")
-    if codec.spec is None:
-        raise ValueError(f"Protocol has no definition: {codec.protocol!r}")
-    if _definitions.get(codec.protocol) is not codec.spec:
-        raise ValueError(f"Protocol definition does not match: {codec.protocol!r}")
-    _registry[codec.protocol] = codec
-    _clash_type_index[codec.clash_type] = codec
-
-
-for _codec in _CODECS:
-    register(_codec)
-
-
-def get(protocol: Protocol) -> ClashProtocolCodec | None:
-    return _registry.get(protocol)
 
 
 def get_definition(protocol: Protocol) -> ProtocolSpec | None:
     return _definitions.get(protocol)
 
 
-def target_codec(target: str, protocol: Protocol) -> ClashTargetCodec | None:
-    codec = _registry.get(protocol)
-    if codec is None or not codec.supports_dialect(target):
-        return None
-    return ClashTargetCodec(target=target, protocol_codec=codec)
-
-
-def target_codecs_for(target: str) -> dict[Protocol, ClashTargetCodec]:
-    return {
-        protocol: ClashTargetCodec(target=target, protocol_codec=codec)
-        for protocol, codec in _registry.items()
-        if codec.supports_dialect(target)
-    }
-
-
 def all_definitions() -> tuple[ProtocolSpec, ...]:
     return tuple(_definitions.values())
-
-
-def by_clash_type(clash_type: str) -> ClashProtocolCodec | None:
-    return _clash_type_index.get(clash_type)
-
-
-def all() -> Iterable[ClashProtocolCodec]:
-    return _registry.values()

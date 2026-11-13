@@ -183,9 +183,9 @@ def parse_smux(data: Dict[str, Any]) -> SmuxSettings:
 
 
 def emit_base(node: Any) -> Dict[str, Any]:
-    import subio_v2.protocols as protocol_registry
+    import subio_v2.adapters.clash_family.codecs as clash_registry
 
-    desc = protocol_registry.get(node.type)
+    desc = clash_registry.get(node.type)
     clash_type = desc.clash_type if desc else node.type.value
     base: Dict[str, Any] = {
         "name": node.name,
@@ -209,6 +209,7 @@ def emit_base(node: Any) -> Dict[str, Any]:
     if node.users:
         base["users"] = node.users
     return base
+
 
 def emit_tls(base: Dict[str, Any], tls: Optional[TLSSettings]) -> None:
     if not tls or not tls.enabled:

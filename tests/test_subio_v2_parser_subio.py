@@ -6,7 +6,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 import pytest
 import yaml
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.subio.parser import SubioParser
 from subio_v2.adapters.subio.schema import (
     PUBLIC_NESTED_FIELDS,
@@ -646,20 +646,20 @@ proxies:
 def test_subio_public_field_contract_covers_every_concrete_protocol():
     registered = {
         descriptor.protocol
-        for descriptor in protocol_registry.all()
+        for descriptor in clash_registry.all()
         if descriptor.definition.native_public
     }
     assert PUBLIC_PROTOCOLS == registered
     assert Protocol.SOURCE_PASSTHROUGH not in PUBLIC_PROTOCOLS
 
-    for descriptor in protocol_registry.all():
+    for descriptor in clash_registry.all():
         assert public_node_fields(descriptor.protocol) == (
             TERMINAL_NATIVE_COMMON_FIELDS | descriptor.definition.terminal_native_fields
         ), descriptor.protocol.value
 
 
 def test_subio_user_override_contract_is_explicit_and_valid():
-    for descriptor in protocol_registry.all():
+    for descriptor in clash_registry.all():
         protocol = descriptor.protocol
         model_fields = get_type_hints(descriptor.node_class).keys()
         override_fields = public_user_override_fields(protocol)
@@ -681,7 +681,7 @@ def test_subio_public_mapping_contract_covers_unconstrained_objects():
     owners = list(PUBLIC_NESTED_FIELDS.items())
     owners.extend(
         (descriptor.node_class, public_node_fields(descriptor.protocol))
-        for descriptor in protocol_registry.all()
+        for descriptor in clash_registry.all()
     )
 
     for owner, public_fields in owners:

@@ -4,7 +4,7 @@ import copy
 import re
 from typing import Any
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.core.nodes import Node
 
 _COMMON_INPUT_ALIASES = {"server-cert-fingerprint": "fingerprint"}
@@ -25,9 +25,7 @@ _PLUGIN_FIELDS = {
     "v2ray-plugin": frozenset(
         {"mode", "tls", "skip-cert-verify", "host", "path", "headers"}
     ),
-    "shadow-tls": frozenset(
-        {"password", "host", "skip-cert-verify", "version"}
-    ),
+    "shadow-tls": frozenset({"password", "host", "skip-cert-verify", "version"}),
 }
 
 
@@ -38,9 +36,7 @@ def _move_aliases(
         if source not in data:
             continue
         if target in data and data[target] != data[source]:
-            raise ValueError(
-                f"Conflicting {dialect} fields '{source}' and '{target}'"
-            )
+            raise ValueError(f"Conflicting {dialect} fields '{source}' and '{target}'")
         data[target] = data.pop(source)
 
 
@@ -58,7 +54,7 @@ def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
     normalized = copy.deepcopy(data)
     _move_aliases(normalized, _COMMON_INPUT_ALIASES, dialect="Stash")
     protocol = str(normalized.get("type", ""))
-    codec = protocol_registry.by_clash_type(protocol)
+    codec = clash_registry.by_clash_type(protocol)
     if codec is None:
         return normalized
     _move_aliases(normalized, dict(codec.stash_input_aliases), dialect="Stash")
@@ -75,7 +71,7 @@ def post_stash_emit(
         output.pop(key, None)
 
     _move_aliases(output, _COMMON_OUTPUT_ALIASES, dialect="shared")
-    codec = protocol_registry.get(node.type)
+    codec = clash_registry.get(node.type)
     if codec is not None:
         _move_aliases(output, dict(codec.stash_output_aliases), dialect="shared")
     if "servername" in output:

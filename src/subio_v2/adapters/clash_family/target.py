@@ -1,6 +1,6 @@
 """Clash-family contracts own validation and final dialect encoding."""
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.checks import (
     foreign_surge_options,
     ignored_fields,
@@ -60,7 +60,7 @@ def make_target(target: str, policy) -> TargetAdapter:
         context,
         {
             protocol: bind(codec)
-            for protocol, codec in protocol_registry.target_codecs_for(target).items()
+            for protocol, codec in clash_registry.target_codecs_for(target).items()
         },
         "tests/fixtures/mihomo/schema/README.md: 88d5239; docs/support_matrix.md: implemented Clash/Stash contracts",
         NodeTargetCodec(

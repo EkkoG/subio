@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Dict
 
+from subio_v2.adapters.clash_family.codecs._fields import ClashFieldSpec
 from subio_v2.adapters.clash_family.fields import (
     assign_extra,
     emit_base,
@@ -15,7 +16,6 @@ from subio_v2.adapters.clash_family.fields import (
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import BaseNode, Node, Protocol
 from subio_v2.core.results import IssueDraft
-from subio_v2.protocols._fields import ClashFieldSpec
 from subio_v2.protocols.spec import ProtocolSpec
 
 

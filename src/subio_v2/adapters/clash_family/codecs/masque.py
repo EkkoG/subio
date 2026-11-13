@@ -1,0 +1,205 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Dict
+
+from subio_v2.adapters.clash_family.codecs._base import StructuredClashProtocolCodec
+from subio_v2.adapters.clash_family.codecs._dialects import stash_fields
+from subio_v2.adapters.clash_family.codecs._fields import (
+    EmitPolicy,
+    field_group,
+    scalar_field,
+    smux_group,
+    tls_group,
+)
+from subio_v2.core.nodes import MasqueMode, MasqueNode, Node, Protocol
+from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.protocols.masque import SPEC
+
+
+def _parse_network(data: Mapping[str, Any]) -> dict[str, Any]:
+    network = str(data.get("network") or "quic")
+    if network == "h3-l4proxy":
+        return {"mode": MasqueMode.H3_L4_PROXY, "transport": "h3"}
+    if network == "h2":
+        return {"mode": MasqueMode.CONNECT_IP, "transport": "h2"}
+    if network == "quic":
+        return {"mode": MasqueMode.CONNECT_IP, "transport": "h3"}
+    return {"mode": MasqueMode.CONNECT_IP, "transport": network}
+
+
+def _emit_network(out: MutableMapping[str, Any], node: Node) -> None:
+    assert isinstance(node, MasqueNode)
+    if node.mode == MasqueMode.H3_L4_PROXY:
+        out["network"] = "h3-l4proxy"
+    elif node.mode == MasqueMode.CONNECT_IP and node.transport == "h2":
+        out["network"] = "h2"
+    elif node.mode == MasqueMode.CONNECT_IP and node.transport != "h3":
+        out["network"] = node.transport
+    elif node.mode != MasqueMode.CONNECT_IP:
+        raise ValueError("Unsupported Mihomo MASQUE mode or transport")
+
+
+class MasqueCodec(StructuredClashProtocolCodec):
+    spec = SPEC
+    stash_input_aliases = {"connect-uri": "uri"}
+    stash_output_aliases = {"uri": "connect-uri"}
+
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
+        return value is False and key in {"udp", "remote-dns-resolve"}
+
+    def post_stash_emit(
+        self, data: dict[str, object], node: Node
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        if node.transport == "h3":
+            data.setdefault("network", "h3")
+        return data, ()
+
+    protocol = Protocol.MASQUE
+    clash_dialects = frozenset({"mihomo", "stash"})
+    clash_type = "masque"
+    dialect_fields = {
+        "stash": stash_fields(
+            "name",
+            "type",
+            "server",
+            "port",
+            "private-key",
+            "public-key",
+            "ip",
+            "ipv6",
+            "dns",
+            "network",
+            "sni",
+            "connect-uri",
+            "mtu",
+            "keepalive",
+            endpoint=False,
+        )
+    }
+    fields = (
+        scalar_field("uri", "connect_uri", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("private-key", "private_key", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("public-key", "public_key", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("ip", "interface_ip", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("ipv6", "interface_ipv6", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("mtu", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field(
+            "remote-dns-resolve",
+            "remote_dns_resolve",
+            default=False,
+            emit_policy=EmitPolicy.ALWAYS,
+        ),
+        scalar_field("dns", "dns_servers", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field(
+            "congestion-controller",
+            "congestion_controller",
+            emit_policy=EmitPolicy.NOT_NONE,
+        ),
+        scalar_field("cwnd", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field("bbr-profile", "bbr_profile", emit_policy=EmitPolicy.NOT_NONE),
+        scalar_field(
+            "handshake-timeout", "handshake_timeout", emit_policy=EmitPolicy.NOT_NONE
+        ),
+        field_group(
+            consumed_keys=("network",),
+            node_attrs=("mode", "transport"),
+            parse_kwargs=_parse_network,
+            emit_into=_emit_network,
+        ),
+        tls_group(
+            consumed_keys=(
+                "sni",
+                "skip-cert-verify",
+                "fingerprint",
+                "client-fingerprint",
+                "alpn",
+                "ech-opts",
+            ),
+            force_enabled=True,
+        ),
+        smux_group(),
+    )
+
+    def prepare_parse_kwargs(
+        self, data: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        if "udp" not in data:
+            kwargs["udp"] = False
+        return kwargs
+
+    def after_emit(self, out: Dict[str, Any], node: Node) -> None:
+        out.pop("tls", None)
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+        if not isinstance(node, MasqueNode):
+            return []
+        supported_modes = {
+            "mihomo": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
+            "stash": {MasqueMode.CONNECT_IP},
+        }.get(platform)
+        warnings: list[IssueDraft] = []
+        if supported_modes is not None and node.mode not in supported_modes:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=(
+                        f"MASQUE mode '{node.mode.value}' is not supported by {platform}"
+                    ),
+                    field="mode",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+            return warnings
+
+        supported_transports = {
+            "stash": {"h2", "h3"},
+        }.get(platform)
+        if (
+            supported_transports is not None
+            and node.transport not in supported_transports
+        ):
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=(
+                        f"MASQUE transport '{node.transport}' is not supported by "
+                        f"{platform}"
+                    ),
+                    field="transport",
+                    code="conversion.unsupported-protocol-variant",
+                )
+            )
+
+        if platform != "stash" and node.dialer_proxy and node.ports:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message="MASQUE port hopping cannot be combined with underlying-proxy",
+                    field="ports",
+                    code="conversion.unsupported-field-combination",
+                )
+            )
+
+        if platform == "stash":
+            for field, value in (
+                ("remote_dns_resolve", node.remote_dns_resolve),
+                ("congestion_controller", node.congestion_controller),
+                ("cwnd", node.cwnd),
+                ("bbr_profile", node.bbr_profile),
+                ("handshake_timeout", node.handshake_timeout),
+                ("smux", node.smux.enabled),
+            ):
+                if value is not None and value is not False:
+                    warnings.append(
+                        IssueDraft(
+                            severity=IssueSeverity.WARNING,
+                            message=f"MASQUE field '{field}' is Mihomo-only",
+                            field=field,
+                            code="conversion.unconsumed-source-field",
+                        )
+                    )
+        return warnings
+
+
+CODEC = MasqueCodec()

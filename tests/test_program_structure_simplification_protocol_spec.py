@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import fields
 from pathlib import Path
 
+import subio_v2.adapters.clash_family.codecs as clash_registry
 import subio_v2.protocols as registry
 from subio_v2.core.nodes import Protocol, ShadowsocksNode, VlessNode, VmessNode
 from subio_v2.protocols.shadowsocks import SPEC as SHADOWSOCKS_SPEC
@@ -17,7 +18,7 @@ def test_representative_protocol_specs_are_local_and_authoritative():
         Protocol.VMESS: (VMESS_SPEC, VmessNode),
     }
     for protocol, (spec, node_class) in expected.items():
-        codec = registry.get(protocol)
+        codec = clash_registry.get(protocol)
         assert codec is not None
         assert codec.spec is spec
         assert registry.get_definition(protocol) is spec
@@ -29,7 +30,7 @@ def test_representative_protocol_specs_are_local_and_authoritative():
 
 
 def test_protocol_definitions_do_not_require_clash_codecs():
-    codecs = tuple(registry.all())
+    codecs = tuple(clash_registry.all())
     assert len(codecs) == 27
     assert all(codec.spec is not None for codec in codecs)
     assert len(registry.all_definitions()) == 30
@@ -40,7 +41,7 @@ def test_protocol_definitions_do_not_require_clash_codecs():
         Protocol.SHADOWTLS,
     }
     for protocol in runtime_only:
-        assert registry.get(protocol) is None
+        assert clash_registry.get(protocol) is None
         spec = registry.get_definition(protocol)
         assert spec is not None and not spec.native_public
 
@@ -48,7 +49,7 @@ def test_protocol_definitions_do_not_require_clash_codecs():
 def test_semantic_validation_does_not_use_clash_fields(monkeypatch):
     from subio_v2.core.validation import validate_node
 
-    codec = registry.get(Protocol.VMESS)
+    codec = clash_registry.get(Protocol.VMESS)
     monkeypatch.setattr(codec, "fields", ())
     node = VmessNode(name="vmess", server="example.test", port=443, uuid="")
     errors = validate_node(node, definition=VMESS_SPEC)

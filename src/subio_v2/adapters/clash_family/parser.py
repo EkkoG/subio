@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import yaml
 
-import subio_v2.protocols as protocol_registry
+import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.catalog import normalize_format
 from subio_v2.adapters.clash_family.dialect import pre_descriptor_normalize
 from subio_v2.core.dialect import DialectContext
@@ -22,9 +22,7 @@ class ClashParser:
         parameters: Mapping[str, ParameterValue] | None = None,
     ):
         context = context or DialectContext("mihomo", "yaml")
-        self.context = DialectContext(
-            normalize_format(context.dialect), context.format
-        )
+        self.context = DialectContext(normalize_format(context.dialect), context.format)
         self.parameters = dict(parameters) if parameters is not None else None
 
     def parse_result(self, content: Any) -> ParseResult:
@@ -38,8 +36,12 @@ class ClashParser:
             except Exception as e:
                 # YAML constructors also raise built-in errors that can expose input values.
                 mark = getattr(e, "problem_mark", None)
-                location = f"; line={mark.line + 1}; column={mark.column + 1}" if mark else ""
-                raise ValueError(f"YAML parse error ({type(e).__name__}){location}") from e
+                location = (
+                    f"; line={mark.line + 1}; column={mark.column + 1}" if mark else ""
+                )
+                raise ValueError(
+                    f"YAML parse error ({type(e).__name__}){location}"
+                ) from e
         elif isinstance(content, dict):
             return content
         else:
@@ -103,7 +105,7 @@ class ClashParser:
         if not isinstance(node_type, str) or not node_type.strip():
             raise ValueError("Proxy type must be a non-empty string")
 
-        desc = protocol_registry.by_clash_type(str(node_type))
+        desc = clash_registry.by_clash_type(str(node_type))
         if not desc:
             node = SourcePassthroughNode(
                 name=data.get("name", "Unknown"),
