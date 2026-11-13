@@ -550,8 +550,22 @@ serve 只使用内存资源快照和每轮内存去重，显式关闭远程磁�
 监听地址，不将资源准备完成误报为端口监听成功。独立的一个刷新 worker 不占用四个同步渲染
 worker；渲染名额直到工作实际结束才释放，包括断连后的任务。关闭时停止调度和接收渲染，等待实际刷新
 及渲染线程结束，没有硬性关闭期限，也不提供可信模板的严格 wall-time 或全局传输内存上限。
-`RunRemoteLoader` 当前使用
-Requests，先缓冲再检查 `max_bytes`，不能将该检查描述为 streaming memory bound。
+`RunRemoteLoader` 保留 Requests Session，从关闭自动解码的 raw 流有界读取，按 `max_bytes` 限制解码输出。
+支持 identity、gzip、deflate 和 zstd；其他编码及编码链拒绝。gzip/deflate 每次解码输出有预算，deflate
+首次格式探测最多保留 64 KiB 后安全拒绝；zstd 解码窗口上限为 8 MiB，并检查各帧完整性。
+重定向中间正文在 Requests 自动消费前关闭；状态重试先关闭正文，与连接重试共享 Retry 总预算和退避历史。
+这些是单资源读取/解码边界，不是整个服务、模板执行或所有并发请求的全局内存上限。
+
+磁盘缓存使用版本化的单 JSON 记录，将 Base64 正文和元数据一次原子替换；读取有记录和解码大小上限。
+旧 `.bin` + `.json` 双文件缓存、损坏或超限记录均视为未命中，不迁移或自动删除。首次使用需重新获取；
+离线时旧格式不能作为 stale 数据。新格式保留 TTL、ETag/304、stale-if-error 和私有权限，正文磁盘开销约增三分之一。
+缓存落盘失败只报告安全 warning，不改变成功网络或 304 结果。
+
+CLI 配置和 provider 的语法诊断只报告类别和可用行列，不回显原始源行。动态日志按字面文本显示，
+不解释节点名等外部字符串中的 Rich markup。显式 null collection 和非法枚举类型按 ConfigError 拒绝。
+`clean-dist` 以 manifest 原子发布为提交点：此前捕获的同步中断恢复旧文件，此后保留已提交的新状态并重抛中断。
+不保证 SIGKILL、断电或多进程清理恢复；提交后可能留下私有临时备份。同一 Gist 的有效 clean 设置冲突时拒绝排队，
+请求文件按 literal pathspec 强制暂存并验证跟踪状态。
 
 ## 8. 测试与提交
 

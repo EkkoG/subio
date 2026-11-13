@@ -84,6 +84,17 @@ VLESS 分享链接的 WebSocket header 当前只能表示精确键名为 `Host` 
 和 sing-box 当前支持的 TCP 路径；Mihomo、Stash 及链接目标无法表示该语义时产生 `tls.sni_disabled`
 ERROR，不输出语义改变的节点。
 
+所有分享链接目标均检查无法表示的 TLS 证书固定、验证名、客户端证书/私钥和 ECH 等字段，给出字段级 ERROR；
+HTTP 必需 headers 和 VMess/Trojan/VLESS 无法表示的 transport headers 同样拒绝。
+SS 链接保留裸插件标志（如 `tls`）、百分号凭据及旧式整段 Base64；Trojan 保留 ALPN。
+VLESS TCP 的 HTTP 伪装当前没有模型表示，产生 parse issue。
+SS 独立 UDP 端口不能输出到 Mihomo/Clash/Stash/链接，Hysteria2 跳跃参数不能输出到 DAE 链接；
+sing-box Direct/Hysteria/Hysteria2 的 `udp = false` 无等价表示时拒绝，不能静默启用 UDP。
+
+Clash-family 仅从活动 transport 块提取模型字段，其他块只按同方言保留。Sudoku HTTP-mask 和 WireGuard peer
+未知嵌套字段绑定来源方言，模型值优先；跨方言有 issue。Surge 多 peer 不同 keepalive 在同方言保留，
+不能表达差异的目标拒绝。Stash Tailscale 的 `exit-node: none` 无已证明的选择语义，拒绝输出。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |
@@ -138,6 +149,11 @@ SRS 或完整客户端配置。
 `clash-meta` 是 `mihomo` 的兼容别名。sing-box 规则只在完整客户端 JSON 模板中输出为 `route.rules`；
 不提供节点-only JSON 或独立 Source ruleset artifact。目标无法表示的规则类型、option 或逻辑表达式会生成
 结构化 conversion issue，并在未显式放行时阻止 staging、上传和 manifest 发布。
+
+DAE 仅输出已验证的简单 domain/IP matcher 和 policy 标识符；结构符号、空白或 IPv6 scope 等
+未证明可安全表达的值产生规则级 ERROR。YAML payload 的每个字符串必须是单行，注释也不能夹带额外物理行。
+Mihomo/Clash/Stash 在需要时对完整规则作 YAML 标量编码，保留内部 CSV/逻辑语法和 Unicode 值；
+Stash `MATCH` 保留 `no-track`，跨不支持目标继续产生 option issue。
 
 | 目标 | 输出边界 |
 |---|---|
