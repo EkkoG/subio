@@ -266,6 +266,8 @@ YAML 循环和会产生 tuple 的 `!!pairs` / `!!omap` 拒绝。部署、编码�
 - provider/user/global filter/selector 删除已知 dialer 上游时，产物在选择阶段失败；目标编码失败导致的
   悬空依赖会级联淘汰并产生 ERROR，允许转换错误时也不会保留这些节点或附件。未知名称仍可由模板
   静态策略组提供；dae 链与 sing-box endpoint 的更严格限制保持不变。
+- Surge 先检查目标与已知 dialer 依赖，再按源顺序合并附件；冲突导致依赖淘汰时重新评估候选，
+  每轮移除失去依赖的节点。仅存活节点拥有最终附件，同键同值合并，异值保留源顺序优先项。
 - `match_original_name = true` 对未改名节点使用当前名称，对已改名节点使用保存的原名。
 
 - CLI 命令、已有 provider/ruleset/artifact 配置结构、模板 callable 和输出文件组织不变；

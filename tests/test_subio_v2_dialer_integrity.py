@@ -157,13 +157,9 @@ def test_surge_selector_accepts_static_template_group(tmp_path):
 @pytest.mark.parametrize("target", ["mihomo", "stash", "surge", "sing-box"])
 @pytest.mark.parametrize("names", [(None, "bad"), (42, "bad"), (None, "")])
 def test_rejected_mixed_names_do_not_break_relation_checks(target, names):
-    parsed = get_parser("mihomo").parse_result({"proxies": [
-        {"name": name, "type": "ss", "server": "example.test", "port": 8388,
-         "cipher": "aes-256-gcm", "password": "" if name != "safe" else "synthetic"}
-        for name in (*names, "safe")
-    ]})
-    assert not parsed.issues
-    result = get_emitter(target).emit_result(parsed.nodes)
+    nodes = [ss(name, password="" if name != "safe" else "synthetic")
+             for name in (*names, "safe")]
+    result = get_emitter(target).emit_result(nodes)
     assert [node.name for node in result.supported_nodes] == ["safe"]
     assert result.errors
     assert not any(issue.field == "dialer_proxy" for issue in result.issues)

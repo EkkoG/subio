@@ -96,68 +96,65 @@ class SurgeEmitter(BaseEmitter):
 
         lines: list[str] = []
         emitted_nodes: list[Node] = []
-        emitted_policy_name_set: set[str] = set()
         emitted_attachments = SurgeNodeAttachments()
-        attachments_by_node: list[SurgeNodeAttachments] = []
-
+        candidates: list[tuple[Node, str, SurgeNodeAttachments]] = []
         for node in nodes:
-            if node.name in emitted_policy_name_set:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Duplicate Surge policy name '{node.name}'",
-                        field="name",
-                        code="conversion.resource-conflict",
-                    )
-                )
-                continue
             encoded = self.encode_node(node)
             issues.extend(encoded.issues)
-            if encoded.supported_node is None:
-                continue
-            line, node_attachments = encoded.content
-            try:
-                merged_attachments = emitted_attachments.clone()
-                merged_attachments.merge(node_attachments)
-            except ValueError as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        str(exc),
+            if encoded.supported_node is not None:
+                line, attachments = encoded.content
+                candidates.append((node, line, attachments))
+
+        eligible = list(range(len(candidates)))
+        while eligible:
+            retained, relation_issues = self.retain_dialer_indices(
+                nodes, [candidates[index][0] for index in eligible]
+            )
+            issues.extend(relation_issues)
+            eligible = [index for position, index in enumerate(eligible) if position in retained]
+            selected: list[int] = []
+            policy_names: set[str] = set()
+            attachments = SurgeNodeAttachments()
+            conflict_issues = []
+            for index in eligible:
+                node, _, node_attachments = candidates[index]
+                if node.name in policy_names:
+                    conflict_issues.append(self.issue_for_node(
+                        node, IssueSeverity.ERROR,
+                        f"Duplicate Surge policy name '{node.name}'",
+                        field="name", code="conversion.resource-conflict",
+                    ))
+                    continue
+                try:
+                    merged = attachments.clone()
+                    merged.merge(node_attachments)
+                except ValueError as exc:
+                    conflict_issues.append(self.issue_for_node(
+                        node, IssueSeverity.ERROR, str(exc),
                         field="source_extensions.surge.attachments",
                         code="conversion.attachment-conflict",
-                    )
-                )
-                continue
-            except Exception as exc:
-                issues.append(
-                    self.issue_for_node(
-                        node,
-                        IssueSeverity.ERROR,
-                        f"Failed to emit Surge proxy: {exc}",
-                    )
-                )
-                continue
+                    ))
+                    continue
+                selected.append(index)
+                policy_names.add(node.name)
+                attachments = merged
 
-            lines.append(line)
-            emitted_nodes.append(node)
-            emitted_policy_name_set.add(node.name)
-            emitted_attachments = merged_attachments
-            attachments_by_node.append(node_attachments)
-
-        retained, relation_issues = self.retain_dialer_indices(nodes, emitted_nodes)
-        issues.extend(relation_issues)
-        lines = [line for index, line in enumerate(lines) if index in retained]
-        emitted_nodes = [
-            node for index, node in enumerate(emitted_nodes) if index in retained
-        ]
-        # Rebuild only from survivors; conflict decisions above retain source order.
-        emitted_attachments = SurgeNodeAttachments()
-        for index, attachments in enumerate(attachments_by_node):
-            if index in retained:
-                emitted_attachments.merge(attachments)
+            retained, relation_issues = self.retain_dialer_indices(
+                nodes, [candidates[index][0] for index in selected]
+            )
+            if len(retained) == len(selected):
+                issues.extend(conflict_issues)
+                lines = [candidates[index][1] for index in selected]
+                emitted_nodes = [candidates[index][0] for index in selected]
+                emitted_attachments = attachments
+                break
+            issues.extend(relation_issues)
+            # Each retry removes at least one dependent permanently. Conflict
+            # losers can then use resources released by those removed nodes.
+            removed = {
+                index for position, index in enumerate(selected) if position not in retained
+            }
+            eligible = [index for index in eligible if index not in removed]
 
         if emitted_attachments.keystore:
             lines.append("")
