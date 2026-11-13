@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from subio_v2.core.errors import ArtifactGenerationError
+from subio_v2.infrastructure.files import set_private_permissions
 from subio_v2.workflow.artifacts import ArtifactDraft
 
 
@@ -22,21 +23,14 @@ class ArtifactPublisher:
                         f"Artifact path escapes dist directory: {filename!r}"
                     )
                 fd, temp_name = tempfile.mkstemp(
-                    prefix=f".{filename}.", suffix=".tmp", dir=dist_dir
+                    prefix=".subio-artifact-", suffix=".tmp", dir=dist_dir
                 )
                 prepared.append((temp_name, target))
-                try:
-                    os.fchmod(fd, 0o600)
-                    with os.fdopen(fd, "w", encoding="utf-8") as output:
-                        output.write(content)
-                        output.flush()
-                        os.fsync(output.fileno())
-                except Exception:
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-                    raise
+                with os.fdopen(fd, "w", encoding="utf-8") as output:
+                    set_private_permissions(output.fileno(), temp_name)
+                    output.write(content)
+                    output.flush()
+                    os.fsync(output.fileno())
 
             for temp_name, target in prepared:
                 os.replace(temp_name, target)

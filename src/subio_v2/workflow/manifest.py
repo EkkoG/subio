@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from subio_v2.core.errors import ArtifactGenerationError
+from subio_v2.infrastructure.files import set_private_permissions
 from subio_v2.workflow.artifacts import ArtifactSummary
 from subio_v2.workflow.providers import ProviderSummary
 
@@ -122,26 +123,21 @@ def write_manifest(dist_dir: Path, manifest: dict[str, Any]) -> None:
     dist_dir.mkdir(parents=True, exist_ok=True)
     target = dist_dir / MANIFEST_NAME
     fd, temporary = tempfile.mkstemp(
-        prefix=f".{MANIFEST_NAME}.", suffix=".tmp", dir=dist_dir
+        prefix=".subio-manifest-", suffix=".tmp", dir=dist_dir
     )
     try:
-        os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as output:
+            set_private_permissions(output.fileno(), temporary)
             json.dump(manifest, output, ensure_ascii=False, indent=2, sort_keys=True)
             output.write("\n")
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary, target)
-    except BaseException:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
+    finally:
         try:
             os.unlink(temporary)
         except FileNotFoundError:
             pass
-        raise
 
 
 def apply_manifest(
@@ -165,7 +161,7 @@ def apply_manifest(
             if not target.exists():
                 continue
             fd, temporary_name = tempfile.mkstemp(
-                prefix=f".subio-clean-{filename}-",
+                prefix=".subio-clean-",
                 suffix=".tmp",
                 dir=dist_dir,
             )

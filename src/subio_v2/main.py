@@ -12,6 +12,7 @@ from subio_v2.core.errors import (
     WorkflowError,
 )
 from subio_v2.infrastructure import age
+from subio_v2.infrastructure.files import set_private_permissions
 from subio_v2.infrastructure.logging import LOG_LEVELS, logger
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
@@ -29,25 +30,20 @@ def _atomic_write_bytes(target: str, data: bytes) -> None:
     target_path = Path(target).resolve()
     target_path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(
-        prefix=f".{target_path.name}.", suffix=".tmp", dir=target_path.parent
+        prefix=".subio-write-", suffix=".tmp", dir=target_path.parent
     )
     try:
-        os.fchmod(fd, 0o600)
         with os.fdopen(fd, "wb") as output:
+            set_private_permissions(output.fileno(), temp_name)
             output.write(data)
             output.flush()
             os.fsync(output.fileno())
         os.replace(temp_name, target_path)
-    except Exception:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
+    finally:
         try:
             os.unlink(temp_name)
         except FileNotFoundError:
             pass
-        raise
 
 
 def find_default_config() -> str | None:

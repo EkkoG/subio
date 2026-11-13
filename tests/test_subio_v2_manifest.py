@@ -176,7 +176,7 @@ def test_clean_dist_keeps_unrestored_temp_when_rollback_fails(tmp_path, monkeypa
     assert not old.exists()
     temporary_files = list(dist.glob(".subio-clean-*.tmp"))
     assert temporary_files
-    assert "old.yaml" in temporary_files[0].name
+    assert temporary_files[0].read_text() == "old"
 
 
 def test_workflow_writes_manifest_only_when_requested(tmp_path, monkeypatch):

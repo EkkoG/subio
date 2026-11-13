@@ -25,6 +25,7 @@ from urllib3.exceptions import MaxRetryError
 from urllib3.util.retry import Retry
 
 from subio_v2.infrastructure.logging import logger
+from subio_v2.infrastructure.files import set_private_permissions
 
 
 class RemoteLoadError(RuntimeError):
@@ -471,19 +472,15 @@ class RunRemoteLoader:
             "content_length": len(result.content),
             "subscription_user_info": dict(result.metadata.subscription_user_info or {}),
         }
-        fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", dir=self.cache_dir)
+        fd, temporary = tempfile.mkstemp(prefix=".subio-cache-", dir=self.cache_dir)
         try:
-            os.fchmod(fd, 0o600)
             with os.fdopen(fd, "wb") as output:
+                set_private_permissions(output.fileno(), temporary)
                 output.write(json.dumps(record, sort_keys=True).encode("utf-8"))
                 output.flush()
                 os.fsync(output.fileno())
             os.replace(temporary, target)
         finally:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
             try:
                 os.unlink(temporary)
             except FileNotFoundError:
