@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import ipaddress
-import json
 import re
+import yaml
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -129,7 +129,9 @@ class RuleOutputDialect:
                 or any(not char.isprintable() for char in content)
                 or content != content.rstrip()
             ):
-                content = json.dumps(content, ensure_ascii=True)
+                content = yaml.safe_dump(
+                    content, default_style='"', allow_unicode=True, width=2**31 - 1,
+                ).rstrip("\n")
             content = f"{self.line_prefix}{content}"
         return content, ()
 

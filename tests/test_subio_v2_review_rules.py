@@ -70,10 +70,12 @@ def test_ipv6_scope_cannot_enter_dae_syntax(matcher):
 
 
 @pytest.mark.parametrize('target', ['mihomo', 'clash', 'stash'])
-@pytest.mark.parametrize('separator', ['\u0085', '\u2028', '\u2029'])
-def test_yaml_line_characters_preserve_the_exact_policy(target, separator):
+@pytest.mark.parametrize('separator', ['\u0085', '\u2028', '\u2029', ': ', ' #'])
+@pytest.mark.parametrize('suffix', ['Private', '\U0001f680'])
+def test_yaml_line_characters_preserve_the_exact_policy(target, separator, suffix):
     from tests.test_subio_v2_template_ruleset_dae import make_ruleset, bound
-    policy = 'Proxy' + separator + 'Private'
+    policy = 'Proxy' + separator + suffix
     result = make_ruleset([bound('DOMAIN', 'example.test')]).render_result(target, policy)
     assert not result.issues
     assert yaml.safe_load(result.content) == ['DOMAIN,example.test,' + policy]
+    assert yaml.safe_load(result.content)[0].encode('utf-8')
