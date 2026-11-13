@@ -101,7 +101,7 @@ proxies:
     host-key: ["algo1","algo2"]
     host-key-algorithms: ["rsa","ed25519"]
 """.replace("__CERT_SHA256__", CERT_SHA256)
-    nodes = ClashParser().parse_result(yaml_text).nodes
+    nodes = ClashParser(source_kind="local").parse_result(yaml_text).nodes
     assert len(nodes) == 10
     vm = nodes[0]
     assert vm.type == Protocol.VMESS and vm.global_padding is True

@@ -253,7 +253,7 @@ server_name = "example.com"
 
 
 def test_subio_native_format_validates_user_specific_node_credentials():
-    result = SubioParser().parse_result(
+    result = SubioParser(source_kind="local").parse_result(
         """
 version = 2
 

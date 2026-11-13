@@ -46,27 +46,29 @@ class FormatResolution:
 
 
 def _clash_parser(
-    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+    *, parameters: Mapping[str, ParameterValue] | None = None,
+    source_kind: str = "unknown", **_: Any
 ) -> Any:
     from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
 
-    return ClashParser(DialectContext("mihomo", "yaml"), parameters=parameters)
+    return ClashParser(DialectContext("mihomo", "yaml"), parameters=parameters, source_kind=source_kind)
 
 
 def _clash_parser_for_clash(
-    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+    *, parameters: Mapping[str, ParameterValue] | None = None,
+    source_kind: str = "unknown", **_: Any
 ) -> Any:
     from subio_v2.adapters.clash_family.parser import ClashParser
     from subio_v2.core.dialect import DialectContext
 
-    return ClashParser(DialectContext("clash", "yaml"), parameters=parameters)
+    return ClashParser(DialectContext("clash", "yaml"), parameters=parameters, source_kind=source_kind)
 
 
-def _stash_parser(**_: Any) -> Any:
+def _stash_parser(*, source_kind: str = "unknown", **_: Any) -> Any:
     from subio_v2.adapters.clash_family.parser import StashParser
 
-    return StashParser()
+    return StashParser(source_kind=source_kind)
 
 
 def _surge_parser(
@@ -81,17 +83,18 @@ def _surge_parser(
 
 
 def _subio_parser(
-    *, parameters: Mapping[str, ParameterValue] | None = None, **_: Any
+    *, parameters: Mapping[str, ParameterValue] | None = None,
+    source_kind: str = "unknown", **_: Any
 ) -> Any:
     from subio_v2.adapters.subio.parser import SubioParser
 
-    return SubioParser(parameters=parameters)
+    return SubioParser(parameters=parameters, source_kind=source_kind)
 
 
-def _singbox_parser(**_: Any) -> Any:
+def _singbox_parser(*, source_kind: str = "unknown", **_: Any) -> Any:
     from subio_v2.adapters.singbox.parser import SingBoxParser
 
-    return SingBoxParser()
+    return SingBoxParser(source_kind=source_kind)
 
 
 def _singbox_emitter() -> Any:

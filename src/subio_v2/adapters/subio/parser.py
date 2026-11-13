@@ -7,6 +7,7 @@ import toml
 import yaml
 
 from subio_v2.adapters.subio.codec import SubioNodeCodec
+from subio_v2.adapters.source_credentials import restrict_source_credentials
 from subio_v2.core.parameters import ParameterValue, bind_document_parameters
 from subio_v2.core.results import ParseResult
 
@@ -22,9 +23,11 @@ class SubioParser:
     4. YAML
     """
 
-    def __init__(self, *, parameters: Mapping[str, ParameterValue] | None = None):
+    def __init__(self, *, parameters: Mapping[str, ParameterValue] | None = None,
+                 source_kind: str = "unknown"):
         self.node_codec = SubioNodeCodec()
         self.parameters = dict(parameters) if parameters is not None else None
+        self.source_kind = source_kind
 
     def parse_result(self, content: Any) -> ParseResult:
         return self.parse_document(self.decode_source(content))
@@ -85,11 +88,13 @@ class SubioParser:
             and "proxies" in data
             and ("version" in data or "nodes" in data)
         ):
-            return self.node_codec.decode_document(data, source_format or "unknown")
+            return restrict_source_credentials(
+                self.node_codec.decode_document(data, source_format or "unknown"), self.source_kind)
         if isinstance(data, dict) and "proxies" in data:
             return self.node_codec.fatal_result(
                 "parse.subio.legacy-format-removed",
                 "Legacy SubIO 'proxies' syntax is no longer supported",
                 field="proxies",
             )
-        return self.node_codec.decode_document(data, source_format or "unknown")
+        return restrict_source_credentials(
+            self.node_codec.decode_document(data, source_format or "unknown"), self.source_kind)

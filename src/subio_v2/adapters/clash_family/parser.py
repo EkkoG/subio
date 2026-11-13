@@ -7,6 +7,7 @@ import yaml
 import subio_v2.adapters.clash_family.codecs as clash_registry
 from subio_v2.adapters.catalog import normalize_format
 from subio_v2.adapters.clash_family.dialect import pre_descriptor_normalize
+from subio_v2.adapters.source_credentials import restrict_source_credentials
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import SourcePassthroughNode
 from subio_v2.core.parameters import ParameterValue, bind_document_parameters
@@ -20,10 +21,12 @@ class ClashParser:
         context: DialectContext | None = None,
         *,
         parameters: Mapping[str, ParameterValue] | None = None,
+        source_kind: str = "unknown",
     ):
         context = context or DialectContext("mihomo", "yaml")
         self.context = DialectContext(normalize_format(context.dialect), context.format)
         self.parameters = dict(parameters) if parameters is not None else None
+        self.source_kind = source_kind
 
     def parse_result(self, content: Any) -> ParseResult:
         return self.parse_document(self.decode_source(content))
@@ -98,7 +101,7 @@ class ClashParser:
                 continue
             if node:
                 nodes.append(node)
-        return ParseResult(nodes=nodes, issues=issues)
+        return restrict_source_credentials(ParseResult(nodes=nodes, issues=issues), self.source_kind)
 
     def _parse_node(self, data: Dict[str, Any]):
         name = data.get("name", "Unknown")
@@ -140,5 +143,5 @@ class ClashParser:
 class StashParser(ClashParser):
     """Stash YAML parser using the shared Clash-family document path."""
 
-    def __init__(self):
-        super().__init__(DialectContext("stash", "yaml"))
+    def __init__(self, *, source_kind: str = "unknown"):
+        super().__init__(DialectContext("stash", "yaml"), source_kind=source_kind)

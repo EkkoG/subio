@@ -45,8 +45,8 @@ b = ssh, b.example.com, 22, username=root, private-key=shared
 shared = type = openssh-private-key, base64 = S0VZLUI=
 """
 
-    parser_a = get_parser("surge")
-    parser_b = get_parser("surge")
+    parser_a = get_parser("surge", source_kind="local")
+    parser_b = get_parser("surge", source_kind="local")
     assert isinstance(parser_a, SurgeParser)
     assert isinstance(parser_b, SurgeParser)
 

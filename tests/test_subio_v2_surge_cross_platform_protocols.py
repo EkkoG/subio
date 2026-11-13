@@ -84,7 +84,7 @@ def test_mihomo_tailscale_common_fields_emit_to_surge_section():
 
 
 def test_tailscale_local_interactive_state_and_auto_exit_modes_are_not_guessed():
-    surge = SurgeParser().parse_result(
+    surge = SurgeParser(source_kind="local").parse_result(
         """
 [Proxy]
 Tailnet = tailscale, section-name=office

@@ -364,6 +364,11 @@ provider 默认忽略，只有显式设置 `allow_unsafe_external = true` 才允
 安全 WARNING。该开关只对远程 Surge provider 有意义，External 跨平台始终 WARNING 后跳过。
 直接调用 Parser 时，`source_kind = "unknown"` 按不可信输入处理，只有显式 `local` 使用本地语义。
 
+catalog 将来源权限传给 Clash-family、SubIO v2、sing-box 和 Surge parser。远程或未知来源的
+TLS 证书、TLS/SSH 私钥必须是明确的内联 PEM 材料；模糊字符串和本地文件引用返回解析 ERROR。
+检查包括同一节点的用户覆盖和 Surge Keystore 解码值。WireGuard/MASQUE 协议密钥不按文件引用处理。
+Surge `interactive-login=true` 仅允许本地来源；远程 Tailscale 必须携带认证材料。
+
 ## 6. Stash
 
 Stash 属于 Clash-family，但不是 Mihomo 字段的无差别子集。它需要独立方言上下文：

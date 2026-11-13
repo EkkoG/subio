@@ -142,7 +142,7 @@ def test_trojan_tls_disabled_is_not_silently_reenabled(target):
     ("masque", {"private_key": "protocol-key", "public_key": "public", "interface_ip": "10.0.0.2"}, "private_key", "tls-key"),
 ])
 def test_tls_ownership_filter_reports_unrepresentable_typed_fields(protocol, credentials, field, value):
-    parsed = get_parser("subio").parse_result(json.dumps({"version": 2, "nodes": [{
+    parsed = get_parser("subio", source_kind="local").parse_result(json.dumps({"version": 2, "nodes": [{
         "name": "unsafe", "type": protocol, "server": "example.test", "port": 443,
         **credentials, "tls": {"enabled": True, field: value},
     }]}))
@@ -210,7 +210,7 @@ def test_tls_and_ssh_errors_reach_the_real_artifact_gate(tmp_path, monkeypatch, 
     ("clash", "ech_opts", {"enable": True}),
 ])
 def test_final_dialect_trimming_cannot_drop_typed_tls_requirements(protocol, credentials, target, field, value):
-    parsed = get_parser("subio").parse_result(json.dumps({"version": 2, "nodes": [{
+    parsed = get_parser("subio", source_kind="local").parse_result(json.dumps({"version": 2, "nodes": [{
         "name": "tls", "type": protocol, "server": "example.test", "port": 443,
         **credentials, "tls": {"enabled": True, field: value},
     }]}))

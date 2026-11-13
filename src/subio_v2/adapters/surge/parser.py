@@ -48,6 +48,7 @@ from subio_v2.core.nodes import (
     WireguardPeer,
 )
 from subio_v2.core.records import NodeRecord
+from subio_v2.adapters.source_credentials import restrict_source_credentials
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 
 _PREDEFINED_BUILTIN_NAMES = SURGE_RESERVED_POLICY_NAMES
@@ -425,7 +426,7 @@ class SurgeParser:
                     )
                 )
 
-        return ParseResult(nodes=nodes, issues=issues)
+        return restrict_source_credentials(ParseResult(nodes=nodes, issues=issues), self.source_kind)
 
     @staticmethod
     def _collect_named_sections(

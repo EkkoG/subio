@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 import subio_v2.protocols as protocol_registry
+from subio_v2.adapters.source_credentials import restrict_source_credentials
 from subio_v2.adapters.singbox.codecs import (
     SINGBOX_ENDPOINT_CODECS_BY_TYPE,
     SINGBOX_OUTBOUND_CODECS_BY_TYPE,
@@ -19,6 +20,9 @@ from subio_v2.core.validation import validate_node
 
 class SingBoxParser:
     context = DialectContext("sing-box", "json")
+
+    def __init__(self, *, source_kind: str = "unknown"):
+        self.source_kind = source_kind
 
     def parse_result(self, content: Any) -> ParseResult:
         if isinstance(content, str):
@@ -59,7 +63,7 @@ class SingBoxParser:
             nodes,
             issues,
         )
-        return ParseResult(nodes=nodes, issues=issues)
+        return restrict_source_credentials(ParseResult(nodes=nodes, issues=issues), self.source_kind)
 
     def _parse_entries(self, entries, section, registry, nodes, issues) -> None:
         for index, raw in enumerate(entries):
