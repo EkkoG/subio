@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from subio_v2.core.results import ConversionIssue, IssueSeverity
+from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.infrastructure.remote import RemoteMetadata
 from subio_v2.infrastructure.logging import logger
 from subio_v2.workflow.artifacts import ArtifactGenerationResult
@@ -45,12 +46,17 @@ def _dist_status(dist_dir: Path | None, filename: str, digest: str) -> str:
     if dist_dir is None:
         return "not-compared"
     target = dist_dir / filename
-    if not target.is_file():
-        return "new"
-    hasher = hashlib.sha256()
-    with target.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            hasher.update(chunk)
+    try:
+        if not target.is_file():
+            return "new"
+        hasher = hashlib.sha256()
+        with target.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                hasher.update(chunk)
+    except OSError as exc:
+        raise ArtifactGenerationError(
+            f"Cannot compare generated artifact ({type(exc).__name__})"
+        ) from exc
     return "unchanged" if hasher.hexdigest() == digest else "changed"
 
 

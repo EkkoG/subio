@@ -155,6 +155,8 @@ class GistBatchUploader:
         except subprocess.CalledProcessError as exc:
             detail = _redact((exc.stderr or exc.stdout or str(exc)).strip(), token)
             raise UploadError(f"Git command failed: {detail}") from exc
+        except OSError as exc:
+            raise UploadError(f"Cannot start Git command ({type(exc).__name__})") from exc
 
     def _upload_batch(
         self, gist_id: str, token: str, files: dict[str, str], clean: bool = False

@@ -248,8 +248,13 @@ class ProviderLoaderService:
         candidates = (os.path.join(config_dir, path), os.path.join(config_dir, "provider", path))
         for absolute_path in candidates:
             if os.path.exists(absolute_path):
-                with open(absolute_path, "rb") as handle:
-                    content = handle.read()
+                try:
+                    with open(absolute_path, "rb") as handle:
+                        content = handle.read()
+                except OSError as exc:
+                    raise ProviderLoadError(
+                        f"Failed to read provider '{provider_name}' ({type(exc).__name__})"
+                    ) from exc
                 digest = hashlib.sha256(content).hexdigest()[:12]
                 logger.dim(
                     f"Read provider {provider_name} from {path}: "
