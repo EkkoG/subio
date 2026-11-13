@@ -22,7 +22,10 @@ from subio_v2.rules.parser import (
     MIHOMO_PREDICATES,
     STASH_PREDICATES,
     SURGE_PREDICATES,
+    MAX_LOGIC_DEPTH,
 )
+
+_LINE_SEPARATORS = frozenset("\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029")
 
 LowerExpression: TypeAlias = Callable[
     [RuleExpression, DialectContext], tuple[str, str, tuple[str, ...]]
@@ -55,6 +58,12 @@ class RuleOutputDialect:
         lines: list[str] = []
         for entry in ruleset.entries:
             if isinstance(entry, RuleComment):
+                if any(char in _LINE_SEPARATORS for char in entry.content):
+                    issues.append(_issue(
+                        ruleset.name, entry, self.name, "ruleset.invalid-target-value",
+                        "Rule comments must contain a single physical line",
+                    ))
+                    continue
                 lines.append(entry.content)
                 continue
             rendered, expression_issues = self.render(
@@ -82,10 +91,28 @@ class RuleOutputDialect:
         source_context: DialectContext,
         policy: str | None,
         nested: bool = False,
+        logic_depth: int = 0,
     ) -> tuple[str | None, tuple[ConversionIssue, ...]]:
+        if isinstance(expression, LogicalExpression):
+            logic_depth += 1
+            limit = 10 if self.name == "surge" else MAX_LOGIC_DEPTH
+            if logic_depth > limit:
+                return None, (_issue(
+                    source, expression, self.name, "ruleset.unsupported-target-rule",
+                    f"Logical nesting exceeds {limit} levels for {self.name}",
+                ),)
         rule_type, matcher, options = self.lower_expression(
             expression, source_context
         )
+        if any(
+            char in _LINE_SEPARATORS
+            for value in (matcher, policy or "", *options)
+            for char in value
+        ):
+            return None, (_issue(
+                source, expression, self.name, "ruleset.invalid-target-value",
+                "Rule values must contain a single physical line",
+            ),)
         if not self.supports_rule(rule_type):
             return None, (
                 _issue(
@@ -127,6 +154,7 @@ class RuleOutputDialect:
                     source_context=source_context,
                     policy=None,
                     nested=True,
+                    logic_depth=logic_depth,
                 )
                 issues.extend(operand_issues)
                 if rendered is None:
@@ -328,7 +356,9 @@ def _serialize_expression(
         if matcher:
             fields.append(_serialize_matcher(rule_type, matcher))
     if policy is not None:
-        fields.append(_serialize_token(policy))
+        fields.append(_serialize_token(
+            policy, force_quote=bool(re.fullmatch(r"\d+(?:-\d+)?", policy)),
+        ))
     fields.extend(_serialize_option(option) for option in options)
     return ",".join(fields)
 
@@ -354,8 +384,13 @@ def _serialize_dae(
     return f"dip({expression.matcher}) -> {policy}"
 
 
-def _serialize_token(value: str) -> str:
-    if not any(char in value for char in (",", '"', "\n", "\r")):
+def _serialize_token(value: str, *, force_quote: bool = False) -> str:
+    if not force_quote and not (
+        any(char in value for char in (",", '"', "'", "(", ")"))
+        or value.endswith("\\")
+        or re.search(r"(?:^|\s)(?:#|;|//)", value)
+        or value != value.strip()
+    ):
         return value
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -385,7 +420,7 @@ def _serialize_option(option: str) -> str:
 
 def _issue(
     source: str,
-    expression: RuleExpression,
+    expression: RuleExpression | RuleComment,
     target: str,
     code: str,
     message: str,

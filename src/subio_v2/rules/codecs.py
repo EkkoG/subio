@@ -39,6 +39,13 @@ def _construct_unique_mapping(loader, node, deep=False):
     mapping = {}
     for key_node, value_node in node.value:
         key = loader.construct_object(key_node, deep=deep)
+        try:
+            hash(key)
+        except TypeError as exc:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping", node.start_mark,
+                "found unhashable key", key_node.start_mark,
+            ) from exc
         if key in mapping:
             raise yaml.constructor.ConstructorError(
                 "while constructing a mapping",
@@ -215,7 +222,9 @@ def _parse_scalar_values(
         if not value:
             continue
         if value.startswith("#") or value.startswith("//"):
-            entries.append(RuleComment(value, line_number))
+            prefix_length = 2 if value.startswith("//") else 1
+            comment = f"# {value[prefix_length:].strip()}".rstrip()
+            entries.append(RuleComment(comment, line_number))
             continue
         if behavior == "domain":
             entries.append(_parse_domain(value, context.dialect, name, line_number))

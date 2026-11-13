@@ -118,6 +118,8 @@ Clash-family 仅从活动 transport 块提取模型字段，其他块只按同�
 SRS 或完整客户端配置。
 
 本地 snippet 使用同一 Mihomo classical grammar，只额外提供参数声明和最外层 policy binding。
+数字字面 policy 必须加引号，以区别于端口 matcher 列表。Mihomo/Stash 逻辑规则的实现深度上限为 64，
+Surge 输入与输出的上限均为 10；超限返回解析或转换错误。
 `SCRIPT`、脚本快捷方式、脚本 provider 和其他完整配置依赖不会被下载、执行或转换。
 
 ### 2.1 解析范围

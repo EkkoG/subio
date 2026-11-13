@@ -140,12 +140,12 @@ class RuleSet:
         return bound
 
     def render_result(
-        self, platform: str, *values: Any, **kwargs: Any
+        self, platform: str, /, *values: Any, **kwargs: Any
     ) -> RuleRenderResult:
         arguments = self._bind_arguments(values, kwargs)
         return RULESET_RENDERER.render(self.model, platform, arguments)
 
-    def render(self, platform: str, *values: Any, **kwargs: Any) -> str:
+    def render(self, platform: str, /, *values: Any, **kwargs: Any) -> str:
         return self.render_result(platform, *values, **kwargs).content
 
     def as_callable(

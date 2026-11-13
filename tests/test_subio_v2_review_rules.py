@@ -76,6 +76,13 @@ def test_yaml_line_characters_preserve_the_exact_policy(target, separator, suffi
     from tests.test_subio_v2_template_ruleset_dae import make_ruleset, bound
     policy = 'Proxy' + separator + suffix
     result = make_ruleset([bound('DOMAIN', 'example.test')]).render_result(target, policy)
+    if separator in {'\u0085', '\u2028', '\u2029'}:
+        assert not result.content
+        assert result.issues[0].code == 'ruleset.invalid-target-value'
+        return
     assert not result.issues
-    assert yaml.safe_load(result.content) == ['DOMAIN,example.test,' + policy]
-    assert yaml.safe_load(result.content)[0].encode('utf-8')
+    line = yaml.safe_load(result.content)[0]
+    parsed = MIHOMO_CLASSICAL_PARSER.parse_snippet(
+        name='test', parameter_names=('rule',), content=line,
+        source_context=DialectContext('mihomo', 'text'))
+    assert parsed.entries[0].policy_binding.value == policy

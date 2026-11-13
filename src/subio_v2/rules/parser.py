@@ -25,6 +25,7 @@ IDENTIFIER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 POLICY_PLACEHOLDER_RE = re.compile(r"^\{\{\s*([A-Za-z][A-Za-z0-9_]*)\s*\}\}$")
 RULE_TYPE_RE = re.compile(r"^[A-Z][A-Z0-9-]*$")
 LOGICAL_RULES = frozenset({"AND", "OR", "NOT"})
+MAX_LOGIC_DEPTH = 64
 
 MIHOMO_PREDICATES = frozenset(
     {
@@ -216,7 +217,7 @@ def parse_argument_names(args: str) -> tuple[str, ...]:
     return parts
 
 
-def split_rule_tokens(value: str) -> tuple[str, ...]:
+def split_rule_tokens(value: str, *, decode: bool = True) -> tuple[str, ...]:
     """Split on top-level commas without truncating logical expressions."""
 
     tokens: list[str] = []
@@ -226,13 +227,17 @@ def split_rule_tokens(value: str) -> tuple[str, ...]:
     escaped = False
 
     for char in value:
+        if escaped:
+            current.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            current.append(char)
+            escaped = True
+            continue
         if quote is not None:
             current.append(char)
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == quote:
+            if char == quote:
                 quote = None
             continue
 
@@ -248,7 +253,7 @@ def split_rule_tokens(value: str) -> tuple[str, ...]:
                 raise ValueError("unbalanced closing parenthesis")
             current.append(char)
         elif char == "," and depth == 0:
-            tokens.append(_decode_token("".join(current).strip()))
+            tokens.append("".join(current).strip())
             current = []
         else:
             current.append(char)
@@ -258,8 +263,8 @@ def split_rule_tokens(value: str) -> tuple[str, ...]:
     if depth != 0:
         raise ValueError("unbalanced parentheses")
 
-    tokens.append(_decode_token("".join(current).strip()))
-    return tuple(tokens)
+    tokens.append("".join(current).strip())
+    return tuple(_decode_token(token) for token in tokens) if decode else tuple(tokens)
 
 
 def _decode_token(token: str) -> str:
@@ -384,7 +389,7 @@ class ClassicalRuleParser:
             self._fail(source, line_number, "YAML list syntax is not valid text format")
 
         try:
-            tokens = split_rule_tokens(line)
+            tokens = split_rule_tokens(line, decode=False)
         except ValueError as exc:
             self._fail(source, line_number, str(exc))
 
@@ -420,7 +425,7 @@ class ClassicalRuleParser:
         if not tokens or not tokens[0]:
             self._fail(source, line_number, "missing rule type")
 
-        rule_type = tokens[0].upper()
+        rule_type = _decode_token(tokens[0]).upper()
         if not RULE_TYPE_RE.fullmatch(rule_type):
             self._fail(source, line_number, f"invalid rule type {tokens[0]!r}")
 
@@ -551,11 +556,12 @@ class ClassicalRuleParser:
         issues: list[ConversionIssue],
     ) -> tuple[LogicalExpression | None, object | None]:
         next_depth = logic_depth + 1
-        if self.spec.max_logic_depth is not None and next_depth > self.spec.max_logic_depth:
+        limit = min(self.spec.max_logic_depth or MAX_LOGIC_DEPTH, MAX_LOGIC_DEPTH)
+        if next_depth > limit:
             self._fail(
                 source,
                 line_number,
-                f"logical nesting exceeds {self.spec.max_logic_depth} levels",
+                f"logical nesting exceeds {limit} levels",
             )
         if len(tokens) < 2:
             self._fail(source, line_number, f"{rule_type} requires sub-rules")
@@ -569,7 +575,7 @@ class ClassicalRuleParser:
         operands: list[RuleExpression] = []
         for child in child_values:
             try:
-                child_tokens = split_rule_tokens(child)
+                child_tokens = split_rule_tokens(child, decode=False)
             except ValueError as exc:
                 self._fail(source, line_number, str(exc))
             expression, binding = self._parse_tokens(
@@ -619,14 +625,14 @@ class ClassicalRuleParser:
 
         remaining = list(values)
         if rule_type in {"DST-PORT", "SRC-PORT", "DEST-PORT", "IN-PORT"}:
-            matcher_parts: list[str] = []
+            matcher_parts = [_decode_token(remaining.pop(0))]
             while remaining and self._looks_like_matcher_fragment(
                 rule_type, remaining[0]
             ):
                 matcher_parts.append(remaining.pop(0))
             return ",".join(matcher_parts).strip(), tuple(remaining)
 
-        matcher = remaining.pop(0).strip()
+        matcher = _decode_token(remaining.pop(0))
         return matcher, tuple(remaining)
 
     @staticmethod
@@ -640,7 +646,7 @@ class ClassicalRuleParser:
     ) -> tuple[str, ...]:
         outer = self._strip_wrapping_parentheses(value, source, line_number)
         try:
-            parts = split_rule_tokens(outer)
+            parts = split_rule_tokens(outer, decode=False)
         except ValueError as exc:
             self._fail(source, line_number, str(exc))
         return tuple(
@@ -658,12 +664,14 @@ class ClassicalRuleParser:
         quote: str | None = None
         escaped = False
         for index, char in enumerate(value):
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
             if quote is not None:
-                if escaped:
-                    escaped = False
-                elif char == "\\":
-                    escaped = True
-                elif char == quote:
+                if char == quote:
                     quote = None
                 continue
             if char in {'"', "'"}:
@@ -692,6 +700,7 @@ class ClassicalRuleParser:
         parameter_names: tuple[str, ...],
         parameterized: bool,
     ) -> tuple[object | None, tuple[str, ...]]:
+        suffix = tuple(_decode_token(value) for value in suffix)
         if not parameterized:
             return None, tuple(self._normalize_option(value) for value in suffix)
 
@@ -759,12 +768,14 @@ class ClassicalRuleParser:
         escaped = False
         depth = 0
         for index, char in enumerate(value):
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
             if quote is not None:
-                if escaped:
-                    escaped = False
-                elif char == "\\":
-                    escaped = True
-                elif char == quote:
+                if char == quote:
                     quote = None
                 continue
             if char in {'"', "'"}:
