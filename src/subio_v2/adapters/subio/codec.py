@@ -42,6 +42,10 @@ class SubioNodeCodec:
                 "SubIO node document must be an object",
                 field=None,
             )
+        if any(not isinstance(key, str) for key in data):
+            return self.fatal_result(
+                "parse.subio.invalid-field", "SubIO v2 object keys must be strings", field=None,
+            )
         if "nodes" in data and "proxies" in data:
             return self.fatal_result(
                 "parse.subio.invalid-document",
@@ -102,6 +106,11 @@ class SubioNodeCodec:
             ]
 
         name = raw_node.get("name") if isinstance(raw_node.get("name"), str) else None
+        if any(not isinstance(key, str) for key in raw_node):
+            return None, [self._issue(
+                "parse.subio.invalid-field", "SubIO v2 object keys must be strings",
+                field=path, node=name,
+            )]
         raw_type = raw_node.get("type")
         if not isinstance(raw_type, str):
             return None, [
@@ -427,6 +436,8 @@ class SubioNodeCodec:
     def _decode_dataclass(self, value: Any, cls: type, path: str) -> Any:
         if not isinstance(value, dict):
             raise _FieldError(path, f"Field '{path}' must be an object")
+        if any(not isinstance(key, str) for key in value):
+            raise _FieldError(path, "SubIO v2 object keys must be strings")
         allowed = PUBLIC_NESTED_FIELDS.get(cls)
         if allowed is None:
             raise _FieldError(path, f"Field '{path}' uses an unsupported object type")

@@ -136,7 +136,7 @@ def _validate_enum(
     value: str,
     supported: set[str],
 ) -> None:
-    if value not in supported:
+    if not isinstance(value, str) or value not in supported:
         errors.append(
             NodeValidationError(
                 field, f"Unsupported Sudoku {field.replace('_', '-')}: {value}"

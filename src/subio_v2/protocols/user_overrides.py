@@ -22,7 +22,7 @@ def clone_node_for_user(node: Node, username: str) -> Node | None:
         return None
 
     new_node = copy.deepcopy(node)
-    user_overrides = node.users[username]
+    user_overrides = new_node.users[username]
     if not isinstance(user_overrides, dict):
         # Preserve the existing workflow error contract during the ownership move.
         raise ValueError(  # noqa: TRY004
@@ -31,6 +31,8 @@ def clone_node_for_user(node: Node, username: str) -> Node | None:
 
     allowed_fields = user_override_fields(node)
     for key, value in user_overrides.items():
+        if not isinstance(key, str):
+            raise ValueError(f"Override field names for user '{username}' must be strings")
         normalized_key = key.replace("-", "_")
         if normalized_key not in allowed_fields or not hasattr(new_node, normalized_key):
             raise ValueError(f"User '{username}' cannot override node field '{key}'")

@@ -334,7 +334,7 @@ class ConfigValidator:
             if pattern:
                 try:
                     re.compile(pattern)
-                except re.error as exc:
+                except (re.error, OverflowError, RecursionError) as exc:
                     raise ConfigError(f"{label} {key} is not a valid regex") from exc
 
     @classmethod
@@ -379,7 +379,7 @@ class ConfigValidator:
                 for pattern in patterns:
                     try:
                         re.compile(pattern)
-                    except re.error as exc:
+                    except (re.error, OverflowError, RecursionError) as exc:
                         raise ConfigError(
                             f"Selector '{name}' {key} contains an invalid regex"
                         ) from exc

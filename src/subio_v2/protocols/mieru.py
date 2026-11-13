@@ -17,7 +17,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
         errors.append(NodeValidationError("server", "Server is required"))
 
     has_port = node.port is not None
-    has_port_range = node.port_range not in {None, ""}
+    has_port_range = node.port_range is not None and node.port_range != ""
     if has_port == has_port_range:
         errors.append(
             NodeValidationError(
@@ -46,13 +46,16 @@ def _validate(node: Node) -> list[NodeValidationError]:
 
 
 def _valid_port_range(value: str | None) -> bool:
-    if value is None:
+    if not isinstance(value, str):
         return False
     parts = value.split("-", 1)
-    if not all(part.isdigit() for part in parts):
+    if not all(part.isascii() and part.isdigit() for part in parts):
         return False
-    start = int(parts[0])
-    end = int(parts[-1])
+    try:
+        start = int(parts[0])
+        end = int(parts[-1])
+    except ValueError:
+        return False
     return 1 <= start <= end <= 65535
 
 

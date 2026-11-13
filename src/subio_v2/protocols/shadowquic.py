@@ -16,7 +16,10 @@ def _validate(node: Node) -> list[NodeValidationError]:
         return errors
     if (
         node.congestion_controller is not None
-        and node.congestion_controller not in _CONGESTION_CONTROLLERS
+        and (
+            not isinstance(node.congestion_controller, str)
+            or node.congestion_controller not in _CONGESTION_CONTROLLERS
+        )
     ):
         errors.append(
             NodeValidationError(
@@ -24,7 +27,9 @@ def _validate(node: Node) -> list[NodeValidationError]:
                 f"Unsupported ShadowQUIC congestion controller: {node.congestion_controller}",
             )
         )
-    if node.bbr_profile is not None and node.bbr_profile not in _BBR_PROFILES:
+    if node.bbr_profile is not None and (
+        not isinstance(node.bbr_profile, str) or node.bbr_profile not in _BBR_PROFILES
+    ):
         errors.append(
             NodeValidationError(
                 "bbr_profile",

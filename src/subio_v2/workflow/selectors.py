@@ -94,7 +94,7 @@ class SelectorEngine:
                     re.compile(pattern, re.IGNORECASE)
                     for pattern in spec.exclude_name_regex
                 )
-            except re.error as exc:
+            except (re.error, OverflowError, RecursionError) as exc:
                 raise ConfigError(f"Selector {name!r} contains an invalid regex") from exc
         self._validate_references()
 
@@ -171,7 +171,7 @@ class SelectorEngine:
                     re.compile(pattern, re.IGNORECASE)
                     for pattern in spec.exclude_name_regex
                 )
-            except re.error as exc:
+            except (re.error, OverflowError, RecursionError) as exc:
                 raise ConfigError("Inline selector contains an invalid regex") from exc
         else:
             include = self._compiled.get(selector_name, ())

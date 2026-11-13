@@ -85,7 +85,7 @@ class ClashParser:
                 issues.append(
                     ConversionIssue(
                         severity=IssueSeverity.ERROR,
-                        node=proxy.get("name"),
+                        node=proxy.get("name") if isinstance(proxy.get("name"), str) else None,
                         protocol=str(proxy.get("type")) if proxy.get("type") else None,
                         source=None,
                         target=None,
@@ -101,6 +101,9 @@ class ClashParser:
         return ParseResult(nodes=nodes, issues=issues)
 
     def _parse_node(self, data: Dict[str, Any]):
+        name = data.get("name", "Unknown")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Proxy name must be a non-empty string")
         node_type = data.get("type")
         if not isinstance(node_type, str) or not node_type.strip():
             raise ValueError("Proxy type must be a non-empty string")

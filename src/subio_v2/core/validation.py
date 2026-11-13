@@ -31,11 +31,13 @@ def validate_node(
     """Validate generic node structure plus explicitly supplied protocol semantics."""
 
     errors: list[NodeValidationError] = []
-    if not node.name:
+    if not isinstance(node.name, str) or not node.name.strip():
         errors.append(NodeValidationError("name", "Node name is required"))
     if isinstance(node, RejectNode) and not isinstance(node.mode, RejectMode):
         errors.append(NodeValidationError("mode", "Reject mode is invalid"))
-    if node.ip_version is not None and node.ip_version not in GENERIC_IP_VERSION_VALUES:
+    if node.ip_version is not None and (
+        not isinstance(node.ip_version, str) or node.ip_version not in GENERIC_IP_VERSION_VALUES
+    ):
         errors.append(
             NodeValidationError(
                 "ip_version",

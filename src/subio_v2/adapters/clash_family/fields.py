@@ -34,6 +34,8 @@ _BASE_FIELD_KEYS = frozenset(
 
 def parse_port(data: Dict[str, Any]) -> int:
     port = data.get("port", 0)
+    if isinstance(port, bool) or not isinstance(port, (int, str)):
+        raise ValueError("port must be an integer or integer text")
     try:
         return int(port)
     except (TypeError, ValueError) as e:
@@ -42,7 +44,7 @@ def parse_port(data: Dict[str, Any]) -> int:
 
 def parse_base_fields(data: Dict[str, Any]) -> Dict[str, Any]:
     ip_version = data.get("ip-version", "dual")
-    if ip_version not in GENERIC_IP_VERSION_VALUES:
+    if not isinstance(ip_version, str) or ip_version not in GENERIC_IP_VERSION_VALUES:
         raise ValueError(
             "ip-version must be one of dual, ipv4, ipv6, ipv4-prefer, ipv6-prefer"
         )
