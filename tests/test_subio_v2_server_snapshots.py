@@ -1,6 +1,6 @@
-from io import BytesIO
 """HTTP lifecycle contracts use synthetic resources, event barriers and a fake clock."""
 
+from io import BytesIO
 import asyncio
 import socket
 import threading
