@@ -1,4 +1,5 @@
 import ipaddress
+import hashlib
 import struct
 from pathlib import Path
 
@@ -86,3 +87,63 @@ def test_decode_mrs_enforces_compressed_and_decompressed_limits(monkeypatch):
     monkeypatch.setattr(mrs, "MAX_MRS_OUTPUT_SIZE", len(payload) - 1)
     with pytest.raises(ConfigError, match="decompressed output exceeds"):
         mrs.decode_mrs(content, "ipcidr")
+
+
+def _domain_mrs(domains):
+    trie = {}
+    for domain in domains:
+        node = trie
+        for char in domain[::-1].encode():
+            node = node.setdefault(char, {})
+        node[None] = None
+    queue = [trie]
+    leaves = []
+    label_bits = []
+    labels = bytearray()
+    for node in queue:
+        leaves.append(int(None in node))
+        for char in sorted(key for key in node if key is not None):
+            queue.append(node[char])
+            labels.append(char)
+            label_bits.append(0)
+        label_bits.append(1)
+
+    def bitmap(bits):
+        words = [0] * ((len(bits) + 63) // 64)
+        for index, bit in enumerate(bits):
+            words[index // 64] |= bit << (index % 64)
+        return struct.pack(">q", len(words)) + b"".join(struct.pack(">Q", word) for word in words)
+
+    body = b"\x01" + bitmap(leaves) + bitmap(label_bits) + struct.pack(">q", len(labels)) + labels
+    return _compress(_mrs_payload(0, len(domains), body))
+
+
+def test_domain_trie_bitmap_budget_counts_nodes_instead_of_rules():
+    # Each unique prefix adds several trie nodes to one rule.
+    domains = [hashlib.sha256(str(index).encode()).hexdigest()[:24] + ".example.test" for index in range(32768)]
+    assert mrs.decode_mrs(_domain_mrs(domains), "domain") == sorted(domains)
+
+
+@pytest.mark.parametrize("first,last,expected", [
+    ("::", "::ffff:ffff:ffff", "::/80"),
+    ("192.0.2.0", "192.0.2.255", "192.0.2.0/24"),
+    ("::ffff:ffff:ff00", "::1:0:0:0", None),
+])
+def test_mapped_ipv4_ranges_are_unmapped_as_a_pair(first, last, expected):
+    prefixes = list(ipaddress.summarize_address_range(ipaddress.ip_address(first), ipaddress.ip_address(last)))
+    body = _ip_range_body(first, last)
+    count = 1 if expected else len(prefixes)
+    actual = mrs.decode_mrs(_compress(_mrs_payload(1, count, body)), "ipcidr")
+    assert actual == ([expected] if expected else [str(prefix) for prefix in prefixes])
+
+
+def test_domain_bitmap_length_cannot_exceed_available_payload():
+    body = b"\x01" + struct.pack(">q", 2**40)
+    with pytest.raises(ConfigError, match="domain leaves length"):
+        mrs.decode_mrs(_compress(_mrs_payload(0, 1, body)), "domain")
+
+
+def test_domain_bitmap_must_match_trie_structure():
+    body = b"\x01" + struct.pack(">qQqQq", 1, 1 << 63, 1, 3, 1) + b"a"
+    with pytest.raises(ConfigError, match="bitmap"):
+        mrs.decode_mrs(_compress(_mrs_payload(0, 1, body)), "domain")

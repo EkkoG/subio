@@ -1,3 +1,5 @@
+import json
+
 import pytest
 import yaml
 
@@ -127,3 +129,31 @@ def test_surge_inner_token_quotes_preserve_policy_and_option(value):
     rules.model = ParameterizedRuleSet(name="test", parameters=("rule",), entries=(BoundRule(expression, DefaultParameter()),), source_context=DialectContext("surge", "text"))
     reparsed = snippet(rules.render("surge", "Proxy"), parser=SURGE_CLASSICAL_PARSER)
     assert reparsed.model.entries[0].expression.options == expression.options
+
+
+@pytest.mark.parametrize("expression", [
+    Predicate("MATCH", options=("no-track",)),
+    LogicalExpression("AND", (
+        Predicate("DOMAIN-SUFFIX", "example.test"),
+        LogicalExpression("NOT", (Predicate("DOMAIN", "example.test"),), ("no-track",)),
+    )),
+])
+def test_singbox_rule_shortcuts_do_not_skip_option_errors(expression):
+    rules = RuleSet(ParameterizedRuleSet(
+        name="test", parameters=("rule",), entries=(BoundRule(expression, DefaultParameter()),),
+        source_context=DialectContext("stash", "text"),
+    ))
+    result = rules.render_result("sing-box", "Proxy")
+    assert json.loads(result.content) == []
+    assert result.issues[0].code == "ruleset.unsupported-target-option"
+
+
+@pytest.mark.parametrize("pattern", ["[]{}]", "[^]{}]", r"[\]{}]", "[][{}]"])
+def test_singbox_literal_closing_bracket_in_character_class(pattern):
+    codec = DEFAULT_RULESET_CODEC_REGISTRY.get(RuleSetInputSelection("sing-box", "classical", "source"))
+    parsed = codec.parse(name="test", content=json.dumps({"version": 5, "rules": [{"domain_regex": pattern}]}).encode(), context=DialectContext("sing-box", "source"))
+    assert not parsed.issues
+    assert parsed.ruleset.entries[0].matcher == pattern
+    result = parameterize(parsed).render_result("sing-box", "Proxy")
+    assert not result.issues
+    assert json.loads(result.content)[0]["domain_regex"] == pattern

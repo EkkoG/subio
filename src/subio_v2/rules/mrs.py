@@ -12,7 +12,6 @@ MRS_BEHAVIOR = {"domain": 0, "ipcidr": 1}
 MAX_MRS_INPUT_SIZE = 16 * 1024 * 1024
 MAX_MRS_OUTPUT_SIZE = 64 * 1024 * 1024
 MAX_MRS_ITEMS = 1_000_000
-MAX_MRS_BITMAP_WORDS = (MAX_MRS_ITEMS + 63) // 64 + 1
 MAX_MRS_DOMAIN_LENGTH = 255
 
 
@@ -108,6 +107,19 @@ def _decode_domain_set(reader: _Reader) -> list[str]:
     if labels_length < 1 or labels_length > MAX_MRS_OUTPUT_SIZE:
         raise ConfigError("Invalid MRS domain label length")
     labels = reader.read(labels_length)
+    node_count = labels_length + 1
+    label_bits = 2 * node_count - 1
+    if (
+        len(leaves.words) > (node_count + 63) // 64
+        or len(label_bitmap.words) != (label_bits + 63) // 64
+        or label_bitmap._ones_prefix[-1] != node_count
+        or label_bitmap.count_zeros(label_bits) != node_count - 1
+        or (
+            len(leaves.words) == (node_count + 63) // 64
+            and leaves.words[-1] >> ((node_count - 1) % 64 + 1)
+        )
+    ):
+        raise ConfigError("Invalid MRS domain trie bitmap structure")
 
     keys: list[str] = []
     current = bytearray()
@@ -131,6 +143,8 @@ def _decode_domain_set(reader: _Reader) -> list[str]:
                 raise ConfigError("Invalid MRS domain trie label index")
             current.append(labels[label_index])
             next_node_id = label_bitmap.count_zeros(bitmap_index + 1)
+            if next_node_id <= node_id:
+                raise ConfigError("Invalid MRS domain trie bitmap order")
             next_bitmap_index = label_bitmap.select_one(next_node_id - 1) + 1
             traverse(next_node_id, next_bitmap_index)
             current.pop()
@@ -152,8 +166,10 @@ def _decode_ipcidr_set(reader: _Reader, count: int) -> list[str]:
 
     prefixes: list[str] = []
     for _ in range(length):
-        first = _unmap_address(ipaddress.ip_address(reader.read(16)))
-        last = _unmap_address(ipaddress.ip_address(reader.read(16)))
+        first = ipaddress.IPv6Address(reader.read(16))
+        last = ipaddress.IPv6Address(reader.read(16))
+        if first.ipv4_mapped is not None and last.ipv4_mapped is not None:
+            first, last = first.ipv4_mapped, last.ipv4_mapped
         if first.version != last.version or int(first) > int(last):
             raise ConfigError("Invalid MRS IP address range")
         for prefix in ipaddress.summarize_address_range(first, last):
@@ -165,7 +181,7 @@ def _decode_ipcidr_set(reader: _Reader, count: int) -> list[str]:
 
 def _read_bitmap(reader: _Reader, label: str) -> tuple[int, ...]:
     length = reader.int64()
-    if length < 1 or length > MAX_MRS_BITMAP_WORDS:
+    if length < 1 or length > min(reader.remaining, MAX_MRS_OUTPUT_SIZE) // 8:
         raise ConfigError(f"Invalid MRS {label} length")
     return tuple(reader.uint64() for _ in range(length))
 
@@ -213,9 +229,3 @@ class _Bitmap:
             remaining -= 1
         bit_index = (word & -word).bit_length() - 1
         return word_index * 64 + bit_index
-
-
-def _unmap_address(address: ipaddress.IPv4Address | ipaddress.IPv6Address):
-    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped:
-        return address.ipv4_mapped
-    return address

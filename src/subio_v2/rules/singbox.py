@@ -103,15 +103,9 @@ class SingBoxRouteRuleSerializer:
             if isinstance(entry, RuleComment):
                 continue
             try:
-                if (
-                    isinstance(entry.expression, Predicate)
-                    and entry.expression.rule_type.upper() in {"MATCH", "FINAL"}
-                ):
-                    encoded: dict[str, Any] = {}
-                else:
-                    encoded = _encode_source_rule(
-                        entry.expression, ruleset.source_context
-                    )
+                encoded = _encode_source_rule(
+                    entry.expression, ruleset.source_context
+                )
                 encoded["action"] = "route"
                 encoded["outbound"] = resolve_policy(entry)
                 rules.append(encoded)
@@ -440,7 +434,7 @@ def _validate_re2_subset(pattern: str, path: str) -> None:
             f"Sing-box Source {path} contains an invalid regular expression",
         ) from exc
 
-    in_class = False
+    class_end = 0
     index = 0
     while index < len(pattern):
         character = pattern[index]
@@ -459,15 +453,11 @@ def _validate_re2_subset(pattern: str, path: str) -> None:
                 _raise_unsupported_regex(path)
             index += 2
             continue
-        if character == "[" and not in_class:
-            in_class = True
+        if index < class_end:
             index += 1
             continue
-        if character == "]" and in_class:
-            in_class = False
-            index += 1
-            continue
-        if in_class:
+        if character == "[":
+            class_end = _character_class_end(pattern, index)
             index += 1
             continue
         if pattern.startswith("(?", index):
@@ -838,6 +828,9 @@ def _encode_source_predicate(
             f"Rule option {option!r} cannot be rendered for sing-box",
         )
 
+    if rule_type in {"MATCH", "FINAL"}:
+        return {}
+
     field_by_type = {
         "DOMAIN": "domain",
         "DOMAIN-SUFFIX": "domain_suffix",
@@ -943,7 +936,7 @@ def _leading_dot_domain_suffix(expression: LogicalExpression) -> str | None:
         return None
     if suffix.options or not isinstance(negated, LogicalExpression):
         return None
-    if negated.operator.upper() != "NOT" or len(negated.operands) != 1:
+    if negated.options or negated.operator.upper() != "NOT" or len(negated.operands) != 1:
         return None
     domain = negated.operands[0]
     if not isinstance(domain, Predicate) or domain.rule_type != "DOMAIN":
