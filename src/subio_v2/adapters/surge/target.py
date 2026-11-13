@@ -8,13 +8,14 @@ from subio_v2.adapters.checks import (
 )
 from subio_v2.adapters.contracts import NodeTargetCodec, TargetAdapter
 from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
+from subio_v2.adapters.surge.codecs._base import SurgeUdpBehavior
 from subio_v2.adapters.surge.validation import (
     SURGE_RESERVED_POLICY_NAMES,
     validate_surge_common,
     validate_surge_parameters,
 )
 from subio_v2.core.dialect import DialectContext
-from subio_v2.core.nodes import Node, Protocol
+from subio_v2.core.nodes import Node, Protocol, TransportSettings
 from subio_v2.core.results import IssueDraft, IssueSeverity
 
 
@@ -43,6 +44,32 @@ def make_target(policy) -> TargetAdapter:
 
     def common(node: Node) -> list[IssueDraft]:
         issues = []
+        fields = []
+        if node.type != Protocol.VLESS:
+            if getattr(getattr(node, "smux", None), "enabled", False):
+                fields.append("smux")
+            transport = getattr(node, "transport", None)
+            if isinstance(transport, TransportSettings):
+                if transport.method not in {None, "GET"}:
+                    fields.append("transport.method")
+                for attr in ("max_early_data", "early_data_header_name"):
+                    if getattr(transport, attr) is not None:
+                        fields.append(f"transport.{attr}")
+        codec = SURGE_PROTOCOL_CODECS[node.type]
+        automatic_udp = codec.udp_behavior == SurgeUdpBehavior.AUTOMATIC or (
+            codec.udp_behavior == SurgeUdpBehavior.VERSIONED and (node.version or 1) >= 3
+        )
+        if automatic_udp and node.type != Protocol.VLESS and node.udp is False:
+            fields.append("udp")
+        if node.type == Protocol.VMESS:
+            if node.packet_encoding is not None:
+                fields.append("packet_encoding")
+            if node.global_padding:
+                fields.append("global_padding")
+        issues.extend(IssueDraft(
+            IssueSeverity.ERROR, "Surge cannot preserve this setting", field,
+            code="conversion.unsupported-platform-field",
+        ) for field in fields)
         tls = getattr(node, "tls", None)
         if node.type != Protocol.VLESS:
             issues.extend(

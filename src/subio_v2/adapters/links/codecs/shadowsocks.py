@@ -54,8 +54,9 @@ def parse(line: str) -> Node | None:
         else:
             server, port = url.hostname, url.port
             if url.username and ":" not in url.username and not url.password:
+                encoded_auth = urllib.parse.unquote(url.username)
                 auth = base64.urlsafe_b64decode(
-                    url.username + "=" * ((4 - len(url.username) % 4) % 4)
+                    encoded_auth + "=" * ((4 - len(encoded_auth) % 4) % 4)
                 ).decode()
                 method, password = auth.split(":", 1)
             else:

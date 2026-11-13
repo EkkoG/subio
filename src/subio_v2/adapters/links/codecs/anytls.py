@@ -27,15 +27,22 @@ def build(node: Node) -> str:
 
 
 def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
-    if not isinstance(node, AnyTLSNode) or node.reuse:
+    if not isinstance(node, AnyTLSNode):
         return []
-    return [
+    issues = [IssueDraft(
+        IssueSeverity.ERROR, f"AnyTLS session field cannot be represented by {platform}",
+        attr, code="conversion.unsupported-platform-field",
+    ) for attr in ("min_idle_session", "idle_session_timeout", "idle_session_check_interval")
+        if getattr(node, attr) is not None]
+    if not node.reuse:
+        issues.append(
         IssueDraft(
             severity=IssueSeverity.ERROR,
             message=f"AnyTLS reuse=false cannot be represented by {platform}",
             field="reuse",
         )
-    ]
+        )
+    return issues
 
 
 CODEC = LinkCodec(Protocol.ANYTLS, frozenset({"dae"}), build, check=check)

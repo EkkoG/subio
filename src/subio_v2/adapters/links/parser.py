@@ -30,7 +30,7 @@ class V2RayNParser:
                 nodes.append(node)
                 continue
             scheme = line.partition("://")[0] or None
-            fragment = urllib.parse.urlparse(line).fragment
+            fragment = line.partition("#")[2]
             issues.append(
                 ConversionIssue(
                     severity=IssueSeverity.ERROR,

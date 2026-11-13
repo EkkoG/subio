@@ -49,10 +49,8 @@ def build(node: Node) -> str:
         data["path"] = node.transport.grpc_service_name or ""
     elif node.transport.network == Network.HTTP:
         path = node.transport.path
-        data["path"] = (
-            path
-            if isinstance(path, str)
-            else join_comma_values(path or [], field="transport.path")
+        data["path"] = join_comma_values(
+            [path] if isinstance(path, str) else path or [], field="transport.path"
         )
         if node.transport.headers and "Host" in node.transport.headers:
             data["host"] = node.transport.headers["Host"]
@@ -70,6 +68,8 @@ def parse(line: str) -> Node | None:
         payload += "=" * ((4 - len(payload) % 4) % 4)
         data = json.loads(base64.b64decode(payload).decode())
         network = data.get("net", "tcp")
+        if network == "tcp" and data.get("type", "none") not in {"", "none"}:
+            return None
         try:
             network_value: Network | str = Network(network)
         except ValueError:
@@ -86,7 +86,8 @@ def parse(line: str) -> Node | None:
         elif network == Network.GRPC.value:
             transport.grpc_service_name = data.get("path")
         elif network == Network.HTTP.value:
-            transport.path = data.get("path")
+            path = data.get("path")
+            transport.path = path.split(",") if path else None
             if data.get("host"):
                 transport.headers = {"Host": data["host"]}
         return VmessNode(
@@ -100,7 +101,7 @@ def parse(line: str) -> Node | None:
             transport=transport,
             tls=TLSSettings(
                 enabled=data.get("tls") == "tls",
-                server_name=data.get("sni") or data.get("host"),
+                server_name=data.get("sni") or None,
                 alpn=data.get("alpn", "").split(",") if data.get("alpn") else None,
             ),
         )

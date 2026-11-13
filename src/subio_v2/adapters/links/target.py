@@ -16,7 +16,31 @@ from subio_v2.core.results import IssueDraft, IssueSeverity
 
 def check_link_fields(node: Node) -> list[IssueDraft]:
     issues = []
+    fields = []
+    if node.ip_version not in {None, "dual"}:
+        fields.append("ip_version")
+    if getattr(getattr(node, "smux", None), "enabled", False):
+        fields.append("smux")
+    if node.udp is False and node.type != Protocol.HTTP:
+        fields.append("udp")
+    packet_encoding = getattr(node, "packet_encoding", None)
+    if packet_encoding is not None and not (
+        node.type == Protocol.VLESS and packet_encoding == "xudp"
+    ):
+        fields.append("packet_encoding")
+    if getattr(node, "global_padding", False):
+        fields.append("global_padding")
     transport = getattr(node, "transport", None)
+    if transport is not None:
+        if transport.method not in {None, "GET"}:
+            fields.append("transport.method")
+        for attr in ("max_early_data", "early_data_header_name"):
+            if getattr(transport, attr) is not None:
+                fields.append(f"transport.{attr}")
+    issues.extend(IssueDraft(
+        IssueSeverity.ERROR, "Links cannot preserve this setting", field,
+        code="conversion.unsupported-platform-field",
+    ) for field in fields)
     headers = getattr(transport, "headers", None)
     if headers and (
         transport.network_value not in {"ws", "http"}

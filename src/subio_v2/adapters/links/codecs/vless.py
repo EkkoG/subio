@@ -117,11 +117,14 @@ def parse(line: str) -> Node | None:
         ):
             return None
         if (
-            any(key in query for key in ("mode", "authority", "serviceName"))
+            any(key in query for key in ("authority", "serviceName"))
             and network != "grpc"
         ):
             return None
-        if "mode" in query and query["mode"][0] not in {"gun", "multi"}:
+        if "mode" in query and (
+            network not in {"grpc", "xhttp"}
+            or (network == "grpc" and query["mode"][0] not in {"gun", "multi"})
+        ):
             return None
         try:
             network_value: Network | str = Network(network)
@@ -145,6 +148,10 @@ def parse(line: str) -> Node | None:
             transport.path = path.split(",") if path else None
             if query.get("host"):
                 transport.headers = {"Host": query["host"][0]}
+        elif network == Network.XHTTP.value:
+            transport.path = query.get("path", [None])[0]
+            transport.host = query.get("host", [None])[0]
+            transport.xhttp_mode = query.get("mode", [None])[0]
         return VlessNode(
             name=(
                 urllib.parse.unquote(url.fragment)

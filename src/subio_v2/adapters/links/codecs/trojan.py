@@ -59,7 +59,12 @@ def parse(line: str) -> Node | None:
     try:
         url = urllib.parse.urlparse(line)
         query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        if any(len(values) != 1 for values in query.values()):
+            return None
         network = query.get("type", ["tcp"])[0]
+        if (any(key in query for key in ("mode", "authority", "serviceName"))
+                and network != "grpc"):
+            return None
         try:
             network_value: Network | str = Network(network)
         except ValueError:
@@ -75,6 +80,8 @@ def parse(line: str) -> Node | None:
                 transport.host = query["host"][0].split(",")
         elif network == Network.GRPC.value:
             transport.grpc_service_name = query.get("serviceName", [None])[0]
+            transport.grpc_mode = query.get("mode", [None])[0]
+            transport.grpc_authority = query.get("authority", [None])[0]
         security = query.get("security", ["tls"])[0]
         if security not in {"tls", "reality"}:
             return None

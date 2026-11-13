@@ -107,6 +107,14 @@ Clash-family SSH 无法表示 `idle_timeout` 时返回 ERROR；Stash Snell 省�
 v3/v4 限制。MASQUE `h3-l4proxy` 要求 h3；当前固定规范未定义 MASQUE 跳跃端口，`ports` 和
 `hop_interval` 返回字段级 ERROR。WireGuard 显式非列表 `allowed-ips` 产生逐项 parse issue。
 
+VLESS XHTTP 输入保留 path、Host 和 mode，输出仍按目标能力检查。VMess TCP HTTP 伪装当前明确拒绝；
+HTTP 路径列表按逗号列表往返，单个路径含逗号时拒绝。传输 Host 列表不会被当作显式 TLS SNI。
+Trojan gRPC mode/authority 保留到目标检查，当前无法表示的目标返回字段级 ERROR。
+分享链接无法表示的 IP 版本限制、已启用 SMUX、UDP 禁用、封装参数、非默认 HTTP method 和 WS early data
+均明确拒绝；HTTP 节点不套用 UDP 禁用检查。DAE TUIC 跳跃和 AnyTLS 会话字段同样返回 ERROR。
+Surge 对已发现的对应 SMUX、握手、AnyTLS 会话和 VMess 封装字段返回 ERROR；自动 UDP 协议无法关闭
+UDP 时拒绝，Surge VLESS 继续使用已记录的自动 XUDP warning 策略。
+
 ## 2. 可分享规则集输入
 
 | `ruleset.type` | `behavior` | `format` |

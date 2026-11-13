@@ -13,6 +13,7 @@ from subio_v2.core.nodes import (
     Node,
     Protocol,
 )
+from subio_v2.core.results import IssueDraft, IssueSeverity
 
 
 def parse_anytls(context: SurgeProtocolParseContext) -> Node:
@@ -36,6 +37,14 @@ def emit_anytls(node: Node, _: dict[int, str]) -> list[str]:
     return parts
 
 
+def check(node: Node, _: dict) -> list[IssueDraft]:
+    return [IssueDraft(
+        IssueSeverity.ERROR, "Surge cannot preserve this AnyTLS session field", attr,
+        code="conversion.unsupported-platform-field",
+    ) for attr in ("min_idle_session", "idle_session_timeout", "idle_session_check_interval")
+        if getattr(node, attr) is not None]
+
+
 CODECS = (
     _spec(
         "anytls",
@@ -43,6 +52,7 @@ CODECS = (
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_anytls,
         emitter=emit_anytls,
+        check=check,
         consumed=("password", "reuse"),
     ),
 )

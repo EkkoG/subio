@@ -36,6 +36,12 @@ def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
     if not isinstance(node, TUICNode):
         return []
     warnings: list[IssueDraft] = []
+    for attr in ("ports", "hop_interval"):
+        if getattr(node, attr) is not None:
+            warnings.append(IssueDraft(
+                IssueSeverity.ERROR, "This link cannot preserve port hopping", attr,
+                code="conversion.unsupported-platform-field",
+            ))
     actual_version = node.version
     if actual_version is None:
         if node.uuid or node.password:
