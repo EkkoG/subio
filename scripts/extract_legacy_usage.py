@@ -390,7 +390,7 @@ class UsageExtractor:
             for path in self.root.rglob("*")
             if path.is_file()
             and not path.is_symlink()
-            and not any(part in SKIP_DIRS for part in path.parts)
+            and not any(part in SKIP_DIRS for part in path.relative_to(self.root).parts[:-1])
         )
         for path in paths:
             self._scan_file(path)
@@ -849,14 +849,19 @@ class UsageExtractor:
                 _anon(self.secret, "template-symbol", item) for item in unknown_symbols
             )
         )
+        from jinja2 import Environment, TemplateSyntaxError, nodes
+
         call_arities = []
-        for expression in expressions:
-            for match in re.finditer(
-                r"([A-Za-z_][A-Za-z0-9_]*)\s*\(([^()]*)\)", expression
-            ):
-                arguments = match.group(2).strip()
-                arity = 0 if not arguments else arguments.count(",") + 1
-                call_arities.append(arity)
+        try:
+            tree = Environment().parse(text)
+        except TemplateSyntaxError:
+            self.gaps["parse-failure"] += 1
+        else:
+            for call in tree.find_all(nodes.Call):
+                if call.dyn_args is not None or call.dyn_kwargs is not None:
+                    self.gaps["parse-failure"] += 1
+                    continue
+                call_arities.append(len(call.args) + len(call.kwargs))
         self.template_shapes[
             (safe_symbols, anonymous_symbols, tuple(sorted(call_arities)))
         ] += 1
@@ -1238,13 +1243,13 @@ def _validate_report(report: Any, node_keys: frozenset[str]) -> None:
 
 
 def extract_command(args: argparse.Namespace) -> int:
-    root = Path(args.root).resolve()
-    output = Path(args.output).absolute()
-    schema = Path(args.schema).resolve()
-    if not root.is_dir():
-        print("EXTRACT_FAIL invalid-root")
-        return 2
     try:
+        root = Path(args.root).resolve()
+        output = Path(args.output).absolute()
+        schema = Path(args.schema).resolve()
+        if not root.is_dir():
+            print("EXTRACT_FAIL invalid-root")
+            return 2
         report = UsageExtractor(root, _load_node_keys(schema)).extract()
         payload = json.dumps(report, ensure_ascii=True, sort_keys=True, indent=2)
         output.parent.mkdir(parents=True, exist_ok=True)
