@@ -92,6 +92,10 @@ proxies:
     }
     assert nodes[1].tls.enabled is False
 
+    rejected = ClashEmitter().emit_result(nodes)
+    assert any(i.node == 'trojan-grpc' and i.field == 'tls.enabled' for i in rejected.errors)
+    nodes[1].tls.enabled = True
+
     proxies = {
         proxy["name"]: proxy
         for proxy in ClashEmitter().emit_result(nodes).content["proxies"]
@@ -107,7 +111,7 @@ proxies:
         "ping-interval": 0,
         "max-connections": 7,
     }
-    assert "tls" not in proxies["trojan-grpc"]
+    assert proxies["trojan-grpc"]["tls"] is True
 
 
 def test_clash_roundtrip_preserves_inactive_transport_option_blocks():

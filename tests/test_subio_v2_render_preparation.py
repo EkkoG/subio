@@ -463,14 +463,22 @@ def test_scoped_surge_parameter_errors_skip_unsafe_nodes_like_static(
     })
     if protocol == "ss":
         node["cipher"] = "aes-256-gcm"
+    if protocol == "trojan" and native:
+        node["tls"] = {"enabled": True}
     document[key].append({**node, "name": "safe", "server": "example.test"})
     node[field] = value
     (tmp_path / "nodes.yaml").write_text(yaml.safe_dump(document))
     _snapshot(path, data)
     static = WorkflowEngine(str(path)).prepare().artifact_result
     assert static.drafts
+
+    def expected_issue(issue):
+        if field == "name" and not value.strip():
+            return issue.stage == "parse" and issue.severity == "error"
+        return issue.field == field and issue.code == "conversion.invalid-value"
+
     assert any(
-        issue.field == field and issue.code == "conversion.invalid-value"
+        expected_issue(issue)
         for issue in static.issues
     )
 
@@ -484,7 +492,7 @@ def test_scoped_surge_parameter_errors_skip_unsafe_nodes_like_static(
     parsed = get_parser("surge").parse_result(result.drafts[0].content)
     assert not parsed.issues and [node.name for node in parsed.nodes] == ["safe"]
     assert any(
-        issue.field == field and issue.code == "conversion.invalid-value"
+        expected_issue(issue)
         and issue.severity == "error"
         for issue in result.issues
     )

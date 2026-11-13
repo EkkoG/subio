@@ -85,6 +85,10 @@ def test_modeled_fields_are_gated_by_target_capability():
     ).nodes[0]
 
     clash = ClashEmitter("clash").emit_result([node])
+    assert not clash.supported_nodes
+    assert any(issue.field == "tls.ech_opts" for issue in clash.errors)
+    node.tls.ech_opts = None
+    clash = ClashEmitter("clash").emit_result([node])
     proxy = clash.content["proxies"][0]
 
     assert "tfo" not in proxy

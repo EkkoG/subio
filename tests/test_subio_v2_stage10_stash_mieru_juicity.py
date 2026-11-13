@@ -147,7 +147,7 @@ def test_juicity_is_stash_only_and_never_becomes_mihomo_strong_semantics():
     )
     assert parsed_as_mihomo.nodes == []
     assert parsed_as_mihomo.issues[0].severity.value == "error"
-    assert "Known proxy type 'juicity'" in parsed_as_mihomo.issues[0].message
+    assert parsed_as_mihomo.issues[0].code == "parse.node"
 
 
 def test_stage10_capability_is_complete_for_mieru_and_juicity():
