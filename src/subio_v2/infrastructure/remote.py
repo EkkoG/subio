@@ -31,6 +31,76 @@ class RemoteLoadError(RuntimeError):
     """Sanitized remote resource failure."""
 
 
+class _ZstdFrameInput:
+    """Check frame completion while the library owns bounded decompression."""
+
+    def __init__(self, raw: Any, read_size: int):
+        self.raw = raw
+        self.read_size = read_size
+        self._chunks = self._frames()
+        self._pending = b""
+
+    def read(self, size: int) -> bytes:
+        if not self._pending:
+            self._pending = next(self._chunks, b"")
+        result, self._pending = self._pending[:size], self._pending[size:]
+        return result
+
+    def _exact(self, size: int, *, allow_eof: bool = False) -> bytes:
+        result = bytearray()
+        while len(result) < size:
+            chunk = self.raw.read(min(size - len(result), self.read_size))
+            if not chunk:
+                if allow_eof and not result:
+                    return b""
+                raise RemoteLoadError("Incomplete zstd remote response")
+            result.extend(chunk)
+        return bytes(result)
+
+    def _payload(self, size: int):
+        while size:
+            chunk = self._exact(min(size, self.read_size))
+            size -= len(chunk)
+            yield chunk
+
+    def _frames(self):
+        seen = False
+        while magic := self._exact(4, allow_eof=True):
+            seen = True
+            value = int.from_bytes(magic, "little")
+            if 0x184D2A50 <= value <= 0x184D2A5F:
+                length = self._exact(4)
+                yield magic
+                yield length
+                yield from self._payload(int.from_bytes(length, "little"))
+                continue
+            if magic != b"\x28\xb5\x2f\xfd":
+                raise RemoteLoadError("Invalid zstd remote response")
+            descriptor = self._exact(1)
+            flags = descriptor[0]
+            single_segment = bool(flags & 0x20)
+            size_length = (1 if single_segment else 0, 2, 4, 8)[flags >> 6]
+            header = self._exact((0 if single_segment else 1) + (0, 1, 2, 4)[flags & 3] + size_length)
+            yield magic
+            yield descriptor
+            if header:
+                yield header
+            while True:
+                block = self._exact(3)
+                info = int.from_bytes(block, "little")
+                block_type = (info >> 1) & 3
+                if block_type == 3:
+                    raise RemoteLoadError("Invalid zstd block type")
+                yield block
+                yield from self._payload(1 if block_type == 1 else info >> 3)
+                if info & 1:
+                    break
+            if flags & 4:
+                yield self._exact(4)
+        if not seen:
+            raise RemoteLoadError("Incomplete zstd remote response")
+
+
 @dataclass(frozen=True)
 class RemoteMetadata:
     state: str = "network"
@@ -128,6 +198,7 @@ class RunRemoteLoader:
         adapter = HTTPAdapter(max_retries=retry_strategy.new(
             status=0, status_forcelist=(), respect_retry_after_header=False,
         ))
+        self._adapter = adapter
         self._session.mount("http://", adapter)
         self._session.mount("https://", adapter)
         self._session.hooks = {"response": [self._close_redirect_body]}
@@ -143,7 +214,16 @@ class RunRemoteLoader:
     def _get_response(self, url: str, headers: dict[str, str]) -> requests.Response:
         retries = self._retry_strategy
         while True:
+            self._adapter.max_retries = retries.new(
+                status=0, status_forcelist=(), respect_retry_after_header=False,
+            )
             response = self._session.get(url, headers=headers, timeout=self.timeout, stream=True)
+            consumed = getattr(response.raw, "retries", None)
+            if isinstance(consumed, Retry):
+                retries = consumed.new(
+                    status=retries.status, status_forcelist=retries.status_forcelist,
+                    respect_retry_after_header=retries.respect_retry_after_header,
+                )
             if not retries.is_retry("GET", response.status_code, bool(_header(response.headers, "Retry-After"))):
                 return response
             raw = response.raw
@@ -155,6 +235,8 @@ class RunRemoteLoader:
                 response.close()
             retries = next_retry
             retries.sleep(raw)
+            url = response.url
+            headers = dict(response.request.headers)
 
     def fetch(self, url: str, *, headers: Mapping[str, str] | None = None) -> bytes:
         return self.fetch_result(url, headers=headers).content
@@ -274,24 +356,37 @@ class RunRemoteLoader:
         if encoding == "zstd":
             # Bound both the decoder window and each decoded read.
             with zstandard.ZstdDecompressor(max_window_size=8 * 1024 * 1024).stream_reader(
-                raw, read_size=min(64 * 1024, self.max_bytes + 1), read_across_frames=True,
+                _ZstdFrameInput(raw, min(64 * 1024, self.max_bytes + 1)),
+                read_size=min(64 * 1024, self.max_bytes + 1), read_across_frames=True,
                 closefd=False,
             ) as reader:
                 while chunk := reader.read(budget()):
                     append(chunk)
         elif encoding in {"gzip", "deflate"}:
-            data = raw.read(2)
-            window = 16 + zlib.MAX_WBITS if encoding == "gzip" else (
-                zlib.MAX_WBITS if len(data) == 2 and data[0] & 15 == 8
-                and int.from_bytes(data, "big") % 31 == 0 else -zlib.MAX_WBITS
-            )
+            data = raw.read(budget())
+            window = 16 + zlib.MAX_WBITS if encoding == "gzip" else zlib.MAX_WBITS
             decoder = zlib.decompressobj(window)
+            probe = bytearray() if encoding == "deflate" else None
             while data:
                 if decoder.eof:
                     if encoding != "gzip":
                         raise RemoteLoadError("Unexpected data after compressed response")
                     decoder = zlib.decompressobj(window)
-                append(decoder.decompress(data, budget()))
+                if probe is not None:
+                    if len(probe) + len(data) > 64 * 1024:
+                        raise RemoteLoadError("Deflate format exceeds the detection budget")
+                    probe.extend(data)
+                try:
+                    decoded = decoder.decompress(data, budget())
+                except zlib.error:
+                    if probe is None:
+                        raise
+                    decoder = zlib.decompressobj(-zlib.MAX_WBITS)
+                    decoded = decoder.decompress(bytes(probe), budget())
+                    probe = None
+                append(decoded)
+                if decoded:
+                    probe = None
                 data = decoder.unconsumed_tail or decoder.unused_data
                 if not data:
                     data = raw.read(budget())
@@ -347,7 +442,7 @@ class RunRemoteLoader:
                 content_length=len(content), subscription_user_info=usage or None,
             )
             return RemoteFetchResult(content, metadata), float(saved_at)
-        except (OSError, KeyError, TypeError, ValueError, OverflowError, binascii.Error):
+        except (OSError, KeyError, TypeError, ValueError, OverflowError, RecursionError, binascii.Error):
             return None
 
     def _write_disk(

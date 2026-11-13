@@ -8,6 +8,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 import requests
 import urllib3.response
+import urllib3.connection
+from urllib3.exceptions import NewConnectionError
 import zstandard
 
 from subio_v2.core.errors import ConfigError
@@ -271,6 +273,85 @@ def test_304_success_survives_cache_write_failure(tmp_path, monkeypatch):
     assert result.content == loader.fetch(url) == b'payload'
     assert result.metadata.state == 'not-modified'
     assert session.responses is not None
+
+
+@pytest.mark.parametrize('suffix', ['single', 'second'])
+def test_zstd_requires_every_frame_to_finish(http_source, suffix):
+    root, routes, _ = http_source
+    frame = zstandard.ZstdCompressor(write_checksum=True).compress(b'ok')
+    routes['/bad'] = (200, {'Content-Encoding': 'zstd'}, (frame if suffix == 'second' else b'') + frame[:-1])
+    routes['/good'] = (200, {'Content-Encoding': 'zstd'}, frame + frame)
+    loader = RunRemoteLoader()
+    try:
+        with pytest.raises(RemoteLoadError, match='Incomplete'):
+            loader.fetch(root + '/bad')
+        assert loader.fetch(root + '/good') == b'okok'
+    finally:
+        loader.close()
+
+
+def test_ambiguous_raw_deflate_keeps_bounded_fallback(http_source):
+    root, routes, _ = http_source
+    body = b'\x78\x9c\x00\x63\xff' + b'x' * 156 + b'\x01\x00\x00\xff\xff'
+    assert zlib.decompress(body, -zlib.MAX_WBITS) == b'x' * 156
+    routes['/raw'] = (200, {'Content-Encoding': 'deflate'}, body)
+    loader = RunRemoteLoader(max_bytes=200)
+    try:
+        assert loader.fetch(root + '/raw') == b'x' * 156
+    finally:
+        loader.close()
+
+
+def test_nested_json_cache_miss_reaches_real_fetch(tmp_path, monkeypatch):
+    from tests.test_subio_v2_remote_cache import Response, Session
+    session = Session([Response()])
+    monkeypatch.setattr('subio_v2.infrastructure.remote.requests.Session', lambda: session)
+    loader = RunRemoteLoader(cache_enabled=True, cache_dir=tmp_path)
+    url = 'https://synthetic.test/data'
+    key = (url, (('Accept-Encoding', 'gzip, deflate, zstd'),))
+    target = tmp_path / (loader._cache_key(key) + '.json')
+    target.write_text('[' * 2000 + '0' + ']' * 2000)
+    assert loader.fetch(url) == b'payload'
+    assert len(session.calls) == 1
+
+
+@pytest.mark.parametrize('failure_attempts', [{1, 2, 3}, {2, 3}])
+def test_connection_and_status_failures_share_retry_budget(http_source, monkeypatch, failure_attempts):
+    root, routes, seen = http_source
+    routes['/retry'] = (503, {}, b'ignored')
+    original = urllib3.connection.HTTPConnection._new_conn
+    attempts = []
+
+    def connect(connection):
+        attempts.append(1)
+        if len(attempts) in failure_attempts:
+            raise NewConnectionError(connection, 'synthetic connection failure')
+        return original(connection)
+
+    monkeypatch.setattr(urllib3.connection.HTTPConnection, '_new_conn', connect)
+    monkeypatch.setattr('urllib3.util.retry.Retry.sleep', lambda *_: None)
+    loader = RunRemoteLoader()
+    try:
+        with pytest.raises(RemoteLoadError, match='HTTPError'):
+            loader.fetch(root + '/retry')
+        assert len(attempts) == 4
+        assert len(seen) == (1 if 1 in failure_attempts else 2)
+    finally:
+        loader.close()
+
+
+def test_status_retry_after_redirect_uses_final_url(http_source, monkeypatch):
+    root, routes, seen = http_source
+    routes['/start'] = (302, {'Location': '/retry'}, b'x' * 200_000)
+    statuses = iter([503, 200])
+    routes['/retry'] = (lambda: next(statuses), {}, b'ok')
+    monkeypatch.setattr('urllib3.util.retry.Retry.sleep', lambda *_: None)
+    loader = RunRemoteLoader(max_bytes=4)
+    try:
+        assert loader.fetch(root + '/start') == b'ok'
+        assert [path for path, _ in seen] == ['/start', '/retry', '/retry']
+    finally:
+        loader.close()
 
 
 def test_mrs_prefix_budget_is_checked_before_string_allocation(monkeypatch):
