@@ -83,6 +83,40 @@ Config / local snippet
 `adapters.catalog.get_parser()` 和 `adapters.catalog.get_emitter()` 每次返回新实例。Parser、Emitter、Uploader 的可变状态不得
 跨 provider、artifact 或两次运行共享。
 
+### 2.1 可执行目标契约
+
+`FormatSpec.target_factory` 创建本次转换的 `TargetAdapter`；其 `codecs` 直接注册
+`NodeTargetCodec`。一个绑定拥有目标协议的前置检查、协议表示检查、目标公共检查和编码函数。
+前置 ERROR 会短路后续目标检查；这个顺序同时用于直接 `binding.check(node)` 和实际输出，
+避免两条入口报告不同的认证或字段问题。目标无关的必需字段与组合语义仍先由 `ProtocolSpec` 校验。
+
+`TargetValidationService` 只负责通用语义、绑定查找、来源边界、issue 上下文和 checked encode
+编排，不按具体协议、Node 类型或字段名拼装平台能力，也不接受外部任意 encoder/check callback。
+Emitter 消费绑定返回的编码结果，继续拥有文档组装、dialer 淘汰与节点附件冲突处理；同一节点
+不会为验证而重复编码。Surge 每次输出的资源上下文显式传给所选绑定，不存入共享 codec。
+
+| 目标 | 实际绑定与协议检查 owner | 既有规范依据与实现范围 |
+|---|---|---|
+| Mihomo / Clash / Stash | `adapters/clash_family/target.py` 与 `protocols/` 的 Clash-family codec | Mihomo 快照 `tests/fixtures/mihomo/schema/README.md` 的 `88d5239`；Clash/Stash 按支持矩阵和现有合同 |
+| Surge | `adapters/surge/target.py`、`SurgeCodecSpec` 与同目录协议检查/校验函数 | `tests/fixtures/surge/official/README.md`；VLESS 的版本范围见支持矩阵 |
+| dae / v2rayN | `adapters/links/target.py` 与 `links/codecs/` 的逐协议 `LinkCodec` | 支持矩阵、现有分享链接 serializer/contract；不推断其他客户端同名字段 |
+| sing-box | `adapters/singbox/target.py` 与 outbound/endpoint codec | `tests/fixtures/singbox/` 的 v1.14.3 provenance；仅已实现字段组合 |
+
+Surge 与分享链接不借用 Clash 目标检查。跨目标可复用的纯语义留在既有语义 owner，目标
+TLS、transport、认证和来源可表示性留在相应绑定。协议本地为真实目标差异保留条件判断，
+不以消除所有 `if` 为目标；禁止在通用服务重建平台×协议×字段条件链或另建能力表。
+测试支持视图同样由 `get_target()` 的实际绑定派生。
+
+这里区分三类信息：规范/fixture 是依据，绑定的 check/encode 是 SubIO 已实现范围，
+同方言回放、跨方言 issue 与发布 gate 是转换策略。通过检查只证明满足当前实现契约，
+不代表完整符合某平台的所有版本；Surge 的内部 `latest` 标签也不作这样的承诺。
+
+`FormatSpec.representation_factory` 另行提供 `FormatRepresentation`：格式 owner 负责节点
+序列化、legacy names、允许访问的模板片段和渲染后格式校验。`TemplateNodeSet` 与 artifact
+编排只消费这些函数；安全摘要、选择器与公共 callable 仍由 workflow 构建，平台附件不进入
+模板上下文。规则使用自己的 `RuleOutputDialect.render_ruleset()` 和目标值检查函数；
+DAE 值检查、sing-box route-rule JSON 序列化均属于规则目标，不建立节点/规则通用配置 IR。
+
 ## 3. IR 与扩展字段
 
 ### 3.1 强类型语义
