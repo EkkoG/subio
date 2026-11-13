@@ -14,6 +14,10 @@ from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionFragments, EmissionResult, IssueSeverity
 
 
+def legacy_policy_names(names: list[str]) -> str:
+    return ", ".join(f"'{name}'" for name in names)
+
+
 class DaeEmitter(BaseEmitter):
     platform = "dae"
 

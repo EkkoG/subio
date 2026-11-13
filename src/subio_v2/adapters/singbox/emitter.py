@@ -1,8 +1,31 @@
+import json
 from typing import Any
 
 from subio_v2.adapters.base import BaseEmitter
+from subio_v2.core.errors import TemplateRenderError
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionResult, IssueSeverity
+
+
+def serialize_nodes(content: dict[str, Any], template: bool) -> str:
+    return json.dumps(content, ensure_ascii=False, indent=2) + "\n"
+
+
+def template_fragment(rendered: str, key: str) -> str:
+    return json.dumps(json.loads(rendered)[key], ensure_ascii=False)
+
+
+def validate_template(content: str, path: str) -> None:
+    try:
+        document = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise TemplateRenderError(
+            f"Rendered sing-box template '{path}' is not valid JSON"
+        ) from exc
+    if not isinstance(document, dict):
+        raise TemplateRenderError(
+            f"Rendered sing-box template '{path}' must be a JSON object"
+        )
 
 
 class SingBoxEmitter(BaseEmitter):

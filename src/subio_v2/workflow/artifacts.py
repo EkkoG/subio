@@ -1,19 +1,17 @@
 import hashlib
-import json
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
-import yaml
-
 from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.catalog import (
     common_policy_for_format,
     get_emitter,
+    get_representation,
     normalize_format,
 )
-from subio_v2.core.errors import ArtifactGenerationError, TemplateRenderError
+from subio_v2.core.errors import ArtifactGenerationError
 from subio_v2.core.nodes import Node
 from subio_v2.core.parameters import ParameterValue
 from subio_v2.core.results import ConversionIssue, EmissionFragments, IssueSeverity
@@ -164,8 +162,11 @@ class ArtifactGenerationService:
         name = artifact_config.name
         artifact_type = artifact_config.artifact_type
         parameters = (
-            self.parameters if self.parameters is not None
-            else normalize_parameters(artifact_config.params, self.parameter_pairs or ())
+            self.parameters
+            if self.parameters is not None
+            else normalize_parameters(
+                artifact_config.params, self.parameter_pairs or ()
+            )
         )
         nodes: list[Node] = []
         provider_issues: list[ConversionIssue] = []
@@ -246,8 +247,7 @@ class ArtifactGenerationService:
             ) from exc
 
         artifact_issues = [
-            replace(issue, artifact=name, user=username)
-            for issue in provider_issues
+            replace(issue, artifact=name, user=username) for issue in provider_issues
         ]
         artifact_issues.extend(preflight_issues)
         artifact_issues.extend(
@@ -321,15 +321,8 @@ class ArtifactGenerationService:
         artifact_name: str,
         parameters: Mapping[str, ParameterValue],
     ) -> tuple[str, list[ConversionIssue]]:
-        is_yaml_data = isinstance(content, dict)
-        if is_yaml_data and normalize_format(artifact_type) == "sing-box":
-            raw_content = json.dumps(content, ensure_ascii=False, indent=2) + "\n"
-        else:
-            raw_content = (
-                yaml.dump(content.get("proxies", []), allow_unicode=True, sort_keys=False)
-                if is_yaml_data
-                else content
-            )
+        representation = get_representation(artifact_type)
+        raw_content = representation.serialize(content, bool(template_path))
         if template_path:
             context = build_template_context(
                 platform=artifact_type,
@@ -353,27 +346,13 @@ class ArtifactGenerationService:
                 template_path, context, artifact_type, self.rulesets
             )
             final_content = render_result.content
-            if normalize_format(artifact_type) == "sing-box":
-                try:
-                    rendered_json = json.loads(final_content)
-                except json.JSONDecodeError as exc:
-                    raise TemplateRenderError(
-                        f"Rendered sing-box template '{template_path}' is not valid JSON"
-                    ) from exc
-                if not isinstance(rendered_json, dict):
-                    raise TemplateRenderError(
-                        f"Rendered sing-box template '{template_path}' must be a JSON object"
-                    )
+            representation.validate_template(final_content, template_path)
             ruleset_issues = [
                 replace(issue, artifact=artifact_name, user=username)
                 for issue in render_result.issues
             ]
             return final_content, ruleset_issues
-        elif is_yaml_data and normalize_format(artifact_type) != "sing-box":
-            final_content = yaml.dump(content, allow_unicode=True, sort_keys=False)
-        else:
-            final_content = raw_content
-        return final_content, []
+        return raw_content, []
 
     @staticmethod
     def _preflight_nodes(
@@ -443,9 +422,7 @@ class ArtifactGenerationService:
         username: str | None,
     ) -> ArtifactDraft:
         final_content = content
-        actual_filename = (
-            filename.replace("{user}", username) if username else filename
-        )
+        actual_filename = filename.replace("{user}", username) if username else filename
         if (
             not actual_filename
             or actual_filename != os.path.basename(actual_filename)

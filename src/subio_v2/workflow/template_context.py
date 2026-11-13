@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from subio_v2.adapters.catalog import get_representation
+from subio_v2.adapters.representation import FormatRepresentation
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionFragments
 from subio_v2.workflow.selectors import SelectorEngine
@@ -29,7 +30,7 @@ class TemplateNodeSet:
 
     _rendered: str
     _summaries: tuple[TemplateNodeSummary, ...]
-    _platform: str
+    _representation: FormatRepresentation
     _fragments: EmissionFragments
     _selector_engine: SelectorEngine
 
@@ -37,15 +38,10 @@ class TemplateNodeSet:
         return self._rendered
 
     def outbounds(self) -> str:
-        return self._singbox_array("outbounds")
+        return self._representation.fragment(self._rendered, "outbounds")
 
     def endpoints(self) -> str:
-        return self._singbox_array("endpoints")
-
-    def _singbox_array(self, key: str) -> str:
-        if self._platform != "sing-box":
-            raise ValueError(f"nodes.{key}() is only available for sing-box templates")
-        return json.dumps(json.loads(self._rendered)[key], ensure_ascii=False)
+        return self._representation.fragment(self._rendered, "endpoints")
 
     def _selected(
         self,
@@ -129,12 +125,7 @@ class TemplateNodeSet:
         )
 
     def legacy_names(self) -> list[str] | str:
-        names = self.names()
-        if self._platform == "surge":
-            return f"PROXY = select, {', '.join(names)}"
-        if self._platform == "dae":
-            return ", ".join(f"'{name}'" for name in names)
-        return names
+        return self._representation.legacy_names(self.names())
 
 
 def build_template_context(
@@ -158,7 +149,7 @@ def build_template_context(
         for node in nodes
     )
     node_set = TemplateNodeSet(
-        rendered, summaries, platform, fragments, selector_engine
+        rendered, summaries, get_representation(platform), fragments, selector_engine
     )
     context: dict[str, Any] = {
         "nodes": node_set,

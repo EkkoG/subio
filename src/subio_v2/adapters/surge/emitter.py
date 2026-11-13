@@ -39,6 +39,10 @@ from subio_v2.core.nodes import (
 from subio_v2.core.results import EmissionResult, IssueSeverity
 
 
+def legacy_policy_names(names: list[str]) -> str:
+    return f"PROXY = select, {', '.join(names)}"
+
+
 class SurgeEmitter(BaseEmitter):
     platform = "surge"
 

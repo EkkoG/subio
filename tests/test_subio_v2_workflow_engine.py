@@ -1297,14 +1297,14 @@ proxies:
     )
     monkeypatch.chdir(tmp_path)
     emitter = V2RayNEmitter()
-    original_check = emitter.check_node
+    original_check = emitter._conversion.check_node
     checks = []
 
     def counted_check(node):
         checks.append(node.name)
         return original_check(node)
 
-    monkeypatch.setattr(emitter, "check_node", counted_check)
+    monkeypatch.setattr(emitter._conversion, "check_node", counted_check)
     monkeypatch.setattr(
         "subio_v2.workflow.artifacts.get_emitter", lambda _: emitter
     )

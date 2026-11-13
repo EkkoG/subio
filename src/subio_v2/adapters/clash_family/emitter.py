@@ -1,9 +1,15 @@
 import copy
 from typing import Any, Dict, List
 
+import yaml
 from subio_v2.adapters.base import BaseEmitter
 from subio_v2.core.nodes import Node, SourcePassthroughNode
 from subio_v2.core.results import EmissionResult, IssueSeverity
+
+
+def serialize_nodes(content: dict[str, Any], template: bool) -> str:
+    value = content.get("proxies", []) if template else content
+    return yaml.dump(value, allow_unicode=True, sort_keys=False)
 
 
 class ClashEmitter(BaseEmitter):

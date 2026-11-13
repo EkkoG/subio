@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from subio_v2.adapters.representation import FormatRepresentation
 from subio_v2.core.parameters import ParameterValue
 
 
@@ -32,6 +33,7 @@ class FormatSpec:
     common_policy: TargetCommonPolicy | None = None
     parameterized_input: bool = False
     target_factory: Callable[[TargetCommonPolicy], Any] | None = None
+    representation_factory: Callable[[], FormatRepresentation] = FormatRepresentation
 
 
 @dataclass(frozen=True)
@@ -170,6 +172,38 @@ def _singbox_target(policy):
     return make_target(policy)
 
 
+def _yaml_representation():
+    from subio_v2.adapters.clash_family.emitter import serialize_nodes
+
+    return FormatRepresentation(serialize=serialize_nodes)
+
+
+def _surge_representation():
+    from subio_v2.adapters.surge.emitter import legacy_policy_names
+
+    return FormatRepresentation(legacy_names=legacy_policy_names)
+
+
+def _dae_representation():
+    from subio_v2.adapters.links.dae import legacy_policy_names
+
+    return FormatRepresentation(legacy_names=legacy_policy_names)
+
+
+def _singbox_representation():
+    from subio_v2.adapters.singbox.emitter import (
+        serialize_nodes,
+        template_fragment,
+        validate_template,
+    )
+
+    return FormatRepresentation(
+        serialize=serialize_nodes,
+        fragment=template_fragment,
+        validate_template=validate_template,
+    )
+
+
 def _dae_target(policy):
     from subio_v2.adapters.links.target import make_target
 
@@ -189,6 +223,7 @@ _FORMAT_SPECS = (
         parser_factory=_clash_parser,
         emitter_factory=_clash_emitter,
         target_factory=_mihomo_target,
+        representation_factory=_yaml_representation,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
         parameterized_input=True,
     ),
@@ -199,6 +234,7 @@ _FORMAT_SPECS = (
         parser_factory=_clash_parser_for_clash,
         emitter_factory=_clash_emitter_for_clash,
         target_factory=_clash_target,
+        representation_factory=_yaml_representation,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
         parameterized_input=True,
     ),
@@ -207,6 +243,7 @@ _FORMAT_SPECS = (
         parser_factory=_stash_parser,
         emitter_factory=_stash_emitter,
         target_factory=_stash_target,
+        representation_factory=_yaml_representation,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
     ),
     FormatSpec(
@@ -214,12 +251,14 @@ _FORMAT_SPECS = (
         parser_factory=_surge_parser,
         emitter_factory=_surge_emitter,
         target_factory=_surge_target,
+        representation_factory=_surge_representation,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
     ),
     FormatSpec(
         "dae",
         emitter_factory=_dae_emitter,
         target_factory=_dae_target,
+        representation_factory=_dae_representation,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec(
@@ -234,6 +273,7 @@ _FORMAT_SPECS = (
         parser_factory=_singbox_parser,
         emitter_factory=_singbox_emitter,
         target_factory=_singbox_target,
+        representation_factory=_singbox_representation,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec("subio", parser_factory=_subio_parser, parameterized_input=True),
@@ -314,6 +354,11 @@ def get_parser(
 def get_emitter(format_name: str) -> Any | None:
     spec = get_format(format_name)
     return spec.emitter_factory() if spec and spec.emitter_factory else None
+
+
+def get_representation(format_name: str) -> FormatRepresentation:
+    spec = get_format(format_name)
+    return spec.representation_factory() if spec else FormatRepresentation()
 
 
 def get_target(format_name: str) -> Any | None:
