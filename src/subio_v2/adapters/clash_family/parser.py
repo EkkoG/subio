@@ -35,7 +35,8 @@ class ClashParser:
         if isinstance(content, str):
             try:
                 return yaml.safe_load(content)
-            except (yaml.YAMLError, ValueError, TypeError, OverflowError) as e:
+            except Exception as e:
+                # YAML constructors also raise built-in errors that can expose input values.
                 mark = getattr(e, "problem_mark", None)
                 location = f"; line={mark.line + 1}; column={mark.column + 1}" if mark else ""
                 raise ValueError(f"YAML parse error ({type(e).__name__}){location}") from e

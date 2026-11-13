@@ -112,10 +112,10 @@ def _transport_node(protocol: Protocol, network: str) -> Node:
         network=(
             Network(network) if network in {item.value for item in Network} else network
         ),
-        path="/transport-sentinel",
-        headers={"Host": "host.example.com"},
-        host=["host.example.com"],
-        grpc_service_name="grpc-sentinel",
+        path="/transport-sentinel" if network in {"ws", "h2", "http"} else None,
+        headers={"Host": "host.example.com"} if network in {"ws", "http"} else {},
+        host=["host.example.com"] if network in {"ws", "h2", "http"} else [],
+        grpc_service_name="grpc-sentinel" if network == "grpc" else None,
     )
     common = {
         "name": f"{protocol.value}-{network}",

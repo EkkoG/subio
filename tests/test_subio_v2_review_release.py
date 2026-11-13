@@ -48,7 +48,7 @@ def test_nested_reprs_hide_credentials():
 
 @pytest.mark.parametrize('command', [['check'], ['inspect', 'providers']])
 @pytest.mark.parametrize('format', ['text', 'json'])
-@pytest.mark.parametrize('tag', ['!!int', '!!float'])
+@pytest.mark.parametrize('tag', ['!!int', '!!float', '!!bool', '!!timestamp', '!!binary'])
 @pytest.mark.parametrize('remote', [False, True])
 def test_yaml_scalar_constructor_errors_are_safe(tmp_path, monkeypatch, capsys, command, format, tag, remote):
     from subio_v2.infrastructure.remote import RunRemoteLoader
@@ -67,7 +67,22 @@ def test_yaml_scalar_constructor_errors_are_safe(tmp_path, monkeypatch, capsys, 
     assert main.main() == 1
     captured = capsys.readouterr()
     assert secret not in captured.out + captured.err
-    assert 'ValueError' in captured.out
+    assert 'YAML parse error (' in captured.out
+
+
+@pytest.mark.parametrize('interrupt', [KeyboardInterrupt, SystemExit])
+def test_yaml_decode_preserves_interrupts(monkeypatch, interrupt):
+    from subio_v2.adapters.clash_family.parser import ClashParser
+    monkeypatch.setattr(yaml, 'safe_load', lambda _: (_ for _ in ()).throw(interrupt()))
+    with pytest.raises(interrupt):
+        ClashParser.decode_source('proxies: []')
+
+
+def test_yaml_decode_preserves_valid_scalar_values():
+    from subio_v2.adapters.clash_family.parser import ClashParser
+    assert ClashParser.decode_source('values: [!!int 42, !!float 1.5, !!bool true, !!binary YQ==]') == {
+        'values': [42, 1.5, True, b'a'],
+    }
 
 
 def test_real_source_and_nested_config_reprs_hide_secrets():
