@@ -2,11 +2,11 @@ import base64
 
 import pytest
 
-from subio_v2.adapters.catalog import get_emitter, get_parser
+from subio_v2.adapters.catalog import get_emitter
 from subio_v2.adapters.links import codecs as links
 from subio_v2.adapters.links.parser import V2RayNParser
 from subio_v2.core.nodes import (
-    DirectNode, HysteriaNode, Hysteria2Node, Protocol, SSHNode,
+    DirectNode, HysteriaNode, Hysteria2Node, SSHNode,
 )
 from tests.test_subio_v2_link_nested_values import _node
 

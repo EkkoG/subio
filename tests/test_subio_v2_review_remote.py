@@ -354,6 +354,22 @@ def test_status_retry_after_redirect_uses_final_url(http_source, monkeypatch):
         loader.close()
 
 
+@pytest.mark.parametrize('content_size', [False, True])
+def test_zstd_frame_structure_variants_and_every_truncation(monkeypatch, content_size):
+    from tests.test_subio_v2_remote_cache import Response, Session
+    frame = zstandard.ZstdCompressor(write_checksum=True, write_content_size=content_size).compress(b'payload')
+    skipped = struct.pack('<II', 0x184D2A50, 4) + b'skip'
+    bodies = [skipped + frame] + [frame[:cut] for cut in range(len(frame))]
+    session = Session([Response(content=body, headers={'Content-Encoding': 'zstd'}) for body in bodies])
+    monkeypatch.setattr('subio_v2.infrastructure.remote.requests.Session', lambda: session)
+    loader = RunRemoteLoader()
+    assert loader.fetch('https://synthetic.test/valid') == b'payload'
+    for index in range(1, len(bodies)):
+        with pytest.raises(RemoteLoadError):
+            loader.fetch(f'https://synthetic.test/truncated/{index}')
+    loader.close()
+
+
 def test_mrs_prefix_budget_is_checked_before_string_allocation(monkeypatch):
     monkeypatch.setattr(mrs, 'MAX_MRS_ITEMS', 2)
     header = mrs.MRS_MAGIC + b'\x01' + struct.pack('>qq', 2, 0)
