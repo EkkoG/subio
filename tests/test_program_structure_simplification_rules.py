@@ -21,9 +21,28 @@ def test_rule_dialect_specs_own_shared_output_rule_sets():
 def test_rule_renderer_no_longer_has_duplicate_platform_rules_table():
     source = (Path(__file__).parents[1] / "src/subio_v2/rules/runtime.py").read_text()
     assert "PLATFORM_RULES" not in source
-    assert "get_rule_output_dialect" in source
+    assert "get_rule_output_target" in source
+    assert 'platform == "sing-box"' not in source
     assert "_target_form" not in source
     assert "_output_options_for_target" not in source
+
+
+def test_dae_value_checks_belong_to_the_selected_output_contract():
+    from dataclasses import replace
+
+    from subio_v2.core.dialect import DialectContext
+    from subio_v2.core.rule_model import Predicate
+
+    dialect = replace(RULE_OUTPUT_DIALECTS["dae"], name="test-target")
+    content, issues = dialect.render(
+        source="test",
+        expression=Predicate("DOMAIN", "example.com) -> injected"),
+        source_context=DialectContext("mihomo", "text"),
+        policy="Proxy",
+    )
+    assert content is None
+    assert issues[0].code == "ruleset.invalid-target-value"
+    assert issues[0].target == "test-target"
 
 
 def test_ruleset_input_catalog_is_immutable_and_not_a_mutable_registry():

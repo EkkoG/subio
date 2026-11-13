@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Any
 
 from subio_v2.adapters.catalog import normalize_format
@@ -33,13 +33,12 @@ from subio_v2.rules.codecs import (
     RuleSetInputSelection,
 )
 from subio_v2.rules.config import RuleSetConfig
-from subio_v2.rules.output import get_rule_output_dialect
+from subio_v2.rules.output import get_rule_output_target
 from subio_v2.rules.parser import (
     MIHOMO_CLASSICAL_PARSER,
     parse_argument_names,
     validate_identifier,
 )
-from subio_v2.rules.singbox import SINGBOX_ROUTE_RULE_SERIALIZER
 
 
 @dataclass
@@ -65,34 +64,12 @@ class RuleSetRenderer:
         arguments: Mapping[str, Any],
     ) -> RuleRenderResult:
         platform = normalize_format(platform)
-        if platform == "sing-box":
-            return SINGBOX_ROUTE_RULE_SERIALIZER.render(
-                ruleset,
-                lambda entry: self._resolve_policy(entry, ruleset, arguments),
-            )
-        output_dialect = get_rule_output_dialect(platform)
-        if output_dialect is None:
+        target = get_rule_output_target(platform)
+        if target is None:
             raise ValueError(f"Unknown ruleset target platform: {platform}")
-        issues = [replace(issue, target=output_dialect.name) for issue in ruleset.issues]
-        lines: list[str] = []
-
-        for entry in ruleset.entries:
-            if isinstance(entry, RuleComment):
-                lines.append(entry.content)
-                continue
-
-            policy = self._resolve_policy(entry, ruleset, arguments)
-            rendered, expression_issues = output_dialect.render(
-                source=ruleset.name,
-                expression=entry.expression,
-                source_context=ruleset.source_context,
-                policy=policy,
-            )
-            issues.extend(expression_issues)
-            if rendered is not None:
-                lines.append(rendered)
-
-        return RuleRenderResult(content="\n".join(lines), issues=tuple(issues))
+        return target.render_ruleset(
+            ruleset, lambda entry: self._resolve_policy(entry, ruleset, arguments)
+        )
 
     def _resolve_policy(
         self,

@@ -91,7 +91,7 @@ class _UnsupportedTargetRule(Exception):
 class SingBoxRouteRuleSerializer:
     """Render bound rule IR as sing-box client route-rule JSON fragments."""
 
-    def render(
+    def render_ruleset(
         self,
         ruleset: ParameterizedRuleSet,
         resolve_policy: Callable[[BoundRule], str],

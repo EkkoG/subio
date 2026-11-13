@@ -6,14 +6,18 @@ import ipaddress
 import re
 import yaml
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import TypeAlias
 
 from subio_v2.adapters.catalog import normalize_format
 from subio_v2.core.dialect import DialectContext, dialect_context_for_platform
 from subio_v2.core.results import ConversionIssue, IssueSeverity
-from subio_v2.core.rule_model import LogicalExpression, Predicate, RuleExpression
+from subio_v2.core.rule_model import (
+    BoundRule, LogicalExpression, ParameterizedRuleSet, Predicate,
+    RuleComment, RuleExpression, RuleRenderResult,
+)
+from subio_v2.rules.singbox import SINGBOX_ROUTE_RULE_SERIALIZER
 from subio_v2.rules.parser import (
     MIHOMO_PREDICATES,
     STASH_PREDICATES,
@@ -40,6 +44,29 @@ class RuleOutputDialect:
     serialize_expression: SerializeExpression
     option_prefixes: tuple[str, ...] = ()
     line_prefix: str = ""
+    validate_values: Callable[[str, str, str | None], str | None] | None = None
+
+    def render_ruleset(
+        self,
+        ruleset: ParameterizedRuleSet,
+        resolve_policy: Callable[[BoundRule], str],
+    ) -> RuleRenderResult:
+        issues = [replace(issue, target=self.name) for issue in ruleset.issues]
+        lines: list[str] = []
+        for entry in ruleset.entries:
+            if isinstance(entry, RuleComment):
+                lines.append(entry.content)
+                continue
+            rendered, expression_issues = self.render(
+                source=ruleset.name,
+                expression=entry.expression,
+                source_context=ruleset.source_context,
+                policy=resolve_policy(entry),
+            )
+            issues.extend(expression_issues)
+            if rendered is not None:
+                lines.append(rendered)
+        return RuleRenderResult(content="\n".join(lines), issues=tuple(issues))
 
     def supports_rule(self, rule_type: str) -> bool:
         return rule_type in self.rule_types
@@ -82,19 +109,12 @@ class RuleOutputDialect:
                     ),
                 )
 
-        if self.name == "dae":
-            safe_policy = policy is not None and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", policy)
-            safe_matcher = re.fullmatch(r"[A-Za-z0-9_.-]+", matcher)
-            if rule_type in {"IP-CIDR", "IP-CIDR6"}:
-                try:
-                    ipaddress.ip_network(matcher, strict=False)
-                    safe_matcher = re.fullmatch(r"[0-9A-Fa-f:./]+", matcher)
-                except ValueError:
-                    safe_matcher = False
-            if not safe_policy or (rule_type != "MATCH" and not safe_matcher):
+        if self.validate_values is not None:
+            error = self.validate_values(rule_type, matcher, policy)
+            if error is not None:
                 return None, (_issue(
                     source, expression, self.name, "ruleset.invalid-target-value",
-                    "Rule matcher or policy cannot be represented safely in dae",
+                    error,
                 ),)
 
         if isinstance(expression, LogicalExpression):
@@ -279,6 +299,20 @@ def _lower_dae(
     return (*_canonical_source_form(expression, source_context), expression.options)
 
 
+def _validate_dae_values(rule_type: str, matcher: str, policy: str | None) -> str | None:
+    safe_policy = policy is not None and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", policy)
+    safe_matcher = re.fullmatch(r"[A-Za-z0-9_.-]+", matcher)
+    if rule_type in {"IP-CIDR", "IP-CIDR6"}:
+        try:
+            ipaddress.ip_network(matcher, strict=False)
+            safe_matcher = re.fullmatch(r"[0-9A-Fa-f:./]+", matcher)
+        except ValueError:
+            safe_matcher = False
+    if not safe_policy or (rule_type != "MATCH" and not safe_matcher):
+        return "Rule matcher or policy cannot be represented safely in dae"
+    return None
+
+
 def _serialize_expression(
     expression: RuleExpression,
     rule_type: str,
@@ -441,6 +475,7 @@ RULE_OUTPUT_DIALECTS: Mapping[str, RuleOutputDialect] = MappingProxyType(
             option_names=frozenset({"no-resolve"}),
             lower_expression=_lower_dae,
             serialize_expression=_serialize_dae,
+            validate_values=_validate_dae_values,
         ),
     }
 )
@@ -449,3 +484,13 @@ RULE_OUTPUT_DIALECTS: Mapping[str, RuleOutputDialect] = MappingProxyType(
 def get_rule_output_dialect(platform: str) -> RuleOutputDialect | None:
     """Return the immutable output dialect for a public target name."""
     return RULE_OUTPUT_DIALECTS.get(normalize_format(platform))
+
+
+RULE_OUTPUT_TARGETS = MappingProxyType({
+    **RULE_OUTPUT_DIALECTS,
+    "sing-box": SINGBOX_ROUTE_RULE_SERIALIZER,
+})
+
+
+def get_rule_output_target(platform: str):
+    return RULE_OUTPUT_TARGETS.get(normalize_format(platform))
