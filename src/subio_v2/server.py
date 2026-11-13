@@ -165,13 +165,20 @@ class _RenderService:
             self._stop = asyncio.Event()
             try:
                 await self._refresh()
-                if not self._snapshots:
+                now = time.monotonic()
+                if not any(now - snapshot.acquired_at < self._max_snapshot_age
+                           for snapshot in self._snapshots.values()):
                     phases = sorted({failure.phase for failure in self._failures.values()})
                     self.startup_failure = (
                         "Render service resource preparation failed ("
                         + ", ".join(phases or ["resources"])
                         + ": unavailable); check configured sources and templates"
                     )
+                    if self._snapshots:
+                        self.startup_failure = (
+                            "Render service snapshots expired during preparation; "
+                            "check preparation time and maximum snapshot age"
+                        )
                     raise ServerPreparationError(self.startup_failure)
                 self._refresh_task = asyncio.create_task(self._refresh_loop())
                 yield
@@ -181,13 +188,34 @@ class _RenderService:
                 # Stop admission before waiting for the actual, uncancellable threads.
                 render_executor = self._executor
                 self._executor = None
-                if self._refresh_task is not None:
-                    await self._refresh_task
+                cleanup = asyncio.create_task(self._shutdown(render_executor))
+                cancellation = None
+                while True:
+                    try:
+                        await asyncio.shield(cleanup)
+                        break
+                    except asyncio.CancelledError as exc:
+                        cancellation = exc
+                        if cleanup.done():
+                            break
+                if cancellation is not None:
+                    raise cancellation
+
+    async def _shutdown(self, render_executor):
+        try:
+            if self._refresh_task is not None:
+                await self._refresh_task
+        finally:
+            try:
                 await asyncio.to_thread(self._refresh_executor.shutdown, wait=True)
-                await asyncio.to_thread(render_executor.shutdown, wait=True)
-                self._refresh_executor = None
-                self._snapshots.clear()
-                _service_logger.info("Render service stopped")
+            finally:
+                try:
+                    await asyncio.to_thread(render_executor.shutdown, wait=True)
+                finally:
+                    self._refresh_task = None
+                    self._refresh_executor = None
+                    self._snapshots.clear()
+                    _service_logger.info("Render service stopped")
 
     def _prepare_attempt(self):
         acquired_at = time.monotonic()

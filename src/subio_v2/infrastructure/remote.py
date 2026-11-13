@@ -275,8 +275,19 @@ class RunRemoteLoader:
             response = self._get_response(url, request_headers)
             status_code = getattr(response, "status_code", 200)
             if status_code == 304 and disk is not None:
+                headers = getattr(response, "headers", {}) or {}
+                previous = disk[0].metadata
+                etag = _header(headers, "etag")
+                modified = _header(headers, "last-modified")
+                usage = _header(headers, "subscription-userinfo")
                 result = replace(
-                    disk[0], metadata=replace(disk[0].metadata, state="not-modified")
+                    disk[0], metadata=replace(
+                        previous, state="not-modified",
+                        etag=previous.etag if etag is None else etag,
+                        last_modified=previous.last_modified if modified is None else modified,
+                        subscription_user_info=(previous.subscription_user_info if usage is None
+                                                else _parse_subscription_user_info(usage)),
+                    )
                 )
                 self._cache[cache_key] = result
                 self._persist(cache_key, result)

@@ -1,6 +1,6 @@
 """Render artifact templates with data-only ruleset callables."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from types import CodeType, MappingProxyType
 from typing import Any, Dict, Optional
@@ -25,6 +25,14 @@ class TemplateRenderResult:
 class _TemplateParameters(dict):
     def __missing__(self, key):
         raise MissingParameterError("Missing rendering parameter")
+
+
+def _plain_data(value):
+    if isinstance(value, Mapping):
+        return {key: _plain_data(item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_plain_data(item) for item in value]
+    return value
 
 
 def _template_name(name: str) -> str:
@@ -110,7 +118,7 @@ class TemplateRenderer:
             # sufficiently indented or end with ]).
             if isinstance(value, list):
                 return yaml.dump(
-                    value,
+                    _plain_data(value),
                     allow_unicode=True,
                     sort_keys=False,
                     default_flow_style=True,
@@ -128,18 +136,14 @@ class TemplateRenderer:
 
     def _register_base_filters(self):
         def to_yaml_filter(value):
-            if isinstance(value, Mapping) and not isinstance(value, dict):
-                value = dict(value)
-            return yaml.dump(value, allow_unicode=True, sort_keys=False).strip()
+            return yaml.dump(_plain_data(value), allow_unicode=True, sort_keys=False).strip()
 
         self.env.filters["to_yaml"] = to_yaml_filter
         builtin_tojson = self.env.filters["tojson"]
 
         @jinja2.pass_eval_context
         def to_json_filter(eval_context, value, indent=None):
-            if isinstance(value, Mapping) and not isinstance(value, dict):
-                value = dict(value)
-            return builtin_tojson(eval_context, value, indent)
+            return builtin_tojson(eval_context, _plain_data(value), indent)
 
         self.env.filters["tojson"] = to_json_filter
 
