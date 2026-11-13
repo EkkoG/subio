@@ -1,11 +1,9 @@
 """sing-box node adapters."""
 
-from subio_v2.adapters.singbox.endpoint import (
+from subio_v2.adapters.singbox.codecs import (
     SINGBOX_ENDPOINT_CODECS,
-    encode_endpoint,
-)
-from subio_v2.adapters.singbox.outbound import (
     SINGBOX_OUTBOUND_CODECS,
+    encode_endpoint,
     encode_outbound,
 )
 from subio_v2.adapters.singbox.parser import SingBoxParser

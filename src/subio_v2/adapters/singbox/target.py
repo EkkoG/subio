@@ -7,8 +7,10 @@ from subio_v2.adapters.checks import (
     unsupported_grpc_parameters,
 )
 from subio_v2.adapters.contracts import NodeTargetCodec, TargetAdapter
-from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
-from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
+from subio_v2.adapters.singbox.codecs import (
+    SINGBOX_ENDPOINT_CODECS,
+    SINGBOX_OUTBOUND_CODECS,
+)
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node
 

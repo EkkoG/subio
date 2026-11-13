@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from subio_v2.adapters.singbox.outbound import (
+from subio_v2.adapters.clash_family.parser import ClashParser
+from subio_v2.adapters.singbox.codecs import (
     SINGBOX_OUTBOUND_CODECS_BY_TYPE,
     encode_outbound,
 )
 from subio_v2.adapters.singbox.parser import SingBoxParser
 from subio_v2.adapters.subio.schema import PUBLIC_PROTOCOLS
 from subio_v2.adapters.target import TargetValidationService
-from subio_v2.adapters.clash_family.parser import ClashParser
 from subio_v2.core.nodes import (
     HysteriaNode,
     NaiveNode,
@@ -25,7 +25,6 @@ from subio_v2.core.nodes import (
     TLSSettings,
     VmessNode,
 )
-
 
 SUPPORTED_TYPES = {
     "anytls",

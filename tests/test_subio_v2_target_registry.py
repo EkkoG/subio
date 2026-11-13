@@ -6,8 +6,10 @@ from subio_v2.adapters.links import codecs as links
 from subio_v2.adapters.links.codecs import (
     protocols_for_target as link_protocols_for_target,
 )
-from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
-from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
+from subio_v2.adapters.singbox.codecs import (
+    SINGBOX_ENDPOINT_CODECS,
+    SINGBOX_OUTBOUND_CODECS,
+)
 from subio_v2.adapters.surge.codecs import SURGE_NODE_PROTOCOLS
 from tests.support_target_views import all_platform_capabilities, protocols_for_target
 
@@ -51,6 +53,25 @@ def test_singbox_target_matches_actual_codec_registries():
         protocol.value
         for protocol in {*SINGBOX_OUTBOUND_CODECS, *SINGBOX_ENDPOINT_CODECS}
     )
+
+
+def test_singbox_codec_implementations_have_protocol_local_owners():
+    assert SINGBOX_OUTBOUND_CODECS.keys().isdisjoint(SINGBOX_ENDPOINT_CODECS)
+    for protocol, codec in SINGBOX_OUTBOUND_CODECS.items():
+        owner = f"subio_v2.adapters.singbox.codecs.{protocol.value}"
+        assert codec.parse_fields.__module__ == owner
+        assert codec.emit_fields.__module__ in {
+            owner,
+            "subio_v2.adapters.singbox.codecs._fields",
+        }
+        assert codec.check_fields.__module__ in {
+            owner,
+            "subio_v2.adapters.singbox.codecs._base",
+        }
+    for protocol, codec in SINGBOX_ENDPOINT_CODECS.items():
+        assert type(codec).__module__ == (
+            f"subio_v2.adapters.singbox.codecs.{protocol.value}"
+        )
 
 
 def test_target_registry_normalizes_public_aliases():

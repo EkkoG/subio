@@ -1,11 +1,11 @@
 import pytest
 
-from subio_v2.adapters.singbox.endpoint import (
+from subio_v2.adapters.singbox.codecs import (
     SINGBOX_ENDPOINT_CODECS,
     SINGBOX_ENDPOINT_CODECS_BY_TYPE,
     encode_endpoint,
+    encode_outbound,
 )
-from subio_v2.adapters.singbox.outbound import encode_outbound
 from subio_v2.adapters.singbox.parser import SingBoxParser
 from subio_v2.adapters.target import TargetValidationService
 from subio_v2.core.nodes import (

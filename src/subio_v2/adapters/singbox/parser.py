@@ -4,12 +4,14 @@ import json
 from typing import Any
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.adapters.singbox.outbound import (
+from subio_v2.adapters.singbox.codecs import (
+    SINGBOX_ENDPOINT_CODECS_BY_TYPE,
     SINGBOX_OUTBOUND_CODECS_BY_TYPE,
+)
+from subio_v2.adapters.singbox.codecs._fields import (
     SingBoxCodecError,
     unsupported_field_code,
 )
-from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS_BY_TYPE
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.results import ConversionIssue, IssueSeverity, ParseResult
 from subio_v2.core.validation import validate_node

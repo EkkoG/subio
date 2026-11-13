@@ -1,15 +1,16 @@
 import pytest
 
-import subio_v2.adapters.singbox.endpoint as endpoint_module
+import subio_v2.adapters.singbox.codecs.openconnect as openconnect_module
+import subio_v2.adapters.singbox.codecs.openvpn as openvpn_module
 import subio_v2.protocols as protocol_registry
-from subio_v2.adapters.singbox.endpoint import (
+from subio_v2.adapters.singbox.codecs import (
     SINGBOX_ENDPOINT_CODECS,
     SINGBOX_ENDPOINT_CODECS_BY_TYPE,
     encode_endpoint,
 )
+from subio_v2.adapters.singbox.codecs._fields import SingBoxCodecError
 from subio_v2.adapters.singbox.parser import SingBoxParser
 from subio_v2.adapters.target import TargetValidationService
-from subio_v2.adapters.singbox.outbound import SingBoxCodecError
 from subio_v2.core.nodes import OpenConnectNode, OpenVPNNode, Protocol
 from subio_v2.core.results import IssueSeverity
 from subio_v2.protocols.openvpn import SPEC as OPENVPN_SPEC
@@ -126,7 +127,7 @@ def test_client_endpoint_codec_contract_matches_the_pinned_schema_subset():
         "compression_lzo",
         "mtu",
     }
-    assert endpoint_module._OPENCONNECT_FLAVORS == {
+    assert openconnect_module._OPENCONNECT_FLAVORS == {
         "anyconnect",
         "gp",
         "fortinet",
@@ -134,7 +135,7 @@ def test_client_endpoint_codec_contract_matches_the_pinned_schema_subset():
         "pulse",
         "nc",
     }
-    assert endpoint_module._OPENVPN_NETWORKS == {
+    assert openvpn_module._OPENVPN_NETWORKS == {
         "udp",
         "udp4",
         "udp6",
@@ -142,12 +143,12 @@ def test_client_endpoint_codec_contract_matches_the_pinned_schema_subset():
         "tcp4",
         "tcp6",
     }
-    assert endpoint_module._OPENVPN_TLS_KEYS == {
+    assert openvpn_module._OPENVPN_TLS_KEYS == {
         "certificate",
         "client_certificate",
         "client_key",
     }
-    assert "AES-CBC" not in endpoint_module._OPENVPN_CANONICAL_DATA_CIPHERS
+    assert "AES-CBC" not in openvpn_module._OPENVPN_CANONICAL_DATA_CIPHERS
     assert {
         "BF-CBC",
         "DES-EDE3-CFB",
@@ -155,7 +156,7 @@ def test_client_endpoint_codec_contract_matches_the_pinned_schema_subset():
         "AES-192-GCM",
         "CHACHA20-POLY1305",
         "NONE",
-    } <= endpoint_module._OPENVPN_CANONICAL_DATA_CIPHERS
+    } <= openvpn_module._OPENVPN_CANONICAL_DATA_CIPHERS
 
 
 def test_shared_openvpn_validation_preserves_legacy_cipher_contract():

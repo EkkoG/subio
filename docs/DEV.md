@@ -74,6 +74,8 @@ Config / local snippet
 | `src/subio_v2/adapters/links/` | v2rayN/dae document adapter 与逐协议 link codec |
 | `src/subio_v2/adapters/clash_family/` | Clash-family parser、emitter、共享字段和嵌套 transport/smux 辅助函数 |
 | `src/subio_v2/adapters/surge/` | Surge document adapter、词法、codec 规格、安全门禁和节点附件 |
+| `src/subio_v2/adapters/surge/codecs/` | Surge 逐协议解析、目标检查、编码与规格，显式注册 |
+| `src/subio_v2/adapters/singbox/codecs/` | sing-box 逐协议实现、共享字段与两组 section 注册 |
 | `src/subio_v2/adapters/catalog.py` | 格式名称、alias/deprecation、输入/输出 factory 和公共 target policy |
 | `src/subio_v2/protocols/values.py` | 不带 target 语义的共享协议值域常量 |
 | `src/subio_v2/adapters/target.py` | 从实际 target codec 派生支持并返回 checked encode result |
@@ -101,7 +103,7 @@ Emitter 消费绑定返回的编码结果，继续拥有文档组装、dialer �
 | Mihomo / Clash / Stash | `adapters/clash_family/target.py` 与 `adapters/clash_family/codecs/` | Mihomo 快照 `tests/fixtures/mihomo/schema/README.md` 的 `88d5239`；Clash/Stash 按支持矩阵和现有合同 |
 | Surge | `adapters/surge/target.py`、`SurgeCodecSpec` 与同目录协议检查/校验函数 | `tests/fixtures/surge/official/README.md`；VLESS 的版本范围见支持矩阵 |
 | dae / v2rayN | `adapters/links/target.py` 与 `links/codecs/` 的逐协议 `LinkCodec` | 支持矩阵、现有分享链接 serializer/contract；不推断其他客户端同名字段 |
-| sing-box | `adapters/singbox/target.py` 与 outbound/endpoint codec | `tests/fixtures/singbox/` 的 v1.14.3 provenance；仅已实现字段组合 |
+| sing-box | `adapters/singbox/target.py` 与 `adapters/singbox/codecs/` 的 outbound/endpoint codec | `tests/fixtures/singbox/` 的 v1.14.3 provenance；仅已实现字段组合 |
 
 Surge 与分享链接不借用 Clash 目标检查。跨目标可复用的纯语义留在既有语义 owner，目标
 TLS、transport、认证和来源可表示性留在相应绑定。协议本地为真实目标差异保留条件判断，
@@ -301,7 +303,7 @@ Clash codec 的基类、字段规格和方言合同也由该 family 维护：
 2. 判断字段属于跨平台语义、来源 preservation 还是平台附件；
 3. 在 semantic Node/共享 value object 增加字段，并在唯一 `ProtocolSpec` 明确 terminal native
    public/excluded 与 user override 决策；
-4. 更新实际支持该字段的 Clash/Surge/Link target codec；目标支持由实际 codec 派生，不新增全局
+4. 更新实际支持该字段的 Clash/Surge/Link/sing-box target codec；目标支持由实际 codec 派生，不新增全局
    target protocol set；
 5. 为字段增加 parse/emit、值域/组合、same-dialect preservation 和 cross-target issue tests；
 6. 若终态 native contract 公开该字段，重新生成 v2 schema 并更新 `docs/subio_node_format.md`；
@@ -310,6 +312,12 @@ Clash codec 的基类、字段规格和方言合同也由该 family 维护：
 官方 schema 已定义且影响运行的稳定语义应进入具体 Node，即使当前只有一个目标平台支持；目标不支持
 时由 target codec 产生精确 issue。纯序列化信息和真正未知的新字段留在同方言 `extra`，不要把所有
 schema 元数据机械复制进 IR。
+
+sing-box 的实现位于 `adapters/singbox/codecs/<protocol>.py`：协议的 parse/check/emit、常量和 `CODEC`
+在同一个模块；公共字段处理在 `_fields.py`，既有 outbound/endpoint 两类契约在 `_base.py`。
+`codecs/__init__.py` 显式维护两组 codec 并派生 protocol/type 索引，`target.py` 绑定对应 section。
+新增实现时明确加入 outbound 或 endpoint；共享函数不得从另一个具体协议模块借用。
+文档 parser/emitter 继续负责 section 组装、endpoint detour 及失败节点淘汰。
 
 ## 5. Surge
 
