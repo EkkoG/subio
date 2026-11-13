@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from types import MappingProxyType
 from typing import Any, Dict
 
@@ -14,8 +14,8 @@ from subio_v2.adapters.clash_family.fields import (
     parse_base_fields,
 )
 from subio_v2.core.dialect import DialectContext
-from subio_v2.core.nodes import BaseNode, Node, Protocol
-from subio_v2.core.results import IssueDraft
+from subio_v2.core.nodes import BaseNode, Node, Protocol, TLSSettings
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols.spec import ProtocolSpec
 
 
@@ -109,6 +109,36 @@ class StructuredClashProtocolCodec(ClashProtocolCodec):
     """Codec whose handled, parse, and emit behavior share one field spec."""
 
     fields: tuple[ClashFieldSpec, ...] = ()
+
+    def check_tls_fields(
+        self,
+        node: Node,
+        target: str,
+        finalize_tls: Callable[[dict[str, Any], Node], Mapping[str, Any]],
+    ) -> list[IssueDraft]:
+        issues = []
+        tls = getattr(node, "tls", None)
+        if not isinstance(node, self.node_class) or not isinstance(tls, TLSSettings):
+            return issues
+        for spec in self.fields:
+            if spec.node_attrs != frozenset({"tls"}):
+                continue
+            encoded = {"type": self.clash_type}
+            spec.emit_into(encoded, node)
+            represented = spec.parse_kwargs(finalize_tls(encoded, node))["tls"]
+            # Read back the final dialect fields through their owning codec.
+            for item in fields(tls):
+                if item.name in {"enabled", "sni_disabled"}:
+                    continue
+                value = getattr(tls, item.name)
+                if value and value != getattr(represented, item.name):
+                    issues.append(IssueDraft(
+                        IssueSeverity.ERROR,
+                        f"TLS field cannot be represented by {target}",
+                        f"tls.{item.name}",
+                        code="conversion.unsupported-platform-field",
+                    ))
+        return issues
 
     @property
     def consumed_keys(self) -> frozenset[str]:

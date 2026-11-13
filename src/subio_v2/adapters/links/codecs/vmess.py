@@ -112,6 +112,10 @@ def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
     if not isinstance(node, VmessNode):
         return []
     warnings: list[IssueDraft] = []
+    if node.tls.skip_cert_verify:
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+            "VMess links cannot preserve skipped certificate verification",
+            "tls.skip_cert_verify", code="conversion.unsupported-platform-field"))
     supported_ciphers = proto_caps.get("ciphers", set())
     if node.cipher and node.cipher not in supported_ciphers:
         warnings.append(

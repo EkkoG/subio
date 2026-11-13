@@ -158,7 +158,7 @@ def parse_transport(data: Dict[str, Any]) -> TransportSettings:
             (xhttp_opts, "headers"),
         ),
         host=first_present((h2_opts, "host"), (xhttp_opts, "host")),
-        method=http_opts.get("method"),
+        method=http_opts.get("method") if net == "http" else "GET",
         grpc_service_name=grpc_opts.get("grpc-service-name"),
         xhttp_mode=xhttp_opts.get("mode"),
         max_early_data=ws_opts.get("max-early-data"),

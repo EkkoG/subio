@@ -59,6 +59,12 @@ class SSHCodec(StructuredClashProtocolCodec):
         if not isinstance(node, SSHNode):
             return []
         warnings: list[IssueDraft] = []
+        if platform == "stash":
+            warnings.extend(
+                IssueDraft(IssueSeverity.ERROR, "Stash cannot preserve this SSH host key requirement",
+                           attr, code="conversion.unsupported-platform-field")
+                for attr in ("host_key", "host_key_algorithms") if getattr(node, attr)
+            )
         if node.server_fingerprints:
             warnings.append(
                 IssueDraft(

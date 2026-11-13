@@ -51,6 +51,10 @@ def check_snell(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, SnellNode):
         return []
     warnings: list[IssueDraft] = []
+    if node.tls != TLSSettings():
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+            "Snell cannot preserve an additional TLS layer", "tls",
+            code="conversion.unsupported-platform-field"))
     version = node.version or 1
     if node.version:
         supported_versions = proto_caps.get("versions", set())

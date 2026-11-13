@@ -128,13 +128,18 @@ def tls_group(
     force_enabled: bool = False,
 ) -> ClashFieldSpec:
     def parse_kwargs(data: Mapping[str, Any]) -> dict[str, Any]:
-        tls = parse_tls(dict(data), default_enabled=default_enabled)
+        tls = parse_tls(
+            {key: data[key] for key in consumed_keys if key in data},
+            default_enabled=default_enabled,
+        )
         if force_enabled:
             tls.enabled = True
         return {"tls": tls}
 
     def emit_into(out: MutableMapping[str, Any], node: Node) -> None:
-        emit_tls(out, getattr(node, "tls"))
+        encoded = {"type": out["type"]}
+        emit_tls(encoded, getattr(node, "tls"))
+        out.update({key: value for key, value in encoded.items() if key in consumed_keys})
 
     return field_group(
         consumed_keys=consumed_keys,

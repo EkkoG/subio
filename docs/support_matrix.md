@@ -231,6 +231,10 @@ YAML 循环和会产生 tuple 的 `!!pairs` / `!!omap` 拒绝。部署、编码�
 
 ### 4.3 既有配置与接口
 
+原生 HTTP 的 `variant = "auto"` 由 `tls.enabled` 决定连接方式；显式 `http` 必须关闭 TLS，
+显式 `https` / `h2-connect` 必须启用 TLS。两者冲突时返回字段级 ERROR；省略 TLS 不会为显式 HTTPS
+自动启用 TLS，需配置 `tls.enabled = true`。
+
 - provider/user/global filter/selector 删除已知 dialer 上游时，产物在选择阶段失败；目标编码失败导致的
   悬空依赖会级联淘汰并产生 ERROR，允许转换错误时也不会保留这些节点或附件。未知名称仍可由模板
   静态策略组提供；dae 链与 sing-box endpoint 的更严格限制保持不变。

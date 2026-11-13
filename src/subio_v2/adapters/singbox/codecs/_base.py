@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import fields
+from dataclasses import fields, replace
 from typing import Any
 
 from subio_v2.adapters.singbox.codecs._fields import (
@@ -19,6 +19,7 @@ from subio_v2.core.nodes import (
     Node,
     Protocol,
     TLSSettings,
+    TransportSettings,
 )
 from subio_v2.core.results import IssueDraft, IssueSeverity
 
@@ -139,7 +140,14 @@ class SingBoxOutboundCodec:
         for item in fields(node):
             if item.name in self.allowed_node_fields:
                 continue
-            if getattr(node, item.name) != getattr(default, item.name):
+            value = getattr(node, item.name)
+            if (
+                isinstance(value, TransportSettings)
+                and value.network_value == "tcp"
+                and value.method is None
+            ):
+                value = replace(value, method="GET")
+            if value != getattr(default, item.name):
                 unsupported.append(item.name)
         if self.tcp_only and node.udp:
             unsupported.append("udp")

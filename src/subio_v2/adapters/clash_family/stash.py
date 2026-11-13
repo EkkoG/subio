@@ -49,10 +49,15 @@ def _mbps_value(value: Any) -> int | None:
     return int(match.group(1)) if match else None
 
 
-def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
-    """Translate documented Stash aliases into the shared codec dialect."""
+def normalize_stash_common(data: dict[str, Any]) -> dict[str, Any]:
     normalized = copy.deepcopy(data)
     _move_aliases(normalized, _COMMON_INPUT_ALIASES, dialect="Stash")
+    return normalized
+
+
+def normalize_stash_proxy(data: dict[str, Any]) -> dict[str, Any]:
+    """Translate documented Stash aliases into the shared codec dialect."""
+    normalized = normalize_stash_common(data)
     protocol = str(normalized.get("type", ""))
     codec = clash_registry.by_clash_type(protocol)
     if codec is None:

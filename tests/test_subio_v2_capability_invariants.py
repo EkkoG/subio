@@ -65,6 +65,7 @@ def _base_node_factories() -> dict[Protocol, Callable[[], Node]]:
             server="example.com",
             port=443,
             password="p",
+            tls=TLSSettings(enabled=True),
         ),
         Protocol.SOCKS5: lambda: Socks5Node(
             name="socks5",
@@ -129,7 +130,7 @@ def _transport_node(protocol: Protocol, network: str) -> Node:
     if protocol == Protocol.VLESS:
         return VlessNode(uuid="u", **common)
     if protocol == Protocol.TROJAN:
-        return TrojanNode(password="p", **common)
+        return TrojanNode(password="p", tls=TLSSettings(enabled=True), **common)
     raise AssertionError(f"No transport fixture for {protocol.value}")
 
 

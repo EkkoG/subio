@@ -45,6 +45,11 @@ def check_ssh(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, SSHNode):
         return []
     warnings: list[IssueDraft] = []
+    warnings.extend(
+        IssueDraft(IssueSeverity.ERROR, "Surge cannot preserve this SSH host key requirement",
+                   attr, code="conversion.unsupported-platform-field")
+        for attr in ("host_key", "host_key_algorithms") if getattr(node, attr)
+    )
     supported_auth = proto_caps.get("auth_methods", set())
     if node.private_key and "private_key" not in supported_auth:
         warnings.append(

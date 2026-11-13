@@ -46,7 +46,7 @@ class TrojanCodec(StructuredClashProtocolCodec):
     }
     fields = (
         scalar_field("password", default="", emit_policy=EmitPolicy.ALWAYS),
-        tls_group(),
+        tls_group(default_enabled=True),
         transport_group(
             consumed_keys=(
                 "network",
@@ -63,6 +63,10 @@ class TrojanCodec(StructuredClashProtocolCodec):
         if not isinstance(node, TrojanNode):
             return []
         warnings: list[IssueDraft] = []
+        if not node.tls.enabled:
+            warnings.append(IssueDraft(IssueSeverity.ERROR,
+                "Trojan requires TLS on this target", "tls.enabled",
+                code="conversion.unsupported-platform-field"))
         supported_transports = proto_caps.get("transports", set())
         network = node.transport.network_value if node.transport else "tcp"
         unknown_network = node.transport and not isinstance(

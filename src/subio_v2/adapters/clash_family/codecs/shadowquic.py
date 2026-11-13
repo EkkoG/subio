@@ -11,6 +11,7 @@ from subio_v2.adapters.clash_family.codecs._fields import (
     smux_group,
 )
 from subio_v2.core.nodes import Node, Protocol, ShadowQUICNode, TLSSettings
+from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols.shadowquic import SPEC
 
 
@@ -37,6 +38,19 @@ class ShadowQUICCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SHADOWQUIC
     clash_type = "shadowquic"
     target_constraints = {"mihomo": {"features": {"smux"}}}
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+        if not isinstance(node, ShadowQUICNode):
+            return []
+        defaults = TLSSettings(enabled=True)
+        return [
+            IssueDraft(IssueSeverity.ERROR, "ShadowQUIC cannot preserve this TLS setting",
+                       f"tls.{attr}", code="conversion.unsupported-platform-field")
+            for attr in defaults.__dataclass_fields__
+            if attr not in {"server_name", "alpn"}
+            and getattr(node.tls, attr) != getattr(defaults, attr)
+        ]
+
     fields = (
         scalar_field("username", emit_policy=EmitPolicy.NOT_NONE),
         scalar_field("password", emit_policy=EmitPolicy.NOT_NONE),

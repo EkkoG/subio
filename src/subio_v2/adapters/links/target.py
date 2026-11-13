@@ -50,6 +50,10 @@ def check_link_fields(node: Node) -> list[IssueDraft]:
                     code="conversion.unsupported-platform-field",
                 )
             )
+    if node.type != Protocol.VLESS and getattr(tls, "client_fingerprint", None):
+        issues.append(IssueDraft(IssueSeverity.ERROR,
+            "This link cannot preserve the TLS client fingerprint", "tls.client_fingerprint",
+            code="conversion.unsupported-platform-field"))
     return issues
 
 

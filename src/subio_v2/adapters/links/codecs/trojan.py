@@ -58,7 +58,7 @@ def build(node: Node) -> str:
 def parse(line: str) -> Node | None:
     try:
         url = urllib.parse.urlparse(line)
-        query = urllib.parse.parse_qs(url.query)
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
         network = query.get("type", ["tcp"])[0]
         try:
             network_value: Network | str = Network(network)
@@ -76,6 +76,8 @@ def parse(line: str) -> Node | None:
         elif network == Network.GRPC.value:
             transport.grpc_service_name = query.get("serviceName", [None])[0]
         security = query.get("security", ["tls"])[0]
+        if security not in {"tls", "reality"}:
+            return None
         alpn = query["alpn"][0].split(",") if "alpn" in query else None
         return TrojanNode(
             name=(
@@ -114,6 +116,10 @@ def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
     if not isinstance(node, TrojanNode):
         return []
     warnings: list[IssueDraft] = []
+    if not node.tls.enabled:
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+            "Trojan links require TLS", "tls.enabled",
+            code="conversion.unsupported-platform-field"))
     supported_transports = proto_caps.get("transports", set())
     network = node.transport.network_value if node.transport else "tcp"
     if supported_transports and network not in supported_transports:

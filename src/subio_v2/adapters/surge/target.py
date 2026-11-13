@@ -43,6 +43,14 @@ def make_target(policy) -> TargetAdapter:
 
     def common(node: Node) -> list[IssueDraft]:
         issues = []
+        tls = getattr(node, "tls", None)
+        if node.type != Protocol.VLESS:
+            issues.extend(
+                IssueDraft(IssueSeverity.ERROR, "Surge cannot preserve this TLS setting",
+                           f"tls.{attr}", code="conversion.unsupported-platform-field")
+                for attr in ("certificate", "private_key", "ech_opts", "client_fingerprint")
+                if getattr(tls, attr, None)
+            )
         return (
             issues
             + ignored_fields(

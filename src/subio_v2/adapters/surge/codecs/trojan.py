@@ -35,6 +35,10 @@ def check_trojan(node: Node, proto_caps: dict) -> list[IssueDraft]:
     if not isinstance(node, TrojanNode):
         return []
     warnings: list[IssueDraft] = []
+    if not node.tls.enabled:
+        warnings.append(IssueDraft(IssueSeverity.ERROR,
+            "Surge Trojan requires TLS", "tls.enabled",
+            code="conversion.unsupported-platform-field"))
     supported_transports = proto_caps.get("transports", set())
     network = node.transport.network_value if node.transport else "tcp"
     if supported_transports and network not in supported_transports:

@@ -25,3 +25,4 @@ nodes:
     server: shared.example.test
     port: 443
     password: shared-example-password
+    tls: {enabled: true}

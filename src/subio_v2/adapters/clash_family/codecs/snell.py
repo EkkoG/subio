@@ -11,7 +11,7 @@ from subio_v2.adapters.clash_family.codecs._fields import (
     scalar_field,
     smux_group,
 )
-from subio_v2.core.nodes import Node, Protocol, SnellNode
+from subio_v2.core.nodes import Node, Protocol, SnellNode, TLSSettings
 from subio_v2.core.results import IssueDraft, IssueSeverity
 from subio_v2.protocols.snell import SPEC
 
@@ -73,6 +73,10 @@ class SnellCodec(StructuredClashProtocolCodec):
         if not isinstance(node, SnellNode):
             return []
         warnings: list[IssueDraft] = []
+        if node.tls != TLSSettings():
+            warnings.append(IssueDraft(IssueSeverity.ERROR,
+                "Snell cannot preserve an additional TLS layer", "tls",
+                code="conversion.unsupported-platform-field"))
         version = node.version or 1
         if node.version:
             supported_versions = proto_caps.get("versions", set())

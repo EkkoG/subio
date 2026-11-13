@@ -21,6 +21,7 @@ name = "self-trojan"
 server = "self-trojan.example.test"
 port = 443
 password = "example-password"
+tls = { enabled = true }
 
 [[nodes]]
 type = "shadowsocks"

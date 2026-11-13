@@ -621,7 +621,7 @@ headers = { Host = "cdn.example.com" }
 | 字段 | 类型 | 省略时 | 说明 |
 |---|---|---|---|
 | `password` | string | 空字符串（校验失败） | 必填密码 |
-| `tls` | object | 禁用 | TLS 设置；正常 Trojan 节点通常启用 |
+| `tls` | object | 禁用 | 输出到要求 TLS 的 Trojan 目标时必须显式启用，否则返回 ERROR |
 | `transport` | object | `network = "tcp"` | 传输层设置 |
 | `smux` | object | 禁用 | sing-mux 设置 |
 <!-- /protocol-fields -->
