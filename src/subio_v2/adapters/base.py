@@ -56,7 +56,7 @@ class BaseEmitter(ABC):
     def encode_node(
         self, node: Node, encoder: Callable[[Node], object]
     ):
-        return self._conversion.encode_node(node, encoder, self.check_node)
+        return self._conversion.encode_node(node, encoder, self.check_node, context=self)
 
     def retain_dialer_indices(
         self, source: list[Node], candidates: list[Node]

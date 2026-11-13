@@ -1,7 +1,7 @@
 from collections.abc import Callable, Mapping
 
 import subio_v2.protocols as protocol_registry
-from subio_v2.adapters.catalog import common_policy_for_format, normalize_format
+from subio_v2.adapters.catalog import common_policy_for_format, get_target, normalize_format
 from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
 from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
 from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
@@ -59,10 +59,25 @@ class TargetValidationService:
         self.target_context = dialect_context_for_platform(self.platform)
         self.protocol_codecs = _protocol_codecs_for_target(self.platform)
         self.common_policy = common_policy_for_format(self.platform)
+        self.target = get_target(self.platform)
         if self.common_policy is None or not self.protocol_codecs:
             raise ValueError(f"Unknown platform: {platform}")
 
     def check_node(self, node: Node) -> TargetCheckResult:
+        if self.target is None or node.type not in self.target.codecs:
+            return self._check_legacy_node(node)
+        result = TargetCheckResult(supported=True)
+        for error in validate_node(node, definition=protocol_registry.get_definition(node.type)):
+            result.add_error(error.message, field=error.field)
+        if result.has_errors():
+            return result
+        for issue in self.target.check_common(node) + self.target.codecs[node.type].check(node):
+            result.warnings.append(issue)
+            if issue.severity == IssueSeverity.ERROR:
+                result.supported = False
+        return result
+
+    def _check_legacy_node(self, node: Node) -> TargetCheckResult:
         result = TargetCheckResult(supported=True)
         if (
             self.platform == "surge"
@@ -178,14 +193,17 @@ class TargetValidationService:
         node: Node,
         encoder: Callable[[Node], object],
         check_node: Callable[[Node], TargetCheckResult] | None = None,
+        *,
+        context: object = None,
     ) -> TargetEncodingResult[object]:
-        selected, issues = self.select([node], check_node)
+        binding = self.target.codecs.get(node.type) if self.target is not None else None
+        selected, issues = self.select([node], self.check_node if binding else check_node)
         if not selected:
             return TargetEncodingResult(
                 content=None, supported_node=None, issues=issues
             )
         try:
-            content = encoder(node)
+            content = binding.encode(node, context) if binding else encoder(node)
         except Exception as exc:
             field = getattr(exc, "field", None)
             code = getattr(exc, "code", "conversion")

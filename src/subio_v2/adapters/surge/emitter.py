@@ -185,7 +185,7 @@ class SurgeEmitter(BaseEmitter):
         )
 
     def _encode_protocol(
-        self, node: Node
+        self, node: Node, protocol_emitter=None
     ) -> tuple[str, SurgeNodeAttachments]:
         if node.shadow_tls.enabled and node.shadow_tls.version not in {2, 3}:
             raise _SurgeEmissionError(
@@ -203,7 +203,7 @@ class SurgeEmitter(BaseEmitter):
             )
         node_keystore_map: dict[int, str] = {}
         node_attachments = self._attachments_for_node(node, node_keystore_map)
-        line = self._emit_node(node, node_keystore_map)
+        line = self._emit_node(node, node_keystore_map, protocol_emitter)
         if line is None:
             raise _SurgeEmissionError(
                 "No Surge emitter is registered for this protocol",
@@ -287,14 +287,19 @@ class SurgeEmitter(BaseEmitter):
         return result
 
     def _emit_node(
-        self, node: Node, node_keystore_map: dict[int, str] | None = None
+        self,
+        node: Node,
+        node_keystore_map: dict[int, str] | None = None,
+        protocol_emitter=None,
     ) -> str | None:
         if node_keystore_map is None:
             node_keystore_map = {}
         if isinstance(node, SourcePassthroughNode):
             return self._emit_source_passthrough_node(node)
-        codec = get_surge_protocol_codec(node.type)
-        emitter = codec.emitter if codec is not None else None
+        emitter = protocol_emitter
+        if emitter is None:
+            codec = get_surge_protocol_codec(node.type)
+            emitter = codec.emitter if codec is not None else None
         if emitter is None:
             return None
         config_parts = emitter(node, node_keystore_map)

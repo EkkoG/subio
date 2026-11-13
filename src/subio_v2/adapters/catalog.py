@@ -31,6 +31,7 @@ class FormatSpec:
     emitter_factory: Callable[[], Any] | None = None
     common_policy: TargetCommonPolicy | None = None
     parameterized_input: bool = False
+    target_factory: Callable[[TargetCommonPolicy], Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -139,12 +140,37 @@ def _v2rayn_emitter() -> Any:
     return V2RayNEmitter()
 
 
+def _mihomo_target(policy):
+    from subio_v2.adapters.clash_family.target import make_target
+
+    return make_target("mihomo", policy)
+
+
+def _surge_target(policy):
+    from subio_v2.adapters.surge.target import make_target
+
+    return make_target(policy)
+
+
+def _dae_target(policy):
+    from subio_v2.adapters.links.target import make_target
+
+    return make_target("dae", policy)
+
+
+def _v2rayn_target(policy):
+    from subio_v2.adapters.links.target import make_target
+
+    return make_target("v2rayn", policy)
+
+
 _FORMAT_SPECS = (
     FormatSpec(
         "mihomo",
         aliases=frozenset({"clash-meta"}),
         parser_factory=_clash_parser,
         emitter_factory=_clash_emitter,
+        target_factory=_mihomo_target,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
         parameterized_input=True,
     ),
@@ -167,17 +193,20 @@ _FORMAT_SPECS = (
         "surge",
         parser_factory=_surge_parser,
         emitter_factory=_surge_emitter,
+        target_factory=_surge_target,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
     ),
     FormatSpec(
         "dae",
         emitter_factory=_dae_emitter,
+        target_factory=_dae_target,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec(
         "v2rayn",
         parser_factory=_v2rayn_parser,
         emitter_factory=_v2rayn_emitter,
+        target_factory=_v2rayn_target,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
     ),
     FormatSpec(
@@ -262,3 +291,8 @@ def get_parser(
 def get_emitter(format_name: str) -> Any | None:
     spec = get_format(format_name)
     return spec.emitter_factory() if spec and spec.emitter_factory else None
+
+
+def get_target(format_name: str) -> Any | None:
+    spec = get_format(format_name)
+    return spec.target_factory(spec.common_policy) if spec and spec.target_factory else None
