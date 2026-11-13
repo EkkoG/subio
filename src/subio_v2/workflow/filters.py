@@ -49,32 +49,32 @@ def exclude(data: List[Any], regex: str) -> List[Any]:
 
 def hk_filter(data: List[Any]) -> List[Any]:
     """香港"""
-    return regex_filter(data, r"香港|Hong\s*Kong|HK(?![a-zA-Z])")
+    return regex_filter(data, r"香港|Hong\s*Kong|(?<![a-zA-Z])HK(?![a-zA-Z])")
 
 
 def tw_filter(data: List[Any]) -> List[Any]:
     """台湾"""
-    return regex_filter(data, r"台湾|Taiwan|TW(?![a-zA-Z])")
+    return regex_filter(data, r"台湾|Taiwan|(?<![a-zA-Z])TW(?![a-zA-Z])")
 
 
 def sg_filter(data: List[Any]) -> List[Any]:
     """新加坡"""
-    return regex_filter(data, r"新加坡|Singapore|SG(?![a-zA-Z])")
+    return regex_filter(data, r"新加坡|Singapore|(?<![a-zA-Z])SG(?![a-zA-Z])")
 
 
 def jp_filter(data: List[Any]) -> List[Any]:
     """日本"""
-    return regex_filter(data, r"日本|Japan|JP(?![a-zA-Z])")
+    return regex_filter(data, r"日本|Japan|(?<![a-zA-Z])JP(?![a-zA-Z])")
 
 
 def kr_filter(data: List[Any]) -> List[Any]:
     """韩国"""
-    return regex_filter(data, r"韩国|Korea|KR(?![a-zA-Z])")
+    return regex_filter(data, r"韩国|Korea|(?<![a-zA-Z])KR(?![a-zA-Z])")
 
 
 def us_filter(data: List[Any]) -> List[Any]:
     """美国"""
-    return regex_filter(data, r"美国|United\s*States|USA?(?![a-zA-Z])")
+    return regex_filter(data, r"美国|United\s*States|(?<![a-zA-Z])USA?(?![a-zA-Z])")
 
 
 # ============== 工厂函数（返回过滤器）==============

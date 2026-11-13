@@ -132,7 +132,7 @@ def write_manifest(dist_dir: Path, manifest: dict[str, Any]) -> None:
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary, target)
-    except Exception:
+    except BaseException:
         try:
             os.close(fd)
         except OSError:
@@ -158,6 +158,7 @@ def apply_manifest(
     moved: list[tuple[Path, Path]] = []
     restored: set[Path] = set()
     committed = False
+    manifest = None
     try:
         for filename in orphaned:
             target = dist_dir / filename
@@ -171,14 +172,16 @@ def apply_manifest(
             os.close(fd)
             temporary = Path(temporary_name)
             temporary.unlink()
-            os.replace(target, temporary)
             moved.append((temporary, target))
-        write_manifest(
-            dist_dir,
-            build_manifest(config_path, summaries, provider_summaries),
-        )
+            os.replace(target, temporary)
+        manifest = build_manifest(config_path, summaries, provider_summaries)
+        write_manifest(dist_dir, manifest)
         committed = True
-    except Exception:
+    except BaseException:
+        # Publication may finish before write_manifest returns to this frame.
+        committed = manifest is not None and read_manifest(dist_dir) == manifest
+        if committed:
+            raise
         rollback_errors: list[OSError] = []
         for temporary, target in reversed(moved):
             if temporary.exists() and not target.exists():
@@ -200,4 +203,7 @@ def apply_manifest(
                 temporary.unlink()
             except FileNotFoundError:
                 pass
+            except OSError:
+                if not committed:
+                    raise
     return orphaned

@@ -197,7 +197,7 @@ def _run_serve(args) -> int:
     try:
         from subio_v2.server import serve
     except ImportError:
-        logger.error(r"Serving requires the server extra: install subio\[server]")
+        logger.error("Serving requires the server extra: install subio[server]")
         return 1
     config_path = args.config or find_default_config()
     if config_path is None:

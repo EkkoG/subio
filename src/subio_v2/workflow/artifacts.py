@@ -235,7 +235,7 @@ class ArtifactGenerationService:
                 f"Unsupported artifact type '{artifact_type}' for artifact '{name}'"
             )
         logger.info(
-            f"Generating artifact: [bold cyan]{display_name}[/bold cyan] "
+            f"Generating artifact: {display_name} "
             f"({artifact_type}) - {len(nodes)} nodes"
         )
         try:

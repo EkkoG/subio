@@ -59,7 +59,7 @@ class TLSSettings:
     reality_opts: Optional[Dict[str, str]] = None  # public-key, short-id
     ech_opts: Optional[Dict[str, Any]] = None  # Hysteria2 ECH
     certificate: Optional[str] = None  # mTLS
-    private_key: Optional[str] = None  # mTLS
+    private_key: Optional[str] = field(default=None, repr=False)  # mTLS
     sni_disabled: bool = False
     verify_name: Optional[str] = None
     certificate_sha256: Optional[str] = None
@@ -143,7 +143,7 @@ class RejectMode(StrEnum):
 class TransportSettings:
     network: Union[Network, str] = Network.TCP
     path: Optional[Union[str, List[str]]] = None  # ws/h2/http path
-    headers: Optional[Dict[str, Any]] = None  # ws/http headers
+    headers: Optional[Dict[str, Any]] = field(default=None, repr=False)  # ws/http headers
     host: Optional[Union[str, List[str]]] = None  # h2/xhttp host
     method: Optional[str] = "GET"  # http method
     grpc_service_name: Optional[str] = None
@@ -187,7 +187,7 @@ class BaseNode:
     dialer_proxy: Optional[str] = None
     # Multi-user support: maps username to credential overrides
     # e.g., {"lisa": {"password": "xxx"}, "vita": {"password": "yyy"}}
-    users: Optional[Dict[str, Dict[str, Any]]] = None
+    users: Optional[Dict[str, Dict[str, Any]]] = field(default=None, repr=False)
     interface_name: Optional[str] = None
     routing_mark: Optional[int] = None
     surge_options: SurgePolicyOptions = field(default_factory=SurgePolicyOptions)
@@ -242,7 +242,7 @@ class ShadowsocksNode(BaseNode):
     password: str = field(default="", repr=False)
     udp_port: Optional[int] = None
     plugin: Optional[str] = None
-    plugin_opts: Optional[Dict[str, Any]] = None
+    plugin_opts: Optional[Dict[str, Any]] = field(default=None, repr=False)
     obfs_uri: Optional[str] = None
     smux: SmuxSettings = field(default_factory=SmuxSettings)
 
@@ -251,7 +251,7 @@ class ShadowsocksNode(BaseNode):
 class ShadowsocksRNode(BaseNode):
     type: Protocol = field(default=Protocol.SHADOWSOCKSR)
     cipher: str = ""
-    password: str = ""
+    password: str = field(default="", repr=False)
     obfs: str = ""
     ssr_protocol: str = ""
     obfs_param: Optional[str] = None
@@ -306,7 +306,7 @@ class HttpNode(BaseNode):
     type: Protocol = field(default=Protocol.HTTP)
     username: Optional[str] = None
     password: Optional[str] = field(default=None, repr=False)
-    headers: Optional[Dict[str, str]] = None
+    headers: Optional[Dict[str, str]] = field(default=None, repr=False)
     variant: HttpVariant = HttpVariant.AUTO
     always_use_connect: Optional[bool] = None
     max_streams: Optional[int] = None

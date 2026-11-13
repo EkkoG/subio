@@ -82,13 +82,15 @@ class GistBatchUploader:
         if safe_filename != file_name or safe_filename in {".", ".."}:
             raise UploadError(f"Invalid upload filename: {file_name}")
 
+        clean = self.clean_gist or uploader.clean
         if gist_id not in self._pending:
-            clean = self.clean_gist or uploader.clean
             self._pending[gist_id] = {"token": token, "files": {}, "clean": clean}
 
         pending = self._pending[gist_id]
         if pending["token"] != token:
             raise UploadError(f"Conflicting credentials configured for Gist {gist_id}")
+        if pending["clean"] != clean:
+            raise UploadError(f"Conflicting clean settings configured for Gist {gist_id}")
         existing = pending["files"].get(safe_filename)
         if existing is not None and existing != content:
             raise UploadError(
@@ -154,7 +156,7 @@ class GistBatchUploader:
 
         file_names = list(files)
         logger.step(
-            f"Uploading [bold]{len(files)}[/bold] file(s) to Gist {gist_id}: "
+            f"Uploading {len(files)} file(s) to Gist {gist_id}: "
             f"{', '.join(file_names)}"
         )
 
@@ -194,7 +196,18 @@ class GistBatchUploader:
                     output.write(content)
                 os.chmod(file_path, 0o600)
 
-            self._run_git(["git", "-C", repo_dir, "add", "."], git_env, token)
+            if clean:
+                self._run_git(["git", "-C", repo_dir, "add", "-u"], git_env, token)
+            self._run_git(
+                ["git", "--literal-pathspecs", "-C", repo_dir, "add", "-f", "--", *file_names],
+                git_env, token,
+            )
+            tracked = self._run_git(
+                ["git", "--literal-pathspecs", "-C", repo_dir, "ls-files", "-z", "--", *file_names],
+                git_env, token,
+            )
+            if set(tracked.stdout.split("\0")) - {""} != set(file_names):
+                raise UploadError("Requested upload files were not staged")
             diff = self._run_git(
                 ["git", "-C", repo_dir, "diff", "--cached", "--quiet"],
                 git_env,

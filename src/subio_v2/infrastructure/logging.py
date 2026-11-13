@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from rich.console import Console
 from rich.theme import Theme
+from rich.text import Text
 
 # Custom theme
 custom_theme = Theme(
@@ -42,7 +43,7 @@ class _RedactedStatus:
         return self._status.__exit__(*args)
 
     def update(self, message: str):
-        self._status.update(self._redact(message))
+        self._status.update(Text(self._redact(message)))
 
 
 console = Console(theme=custom_theme)
@@ -95,7 +96,9 @@ class Logger:
     def _emit(self, level: str, label: str, style: str, message: str):
         if self._enabled(level):
             prefix = datetime.now(timezone.utc).isoformat(timespec="seconds") + " " if self._timestamps else ""
-            self.console.print(f"{prefix}[{style}]{label}[/{style}]: {self._redact(message)}")
+            text = Text(f"{prefix}{label}: ", style=style)
+            text.append(self._redact(message), style="none")
+            self.console.print(text)
 
     @contextmanager
     def silenced(self):
@@ -127,17 +130,19 @@ class Logger:
     def step(self, message: str):
         if not self._enabled("info"):
             return
-        self.console.print(f"[bold blue]==>[/bold blue] {self._redact(message)}")
+        text = Text("==> ", style="bold blue")
+        text.append(self._redact(message), style="none")
+        self.console.print(text)
 
     def dim(self, message: str):
         if not self._enabled("info"):
             return
-        self.console.print(f"[dim]{self._redact(message)}[/dim]")
+        self.console.print(Text(self._redact(message), style="dim"))
 
     def status(self, message: str):
         if not self._enabled("info"):
             return _SilentStatus()
-        return _RedactedStatus(self.console.status(self._redact(message), spinner="dots"), self._redact)
+        return _RedactedStatus(self.console.status(Text(self._redact(message)), spinner="dots"), self._redact)
 
 
 logger = Logger()

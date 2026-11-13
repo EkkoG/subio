@@ -139,15 +139,15 @@ class ProviderLoaderService:
         provider_metadata: dict[str, RemoteMetadata] = {}
         provider_summaries: dict[str, ProviderSummary] = {}
         known_node_names: dict[str, frozenset[str]] = {}
-        with logger.status("[bold green]Loading providers...") as status:
+        with logger.status("Loading providers...") as status:
             for provider_config in config.providers:
                 name = provider_config.name
                 provider_type = provider_config.provider_type
                 status.update(
-                    f"[bold green]Loading provider: {name} ({provider_type})"
+                    f"Loading provider: {name} ({provider_type})"
                 )
                 logger.info(
-                    f"Processing provider: [bold cyan]{name}[/bold cyan] "
+                    f"Processing provider: {name} "
                     f"({provider_type})"
                 )
                 if provider_config.allow_unsafe_external:
@@ -172,8 +172,8 @@ class ProviderLoaderService:
                 provider_summaries.update(result.summaries)
                 known_node_names.update(result.known_node_names)
                 logger.info(
-                    f"Provider [bold cyan]{name}[/bold cyan] loaded: "
-                    f"[bold]{len(nodes)}[/bold] nodes"
+                    f"Provider {name} loaded: "
+                    f"{len(nodes)} nodes"
                 )
                 providers[name] = nodes
         return ProviderLoadResult(

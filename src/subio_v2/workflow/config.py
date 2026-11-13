@@ -298,8 +298,9 @@ class ConfigLoader:
             if isinstance(exc, yaml.MarkedYAMLError) and exc.problem_mark is not None:
                 line = exc.problem_mark.line + 1
                 column = exc.problem_mark.column + 1
+            location = f"; line={line}; column={column}" if line is not None else ""
             raise ConfigParseError(
-                f"Error parsing config ({extension}): {exc}", line=line, column=column
+                f"Config syntax error ({type(exc).__name__}){location}", line=line, column=column
             ) from exc
 
         if not isinstance(data, dict):

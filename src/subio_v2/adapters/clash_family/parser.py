@@ -36,7 +36,9 @@ class ClashParser:
             try:
                 return yaml.safe_load(content)
             except yaml.YAMLError as e:
-                raise ValueError(f"YAML parse error: {e}") from e
+                mark = getattr(e, "problem_mark", None)
+                location = f"; line={mark.line + 1}; column={mark.column + 1}" if mark else ""
+                raise ValueError(f"YAML parse error ({type(e).__name__}){location}") from e
         elif isinstance(content, dict):
             return content
         else:

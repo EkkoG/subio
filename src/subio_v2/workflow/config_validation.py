@@ -13,6 +13,9 @@ class ConfigValidator:
     def validate(cls, config: Mapping[str, Any]) -> None:
         if not isinstance(config, Mapping):
             raise ConfigError("Config root must be an object")
+        for key in ("options", "filters", "selectors", "remote", "provider", "artifact", "uploader", "ruleset"):
+            if key in config and config[key] is None:
+                raise ConfigError(f"Config section '{key}' must not be null")
         if not isinstance(config.get("allow_conversion_errors", False), bool):
             raise ConfigError("'allow_conversion_errors' must be a boolean")
         cls._validate_options(config.get("options"), "Config options")
@@ -36,6 +39,8 @@ class ConfigValidator:
                 raise ConfigError(f"Ruleset '{name}' must define a URL")
             for key in ("type", "behavior", "format", "user_agent"):
                 value = entry.get(key)
+                if key != "user_agent" and key in entry and not isinstance(value, str):
+                    raise ConfigError(f"Ruleset '{name}' {key} must be a string")
                 if value is not None and not isinstance(value, str):
                     raise ConfigError(f"Ruleset '{name}' {key} must be a string")
 
@@ -112,6 +117,9 @@ class ConfigValidator:
 
     @classmethod
     def _validate_provider(cls, entry: dict[str, Any], name: str) -> None:
+        for key in ("filters", "rename"):
+            if key in entry and entry[key] is None:
+                raise ConfigError(f"Provider '{name}' {key} must not be null")
         provider_type = entry.get("type")
         if not isinstance(provider_type, str) or not provider_type:
             raise ConfigError(f"Provider '{name}' type must be a non-empty string")
@@ -156,6 +164,9 @@ class ConfigValidator:
         position: int,
         outputs: dict[str, tuple[int, str | None]],
     ) -> None:
+        for key in ("options", "params", "providers", "users", "upload"):
+            if key in entry and entry[key] is None:
+                raise ConfigError(f"Artifact '{name}' {key} must not be null")
         artifact_type = entry.get("type")
         if not isinstance(artifact_type, str) or not artifact_type:
             raise ConfigError(f"Artifact '{name}' type must be a non-empty string")
@@ -185,7 +196,7 @@ class ConfigValidator:
         ):
             raise ConfigError(f"Artifact '{name}' selector must be a non-empty string")
         duplicate_policy = entry.get("on_duplicate_name", "error")
-        if duplicate_policy not in {"error", "keep_first"}:
+        if not isinstance(duplicate_policy, str) or duplicate_policy not in {"error", "keep_first"}:
             raise ConfigError(
                 f"Artifact '{name}' on_duplicate_name must be 'error' or 'keep_first'"
             )
@@ -349,6 +360,8 @@ class ConfigValidator:
                 "sort_by",
             ):
                 item = selector.get(key)
+                if key in selector and item is None:
+                    raise ConfigError(f"Selector '{name}' {key} must not be null")
                 if item is not None and not isinstance(item, (str, list)):
                     raise ConfigError(
                         f"Selector '{name}' {key} must be a string or list"

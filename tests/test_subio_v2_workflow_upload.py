@@ -131,6 +131,8 @@ def test_gist_token_is_not_put_in_git_argv(monkeypatch):
             Path(args[-1]).mkdir()
         return_code = 1 if args[-2:] == ["--cached", "--quiet"] else 0
         stdout = " out.txt | 1 +" if args[-2:] == ["--cached", "--stat"] else ""
+        if "ls-files" in args:
+            stdout = "out.txt\0"
         return subprocess.CompletedProcess(args, return_code, stdout=stdout, stderr="")
 
     monkeypatch.setattr("subio_v2.workflow.uploader.subprocess.run", fake_run)
