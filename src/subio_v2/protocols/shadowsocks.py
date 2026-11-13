@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-import binascii
 
 from subio_v2.core.nodes import Node, Protocol, ShadowsocksNode
 from subio_v2.core.results import IssueDraft, IssueSeverity
@@ -18,8 +16,10 @@ from subio_v2.protocols.values import (
 
 
 def _validate(node: Node) -> list[NodeValidationError]:
-    if isinstance(node, ShadowsocksNode) and node.cipher != "none" and (
-        node.password is None or node.password == ""
+    if (
+        isinstance(node, ShadowsocksNode)
+        and node.cipher != "none"
+        and (node.password is None or node.password == "")
     ):
         return [NodeValidationError("password", "Required field 'password' is missing")]
     return []
@@ -71,6 +71,7 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
         if not options:
             data.pop("plugin-opts", None)
         return data, tuple(sorted(dropped))
+
     protocol = Protocol.SHADOWSOCKS
     clash_dialects = frozenset({"mihomo", "clash", "stash"})
     clash_type = "ss"
@@ -98,9 +99,7 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
             default="chacha20-ietf-poly1305",
             emit_policy=EmitPolicy.ALWAYS,
         ),
-        scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS
-        ),
+        scalar_field("password", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("plugin", emit_policy=EmitPolicy.TRUTHY),
         scalar_field(
             "plugin-opts",
@@ -115,6 +114,15 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
         if not isinstance(node, ShadowsocksNode):
             return []
         warnings: list[IssueDraft] = []
+        if node.udp_port is not None:
+            warnings.append(
+                IssueDraft(
+                    IssueSeverity.ERROR,
+                    "This target cannot preserve a separate UDP port",
+                    "udp_port",
+                    code="conversion.unsupported-platform-field",
+                )
+            )
         supported_ciphers = proto_caps.get("ciphers", set())
         if node.cipher and node.cipher not in supported_ciphers:
             warnings.append(
@@ -125,40 +133,6 @@ class ShadowsocksCodec(StructuredClashProtocolCodec):
                     suggestion=f"Supported ciphers: {', '.join(sorted(supported_ciphers))}",
                 )
             )
-
-        if platform == "surge":
-            if node.cipher == "none":
-                pass
-            elif not node.password:
-                warnings.append(
-                    IssueDraft(
-                        severity=IssueSeverity.ERROR,
-                        message="Shadowsocks password is required for this cipher",
-                        field="password",
-                    )
-                )
-            elif node.cipher.startswith("2022-blake3-aes-"):
-                expected = 16 if "128" in node.cipher else 32
-                try:
-                    decoded_keys = [
-                        base64.b64decode(key, validate=True)
-                        for key in node.password.split(":")
-                    ]
-                except (binascii.Error, ValueError):
-                    decoded_keys = []
-                if not decoded_keys or any(
-                    len(decoded) != expected for decoded in decoded_keys
-                ):
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.ERROR,
-                            message=(
-                                f"{node.cipher} requires each colon-separated "
-                                f"base64 key to encode {expected} bytes"
-                            ),
-                            field="password",
-                        )
-                    )
 
         if node.plugin:
             supported_plugins = proto_caps.get("plugins", set())

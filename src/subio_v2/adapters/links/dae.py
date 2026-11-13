@@ -9,9 +9,7 @@ dae dialer chain 支持：当节点的 `dialer_proxy` 指向同一 emit 列表�
 链接并发出 warning。
 """
 
-
 from subio_v2.adapters.base import BaseEmitter
-from subio_v2.adapters.links import codecs as link
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionFragments, EmissionResult, IssueSeverity
 
@@ -48,9 +46,7 @@ class DaeEmitter(BaseEmitter):
                     )
                 )
                 continue
-            encoded = self.encode_node(
-                node, lambda item: link.build_url(item, target=self.platform)
-            )
+            encoded = self.encode_node(node)
             issues.extend(encoded.issues)
             if encoded.supported_node is None:
                 continue
@@ -106,24 +102,6 @@ class DaeEmitter(BaseEmitter):
             raise ValueError(emit_errors[0].message)
         self.log_issues(result.issues)
         return result.fragments.subscription or ""
-
-    @staticmethod
-    def _build_indexes(
-        nodes: list[Node],
-    ) -> tuple[dict[str, Node], dict[int, str]]:
-        node_by_name: dict[str, Node] = {}
-        url_by_id: dict[int, str] = {}
-        for node in nodes:
-            if node.name in node_by_name:
-                raise ValueError(f"Duplicate node name in dae artifact: {node.name}")
-            url = link.build_url(node, target="dae")
-            if not url:
-                raise ValueError(
-                    f"Unable to build dae link for node '{node.name}' ({node.type.value})"
-                )
-            node_by_name[node.name] = node
-            url_by_id[id(node)] = url
-        return node_by_name, url_by_id
 
     def _build_chain_url(
         self,

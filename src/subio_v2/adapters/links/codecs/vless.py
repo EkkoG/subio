@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import (
@@ -90,7 +91,10 @@ def parse(line: str) -> Node | None:
         if security not in {"none", "tls", "reality"}:
             return None
         # These fields carry security guarantees that the current IR cannot encode.
-        if any(query.get(key, [""])[0] for key in ("pcs", "vcn", "ech", "pqv", "fm")) or "spx" in query:
+        if (
+            any(query.get(key, [""])[0] for key in ("pcs", "vcn", "ech", "pqv", "fm"))
+            or "spx" in query
+        ):
             return None
         if security != "reality" and any(key in query for key in ("pbk", "sid")):
             return None
@@ -100,7 +104,9 @@ def parse(line: str) -> Node | None:
         if insecure not in {"0", "1"} or (insecure == "1" and security == "none"):
             return None
         alpn = query["alpn"][0].split(",") if "alpn" in query else None
-        if alpn is not None and any(not value or value != value.strip() for value in alpn):
+        if alpn is not None and any(
+            not value or value != value.strip() for value in alpn
+        ):
             return None
         network = query.get("type", ["tcp"])[0]
         if network == "raw":
@@ -110,7 +116,10 @@ def parse(line: str) -> Node | None:
             or any(key in query for key in ("host", "path"))
         ):
             return None
-        if any(key in query for key in ("mode", "authority", "serviceName")) and network != "grpc":
+        if (
+            any(key in query for key in ("mode", "authority", "serviceName"))
+            and network != "grpc"
+        ):
             return None
         if "mode" in query and query["mode"][0] not in {"gun", "multi"}:
             return None
@@ -150,7 +159,9 @@ def parse(line: str) -> Node | None:
             transport=transport,
             tls=TLSSettings(
                 enabled=security in {"tls", "reality"},
-                server_name=query.get("sni", [url.hostname if security == "reality" else None])[0],
+                server_name=query.get(
+                    "sni", [url.hostname if security == "reality" else None]
+                )[0],
                 skip_cert_verify=insecure == "1",
                 alpn=alpn,
                 client_fingerprint=query.get("fp", [None])[0],
@@ -168,12 +179,56 @@ def parse(line: str) -> Node | None:
         return None
 
 
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, VlessNode):
+        return []
+    warnings: list[IssueDraft] = []
+    supported_transports = proto_caps.get("transports", set())
+    network = node.transport.network_value if node.transport else "tcp"
+    if supported_transports and network not in supported_transports:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Transport '{network}' is not supported by {platform}",
+                field="transport.network",
+                suggestion=f"Supported transports: {', '.join(sorted(supported_transports))}",
+            )
+        )
+    if node.flow:
+        supported_flows = proto_caps.get("flows", set())
+        if node.flow not in supported_flows:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=f"Flow '{node.flow}' is not supported by {platform}",
+                    field="flow",
+                    suggestion=f"Supported flows: {', '.join(sorted(supported_flows))}"
+                    if supported_flows
+                    else "No flows supported",
+                )
+            )
+    if (
+        node.tls
+        and node.tls.reality_opts
+        and ("reality" not in proto_caps.get("features", set()))
+    ):
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Reality is not supported by {platform}",
+                field="reality",
+            )
+        )
+    return warnings
+
+
 CODEC = LinkCodec(
     Protocol.VLESS,
     frozenset({"dae", "v2rayn"}),
     build,
     schemes=frozenset({"vless"}),
     parse=parse,
+    check=check,
     target_constraints={
         "dae": {
             "transports": {"tcp", "ws", "h2", "grpc"},

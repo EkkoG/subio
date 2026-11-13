@@ -94,6 +94,15 @@ class VlessCodec(StructuredClashProtocolCodec):
         if not isinstance(node, VlessNode):
             return []
         warnings: list[IssueDraft] = []
+        if node.tls.sni_disabled:
+            warnings.append(
+                IssueDraft(
+                    IssueSeverity.ERROR,
+                    "This target cannot preserve the VLESS SNI disable setting",
+                    "tls.sni_disabled",
+                    code="conversion.unsupported-platform-field",
+                )
+            )
         supported_transports = proto_caps.get("transports", set())
         network = node.transport.network_value if node.transport else "tcp"
         unknown_network = node.transport and not isinstance(

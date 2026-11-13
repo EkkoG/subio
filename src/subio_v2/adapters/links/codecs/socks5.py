@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import LinkCodec, format_authority, quote_name
@@ -20,4 +21,20 @@ def build(node: Node) -> str | None:
     )
 
 
-CODEC = LinkCodec(Protocol.SOCKS5, frozenset({"dae", "v2rayn"}), build)
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, Socks5Node):
+        return []
+    if not node.tls or not node.tls.enabled:
+        return []
+    if "tls" in proto_caps.get("features", set()):
+        return []
+    return [
+        IssueDraft(
+            severity=IssueSeverity.ERROR,
+            message=f"SOCKS5 TLS is not supported by {platform}",
+            field="tls",
+        )
+    ]
+
+
+CODEC = LinkCodec(Protocol.SOCKS5, frozenset({"dae", "v2rayn"}), build, check=check)

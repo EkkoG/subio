@@ -22,7 +22,14 @@ SPEC = ProtocolSpec(
     user_override_fields=frozenset({"server", "port", "password"}),
     terminal_native_user_override_fields=frozenset({"server", "port", "password"}),
     terminal_native_fields=frozenset(
-        {"idle_session_check_interval", "idle_session_timeout", "min_idle_session", "password", "reuse", "tls"}
+        {
+            "idle_session_check_interval",
+            "idle_session_timeout",
+            "min_idle_session",
+            "password",
+            "reuse",
+            "tls",
+        }
     ),
 )
 
@@ -44,9 +51,7 @@ class AnyTLSCodec(StructuredClashProtocolCodec):
     clash_type = "anytls"
     dialect_fields = {"stash": stash_fields("password", tls=True)}
     fields = (
-        scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS
-        ),
+        scalar_field("password", default="", emit_policy=EmitPolicy.ALWAYS),
         tls_group(
             consumed_keys=(
                 "sni",
@@ -84,11 +89,7 @@ class AnyTLSCodec(StructuredClashProtocolCodec):
     )
 
     def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
-        if (
-            not isinstance(node, AnyTLSNode)
-            or node.reuse
-            or platform in {"mihomo", "surge"}
-        ):
+        if not isinstance(node, AnyTLSNode) or node.reuse or platform == "mihomo":
             return []
         return [
             IssueDraft(

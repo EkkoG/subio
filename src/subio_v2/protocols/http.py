@@ -92,40 +92,7 @@ class HttpCodec(StructuredClashProtocolCodec):
                     field="tls",
                 )
             ]
-        if platform not in {"dae", "v2rayn"}:
-            return []
-
-        unsupported: list[str] = []
-        if node.tls.server_name and node.tls.server_name != node.server:
-            unsupported.append("sni")
-        if node.tls.skip_cert_verify:
-            unsupported.append("skip-cert-verify")
-        if node.tls.alpn:
-            unsupported.append("alpn")
-        if node.tls.certificate_sha256:
-            unsupported.append("fingerprint")
-        if node.tls.client_fingerprint:
-            unsupported.append("client-fingerprint")
-        if node.tls.verify_name:
-            unsupported.append("name-cert-verify")
-        if node.tls.reality_opts:
-            unsupported.append("reality-opts")
-        if node.tls.ech_opts:
-            unsupported.append("ech-opts")
-        if node.tls.certificate or node.tls.private_key:
-            unsupported.append("client-certificate")
-        if not unsupported:
-            return []
-        fields = ", ".join(unsupported)
-        return [
-            IssueDraft(
-                severity=IssueSeverity.ERROR,
-                message=(
-                    f"HTTP TLS options cannot be represented by {platform}: {fields}"
-                ),
-                field=unsupported[0],
-            )
-        ]
+        return []
 
 
 CODEC = HttpCodec()

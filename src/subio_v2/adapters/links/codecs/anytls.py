@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import (
@@ -25,4 +26,16 @@ def build(node: Node) -> str:
     return f"{url}#{quote_name(node.name)}"
 
 
-CODEC = LinkCodec(Protocol.ANYTLS, frozenset({"dae"}), build)
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, AnyTLSNode) or node.reuse:
+        return []
+    return [
+        IssueDraft(
+            severity=IssueSeverity.ERROR,
+            message=f"AnyTLS reuse=false cannot be represented by {platform}",
+            field="reuse",
+        )
+    ]
+
+
+CODEC = LinkCodec(Protocol.ANYTLS, frozenset({"dae"}), build, check=check)

@@ -221,7 +221,7 @@ def test_singbox_wireguard_never_infers_a_peer_from_top_level_fields():
         public_key="public-key",
     )
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert {issue.field for issue in result.issues} >= {
@@ -248,12 +248,8 @@ def test_singbox_endpoint_target_rejects_unrepresentable_existing_fields():
         interactive_login=True,
     )
 
-    wg_result = TargetValidationService("sing-box").encode_node(
-        wireguard, encode_endpoint
-    )
-    ts_result = TargetValidationService("sing-box").encode_node(
-        tailscale, encode_endpoint
-    )
+    wg_result = TargetValidationService("sing-box").encode_node(wireguard)
+    ts_result = TargetValidationService("sing-box").encode_node(tailscale)
 
     assert any(issue.field == "persistent_keepalive" for issue in wg_result.issues)
     assert {issue.field for issue in ts_result.issues} >= {
@@ -283,7 +279,7 @@ def test_singbox_endpoint_target_rejects_wrong_common_field_types(
     node = factory()
     setattr(node, field, value)
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -310,7 +306,7 @@ def test_singbox_wireguard_target_rejects_wrong_secret_field_types(mutator, fiel
     node = _wireguard_node()
     mutator(node)
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -338,7 +334,7 @@ def test_singbox_tailscale_target_rejects_wrong_protocol_field_types(field, valu
     node = _tailscale_node()
     setattr(node, field, value)
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -361,7 +357,7 @@ def test_singbox_wireguard_target_safely_rejects_malformed_peer_shapes(peers, fi
     node = _wireguard_node()
     node.peers = peers
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -399,12 +395,8 @@ def test_singbox_endpoint_target_validates_constructed_peer_values():
         ],
     )
 
-    port_result = TargetValidationService("sing-box").encode_node(
-        invalid_port, encode_endpoint
-    )
-    reserved_result = TargetValidationService("sing-box").encode_node(
-        invalid_reserved, encode_endpoint
-    )
+    port_result = TargetValidationService("sing-box").encode_node(invalid_port)
+    reserved_result = TargetValidationService("sing-box").encode_node(invalid_reserved)
 
     assert port_result.content is None
     assert reserved_result.content is None
@@ -442,7 +434,7 @@ def test_singbox_tailscale_rejects_platform_exit_node_selectors(exit_node):
     parsed = SingBoxParser().parse_result({"endpoints": [endpoint]})
     node = _tailscale_node()
     node.exit_node = exit_node
-    encoded = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    encoded = TargetValidationService("sing-box").encode_node(node)
 
     assert parsed.nodes == []
     assert parsed.issues[0].field == "endpoints[0].exit_node"
@@ -509,12 +501,12 @@ def test_singbox_endpoint_target_support_is_codec_derived():
     service = TargetValidationService("sing-box")
 
     assert (
-        service.protocol_codecs[Protocol.WIREGUARD]
-        is SINGBOX_ENDPOINT_CODECS[Protocol.WIREGUARD]
+        service.protocol_codecs[Protocol.WIREGUARD].check_protocol
+        == SINGBOX_ENDPOINT_CODECS[Protocol.WIREGUARD].check
     )
     assert (
-        service.protocol_codecs[Protocol.TAILSCALE]
-        is SINGBOX_ENDPOINT_CODECS[Protocol.TAILSCALE]
+        service.protocol_codecs[Protocol.TAILSCALE].check_protocol
+        == SINGBOX_ENDPOINT_CODECS[Protocol.TAILSCALE].check
     )
     assert Protocol.DIRECT in service.protocol_codecs
 
@@ -525,13 +517,13 @@ def test_singbox_peer_wireguard_maps_to_mihomo_without_top_level_endpoint():
     node = parsed.nodes[0]
     service = TargetValidationService("mihomo")
 
-    result = service.encode_node(node, service.protocol_codecs[node.type].emit)
+    result = service.encode_node(node)
 
     assert result.supported_node is node
     assert result.issues == []
-    assert "server" not in result.content
-    assert "port" not in result.content
-    assert result.content["peers"] == [
+    assert "server" not in result.content[0]
+    assert "port" not in result.content[0]
+    assert result.content[0]["peers"] == [
         {
             "server": "wg.example",
             "port": 51820,
@@ -551,7 +543,7 @@ def test_singbox_peer_wireguard_is_rejected_by_stash_target_validation():
     node = parsed.nodes[0]
     service = TargetValidationService("stash")
 
-    result = service.encode_node(node, service.protocol_codecs[node.type].emit)
+    result = service.encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -574,13 +566,13 @@ def test_legacy_endpoint_wireguard_remains_supported_by_clash_targets(target):
     )
     service = TargetValidationService(target)
 
-    result = service.encode_node(node, service.protocol_codecs[node.type].emit)
+    result = service.encode_node(node)
 
     assert result.supported_node is node
     assert result.issues == []
-    assert result.content["server"] == "wg.example"
-    assert result.content["port"] == 51820
-    assert "peers" not in result.content
+    assert result.content[0]["server"] == "wg.example"
+    assert result.content[0]["port"] == 51820
+    assert "peers" not in result.content[0]
     assert "private-secret" not in repr(result.issues)
 
 

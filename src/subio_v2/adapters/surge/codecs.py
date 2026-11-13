@@ -38,7 +38,15 @@ from subio_v2.adapters.surge.parsers import (
     parse_vmess,
     parse_vless,
 )
-from subio_v2.core.nodes import Protocol
+from subio_v2.core.nodes import Node, Protocol
+from subio_v2.core.results import IssueDraft
+from subio_v2.adapters.surge import protocol_checks
+from subio_v2.adapters.surge.validation import (
+    validate_http_fields,
+    validate_shadowsocks_fields,
+    validate_snell_fields,
+    validate_vless,
+)
 
 DEFAULT_SURGE_TARGET = "latest"
 
@@ -58,14 +66,18 @@ class SurgeUdpBehavior(StrEnum):
 @dataclass(frozen=True)
 class SurgeCodecSpec:
     keyword: str
+    check: Callable[[Node, Mapping[str, Any]], list[IssueDraft]]
     protocol: Protocol | None
     policy_kind: SurgePolicyKind
     udp_behavior: SurgeUdpBehavior
+    precheck: Callable[[Node], list[IssueDraft]] = lambda node: []
     consumed_parameters: frozenset[str] = frozenset()
     emitted_parameters: frozenset[str] = frozenset()
     normalized_parameters: tuple[tuple[str, str], ...] = ()
     multi_value_parameters: frozenset[str] = frozenset()
-    target_constraints: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
+    target_constraints: Mapping[str, Any] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
     parser: Callable[[Any], Any] | None = None
     emitter: Callable[[Any, dict[int, str]], list[str]] | None = None
 
@@ -80,6 +92,9 @@ def _spec(
     keyword: str,
     *,
     protocol: Protocol | None,
+    check: Callable[[Node, Mapping[str, Any]], list[IssueDraft]] = lambda node,
+    constraints: [],
+    precheck: Callable[[Node], list[IssueDraft]] = lambda node: [],
     kind: SurgePolicyKind = SurgePolicyKind.NODE,
     udp: SurgeUdpBehavior,
     consumed: tuple[str, ...] = (),
@@ -92,6 +107,8 @@ def _spec(
 ) -> SurgeCodecSpec:
     return SurgeCodecSpec(
         keyword=keyword,
+        check=check,
+        precheck=precheck,
         protocol=protocol,
         policy_kind=kind,
         udp_behavior=udp,
@@ -139,6 +156,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "ss",
         protocol=Protocol.SHADOWSOCKS,
+        precheck=validate_shadowsocks_fields,
+        check=protocol_checks.check_shadowsocks,
         udp=SurgeUdpBehavior.EXPLICIT,
         parser=parse_shadowsocks,
         emitter=emit_shadowsocks,
@@ -151,18 +170,35 @@ SURGE_CODEC_SPECS = (
             "obfs-host",
             "obfs-uri",
         ),
-        constraints={"ciphers": {
-            "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm",
-            "aes-128-cfb", "aes-128-ctr", "aes-128-gcm", "aes-192-cfb",
-            "aes-192-ctr", "aes-192-gcm", "aes-256-cfb", "aes-256-ctr",
-            "aes-256-gcm", "chacha20", "chacha20-ietf",
-            "chacha20-ietf-poly1305", "none", "rc4", "rc4-md5", "salsa20",
-            "xchacha20-ietf-poly1305",
-        }, "plugins": {"obfs"}},
+        constraints={
+            "ciphers": {
+                "2022-blake3-aes-128-gcm",
+                "2022-blake3-aes-256-gcm",
+                "aes-128-cfb",
+                "aes-128-ctr",
+                "aes-128-gcm",
+                "aes-192-cfb",
+                "aes-192-ctr",
+                "aes-192-gcm",
+                "aes-256-cfb",
+                "aes-256-ctr",
+                "aes-256-gcm",
+                "chacha20",
+                "chacha20-ietf",
+                "chacha20-ietf-poly1305",
+                "none",
+                "rc4",
+                "rc4-md5",
+                "salsa20",
+                "xchacha20-ietf-poly1305",
+            },
+            "plugins": {"obfs"},
+        },
     ),
     _spec(
         "vmess",
         protocol=Protocol.VMESS,
+        check=protocol_checks.check_vmess,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_vmess,
         emitter=emit_vmess,
@@ -176,25 +212,45 @@ SURGE_CODEC_SPECS = (
             "ws-headers",
         ),
         constraints={
-            "ciphers": {"aes-128-gcm", "chacha20-ietf-poly1305"},
+            "ciphers": {"auto", "aes-128-gcm", "chacha20-ietf-poly1305"},
             "transports": {"tcp", "ws"},
         },
     ),
     _spec(
         "vless",
         protocol=Protocol.VLESS,
+        precheck=validate_vless,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_vless,
         emitter=emit_vless,
         consumed=(
-            "username", "flow", "tls", "ws", "ws-path", "ws-headers",
-            "grpc", "grpc-service-name", "grpc-mode", "grpc-authority",
-            "reality-public-key", "reality-short-id", "encryption",
+            "username",
+            "flow",
+            "tls",
+            "ws",
+            "ws-path",
+            "ws-headers",
+            "grpc",
+            "grpc-service-name",
+            "grpc-mode",
+            "grpc-authority",
+            "reality-public-key",
+            "reality-short-id",
+            "encryption",
         ),
         emitted=(
-            "username", "flow", "tls", "ws", "ws-path", "ws-headers",
-            "grpc", "grpc-service-name", "grpc-mode", "grpc-authority",
-            "reality-public-key", "reality-short-id",
+            "username",
+            "flow",
+            "tls",
+            "ws",
+            "ws-path",
+            "ws-headers",
+            "grpc",
+            "grpc-service-name",
+            "grpc-mode",
+            "grpc-authority",
+            "reality-public-key",
+            "reality-short-id",
         ),
         normalized=(("encryption", "omitted (none)"),),
         constraints={
@@ -206,6 +262,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "trojan",
         protocol=Protocol.TROJAN,
+        check=protocol_checks.check_trojan,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_trojan,
         emitter=emit_trojan,
@@ -215,6 +272,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "socks5",
         protocol=Protocol.SOCKS5,
+        check=protocol_checks.check_socks5,
         udp=SurgeUdpBehavior.EXPLICIT,
         parser=parse_socks5,
         emitter=emit_socks5,
@@ -224,6 +282,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "socks5-tls",
         protocol=Protocol.SOCKS5,
+        check=protocol_checks.check_socks5,
         udp=SurgeUdpBehavior.EXPLICIT,
         parser=parse_socks5,
         emitter=emit_socks5,
@@ -233,6 +292,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "http",
         protocol=Protocol.HTTP,
+        precheck=validate_http_fields,
+        check=protocol_checks.check_http,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         parser=parse_http,
         emitter=emit_http,
@@ -242,6 +303,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "https",
         protocol=Protocol.HTTP,
+        precheck=validate_http_fields,
+        check=protocol_checks.check_http,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         parser=parse_http,
         emitter=emit_http,
@@ -251,6 +314,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "h2-connect",
         protocol=Protocol.HTTP,
+        precheck=validate_http_fields,
+        check=protocol_checks.check_http,
         udp=SurgeUdpBehavior.EXPLICIT,
         parser=parse_http,
         emitter=emit_http,
@@ -268,6 +333,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "ssh",
         protocol=Protocol.SSH,
+        check=protocol_checks.check_ssh,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         parser=parse_ssh,
         emitter=emit_ssh,
@@ -284,6 +350,8 @@ SURGE_CODEC_SPECS = (
     _spec(
         "snell",
         protocol=Protocol.SNELL,
+        precheck=validate_snell_fields,
+        check=protocol_checks.check_snell,
         udp=SurgeUdpBehavior.VERSIONED,
         parser=parse_snell,
         emitter=emit_snell,
@@ -300,8 +368,12 @@ SURGE_CODEC_SPECS = (
         constraints={
             "obfs_modes": {"http", "tls"},
             "obfs_modes_by_version": {
-                1: {"http", "tls"}, 2: {"http", "tls"}, 3: {"http", "tls"},
-                4: {"http"}, 5: {"http"}, 6: set(),
+                1: {"http", "tls"},
+                2: {"http", "tls"},
+                3: {"http", "tls"},
+                4: {"http"},
+                5: {"http"},
+                6: set(),
             },
             "reuse_versions": {4, 5, 6},
             "versions": {1, 2, 3, 4, 5, 6},
@@ -310,6 +382,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "tuic",
         protocol=Protocol.TUIC,
+        check=protocol_checks.check_tuic,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_tuic,
         emitter=emit_tuic,
@@ -319,6 +392,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "tuic-v5",
         protocol=Protocol.TUIC,
+        check=protocol_checks.check_tuic,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_tuic,
         emitter=emit_tuic,
@@ -328,6 +402,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "hysteria2",
         protocol=Protocol.HYSTERIA2,
+        check=protocol_checks.check_hysteria2,
         udp=SurgeUdpBehavior.AUTOMATIC,
         parser=parse_hysteria2,
         emitter=emit_hysteria2,
@@ -371,6 +446,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "tailscale",
         protocol=Protocol.TAILSCALE,
+        check=protocol_checks.check_tailscale,
         udp=SurgeUdpBehavior.AUTOMATIC,
         emitter=emit_tailscale,
         consumed=("section-name",),
@@ -378,6 +454,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "masque",
         protocol=Protocol.MASQUE,
+        check=protocol_checks.check_masque,
         udp=SurgeUdpBehavior.AUTOMATIC,
         emitter=emit_masque,
         consumed=(
@@ -390,6 +467,7 @@ SURGE_CODEC_SPECS = (
     _spec(
         "trust-tunnel",
         protocol=Protocol.TRUSTTUNNEL,
+        check=protocol_checks.check_trusttunnel,
         udp=SurgeUdpBehavior.UNSUPPORTED,
         emitter=emit_trust_tunnel,
         consumed=("username", "password", "headers", "max-streams", "h3", "ws"),
@@ -404,6 +482,7 @@ SURGE_CODEC_SPECS = (
         _spec(
             keyword,
             protocol=Protocol.REJECT,
+            check=protocol_checks.check_reject,
             udp=SurgeUdpBehavior.UNSUPPORTED,
             emitter=emit_reject,
             constraints={
@@ -425,7 +504,10 @@ if len(SURGE_CODEC_BY_KEYWORD) != len(SURGE_CODEC_SPECS):
 
 SURGE_PROTOCOL_CODECS = {}
 for _spec_item in SURGE_CODEC_SPECS:
-    if _spec_item.protocol is not None and _spec_item.protocol not in SURGE_PROTOCOL_CODECS:
+    if (
+        _spec_item.protocol is not None
+        and _spec_item.protocol not in SURGE_PROTOCOL_CODECS
+    ):
         SURGE_PROTOCOL_CODECS[_spec_item.protocol] = _spec_item
 
 SURGE_NODE_PROTOCOLS = frozenset(
@@ -446,6 +528,7 @@ SURGE_MULTI_VALUE_PARAMETERS = {
 SURGE_BUILTIN_ALIAS_TYPES = frozenset(
     {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}
 )
+
 
 def get_surge_codec(keyword: str) -> SurgeCodecSpec | None:
     return SURGE_CODEC_BY_KEYWORD.get(keyword.lower())

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from collections import Counter, defaultdict, deque
-from collections.abc import Callable
 from typing import Any
 
 from subio_v2.adapters.catalog import normalize_format
@@ -53,10 +52,8 @@ class BaseEmitter(ABC):
             code=code,
         )
 
-    def encode_node(
-        self, node: Node, encoder: Callable[[Node], object]
-    ):
-        return self._conversion.encode_node(node, encoder, self.check_node, context=self)
+    def encode_node(self, node: Node):
+        return self._conversion.encode_node(node, context=self)
 
     def retain_dialer_indices(
         self, source: list[Node], candidates: list[Node]
@@ -80,11 +77,15 @@ class BaseEmitter(ABC):
                     continue
                 retained.remove(index)
                 node = candidates[index]
-                issues.append(self.issue_for_node(
-                    node, IssueSeverity.ERROR,
-                    f"Dialer proxy '{node.dialer_proxy}' was not emitted",
-                    field="dialer_proxy", code="conversion.missing-dialer-proxy",
-                ))
+                issues.append(
+                    self.issue_for_node(
+                        node,
+                        IssueSeverity.ERROR,
+                        f"Dialer proxy '{node.dialer_proxy}' was not emitted",
+                        field="dialer_proxy",
+                        code="conversion.missing-dialer-proxy",
+                    )
+                )
                 if isinstance(node.name, str):
                     counts[node.name] -= 1
                     if counts[node.name] == 0:
@@ -95,9 +96,7 @@ class BaseEmitter(ABC):
     def log_issues(issues: list[ConversionIssue]) -> None:
         for issue in issues:
             if issue.code.startswith("ruleset."):
-                location = (
-                    f"Ruleset '{issue.source}'" if issue.source else "Ruleset"
-                )
+                location = f"Ruleset '{issue.source}'" if issue.source else "Ruleset"
                 context = []
                 if issue.field:
                     context.append(issue.field)

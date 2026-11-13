@@ -1,14 +1,6 @@
 from typing import Any
 
 from subio_v2.adapters.base import BaseEmitter
-from subio_v2.adapters.singbox.endpoint import (
-    SINGBOX_ENDPOINT_CODECS,
-    encode_endpoint,
-)
-from subio_v2.adapters.singbox.outbound import (
-    SINGBOX_OUTBOUND_CODECS,
-    encode_outbound,
-)
 from subio_v2.core.nodes import Node
 from subio_v2.core.results import EmissionResult, IssueSeverity
 
@@ -24,25 +16,16 @@ class SingBoxEmitter(BaseEmitter):
         emitted_tags: set[str] = set()
         outbound_tags: set[str] = set()
 
-        outbound_nodes = [
-            (index, node)
-            for index, node in enumerate(nodes)
-            if node.type in SINGBOX_OUTBOUND_CODECS
-        ]
-        endpoint_nodes = [
-            (index, node)
-            for index, node in enumerate(nodes)
-            if node.type in SINGBOX_ENDPOINT_CODECS
-        ]
-        unsupported_nodes = [
-            (index, node)
-            for index, node in enumerate(nodes)
-            if node.type not in SINGBOX_OUTBOUND_CODECS
-            and node.type not in SINGBOX_ENDPOINT_CODECS
-        ]
+        sections = {"outbounds": [], "endpoints": [], None: []}
+        for index, node in enumerate(nodes):
+            binding = self._conversion.target.codecs.get(node.type)
+            sections[binding.section if binding else None].append((index, node))
+        outbound_nodes = sections["outbounds"]
+        endpoint_nodes = sections["endpoints"]
+        unsupported_nodes = sections[None]
 
         for index, node in outbound_nodes:
-            encoded = self.encode_node(node, encode_outbound)
+            encoded = self.encode_node(node)
             issues.extend(encoded.issues)
             if encoded.supported_node is None or encoded.content is None:
                 continue
@@ -56,7 +39,7 @@ class SingBoxEmitter(BaseEmitter):
             accepted_indices.add(index)
 
         for index, node in endpoint_nodes:
-            encoded = self.encode_node(node, encode_endpoint)
+            encoded = self.encode_node(node)
             issues.extend(encoded.issues)
             if encoded.supported_node is None or encoded.content is None:
                 continue
@@ -81,13 +64,17 @@ class SingBoxEmitter(BaseEmitter):
             accepted_indices.add(index)
 
         for _, node in unsupported_nodes:
-            encoded = self.encode_node(node, encode_outbound)
+            encoded = self.encode_node(node)
             issues.extend(encoded.issues)
 
-        candidates = [node for index, node in enumerate(nodes) if index in accepted_indices]
+        candidates = [
+            node for index, node in enumerate(nodes) if index in accepted_indices
+        ]
         retained, relation_issues = self.retain_dialer_indices(nodes, candidates)
         issues.extend(relation_issues)
-        supported_nodes = [node for index, node in enumerate(candidates) if index in retained]
+        supported_nodes = [
+            node for index, node in enumerate(candidates) if index in retained
+        ]
         final_tags = {node.name for node in supported_nodes}
         return EmissionResult(
             content={

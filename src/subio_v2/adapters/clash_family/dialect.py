@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 from typing import Any
 
-import subio_v2.protocols as protocol_registry
-from subio_v2.adapters.catalog import common_policy_for_format
+from subio_v2.adapters.catalog import TargetCommonPolicy
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node
 
@@ -24,13 +24,13 @@ def post_descriptor_emit(
     data: dict[str, Any],
     node: Node,
     context: DialectContext,
-    platform: str,
+    common_policy: TargetCommonPolicy,
+    protocol_constraints: Mapping[str, Any],
 ) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Apply target capability gates and report modeled fields that were dropped."""
     output = data
     dropped: set[str] = set()
-    common_policy = common_policy_for_format(platform)
-    global_features = common_policy.as_feature_map() if common_policy else {}
+    global_features = common_policy.as_feature_map()
 
     for semantic_field, output_key, capability in (
         ("tfo", "tfo", "tfo"),
@@ -41,11 +41,7 @@ def post_descriptor_emit(
             output.pop(output_key, None)
             dropped.add(semantic_field)
 
-    target_codec = protocol_registry.target_codec(platform, node.type)
-    protocol_caps = (
-        dict(target_codec.target_constraints) if target_codec is not None else {}
-    )
-    if "smux" in output and "smux" not in protocol_caps.get("features", set()):
+    if "smux" in output and "smux" not in protocol_constraints.get("features", set()):
         output.pop("smux", None)
         dropped.add("smux")
 

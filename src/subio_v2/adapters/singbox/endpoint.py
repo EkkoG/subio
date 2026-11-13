@@ -699,6 +699,11 @@ class SingBoxWireguardEndpointCodec(SingBoxEndpointCodec):
     )
     expected_udp = True
 
+    def check(self, node: Node) -> list[IssueDraft]:
+        from subio_v2.adapters.checks import wireguard_peer_keepalive
+
+        return super().check(node) + wireguard_peer_keepalive(node)
+
     def parse(self, data: dict[str, Any]) -> WireguardNode:
         peers = data.get("peers")
         if not isinstance(peers, list) or not peers:

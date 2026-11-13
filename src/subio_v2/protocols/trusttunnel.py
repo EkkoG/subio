@@ -37,8 +37,27 @@ SPEC = ProtocolSpec(
     validator=_validate,
     node_class=TrustTunnelNode,
     user_override_fields=frozenset({"server", "port", "username", "password"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password"}),
-    terminal_native_fields=frozenset({"bbr_profile", "congestion_controller", "cwnd", "headers", "health_check", "max_connections", "max_streams", "min_streams", "password", "quic", "smux", "tls", "username", "websocket"}),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "username", "password"}
+    ),
+    terminal_native_fields=frozenset(
+        {
+            "bbr_profile",
+            "congestion_controller",
+            "cwnd",
+            "headers",
+            "health_check",
+            "max_connections",
+            "max_streams",
+            "min_streams",
+            "password",
+            "quic",
+            "smux",
+            "tls",
+            "username",
+            "websocket",
+        }
+    ),
 )
 
 
@@ -51,23 +70,29 @@ class TrustTunnelCodec(StructuredClashProtocolCodec):
     def normalize_stash(self, data: dict[str, object]) -> dict[str, object]:
         data.setdefault("udp", False)
         return data
+
     protocol = Protocol.TRUSTTUNNEL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "trusttunnel"
     dialect_fields = {
         "stash": stash_fields(
-            "name", "type", "server", "port", "username", "password",
-            "quic", "sni", "alpn", "skip-cert-verify",
-            "server-cert-fingerprint", endpoint=False,
+            "name",
+            "type",
+            "server",
+            "port",
+            "username",
+            "password",
+            "quic",
+            "sni",
+            "alpn",
+            "skip-cert-verify",
+            "server-cert-fingerprint",
+            endpoint=False,
         )
     }
     fields = (
-        scalar_field(
-            "username", default="", emit_policy=EmitPolicy.ALWAYS
-        ),
-        scalar_field(
-            "password", default="", emit_policy=EmitPolicy.ALWAYS
-        ),
+        scalar_field("username", default="", emit_policy=EmitPolicy.ALWAYS),
+        scalar_field("password", default="", emit_policy=EmitPolicy.ALWAYS),
         tls_group(
             consumed_keys=(
                 "sni",
@@ -99,121 +124,80 @@ class TrustTunnelCodec(StructuredClashProtocolCodec):
         smux_group(),
     )
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
-        if not isinstance(node, TrustTunnelNode):
-            return []
+    def _check_mihomo(self, node: Node) -> list[IssueDraft]:
         warnings: list[IssueDraft] = []
-        if platform == "surge":
-            if node.udp:
+        for field, value in (
+            ("headers", node.headers),
+            ("websocket", node.websocket),
+        ):
+            if value:
                 warnings.append(
                     IssueDraft(
                         severity=IssueSeverity.ERROR,
-                        message="Surge Trust Tunnel does not support UDP",
-                        field="udp",
+                        message=f"Trust Tunnel field '{field}' is Surge-only",
+                        field=field,
+                        code="conversion.unconsumed-source-field",
+                    )
+                )
+        return warnings
+
+    def _check_stash(self, node: Node) -> list[IssueDraft]:
+        warnings: list[IssueDraft] = []
+        for field, value in (
+            ("headers", node.headers),
+            ("websocket", node.websocket),
+        ):
+            if value:
+                warnings.append(
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
+                        message=f"Trust Tunnel field '{field}' is Surge-only",
+                        field=field,
                         code="conversion.unsupported-protocol-variant",
                     )
                 )
-            for field, value in (
-                ("health_check", node.health_check),
-                ("congestion_controller", node.congestion_controller),
-                ("cwnd", node.cwnd),
-                ("bbr_profile", node.bbr_profile),
-                ("max_connections", node.max_connections),
-                ("min_streams", node.min_streams),
-                ("client_fingerprint", node.tls.client_fingerprint),
-            ):
-                if value:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.WARNING,
-                            message=f"Trust Tunnel field '{field}' is Mihomo-only",
-                            field=field,
-                            code="conversion.unconsumed-source-field",
-                        )
+        for field, value in (
+            ("health_check", node.health_check),
+            ("congestion_controller", node.congestion_controller),
+            ("cwnd", node.cwnd),
+            ("bbr_profile", node.bbr_profile),
+            ("max_connections", node.max_connections),
+            ("min_streams", node.min_streams),
+            ("max_streams", node.max_streams),
+            ("client_fingerprint", node.tls.client_fingerprint),
+            ("verify_name", node.tls.verify_name),
+            ("smux", node.smux.enabled),
+        ):
+            if value is not None and value is not False:
+                warnings.append(
+                    IssueDraft(
+                        severity=IssueSeverity.WARNING,
+                        message=f"Trust Tunnel field '{field}' is Mihomo-only",
+                        field=field,
+                        code="conversion.unconsumed-source-field",
                     )
-            for field, value in (
-                ("ech_opts", node.tls.ech_opts),
-                ("certificate", node.tls.certificate),
-                ("private_key", node.tls.private_key),
-            ):
-                if value:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.ERROR,
-                            message=(
-                                f"Trust Tunnel TLS field '{field}' cannot be represented by Surge"
-                            ),
-                            field=f"tls.{field}",
-                            code="conversion.unconsumed-source-field",
-                        )
+                )
+        for field, value in (
+            ("ech_opts", node.tls.ech_opts),
+            ("certificate", node.tls.certificate),
+            ("private_key", node.tls.private_key),
+        ):
+            if value:
+                warnings.append(
+                    IssueDraft(
+                        severity=IssueSeverity.ERROR,
+                        message=(
+                            f"Trust Tunnel TLS field '{field}' cannot be "
+                            "represented by Stash"
+                        ),
+                        field=f"tls.{field}",
+                        code="conversion.unconsumed-source-field",
                     )
-        elif platform == "mihomo":
-            for field, value in (
-                ("headers", node.headers),
-                ("websocket", node.websocket),
-            ):
-                if value:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.ERROR,
-                            message=f"Trust Tunnel field '{field}' is Surge-only",
-                            field=field,
-                            code="conversion.unconsumed-source-field",
-                        )
-                    )
-        elif platform == "stash":
-            for field, value in (
-                ("headers", node.headers),
-                ("websocket", node.websocket),
-            ):
-                if value:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.ERROR,
-                            message=f"Trust Tunnel field '{field}' is Surge-only",
-                            field=field,
-                            code="conversion.unsupported-protocol-variant",
-                        )
-                    )
-            for field, value in (
-                ("health_check", node.health_check),
-                ("congestion_controller", node.congestion_controller),
-                ("cwnd", node.cwnd),
-                ("bbr_profile", node.bbr_profile),
-                ("max_connections", node.max_connections),
-                ("min_streams", node.min_streams),
-                ("max_streams", node.max_streams),
-                ("client_fingerprint", node.tls.client_fingerprint),
-                ("verify_name", node.tls.verify_name),
-                ("smux", node.smux.enabled),
-            ):
-                if value is not None and value is not False:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.WARNING,
-                            message=f"Trust Tunnel field '{field}' is Mihomo-only",
-                            field=field,
-                            code="conversion.unconsumed-source-field",
-                        )
-                    )
-            for field, value in (
-                ("ech_opts", node.tls.ech_opts),
-                ("certificate", node.tls.certificate),
-                ("private_key", node.tls.private_key),
-            ):
-                if value:
-                    warnings.append(
-                        IssueDraft(
-                            severity=IssueSeverity.ERROR,
-                            message=(
-                                f"Trust Tunnel TLS field '{field}' cannot be "
-                                "represented by Stash"
-                            ),
-                            field=f"tls.{field}",
-                            code="conversion.unconsumed-source-field",
-                        )
-                    )
+                )
         return warnings
+
+    def checker_for_target(self, target: str):
+        return {"mihomo": self._check_mihomo, "stash": self._check_stash}[target]
 
 
 CODEC = TrustTunnelCodec()

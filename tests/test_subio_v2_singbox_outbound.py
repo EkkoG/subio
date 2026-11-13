@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from subio_v2.adapters.singbox.outbound import (
-    SINGBOX_OUTBOUND_CODECS,
     SINGBOX_OUTBOUND_CODECS_BY_TYPE,
     encode_outbound,
 )
@@ -218,8 +217,7 @@ def test_singbox_mixed_supported_outbounds_round_trip_through_target_codecs():
     service = TargetValidationService("sing-box")
     encoded = []
     for node in parsed.nodes:
-        codec = SINGBOX_OUTBOUND_CODECS[node.type]
-        result = service.encode_node(node, codec.encode)
+        result = service.encode_node(node)
         assert result.issues == [], (node.name, result.issues)
         assert result.supported_node is node
         encoded.append(result.content)
@@ -635,7 +633,7 @@ def test_singbox_socks_tls_is_rejected_instead_of_dropped():
         tls=TLSSettings(enabled=True, server_name="socks.example"),
     )
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_outbound)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None
@@ -653,7 +651,7 @@ def test_singbox_common_target_diagnostics_match_emitted_bind_and_mark_fields():
         routing_mark=7,
     )
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_outbound)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.issues == []
     assert result.content["bind_interface"] == "en0"

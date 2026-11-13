@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Dict
@@ -33,9 +33,7 @@ class ClashTargetCodec:
         return self.protocol_codec.constraints_for_target(self.target)
 
     def check(self, node: Node) -> list[IssueDraft]:
-        return self.protocol_codec.check(
-            node, dict(self.target_constraints), self.target
-        )
+        return self.protocol_codec.checker_for_target(self.target)(node)
 
     def emit(self, node: Node, context: DialectContext | None = None) -> Dict[str, Any]:
         return self.protocol_codec.emit_clash(node, context)
@@ -73,6 +71,10 @@ class ClashProtocolCodec(ABC):
     def constraints_for_target(self, target: str) -> Mapping[str, Any]:
         return self.target_constraints.get(target, MappingProxyType({}))
 
+    def checker_for_target(self, target: str) -> Callable[[Node], list[IssueDraft]]:
+        constraints = dict(self.constraints_for_target(target))
+        return lambda node: self.check(node, constraints, target)
+
     def fields_for_dialect(self, dialect: str) -> frozenset[str]:
         return self.dialect_fields.get(dialect, frozenset())
 
@@ -84,9 +86,7 @@ class ClashProtocolCodec(ABC):
     ) -> tuple[dict[str, Any], tuple[str, ...]]:
         return data, ()
 
-    def stash_lossless_default(
-        self, node: Node, key: str, value: object
-    ) -> bool:
+    def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
         return False
 
     @abstractmethod
@@ -101,9 +101,7 @@ class ClashProtocolCodec(ABC):
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def check(
-        self, node: Node, proto_caps: dict, platform: str
-    ) -> list[IssueDraft]:
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
         return []
 
 
@@ -115,7 +113,6 @@ class StructuredClashProtocolCodec(ClashProtocolCodec):
     @property
     def consumed_keys(self) -> frozenset[str]:
         return frozenset(key for field in self.fields for key in field.consumed_keys)
-
 
     def prepare_parse_kwargs(
         self, data: Dict[str, Any], kwargs: Dict[str, Any]

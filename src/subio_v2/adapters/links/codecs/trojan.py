@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import (
@@ -85,7 +86,9 @@ def parse(line: str) -> Node | None:
             type=Protocol.TROJAN,
             server=url.hostname,
             port=url.port,
-            password=urllib.parse.unquote(url.username) if url.username else url.username,
+            password=urllib.parse.unquote(url.username)
+            if url.username
+            else url.username,
             transport=transport,
             tls=TLSSettings(
                 enabled=True,
@@ -107,12 +110,55 @@ def parse(line: str) -> Node | None:
         return None
 
 
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, TrojanNode):
+        return []
+    warnings: list[IssueDraft] = []
+    supported_transports = proto_caps.get("transports", set())
+    network = node.transport.network_value if node.transport else "tcp"
+    if supported_transports and network not in supported_transports:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Transport '{network}' is not supported by {platform}",
+                field="transport.network",
+                suggestion=f"Supported transports: {', '.join(sorted(supported_transports))}",
+            )
+        )
+    if (
+        node.smux
+        and node.smux.enabled
+        and ("smux" not in proto_caps.get("features", set()))
+    ):
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.WARNING,
+                message=f"SMUX is not supported by {platform}, will be ignored",
+                field="smux",
+            )
+        )
+    if (
+        node.tls
+        and node.tls.reality_opts
+        and ("reality" not in proto_caps.get("features", set()))
+    ):
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Reality is not supported for Trojan on {platform}",
+                field="reality",
+            )
+        )
+    return warnings
+
+
 CODEC = LinkCodec(
     Protocol.TROJAN,
     frozenset({"dae", "v2rayn"}),
     build,
     schemes=frozenset({"trojan"}),
     parse=parse,
+    check=check,
     target_constraints={
         "dae": {"transports": {"tcp", "ws", "grpc"}},
         "v2rayn": {"transports": {"tcp", "ws", "h2", "grpc"}},

@@ -301,10 +301,7 @@ def test_openvpn_accepts_cli_valid_server_neighbors(server):
     assert parsed.issues == []
     node = parsed.nodes[0]
     assert encode_endpoint(node)["server"] == server
-    assert (
-        TargetValidationService("sing-box").encode_node(node, encode_endpoint).content
-        is not None
-    )
+    assert TargetValidationService("sing-box").encode_node(node).content is not None
 
 
 def test_openconnect_protocol_is_source_bound_and_codec_registered():
@@ -438,7 +435,7 @@ def test_client_endpoint_target_rejects_programmatic_malformed_values(
     node = factory()
     setattr(node, field, value)
 
-    result = TargetValidationService("sing-box").encode_node(node, encode_endpoint)
+    result = TargetValidationService("sing-box").encode_node(node)
 
     assert result.content is None
     assert result.supported_node is None

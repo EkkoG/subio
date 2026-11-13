@@ -28,9 +28,13 @@ def test_surge_document_adapters_have_no_parallel_protocol_maps():
     assert "SURGE_PROTOCOL_EMITTERS" not in emitter_source
     assert "_SURGE_PARSERS" not in codec_source
     assert "_SURGE_EMITTERS" not in codec_source
-    assert "get_surge_protocol_codec" in emitter_adapter
+    assert "get_surge_protocol_codec" not in emitter_adapter
+    assert "protocol_emitter" in emitter_adapter
+    assert "codec.emitter" in (root / "target.py").read_text()
     assert ".parser" in parser_adapter
 
 
 def test_clash_protocol_codecs_do_not_declare_surge_target_constraints():
-    assert all("surge" not in codec.target_constraints for codec in protocol_registry.all())
+    assert all(
+        "surge" not in codec.target_constraints for codec in protocol_registry.all()
+    )

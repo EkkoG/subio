@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import base64
 import json
 
@@ -16,10 +17,20 @@ def build(node: Node) -> str:
     assert isinstance(node, VmessNode)
     network = node.transport.network_value
     data = {
-        "v": "2", "ps": node.name, "add": node.server,
-        "port": str(node.port), "id": node.uuid, "aid": str(node.alter_id),
-        "scy": node.cipher or "auto", "net": network, "type": "none",
-        "host": "", "path": "", "tls": "", "sni": "", "alpn": "",
+        "v": "2",
+        "ps": node.name,
+        "add": node.server,
+        "port": str(node.port),
+        "id": node.uuid,
+        "aid": str(node.alter_id),
+        "scy": node.cipher or "auto",
+        "net": network,
+        "type": "none",
+        "host": "",
+        "path": "",
+        "tls": "",
+        "sni": "",
+        "alpn": "",
     }
     if node.transport.network == Network.WS:
         data["path"] = node.transport.path or ""
@@ -38,8 +49,10 @@ def build(node: Node) -> str:
         data["path"] = node.transport.grpc_service_name or ""
     elif node.transport.network == Network.HTTP:
         path = node.transport.path
-        data["path"] = path if isinstance(path, str) else join_comma_values(
-            path or [], field="transport.path"
+        data["path"] = (
+            path
+            if isinstance(path, str)
+            else join_comma_values(path or [], field="transport.path")
         )
         if node.transport.headers and "Host" in node.transport.headers:
             data["host"] = node.transport.headers["Host"]
@@ -95,12 +108,64 @@ def parse(line: str) -> Node | None:
         return None
 
 
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, VmessNode):
+        return []
+    warnings: list[IssueDraft] = []
+    supported_ciphers = proto_caps.get("ciphers", set())
+    if node.cipher and node.cipher not in supported_ciphers:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Cipher '{node.cipher}' is not supported by {platform}",
+                field="cipher",
+            )
+        )
+    supported_transports = proto_caps.get("transports", set())
+    network = node.transport.network_value if node.transport else "tcp"
+    if supported_transports and network not in supported_transports:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Transport '{network}' is not supported by {platform}",
+                field="transport.network",
+                suggestion=f"Supported transports: {', '.join(sorted(supported_transports))}",
+            )
+        )
+    if (
+        node.smux
+        and node.smux.enabled
+        and ("smux" not in proto_caps.get("features", set()))
+    ):
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.WARNING,
+                message=f"SMUX is not supported by {platform}, will be ignored",
+                field="smux",
+            )
+        )
+    if (
+        node.tls
+        and node.tls.reality_opts
+        and ("reality" not in proto_caps.get("features", set()))
+    ):
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Reality is not supported for VMess on {platform}",
+                field="reality",
+            )
+        )
+    return warnings
+
+
 CODEC = LinkCodec(
     Protocol.VMESS,
     frozenset({"dae", "v2rayn"}),
     build,
     schemes=frozenset({"vmess"}),
     parse=parse,
+    check=check,
     target_constraints={
         "dae": {
             "ciphers": {"auto", "aes-128-gcm", "chacha20-poly1305", "none", "zero"},

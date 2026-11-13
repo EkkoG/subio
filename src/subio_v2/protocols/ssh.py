@@ -28,9 +28,38 @@ SPEC = ProtocolSpec(
     required_fields=("username",),
     validator=_validate,
     node_class=SSHNode,
-    user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "private_key_passphrase"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "private_key_passphrase"}),
-    terminal_native_fields=frozenset({"host_key", "host_key_algorithms", "idle_timeout", "password", "private_key", "private_key_passphrase", "server_fingerprints", "username"}),
+    user_override_fields=frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+        }
+    ),
+    terminal_native_user_override_fields=frozenset(
+        {
+            "server",
+            "port",
+            "username",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+        }
+    ),
+    terminal_native_fields=frozenset(
+        {
+            "host_key",
+            "host_key_algorithms",
+            "idle_timeout",
+            "password",
+            "private_key",
+            "private_key_passphrase",
+            "server_fingerprints",
+            "username",
+        }
+    ),
     terminal_native_excluded_fields=frozenset({"keystore_id"}),
 )
 
@@ -42,14 +71,23 @@ class SSHCodec(StructuredClashProtocolCodec):
 
     def stash_lossless_default(self, node: Node, key: str, value: object) -> bool:
         return key == "udp" and node.udp
+
     protocol = Protocol.SSH
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "ssh"
     dialect_fields = {
         "stash": stash_fields(
-            "name", "type", "server", "port", "user", "password",
-            "private-key", "private-key-passphrase", "dialer-proxy",
-            "interface-name", endpoint=False,
+            "name",
+            "type",
+            "server",
+            "port",
+            "user",
+            "password",
+            "private-key",
+            "private-key-passphrase",
+            "dialer-proxy",
+            "interface-name",
+            endpoint=False,
         )
     }
     target_constraints = {
@@ -57,9 +95,7 @@ class SSHCodec(StructuredClashProtocolCodec):
         for target in ("mihomo", "stash")
     }
     fields = (
-        scalar_field(
-            "username", default="", emit_policy=EmitPolicy.ALWAYS
-        ),
+        scalar_field("username", default="", emit_policy=EmitPolicy.ALWAYS),
         scalar_field("password", emit_policy=EmitPolicy.TRUTHY),
         scalar_field("private-key", "private_key", emit_policy=EmitPolicy.TRUTHY),
         scalar_field(
@@ -79,6 +115,15 @@ class SSHCodec(StructuredClashProtocolCodec):
         if not isinstance(node, SSHNode):
             return []
         warnings: list[IssueDraft] = []
+        if node.server_fingerprints:
+            warnings.append(
+                IssueDraft(
+                    IssueSeverity.ERROR,
+                    "This target cannot preserve SSH server fingerprints",
+                    "server_fingerprints",
+                    code="conversion.unsupported-platform-field",
+                )
+            )
         supported_auth = proto_caps.get("auth_methods", set())
         if node.private_key and "private_key" not in supported_auth:
             warnings.append(

@@ -104,7 +104,10 @@ class SurgeVlessParameterError(ValueError):
 
 def normalize_vless_uuid(value: str) -> str:
     if isinstance(value, str):
-        if re.fullmatch(r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}", value):
+        if re.fullmatch(
+            r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}",
+            value,
+        ):
             return str(UUID(value))
         if 1 <= len(value.encode("utf-8")) <= 30:
             return str(uuid5(UUID(int=0), value))
@@ -217,24 +220,39 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
                 _strict_bool(values[key], key)
             except ValueError as exc:
                 if p_type == "vless":
-                    field = {"grpc": "transport.network", "ws": "transport.network", "tls": "tls.enabled"}.get(key, key)
+                    field = {
+                        "grpc": "transport.network",
+                        "ws": "transport.network",
+                        "tls": "tls.enabled",
+                    }.get(key, key)
                     raise SurgeVlessParameterError(str(exc), field) from exc
                 raise
 
     if p_type == "vless":
         normalize_vless_uuid(values.get("username", ""))
         if values.get("encryption", "none") != "none":
-            raise SurgeVlessParameterError("Surge VLESS only supports encryption=none", "encryption")
+            raise SurgeVlessParameterError(
+                "Surge VLESS only supports encryption=none", "encryption"
+            )
         if values.get("ws") == "true" and values.get("grpc") == "true":
-            raise SurgeVlessParameterError("VLESS ws and grpc are mutually exclusive", "transport.network")
+            raise SurgeVlessParameterError(
+                "VLESS ws and grpc are mutually exclusive", "transport.network"
+            )
         if "reality-short-id" in values and "reality-public-key" not in values:
-            raise SurgeVlessParameterError("REALITY short ID requires a public key", "tls.reality_opts.short-id")
+            raise SurgeVlessParameterError(
+                "REALITY short ID requires a public key", "tls.reality_opts.short-id"
+            )
         for key in ("grpc-service-name", "grpc-mode", "grpc-authority"):
             if key in values and values.get("grpc") != "true":
-                raise SurgeVlessParameterError("gRPC parameters require grpc=true", "transport." + key.replace("-", "_"))
+                raise SurgeVlessParameterError(
+                    "gRPC parameters require grpc=true",
+                    "transport." + key.replace("-", "_"),
+                )
         for key, attr in (("ws-path", "path"), ("ws-headers", "headers")):
             if key in values and values.get("ws") != "true":
-                raise SurgeVlessParameterError("WebSocket parameters require ws=true", f"transport.{attr}")
+                raise SurgeVlessParameterError(
+                    "WebSocket parameters require ws=true", f"transport.{attr}"
+                )
 
     if "always-use-connect" in values and p_type not in {"http", "https"}:
         raise ValueError("always-use-connect is only supported by Surge http/https")
@@ -243,9 +261,7 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
         parse_surge_ip_version(values["ip-version"])
     for key, allowed in SURGE_ENUM_PARAMETERS.items():
         if key in values and values[key] not in allowed:
-            raise ValueError(
-                f"{key} must be one of {', '.join(sorted(allowed))}"
-            )
+            raise ValueError(f"{key} must be one of {', '.join(sorted(allowed))}")
     if "tos" in values:
         _validate_tos(values["tos"])
     if "test-timeout" in values:
@@ -284,7 +300,13 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
                 message += " with h3=true"
             raise ValueError(message)
 
-    if p_type in {"direct", "reject", "reject-drop", "reject-no-drop", "reject-tinygif"}:
+    if p_type in {
+        "direct",
+        "reject",
+        "reject-drop",
+        "reject-no-drop",
+        "reject-tinygif",
+    }:
         if "no-error-alert" in values:
             raise ValueError("no-error-alert is only supported by proxy policies")
         if "ecn" in values:
@@ -324,13 +346,10 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
                 raise ValueError("Snell mode is only supported by version 6")
             if values["mode"] not in SURGE_SNELL_MODES:
                 raise ValueError(
-                    "Snell mode must be one of "
-                    + ", ".join(sorted(SURGE_SNELL_MODES))
+                    "Snell mode must be one of " + ", ".join(sorted(SURGE_SNELL_MODES))
                 )
         if "obfs-uri" in values:
-            _validate_obfs_uri(
-                values["obfs-uri"], "obfs-uri", values.get("obfs")
-            )
+            _validate_obfs_uri(values["obfs-uri"], "obfs-uri", values.get("obfs"))
 
     if p_type == "ss":
         if "udp-port" in values:
@@ -338,9 +357,7 @@ def validate_surge_parameters(values: Mapping[str, str], p_type: str) -> None:
             if udp_port > 65535:
                 raise ValueError("udp-port must be between 1 and 65535")
         if "obfs-uri" in values:
-            _validate_obfs_uri(
-                values["obfs-uri"], "obfs-uri", values.get("obfs")
-            )
+            _validate_obfs_uri(values["obfs-uri"], "obfs-uri", values.get("obfs"))
 
 
 def _error(message: str, field: str) -> IssueDraft:
@@ -357,7 +374,7 @@ def _check_bool(value: object, field: str, errors: list[IssueDraft]) -> None:
         errors.append(_error(f"{field} must be a boolean", field))
 
 
-def validate_surge_node(node: Node) -> list[IssueDraft]:
+def validate_surge_common(node: Node) -> list[IssueDraft]:
     """Validate typed node fields that are specific to the Surge target."""
 
     errors: list[IssueDraft] = []
@@ -367,7 +384,9 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
         except ValueError as exc:
             errors.append(_error(str(exc), "name"))
     if node.ip_version not in {None, *GENERIC_IP_VERSION_VALUES}:
-        errors.append(_error("ip_version is not a supported generic value", "ip_version"))
+        errors.append(
+            _error("ip_version is not a supported generic value", "ip_version")
+        )
     _check_bool(node.udp, "udp", errors)
     _check_bool(node.tfo, "tfo", errors)
 
@@ -398,7 +417,11 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
         or isinstance(options.test_timeout, bool)
         or options.test_timeout < 1
     ):
-        errors.append(_error("test_timeout must be a positive integer", "surge_options.test_timeout"))
+        errors.append(
+            _error(
+                "test_timeout must be a positive integer", "surge_options.test_timeout"
+            )
+        )
     if options.test_udp is not None:
         try:
             _validate_test_udp(options.test_udp)
@@ -421,14 +444,31 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
     if node.interface_name is not None and not isinstance(node.interface_name, str):
         errors.append(_error("interface_name must be a string", "interface_name"))
     if node.type in {Protocol.WIREGUARD, Protocol.TAILSCALE} and node.interface_name:
-        errors.append(_error(f"interface is not supported by Surge {node.type.value}", "interface_name"))
+        errors.append(
+            _error(
+                f"interface is not supported by Surge {node.type.value}",
+                "interface_name",
+            )
+        )
     if node.type in {Protocol.DIRECT, Protocol.REJECT}:
         if options.no_error_alert is not None:
-            errors.append(_error("no-error-alert is only supported by proxy policies", "surge_options.no_error_alert"))
+            errors.append(
+                _error(
+                    "no-error-alert is only supported by proxy policies",
+                    "surge_options.no_error_alert",
+                )
+            )
         if options.ecn is not None:
-            errors.append(_error("ecn is only supported by proxy policies", "surge_options.ecn"))
+            errors.append(
+                _error("ecn is only supported by proxy policies", "surge_options.ecn")
+            )
         if node.dialer_proxy:
-            errors.append(_error("underlying-proxy is only supported by proxy policies", "dialer_proxy"))
+            errors.append(
+                _error(
+                    "underlying-proxy is only supported by proxy policies",
+                    "dialer_proxy",
+                )
+            )
 
     shadow = node.shadow_tls
     if shadow.enabled:
@@ -436,161 +476,219 @@ def validate_surge_node(node: Node) -> list[IssueDraft]:
         if isinstance(node, TrustTunnelNode) and node.quic:
             shadow_tls_allowed = False
         if not shadow_tls_allowed:
-            errors.append(_error(f"Shadow TLS is not supported for Surge {node.type.value}", "shadow_tls"))
-        if shadow.version not in {2, 3}:
-            errors.append(_error("Shadow TLS version must be 2 or 3", "shadow_tls.version"))
-        if shadow.version == 3 and not shadow.server_name:
-            errors.append(_error("Shadow TLS version 3 requires shadow-tls-sni", "shadow_tls.server_name"))
-
-    if isinstance(node, HttpNode):
-        _check_bool(node.always_use_connect, "always_use_connect", errors)
-        if (
-            node.variant == HttpVariant.H2_CONNECT
-            and node.always_use_connect is not None
-        ):
             errors.append(
                 _error(
-                    "always_use_connect is only supported by Surge http/https",
-                    "always_use_connect",
+                    f"Shadow TLS is not supported for Surge {node.type.value}",
+                    "shadow_tls",
                 )
             )
-    if isinstance(node, ShadowsocksNode):
-        if node.udp_port is not None and (
-            not isinstance(node.udp_port, int)
-            or isinstance(node.udp_port, bool)
-            or not 1 <= node.udp_port <= 65535
-        ):
-            errors.append(_error("udp_port must be between 1 and 65535", "udp_port"))
-        obfs_mode = None
-        if node.plugin == "obfs" and isinstance(node.plugin_opts, Mapping):
-            obfs_mode = node.plugin_opts.get("mode")
-        elif node.plugin:
-            obfs_mode = node.plugin
-        _validate_node_obfs_uri(node.obfs_uri, obfs_mode, errors)
-    if isinstance(node, SnellNode):
-        version = node.version or 1
-        if node.version is not None and node.version not in SURGE_SNELL_VERSIONS:
-            errors.append(_error("Snell version must be between 1 and 6", "version"))
-        if node.reuse is not None and version not in {4, 5, 6}:
-            errors.append(_error(f"Snell version {version} does not support reuse", "reuse"))
-        if node.udp_port is not None:
-            if not isinstance(node.udp_port, int) or isinstance(node.udp_port, bool) or not 1 <= node.udp_port <= 65535:
-                errors.append(_error("udp_port must be between 1 and 65535", "udp_port"))
-            elif version < 3:
-                errors.append(_error(f"Snell version {version} does not support udp-port", "udp_port"))
-        if node.mode is not None:
-            if version != 6:
-                errors.append(_error("Snell mode is only supported by version 6", "mode"))
-            elif node.mode not in SURGE_SNELL_MODES:
-                errors.append(
-                    _error(
-                        "Snell mode must be one of "
-                        + ", ".join(sorted(SURGE_SNELL_MODES)),
-                        "mode",
-                    )
+        if shadow.version not in {2, 3}:
+            errors.append(
+                _error("Shadow TLS version must be 2 or 3", "shadow_tls.version")
+            )
+        if shadow.version == 3 and not shadow.server_name:
+            errors.append(
+                _error(
+                    "Shadow TLS version 3 requires shadow-tls-sni",
+                    "shadow_tls.server_name",
                 )
-        _validate_node_obfs_uri(node.obfs_uri, node.obfs, errors)
-    if isinstance(node, VlessNode):
-        errors.extend(_validate_vless(node))
+            )
+
     return errors
 
 
-def _validate_vless(node: VlessNode) -> list[IssueDraft]:
+def validate_vless(node: VlessNode) -> list[IssueDraft]:
     issues: list[IssueDraft] = []
     try:
         normalize_vless_uuid(node.uuid)
     except (ValueError, UnicodeError):
-        issues.append(_error("VLESS username must be a UUID or a string of 1 to 30 UTF-8 bytes", "uuid"))
+        issues.append(
+            _error(
+                "VLESS username must be a UUID or a string of 1 to 30 UTF-8 bytes",
+                "uuid",
+            )
+        )
     tls, transport = node.tls, node.transport
     if node.extra.get("encryption", "none") != "none":
         issues.append(_error("Surge VLESS only supports encryption=none", "encryption"))
     network = transport.network_value
     if network not in {"tcp", "ws", "grpc"}:
-        issues.append(_error("Surge VLESS supports TCP, WebSocket and gRPC", "transport.network"))
+        issues.append(
+            _error("Surge VLESS supports TCP, WebSocket and gRPC", "transport.network")
+        )
     if network == "grpc" and not tls.enabled:
         issues.append(_error("VLESS gRPC requires TLS or REALITY", "tls.enabled"))
     if node.flow is not None and (
         node.flow not in {"xtls-rprx-vision", "xtls-rprx-vision-udp443"}
-        or network != "tcp" or not tls.enabled
+        or network != "tcp"
+        or not tls.enabled
     ):
-        issues.append(_error("VLESS Vision requires TCP with TLS or REALITY and a supported flow", "flow"))
+        issues.append(
+            _error(
+                "VLESS Vision requires TCP with TLS or REALITY and a supported flow",
+                "flow",
+            )
+        )
     if node.packet_encoding not in {None, "xudp"}:
-        issues.append(_error("Surge VLESS only supports XUDP packet encoding", "packet_encoding"))
+        issues.append(
+            _error("Surge VLESS only supports XUDP packet encoding", "packet_encoding")
+        )
     if node.smux.enabled:
         issues.append(_error("Surge VLESS cannot preserve smux settings", "smux"))
-    for attr in ("path", "headers", "host", "xhttp_mode", "max_early_data", "early_data_header_name"):
+    for attr in (
+        "path",
+        "headers",
+        "host",
+        "xhttp_mode",
+        "max_early_data",
+        "early_data_header_name",
+    ):
         value = getattr(transport, attr)
         if value is not None and not (network == "ws" and attr in {"path", "headers"}):
-            issues.append(_error("Surge VLESS cannot preserve this transport field", f"transport.{attr}"))
+            issues.append(
+                _error(
+                    "Surge VLESS cannot preserve this transport field",
+                    f"transport.{attr}",
+                )
+            )
     if transport.method not in {None, "GET"}:
-        issues.append(_error("Surge VLESS cannot set the transport method", "transport.method"))
+        issues.append(
+            _error("Surge VLESS cannot set the transport method", "transport.method")
+        )
     if transport.path is not None and not isinstance(transport.path, str):
         issues.append(_error("VLESS WebSocket path must be a string", "transport.path"))
     if node.udp is False:
-        issues.append(IssueDraft(
-            severity=IssueSeverity.WARNING,
-            message="Surge VLESS enables XUDP automatically; UDP cannot be disabled per node",
-            field="udp", code="conversion.automatic-udp",
-        ))
+        issues.append(
+            IssueDraft(
+                severity=IssueSeverity.WARNING,
+                message="Surge VLESS enables XUDP automatically; UDP cannot be disabled per node",
+                field="udp",
+                code="conversion.automatic-udp",
+            )
+        )
     for attr in ("grpc_mode", "grpc_authority", "grpc_service_name"):
         value = getattr(transport, attr)
         if value is not None and network != "grpc":
-            issues.append(_error("gRPC parameters require the gRPC transport", f"transport.{attr}"))
+            issues.append(
+                _error(
+                    "gRPC parameters require the gRPC transport", f"transport.{attr}"
+                )
+            )
     if transport.grpc_mode is not None and (
-        not isinstance(transport.grpc_mode, str) or transport.grpc_mode not in {"gun", "multi"}
+        not isinstance(transport.grpc_mode, str)
+        or transport.grpc_mode not in {"gun", "multi"}
     ):
         issues.append(_error("gRPC mode must be gun or multi", "transport.grpc_mode"))
     if tls.client_fingerprint:
-        issues.append(IssueDraft(
-            severity=IssueSeverity.WARNING,
-            message="Surge uses its own TLS ClientHello and cannot select a client fingerprint",
-            field="tls.client_fingerprint", code="conversion.unsupported-platform-field",
-        ))
+        issues.append(
+            IssueDraft(
+                severity=IssueSeverity.WARNING,
+                message="Surge uses its own TLS ClientHello and cannot select a client fingerprint",
+                field="tls.client_fingerprint",
+                code="conversion.unsupported-platform-field",
+            )
+        )
     for attr in ("ech_opts", "certificate", "private_key"):
         if getattr(tls, attr):
-            issues.append(_error("Surge VLESS cannot preserve this TLS field", f"tls.{attr}"))
+            issues.append(
+                _error("Surge VLESS cannot preserve this TLS field", f"tls.{attr}")
+            )
     if not tls.enabled:
-        for attr in ("alpn", "skip_cert_verify", "client_fingerprint", "verify_name", "certificate_sha256", "client_cert_ref"):
+        for attr in (
+            "alpn",
+            "skip_cert_verify",
+            "client_fingerprint",
+            "verify_name",
+            "certificate_sha256",
+            "client_cert_ref",
+        ):
             if getattr(tls, attr):
-                issues.append(_error("This VLESS TLS field requires TLS to be enabled", f"tls.{attr}"))
+                issues.append(
+                    _error(
+                        "This VLESS TLS field requires TLS to be enabled", f"tls.{attr}"
+                    )
+                )
     reality = tls.reality_opts
     if reality is not None:
         if not isinstance(reality, Mapping):
-            issues.append(_error("REALITY options must be a mapping", "tls.reality_opts"))
+            issues.append(
+                _error("REALITY options must be a mapping", "tls.reality_opts")
+            )
             return issues
         public_key = reality.get("public-key")
         try:
             if not isinstance(public_key, str) or not public_key:
                 raise ValueError
-            decoded = base64.b64decode(public_key + "=" * (-len(public_key) % 4), altchars=b"-_", validate=True)
+            decoded = base64.b64decode(
+                public_key + "=" * (-len(public_key) % 4), altchars=b"-_", validate=True
+            )
             if len(decoded) != 32:
                 raise ValueError
         except (ValueError, binascii.Error):
-            issues.append(_error("REALITY requires a Base64 X25519 public key of 32 bytes", "tls.reality_opts.public-key"))
+            issues.append(
+                _error(
+                    "REALITY requires a Base64 X25519 public key of 32 bytes",
+                    "tls.reality_opts.public-key",
+                )
+            )
         short_id = reality.get("short-id", "")
-        if not isinstance(short_id, str) or re.fullmatch(r"[0-9a-fA-F]{0,16}", short_id) is None:
-            issues.append(_error("REALITY short ID must contain up to 16 hexadecimal digits", "tls.reality_opts.short-id"))
+        if (
+            not isinstance(short_id, str)
+            or re.fullmatch(r"[0-9a-fA-F]{0,16}", short_id) is None
+        ):
+            issues.append(
+                _error(
+                    "REALITY short ID must contain up to 16 hexadecimal digits",
+                    "tls.reality_opts.short-id",
+                )
+            )
         for key in reality.keys() - {"public-key", "short-id"}:
-            issues.append(_error("Surge VLESS cannot preserve this REALITY option", f"tls.reality_opts.{key}"))
+            issues.append(
+                _error(
+                    "Surge VLESS cannot preserve this REALITY option",
+                    f"tls.reality_opts.{key}",
+                )
+            )
         if not tls.enabled:
             issues.append(_error("REALITY requires TLS to be enabled", "tls.enabled"))
         valid_sni = False
         if isinstance(tls.server_name, str):
             try:
-                hostname = tls.server_name.encode("idna").decode("ascii").removesuffix(".")
+                hostname = (
+                    tls.server_name.encode("idna").decode("ascii").removesuffix(".")
+                )
                 valid_sni = 0 < len(hostname) <= 253 and all(
-                    re.fullmatch(r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?", label)
+                    re.fullmatch(
+                        r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?", label
+                    )
                     for label in hostname.split(".")
                 )
             except UnicodeError:
                 pass
         if not valid_sni or tls.server_name == "off" or tls.sni_disabled:
-            issues.append(_error("REALITY requires a valid SNI hostname", "tls.server_name"))
+            issues.append(
+                _error("REALITY requires a valid SNI hostname", "tls.server_name")
+            )
         if network == "ws":
-            issues.append(_error("Surge VLESS does not support WebSocket with REALITY", "transport.network"))
-        for attr in ("skip_cert_verify", "certificate_sha256", "verify_name", "client_cert_ref"):
+            issues.append(
+                _error(
+                    "Surge VLESS does not support WebSocket with REALITY",
+                    "transport.network",
+                )
+            )
+        for attr in (
+            "skip_cert_verify",
+            "certificate_sha256",
+            "verify_name",
+            "client_cert_ref",
+        ):
             if getattr(tls, attr):
-                issues.append(_error("REALITY cannot apply this certificate verification setting", f"tls.{attr}"))
+                issues.append(
+                    _error(
+                        "REALITY cannot apply this certificate verification setting",
+                        f"tls.{attr}",
+                    )
+                )
     return issues
 
 
@@ -606,3 +704,71 @@ def _validate_node_obfs_uri(
         _validate_obfs_uri(value, "obfs-uri", obfs)
     except ValueError as exc:
         errors.append(_error(str(exc), "obfs_uri"))
+
+
+def validate_http_fields(node: HttpNode) -> list[IssueDraft]:
+    errors: list[IssueDraft] = []
+    _check_bool(node.always_use_connect, "always_use_connect", errors)
+    if node.variant == HttpVariant.H2_CONNECT and node.always_use_connect is not None:
+        errors.append(
+            _error(
+                "always_use_connect is only supported by Surge http/https",
+                "always_use_connect",
+            )
+        )
+    return errors
+
+
+def validate_shadowsocks_fields(node: ShadowsocksNode) -> list[IssueDraft]:
+    errors: list[IssueDraft] = []
+    if node.udp_port is not None and (
+        not isinstance(node.udp_port, int)
+        or isinstance(node.udp_port, bool)
+        or not 1 <= node.udp_port <= 65535
+    ):
+        errors.append(_error("udp_port must be between 1 and 65535", "udp_port"))
+    obfs_mode = None
+    if node.plugin == "obfs" and isinstance(node.plugin_opts, Mapping):
+        obfs_mode = node.plugin_opts.get("mode")
+    elif node.plugin:
+        obfs_mode = node.plugin
+    _validate_node_obfs_uri(node.obfs_uri, obfs_mode, errors)
+    return errors
+
+
+def validate_snell_fields(node: SnellNode) -> list[IssueDraft]:
+    errors: list[IssueDraft] = []
+    version = node.version or 1
+    if node.version is not None and node.version not in SURGE_SNELL_VERSIONS:
+        errors.append(_error("Snell version must be between 1 and 6", "version"))
+    if node.reuse is not None and version not in {4, 5, 6}:
+        errors.append(
+            _error(f"Snell version {version} does not support reuse", "reuse")
+        )
+    if node.udp_port is not None:
+        if (
+            not isinstance(node.udp_port, int)
+            or isinstance(node.udp_port, bool)
+            or not 1 <= node.udp_port <= 65535
+        ):
+            errors.append(_error("udp_port must be between 1 and 65535", "udp_port"))
+        elif version < 3:
+            errors.append(
+                _error(f"Snell version {version} does not support udp-port", "udp_port")
+            )
+    if node.mode is not None:
+        if version != 6:
+            errors.append(_error("Snell mode is only supported by version 6", "mode"))
+        elif node.mode not in SURGE_SNELL_MODES:
+            errors.append(
+                _error(
+                    "Snell mode must be one of " + ", ".join(sorted(SURGE_SNELL_MODES)),
+                    "mode",
+                )
+            )
+    _validate_node_obfs_uri(node.obfs_uri, node.obfs, errors)
+    return errors
+
+
+def validate_surge_node(node: VlessNode) -> list[IssueDraft]:
+    return validate_surge_common(node) + validate_vless(node)

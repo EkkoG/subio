@@ -152,6 +152,24 @@ def _surge_target(policy):
     return make_target(policy)
 
 
+def _clash_target(policy):
+    from subio_v2.adapters.clash_family.target import make_target
+
+    return make_target("clash", policy)
+
+
+def _stash_target(policy):
+    from subio_v2.adapters.clash_family.target import make_target
+
+    return make_target("stash", policy)
+
+
+def _singbox_target(policy):
+    from subio_v2.adapters.singbox.target import make_target
+
+    return make_target(policy)
+
+
 def _dae_target(policy):
     from subio_v2.adapters.links.target import make_target
 
@@ -180,6 +198,7 @@ _FORMAT_SPECS = (
         replacement="mihomo",
         parser_factory=_clash_parser_for_clash,
         emitter_factory=_clash_emitter_for_clash,
+        target_factory=_clash_target,
         common_policy=TargetCommonPolicy(tfo=False, mptcp=False, dialer_proxy=False),
         parameterized_input=True,
     ),
@@ -187,6 +206,7 @@ _FORMAT_SPECS = (
         "stash",
         parser_factory=_stash_parser,
         emitter_factory=_stash_emitter,
+        target_factory=_stash_target,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=False, dialer_proxy=True),
     ),
     FormatSpec(
@@ -213,6 +233,7 @@ _FORMAT_SPECS = (
         "sing-box",
         parser_factory=_singbox_parser,
         emitter_factory=_singbox_emitter,
+        target_factory=_singbox_target,
         common_policy=TargetCommonPolicy(tfo=True, mptcp=True, dialer_proxy=True),
     ),
     FormatSpec("subio", parser_factory=_subio_parser, parameterized_input=True),
@@ -274,7 +295,9 @@ def get_parser(
     spec = get_format(format_name)
     if parameterized:
         if source_kind != "local" or spec is None or not spec.parameterized_input:
-            raise ValueError("Parameterized providers require a supported local file format")
+            raise ValueError(
+                "Parameterized providers require a supported local file format"
+            )
         if parameters is None:
             raise ValueError("Parameterized providers require runtime bindings")
     elif parameters is not None:
@@ -295,4 +318,8 @@ def get_emitter(format_name: str) -> Any | None:
 
 def get_target(format_name: str) -> Any | None:
     spec = get_format(format_name)
-    return spec.target_factory(spec.common_policy) if spec and spec.target_factory else None
+    return (
+        spec.target_factory(spec.common_policy)
+        if spec and spec.target_factory
+        else None
+    )

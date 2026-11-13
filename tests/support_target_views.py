@@ -2,55 +2,23 @@
 
 from __future__ import annotations
 
-import subio_v2.protocols as protocol_registry
-from subio_v2.adapters.catalog import (
-    all_formats,
-    common_policy_for_format,
-    normalize_format,
-)
-from subio_v2.adapters.links.codecs import all_codecs as all_link_codecs
-from subio_v2.adapters.singbox.endpoint import SINGBOX_ENDPOINT_CODECS
-from subio_v2.adapters.singbox.outbound import SINGBOX_OUTBOUND_CODECS
-from subio_v2.adapters.surge.codecs import SURGE_PROTOCOL_CODECS
-
-
-def _protocol_codecs(target: str):
-    if target in {"mihomo", "clash", "stash"}:
-        return {
-            codec.protocol: codec
-            for codec in protocol_registry.all()
-            if codec.supports_dialect(target)
-        }
-    if target == "surge":
-        return dict(SURGE_PROTOCOL_CODECS)
-    if target == "sing-box":
-        return {**SINGBOX_OUTBOUND_CODECS, **SINGBOX_ENDPOINT_CODECS}
-    return {
-        codec.protocol: codec for codec in all_link_codecs() if target in codec.targets
-    }
+from subio_v2.adapters.catalog import all_formats, get_target, normalize_format
 
 
 def all_platform_capabilities() -> dict[str, dict[str, object]]:
     result: dict[str, dict[str, object]] = {}
     for spec in all_formats():
         target = spec.name
-        policy = common_policy_for_format(target)
+        policy = spec.common_policy
         if policy is None:
             continue
-        codecs = _protocol_codecs(target)
+        codecs = get_target(target).codecs
         view: dict[str, object] = {
             "protocols": frozenset(protocol.value for protocol in codecs),
             "global_features": policy.as_feature_map(),
         }
         for protocol, codec in codecs.items():
-            if target in {"mihomo", "clash", "stash"}:
-                constraints = codec.target_constraints
-            elif target == "surge":
-                constraints = codec.target_constraints
-            elif target == "sing-box":
-                constraints = codec.target_constraints
-            else:
-                constraints = codec.target_constraints.get(target, {})
+            constraints = codec.target_constraints
             view[protocol.value] = dict(constraints)
         result[target] = view
     result["clash-meta"] = result["mihomo"]

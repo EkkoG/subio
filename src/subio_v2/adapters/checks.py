@@ -2,6 +2,7 @@
 
 from subio_v2.core.nodes import Node, SurgePolicyOptions
 from subio_v2.core.results import IssueDraft, IssueSeverity
+from subio_v2.core.dialect import extension_semantic_fields
 
 
 def grpc_parameters(node: Node) -> list[IssueDraft]:
@@ -51,7 +52,49 @@ def foreign_surge_options(node: Node) -> list[str]:
         fields.append("surge_options")
     if node.shadow_tls.enabled:
         fields.append("shadow_tls")
+    if getattr(node, "vmess_aead", False):
+        fields.append("vmess_aead")
+    if getattr(node, "always_use_connect", None) is not None:
+        fields.append("always_use_connect")
+    if getattr(node, "obfs_uri", None):
+        fields.append("obfs_uri")
     return fields
+
+
+def unsupported_grpc_parameters(node: Node, target: str) -> list[IssueDraft]:
+    issues = grpc_parameters(node)
+    transport = getattr(node, "transport", None)
+    for attr in ("grpc_mode", "grpc_authority"):
+        value = getattr(transport, attr, None)
+        if (
+            value is not None
+            and transport.network_value == "grpc"
+            and isinstance(value, str)
+            and (attr != "grpc_mode" or value in {"gun", "multi"})
+        ):
+            issues.append(
+                IssueDraft(
+                    IssueSeverity.ERROR,
+                    f"This gRPC field cannot be represented by {target}",
+                    f"transport.{attr}",
+                    code="conversion.unsupported-platform-field",
+                )
+            )
+    return issues
+
+
+def wireguard_peer_keepalive(node: Node) -> list[IssueDraft]:
+    fields = extension_semantic_fields(node.source_extensions.get("surge", {}))
+    if "wireguard.peers.keepalive" not in fields:
+        return []
+    return [
+        IssueDraft(
+            IssueSeverity.ERROR,
+            "This target cannot preserve different per-peer keepalive settings",
+            "persistent_keepalive",
+            code="conversion.unsupported-platform-field",
+        )
+    ]
 
 
 def ignored_fields(fields: list[str], target: str) -> list[IssueDraft]:

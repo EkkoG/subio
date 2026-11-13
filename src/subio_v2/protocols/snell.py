@@ -66,9 +66,7 @@ class SnellCodec(StructuredClashProtocolCodec):
     protocol = Protocol.SNELL
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "snell"
-    dialect_fields = {
-        "stash": stash_fields("psk", "version", "reuse", "obfs-opts")
-    }
+    dialect_fields = {"stash": stash_fields("psk", "version", "reuse", "obfs-opts")}
     target_constraints = {
         "mihomo": {
             "versions": {1, 2, 3, 4, 5},
@@ -155,7 +153,7 @@ class SnellCodec(StructuredClashProtocolCodec):
                     field="udp_port",
                 )
             )
-        if node.udp_port is not None and platform != "surge":
+        if node.udp_port is not None:
             warnings.append(
                 IssueDraft(
                     severity=IssueSeverity.ERROR,

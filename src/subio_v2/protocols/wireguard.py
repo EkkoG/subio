@@ -12,7 +12,15 @@ from subio_v2.protocols._dialects import stash_fields
 from subio_v2.protocols._fields import EmitPolicy, scalar_field, smux_group
 from subio_v2.protocols.spec import ProtocolSpec
 
-_PEER_KEYS = {"server", "port", "public-key", "pre-shared-key", "preshared-key", "reserved", "allowed-ips"}
+_PEER_KEYS = {
+    "server",
+    "port",
+    "public-key",
+    "pre-shared-key",
+    "preshared-key",
+    "reserved",
+    "allowed-ips",
+}
 
 
 def _decode_peers(value: Any) -> list[WireguardPeer] | None:
@@ -32,8 +40,7 @@ def _decode_peers(value: Any) -> list[WireguardPeer] | None:
                 server=peer.get("server", ""),
                 port=peer.get("port", 0),
                 public_key=peer.get("public-key", ""),
-                preshared_key=peer.get("pre-shared-key")
-                or peer.get("preshared-key"),
+                preshared_key=peer.get("pre-shared-key") or peer.get("preshared-key"),
                 reserved=peer.get("reserved"),
                 allowed_ips=allowed_ips,
             )
@@ -72,9 +79,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
         )
     if node.peers is not None and not isinstance(node.peers, list):
         errors.append(
-            NodeValidationError(
-                field="peers", message="WireGuard peers must be a list"
-            )
+            NodeValidationError(field="peers", message="WireGuard peers must be a list")
         )
     elif node.peers:
         for index, peer in enumerate(node.peers):
@@ -145,9 +150,32 @@ SPEC = ProtocolSpec(
     validator=_validate,
     node_class=WireguardNode,
     requires_endpoint=False,
-    user_override_fields=frozenset({"server", "port", "private_key", "public_key", "preshared_key"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "private_key", "public_key", "preshared_key"}),
-    terminal_native_fields=frozenset({"allowed_ips", "amnezia_wg_option", "dns_servers", "interface_ip", "interface_ipv6", "mtu", "peers", "persistent_keepalive", "preshared_key", "private_key", "public_key", "refresh_server_ip_interval", "remote_dns_resolve", "reserved", "smux", "workers"}),
+    user_override_fields=frozenset(
+        {"server", "port", "private_key", "public_key", "preshared_key"}
+    ),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "private_key", "public_key", "preshared_key"}
+    ),
+    terminal_native_fields=frozenset(
+        {
+            "allowed_ips",
+            "amnezia_wg_option",
+            "dns_servers",
+            "interface_ip",
+            "interface_ipv6",
+            "mtu",
+            "peers",
+            "persistent_keepalive",
+            "preshared_key",
+            "private_key",
+            "public_key",
+            "refresh_server_ip_interval",
+            "remote_dns_resolve",
+            "reserved",
+            "smux",
+            "workers",
+        }
+    ),
 )
 
 
@@ -162,24 +190,44 @@ class WireguardCodec(StructuredClashProtocolCodec):
     def after_parse(self, node: Node, data: dict[str, Any]) -> Node:
         raw = data.get("peers")
         if isinstance(raw, list):
-            unknown = [{key: copy.deepcopy(value) for key, value in peer.items() if key not in _PEER_KEYS} for peer in raw]
+            unknown = [
+                {
+                    key: copy.deepcopy(value)
+                    for key, value in peer.items()
+                    if key not in _PEER_KEYS
+                }
+                for peer in raw
+            ]
             if any(unknown):
-                node.source_extensions.setdefault(node.source_context.dialect, {}).update(
+                node.source_extensions.setdefault(
+                    node.source_context.dialect, {}
+                ).update(
                     peers=unknown,
-                    semantic_fields=[f"peers[{index}].{key}" for index, peer in enumerate(unknown) for key in peer],
+                    semantic_fields=[
+                        f"peers[{index}].{key}"
+                        for index, peer in enumerate(unknown)
+                        for key in peer
+                    ],
                 )
         return node
 
-    def emit_clash(self, node: Node, context: DialectContext | None = None) -> dict[str, Any]:
+    def emit_clash(
+        self, node: Node, context: DialectContext | None = None
+    ) -> dict[str, Any]:
         context = context or DialectContext("mihomo", "yaml")
         out = super().emit_clash(node, context)
-        if node.source_context and node.source_context.dialect == context.dialect and isinstance(out.get("peers"), list):
+        if (
+            node.source_context
+            and node.source_context.dialect == context.dialect
+            and isinstance(out.get("peers"), list)
+        ):
             unknown = node.source_extensions.get(context.dialect, {}).get("peers", [])
             for peer, extra in zip(out["peers"], unknown):
                 for key, value in extra.items():
                     if key not in _PEER_KEYS:
                         peer.setdefault(key, copy.deepcopy(value))
         return out
+
     dialect_fields = {
         "stash": stash_fields(
             "ip",
@@ -259,7 +307,9 @@ class WireguardCodec(StructuredClashProtocolCodec):
             out.pop("port", None)
         out["udp"] = True
 
-    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    def _check_peers(
+        self, node: Node, proto_caps: dict, platform: str
+    ) -> list[IssueDraft]:
         if platform == "stash" and isinstance(node, WireguardNode) and node.peers:
             return [
                 IssueDraft(
@@ -270,6 +320,13 @@ class WireguardCodec(StructuredClashProtocolCodec):
                 )
             ]
         return []
+
+    def check(self, node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+        from subio_v2.adapters.checks import wireguard_peer_keepalive
+
+        return wireguard_peer_keepalive(node) + self._check_peers(
+            node, proto_caps, platform
+        )
 
 
 CODEC = WireguardCodec()

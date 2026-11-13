@@ -57,9 +57,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
     for field in ("private_key", "public_key"):
         if not getattr(node, field):
             errors.append(
-                NodeValidationError(
-                    field, f"MASQUE {node.mode.value} requires {field}"
-                )
+                NodeValidationError(field, f"MASQUE {node.mode.value} requires {field}")
             )
     if node.mode == MasqueMode.CONNECT_IP and not (
         node.interface_ip or node.interface_ipv6
@@ -72,9 +70,7 @@ def _validate(node: Node) -> list[NodeValidationError]:
         )
     if node.mode == MasqueMode.H3_L4_PROXY and node.udp:
         errors.append(
-            NodeValidationError(
-                "udp", "Mihomo h3-l4proxy mode does not support UDP"
-            )
+            NodeValidationError("udp", "Mihomo h3-l4proxy mode does not support UDP")
         )
     return errors
 
@@ -83,9 +79,36 @@ SPEC = ProtocolSpec(
     protocol=Protocol.MASQUE,
     validator=_validate,
     node_class=MasqueNode,
-    user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "public_key"}),
-    terminal_native_user_override_fields=frozenset({"server", "port", "username", "password", "private_key", "public_key"}),
-    terminal_native_fields=frozenset({"bbr_profile", "congestion_controller", "connect_uri", "cwnd", "dns_servers", "handshake_timeout", "hop_interval", "interface_ip", "interface_ipv6", "mode", "mtu", "password", "ports", "private_key", "public_key", "remote_dns_resolve", "smux", "tls", "transport", "username"}),
+    user_override_fields=frozenset(
+        {"server", "port", "username", "password", "private_key", "public_key"}
+    ),
+    terminal_native_user_override_fields=frozenset(
+        {"server", "port", "username", "password", "private_key", "public_key"}
+    ),
+    terminal_native_fields=frozenset(
+        {
+            "bbr_profile",
+            "congestion_controller",
+            "connect_uri",
+            "cwnd",
+            "dns_servers",
+            "handshake_timeout",
+            "hop_interval",
+            "interface_ip",
+            "interface_ipv6",
+            "mode",
+            "mtu",
+            "password",
+            "ports",
+            "private_key",
+            "public_key",
+            "remote_dns_resolve",
+            "smux",
+            "tls",
+            "transport",
+            "username",
+        }
+    ),
 )
 
 
@@ -103,14 +126,27 @@ class MasqueCodec(StructuredClashProtocolCodec):
         if node.transport == "h3":
             data.setdefault("network", "h3")
         return data, ()
+
     protocol = Protocol.MASQUE
     clash_dialects = frozenset({"mihomo", "stash"})
     clash_type = "masque"
     dialect_fields = {
         "stash": stash_fields(
-            "name", "type", "server", "port", "private-key", "public-key",
-            "ip", "ipv6", "dns", "network", "sni", "connect-uri", "mtu",
-            "keepalive", endpoint=False,
+            "name",
+            "type",
+            "server",
+            "port",
+            "private-key",
+            "public-key",
+            "ip",
+            "ipv6",
+            "dns",
+            "network",
+            "sni",
+            "connect-uri",
+            "mtu",
+            "keepalive",
+            endpoint=False,
         )
     }
     fields = (
@@ -171,7 +207,6 @@ class MasqueCodec(StructuredClashProtocolCodec):
         if not isinstance(node, MasqueNode):
             return []
         supported_modes = {
-            "surge": {MasqueMode.FORWARD_PROXY},
             "mihomo": {MasqueMode.CONNECT_IP, MasqueMode.H3_L4_PROXY},
             "stash": {MasqueMode.CONNECT_IP},
         }.get(platform)
@@ -190,7 +225,6 @@ class MasqueCodec(StructuredClashProtocolCodec):
             return warnings
 
         supported_transports = {
-            "surge": {"h3"},
             "stash": {"h2", "h3"},
         }.get(platform)
         if (

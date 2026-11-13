@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import urllib.parse
 
 from subio_v2.adapters.links.codecs._base import (
@@ -31,9 +32,42 @@ def build(node: Node) -> str:
     return f"{url}#{quote_name(node.name)}"
 
 
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, TUICNode):
+        return []
+    warnings: list[IssueDraft] = []
+    actual_version = node.version
+    if actual_version is None:
+        if node.uuid or node.password:
+            actual_version = 5
+        elif node.token:
+            actual_version = 4
+    if actual_version:
+        supported_versions = proto_caps.get("versions", set())
+        if supported_versions and actual_version not in supported_versions:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=f"TUIC version {actual_version} is not supported by {platform}",
+                    field="version",
+                    suggestion=f"Supported versions: {', '.join((str(v) for v in sorted(supported_versions)))}",
+                )
+            )
+    if node.dialer_proxy and node.ports:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message="TUIC port hopping cannot be combined with underlying-proxy",
+                field="ports",
+            )
+        )
+    return warnings
+
+
 CODEC = LinkCodec(
     Protocol.TUIC,
     frozenset({"dae"}),
     build,
+    check=check,
     target_constraints={"dae": {"versions": {5}}},
 )

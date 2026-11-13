@@ -42,7 +42,11 @@ def test_target_validation_no_longer_constructs_capability_snapshots():
     clash_emitter = (
         Path(__file__).parents[1] / "src/subio_v2/adapters/clash_family/emitter.py"
     ).read_text()
-    assert "protocol_registry.target_codec" in clash_emitter
+    assert "protocol_registry" not in clash_emitter
+    assert "_check_legacy" not in source
+    assert "_check_common_target_fields" not in source
+    assert "isinstance(node, VlessNode)" not in source
+    assert "SURGE_PROTOCOL_CODECS" not in source
 
 
 def test_clash_target_validation_can_return_one_checked_encode_result():
@@ -53,9 +57,8 @@ def test_clash_target_validation_can_return_one_checked_encode_result():
         cipher="aes-256-gcm",
         password="password",
     )
-    result = TargetValidationService("mihomo").encode_node(
-        node, lambda item: {"name": item.name}
-    )
+    result = TargetValidationService("mihomo").encode_node(node)
     assert result.supported_node is node
-    assert result.content == {"name": "ss"}
+    assert result.content[0]["name"] == "ss"
+    assert result.content[0]["cipher"] == "aes-256-gcm"
     assert result.issues == []

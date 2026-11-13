@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import fields
 from typing import Any
 
@@ -247,12 +248,18 @@ class SingBoxOutboundCodec:
         protocol_keys: frozenset[str],
         allowed_node_fields: frozenset[str],
         *,
+        parse_fields: Callable[[dict[str, Any]], dict[str, Any]],
+        emit_fields: Callable[[dict[str, Any], Node], None],
+        check_fields: Callable[[Node], list[str]] = lambda node: [],
         endpoint: bool = True,
         network: bool = False,
         tcp_only: bool = False,
         force_tls: bool = False,
         common_options: bool = True,
     ):
+        self.parse_fields = parse_fields
+        self.emit_fields = emit_fields
+        self.check_fields = check_fields
         self.singbox_type = singbox_type
         self.protocol = protocol
         self.node_class = node_class
@@ -309,195 +316,8 @@ class SingBoxOutboundCodec:
             "tfo": _optional_bool(data, "tcp_fast_open"),
             "mptcp": _optional_bool(data, "tcp_multi_path"),
         }
-        kwargs.update(self._parse_protocol_fields(data))
+        kwargs.update(self.parse_fields(data))
         return self.node_class(**kwargs)
-
-    def _parse_protocol_fields(self, data: dict[str, Any]) -> dict[str, Any]:
-        protocol = self.protocol
-        if protocol == Protocol.ANYTLS:
-            return {
-                "password": _optional_string(data, "password") or "",
-                "tls": _parse_tls(data.get("tls"), force_enabled=True),
-            }
-        if protocol == Protocol.REJECT:
-            return {"mode": RejectMode.REJECT}
-        if protocol == Protocol.DIRECT:
-            return {}
-        if protocol == Protocol.HTTP:
-            return {
-                "username": _optional_string(data, "username"),
-                "password": _optional_string(data, "password"),
-                "tls": _parse_tls(data.get("tls"), force_enabled=False),
-            }
-        if protocol == Protocol.HYSTERIA:
-            return {
-                "auth": _optional_string(data, "auth"),
-                "auth_str": _optional_string(data, "auth_str"),
-                "obfs": _optional_string(data, "obfs"),
-                "tls": _parse_tls(data.get("tls"), force_enabled=True),
-            }
-        if protocol == Protocol.HYSTERIA2:
-            return {
-                "password": _optional_string(data, "password") or "",
-                "tls": _parse_tls(data.get("tls"), force_enabled=True),
-            }
-        if protocol == Protocol.NAIVE:
-            return {
-                "username": _optional_string(data, "username"),
-                "password": _optional_string(data, "password"),
-                "tls": _parse_tls(data.get("tls"), force_enabled=True),
-            }
-        if protocol == Protocol.SHADOWSOCKS:
-            return {
-                "cipher": _optional_enum_string(data, "method", _SHADOWSOCKS_METHODS)
-                or "",
-                "password": _optional_string(data, "password") or "",
-            }
-        if protocol == Protocol.SHADOWTLS:
-            version = _optional_int(data, "version") or 1
-            if version not in {1, 2, 3}:
-                raise SingBoxCodecError(
-                    "version",
-                    "ShadowTLS version must be 1, 2, or 3",
-                    "parse.singbox.invalid-field",
-                )
-            password = _optional_string(data, "password")
-            if version == 1 and password:
-                raise SingBoxCodecError(
-                    "password",
-                    "ShadowTLS v1 does not support a password",
-                    "parse.singbox.unsupported-protocol-variant",
-                )
-            if "tls" not in data:
-                raise SingBoxCodecError(
-                    "tls",
-                    "ShadowTLS requires an enabled TLS object",
-                    "parse.singbox.invalid-field",
-                )
-            tls = _parse_tls(data["tls"], force_enabled=True)
-            if not tls.enabled:
-                raise SingBoxCodecError(
-                    "tls.enabled",
-                    "ShadowTLS requires TLS to be enabled",
-                    "parse.singbox.unsupported-protocol-variant",
-                )
-            return {
-                "version": version,
-                "password": password,
-                "tls": tls,
-            }
-        if protocol == Protocol.SNELL:
-            version = _optional_int(data, "version")
-            if version not in {4, 6}:
-                raise SingBoxCodecError(
-                    "version",
-                    "Sing-box Snell version must be 4 or 6",
-                    "parse.singbox.unsupported-protocol-variant",
-                )
-            out = {
-                "psk": _optional_string(data, "psk") or "",
-                "version": version,
-                "reuse": data.get("reuse"),
-            }
-            if "reuse" in data and type(data["reuse"]) is not bool:
-                raise SingBoxCodecError(
-                    "reuse",
-                    "Sing-box field 'reuse' must be a boolean",
-                    "parse.singbox.invalid-field",
-                )
-            if version == 4:
-                if "mode" in data:
-                    raise SingBoxCodecError(
-                        "mode",
-                        "Sing-box Snell v4 does not support mode",
-                        "parse.singbox.unsupported-protocol-variant",
-                    )
-                out["obfs"] = _optional_enum_string(
-                    data, "obfs_mode", _SNELL_V4_OBFS_MODES
-                )
-                out["obfs_host"] = _optional_string(data, "obfs_host")
-            else:
-                for field in ("obfs_mode", "obfs_host"):
-                    if field in data:
-                        raise SingBoxCodecError(
-                            field,
-                            f"Sing-box Snell v6 does not support {field}",
-                            "parse.singbox.unsupported-protocol-variant",
-                        )
-                out["mode"] = _optional_enum_string(data, "mode", _SNELL_V6_MODES)
-            return out
-        if protocol == Protocol.SOCKS5:
-            version = _optional_string(data, "version") or "5"
-            if version != "5":
-                raise SingBoxCodecError(
-                    "version",
-                    "Only SOCKS5 can be represented by the SubIO SOCKS node",
-                    "parse.singbox.unsupported-protocol-variant",
-                )
-            return {
-                "username": _optional_string(data, "username"),
-                "password": _optional_string(data, "password"),
-            }
-        if protocol == Protocol.SSH:
-            private_key = data.get("private_key")
-            if private_key is not None and not isinstance(private_key, str):
-                raise SingBoxCodecError(
-                    "private_key",
-                    "SSH private_key arrays are not supported",
-                    "parse.singbox.unsupported-field",
-                )
-            host_key = None
-            if "host_key" in data:
-                host_key = _string_list(data["host_key"], "host_key")
-            algorithms = None
-            if "host_key_algorithms" in data:
-                algorithms = _string_list(
-                    data["host_key_algorithms"], "host_key_algorithms"
-                )
-            return {
-                "username": _optional_string(data, "user") or "",
-                "password": _optional_string(data, "password"),
-                "private_key": private_key,
-                "private_key_passphrase": _optional_string(
-                    data, "private_key_passphrase"
-                ),
-                "host_key": host_key,
-                "host_key_algorithms": algorithms,
-            }
-        if protocol == Protocol.TROJAN:
-            return {
-                "password": _optional_string(data, "password") or "",
-                "tls": _parse_tls(data.get("tls"), force_enabled=False),
-            }
-        if protocol == Protocol.TUIC:
-            return {
-                "uuid": _optional_string(data, "uuid"),
-                "password": _optional_string(data, "password"),
-                "version": 5,
-                "tls": _parse_tls(data.get("tls"), force_enabled=True),
-            }
-        if protocol == Protocol.VLESS:
-            return {
-                "uuid": _optional_string(data, "uuid") or "",
-                "flow": _optional_string(data, "flow"),
-                "packet_encoding": _optional_string(data, "packet_encoding"),
-                "tls": _parse_tls(data.get("tls"), force_enabled=False),
-            }
-        if protocol == Protocol.VMESS:
-            return {
-                "uuid": _optional_string(data, "uuid") or "",
-                "cipher": _optional_enum_string(
-                    data, "security", _VMESS_SECURITY_VALUES
-                )
-                or "auto",
-                "alter_id": _optional_int(data, "alter_id") or 0,
-                "global_padding": _optional_bool(data, "global_padding"),
-                "packet_encoding": _optional_enum_string(
-                    data, "packet_encoding", _VMESS_PACKET_ENCODINGS
-                ),
-                "tls": _parse_tls(data.get("tls"), force_enabled=False),
-            }
-        raise TypeError(f"No sing-box parser for {protocol.value}")
 
     def check(self, node: Node) -> list[IssueDraft]:
         if not isinstance(node, self.node_class):
@@ -536,47 +356,12 @@ class SingBoxOutboundCodec:
             )
             if self.force_tls and not tls.enabled:
                 unsupported.append("tls.enabled")
-        if isinstance(node, RejectNode) and node.mode != RejectMode.REJECT:
-            unsupported.append("mode")
         if self.common_options and node.routing_mark is not None:
             if type(node.routing_mark) is not int or not (
                 0 <= node.routing_mark <= _ROUTING_MARK_MAX
             ):
                 unsupported.append("routing_mark")
-        if (
-            isinstance(node, ShadowsocksNode)
-            and node.cipher not in _SHADOWSOCKS_METHODS
-        ):
-            unsupported.append("cipher")
-        if isinstance(node, SnellNode):
-            if node.version not in {4, 6}:
-                unsupported.append("version")
-            elif node.version == 4 and node.obfs not in {None, *_SNELL_V4_OBFS_MODES}:
-                unsupported.append("obfs")
-            elif node.version == 4 and node.mode is not None:
-                unsupported.append("mode")
-            elif node.version == 6:
-                if node.mode not in {None, *_SNELL_V6_MODES}:
-                    unsupported.append("mode")
-                if node.obfs is not None:
-                    unsupported.append("obfs")
-                if node.obfs_host is not None:
-                    unsupported.append("obfs_host")
-        if isinstance(node, ShadowTLSNode):
-            if node.version not in {1, 2, 3}:
-                unsupported.append("version")
-            if node.version == 1 and node.password:
-                unsupported.append("password")
-        if isinstance(node, TUICNode) and (node.version not in {None, 5} or node.token):
-            unsupported.append("version")
-        if isinstance(node, VmessNode):
-            if node.cipher not in _VMESS_SECURITY_VALUES:
-                unsupported.append("cipher")
-            if (
-                node.packet_encoding is not None
-                and node.packet_encoding not in _VMESS_PACKET_ENCODINGS
-            ):
-                unsupported.append("packet_encoding")
+        unsupported.extend(self.check_fields(node))
         return [
             IssueDraft(
                 IssueSeverity.ERROR,
@@ -609,104 +394,401 @@ class SingBoxOutboundCodec:
                 out["tcp_multi_path"] = True
         if self.network and not node.udp:
             out["network"] = "tcp"
-        self._emit_protocol_fields(out, node)
+        self.emit_fields(out, node)
         return out
 
-    def _emit_protocol_fields(self, out: dict[str, Any], node: Node) -> None:
-        if isinstance(node, AnyTLSNode):
-            out["password"] = node.password
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, (RejectNode, DirectNode)):
-            return
-        elif isinstance(node, HttpNode):
-            if node.username:
-                out["username"] = node.username
-            if node.password:
-                out["password"] = node.password
-            if node.tls.enabled or node.tls.server_name or node.tls.alpn:
-                out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, HysteriaNode):
-            if node.auth:
-                out["auth"] = node.auth
-            if node.auth_str:
-                out["auth_str"] = node.auth_str
-            if node.obfs:
-                out["obfs"] = node.obfs
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, Hysteria2Node):
-            out["password"] = node.password
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, NaiveNode):
-            if node.username:
-                out["username"] = node.username
-            if node.password:
-                out["password"] = node.password
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, ShadowsocksNode):
-            out["method"] = node.cipher
-            out["password"] = node.password
-        elif isinstance(node, ShadowTLSNode):
-            out["version"] = node.version
-            if node.password:
-                out["password"] = node.password
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, SnellNode):
-            out["version"] = node.version
-            out["psk"] = node.psk
-            if node.reuse is not None:
-                out["reuse"] = node.reuse
-            if node.version == 4:
-                if node.obfs:
-                    out["obfs_mode"] = node.obfs
-                if node.obfs_host:
-                    out["obfs_host"] = node.obfs_host
-            elif node.mode:
-                out["mode"] = node.mode
-        elif isinstance(node, Socks5Node):
-            out["version"] = "5"
-            if node.username:
-                out["username"] = node.username
-            if node.password:
-                out["password"] = node.password
-        elif isinstance(node, SSHNode):
-            out["user"] = node.username
-            if node.password:
-                out["password"] = node.password
-            if node.private_key:
-                out["private_key"] = node.private_key
-            if node.private_key_passphrase:
-                out["private_key_passphrase"] = node.private_key_passphrase
-            if node.host_key:
-                out["host_key"] = list(node.host_key)
-            if node.host_key_algorithms:
-                out["host_key_algorithms"] = list(node.host_key_algorithms)
-        elif isinstance(node, TrojanNode):
-            out["password"] = node.password
-            if node.tls.enabled or node.tls.server_name or node.tls.alpn:
-                out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, TUICNode):
-            out["uuid"] = node.uuid
-            out["password"] = node.password
-            out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, VlessNode):
-            out["uuid"] = node.uuid
-            if node.flow:
-                out["flow"] = node.flow
-            if node.packet_encoding:
-                out["packet_encoding"] = node.packet_encoding
-            if node.tls.enabled or node.tls.server_name or node.tls.alpn:
-                out["tls"] = _emit_tls(node.tls)
-        elif isinstance(node, VmessNode):
-            out["uuid"] = node.uuid
-            out["security"] = node.cipher
-            if node.alter_id:
-                out["alter_id"] = node.alter_id
-            if node.global_padding:
-                out["global_padding"] = True
-            if node.packet_encoding:
-                out["packet_encoding"] = node.packet_encoding
-            if node.tls.enabled or node.tls.server_name or node.tls.alpn:
-                out["tls"] = _emit_tls(node.tls)
+
+def _parse_anytls(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "password": _optional_string(data, "password") or "",
+        "tls": _parse_tls(data.get("tls"), force_enabled=True),
+    }
+
+
+def _parse_reject(data: dict[str, Any]) -> dict[str, Any]:
+    return {"mode": RejectMode.REJECT}
+
+
+def _parse_direct(data: dict[str, Any]) -> dict[str, Any]:
+    return {}
+
+
+def _parse_http(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "username": _optional_string(data, "username"),
+        "password": _optional_string(data, "password"),
+        "tls": _parse_tls(data.get("tls"), force_enabled=False),
+    }
+
+
+def _parse_hysteria(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "auth": _optional_string(data, "auth"),
+        "auth_str": _optional_string(data, "auth_str"),
+        "obfs": _optional_string(data, "obfs"),
+        "tls": _parse_tls(data.get("tls"), force_enabled=True),
+    }
+
+
+def _parse_hysteria2(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "password": _optional_string(data, "password") or "",
+        "tls": _parse_tls(data.get("tls"), force_enabled=True),
+    }
+
+
+def _parse_naive(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "username": _optional_string(data, "username"),
+        "password": _optional_string(data, "password"),
+        "tls": _parse_tls(data.get("tls"), force_enabled=True),
+    }
+
+
+def _parse_shadowsocks(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "cipher": _optional_enum_string(data, "method", _SHADOWSOCKS_METHODS) or "",
+        "password": _optional_string(data, "password") or "",
+    }
+
+
+def _parse_shadowtls(data: dict[str, Any]) -> dict[str, Any]:
+    version = _optional_int(data, "version") or 1
+    if version not in {1, 2, 3}:
+        raise SingBoxCodecError(
+            "version",
+            "ShadowTLS version must be 1, 2, or 3",
+            "parse.singbox.invalid-field",
+        )
+    password = _optional_string(data, "password")
+    if version == 1 and password:
+        raise SingBoxCodecError(
+            "password",
+            "ShadowTLS v1 does not support a password",
+            "parse.singbox.unsupported-protocol-variant",
+        )
+    if "tls" not in data:
+        raise SingBoxCodecError(
+            "tls",
+            "ShadowTLS requires an enabled TLS object",
+            "parse.singbox.invalid-field",
+        )
+    tls = _parse_tls(data["tls"], force_enabled=True)
+    if not tls.enabled:
+        raise SingBoxCodecError(
+            "tls.enabled",
+            "ShadowTLS requires TLS to be enabled",
+            "parse.singbox.unsupported-protocol-variant",
+        )
+    return {
+        "version": version,
+        "password": password,
+        "tls": tls,
+    }
+
+
+def _parse_snell(data: dict[str, Any]) -> dict[str, Any]:
+    version = _optional_int(data, "version")
+    if version not in {4, 6}:
+        raise SingBoxCodecError(
+            "version",
+            "Sing-box Snell version must be 4 or 6",
+            "parse.singbox.unsupported-protocol-variant",
+        )
+    out = {
+        "psk": _optional_string(data, "psk") or "",
+        "version": version,
+        "reuse": data.get("reuse"),
+    }
+    if "reuse" in data and type(data["reuse"]) is not bool:
+        raise SingBoxCodecError(
+            "reuse",
+            "Sing-box field 'reuse' must be a boolean",
+            "parse.singbox.invalid-field",
+        )
+    if version == 4:
+        if "mode" in data:
+            raise SingBoxCodecError(
+                "mode",
+                "Sing-box Snell v4 does not support mode",
+                "parse.singbox.unsupported-protocol-variant",
+            )
+        out["obfs"] = _optional_enum_string(data, "obfs_mode", _SNELL_V4_OBFS_MODES)
+        out["obfs_host"] = _optional_string(data, "obfs_host")
+    else:
+        for field in ("obfs_mode", "obfs_host"):
+            if field in data:
+                raise SingBoxCodecError(
+                    field,
+                    f"Sing-box Snell v6 does not support {field}",
+                    "parse.singbox.unsupported-protocol-variant",
+                )
+        out["mode"] = _optional_enum_string(data, "mode", _SNELL_V6_MODES)
+    return out
+
+
+def _parse_socks5(data: dict[str, Any]) -> dict[str, Any]:
+    version = _optional_string(data, "version") or "5"
+    if version != "5":
+        raise SingBoxCodecError(
+            "version",
+            "Only SOCKS5 can be represented by the SubIO SOCKS node",
+            "parse.singbox.unsupported-protocol-variant",
+        )
+    return {
+        "username": _optional_string(data, "username"),
+        "password": _optional_string(data, "password"),
+    }
+
+
+def _parse_ssh(data: dict[str, Any]) -> dict[str, Any]:
+    private_key = data.get("private_key")
+    if private_key is not None and not isinstance(private_key, str):
+        raise SingBoxCodecError(
+            "private_key",
+            "SSH private_key arrays are not supported",
+            "parse.singbox.unsupported-field",
+        )
+    host_key = None
+    if "host_key" in data:
+        host_key = _string_list(data["host_key"], "host_key")
+    algorithms = None
+    if "host_key_algorithms" in data:
+        algorithms = _string_list(data["host_key_algorithms"], "host_key_algorithms")
+    return {
+        "username": _optional_string(data, "user") or "",
+        "password": _optional_string(data, "password"),
+        "private_key": private_key,
+        "private_key_passphrase": _optional_string(data, "private_key_passphrase"),
+        "host_key": host_key,
+        "host_key_algorithms": algorithms,
+    }
+
+
+def _parse_trojan(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "password": _optional_string(data, "password") or "",
+        "tls": _parse_tls(data.get("tls"), force_enabled=False),
+    }
+
+
+def _parse_tuic(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "uuid": _optional_string(data, "uuid"),
+        "password": _optional_string(data, "password"),
+        "version": 5,
+        "tls": _parse_tls(data.get("tls"), force_enabled=True),
+    }
+
+
+def _parse_vless(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "uuid": _optional_string(data, "uuid") or "",
+        "flow": _optional_string(data, "flow"),
+        "packet_encoding": _optional_string(data, "packet_encoding"),
+        "tls": _parse_tls(data.get("tls"), force_enabled=False),
+    }
+
+
+def _parse_vmess(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "uuid": _optional_string(data, "uuid") or "",
+        "cipher": _optional_enum_string(data, "security", _VMESS_SECURITY_VALUES)
+        or "auto",
+        "alter_id": _optional_int(data, "alter_id") or 0,
+        "global_padding": _optional_bool(data, "global_padding"),
+        "packet_encoding": _optional_enum_string(
+            data, "packet_encoding", _VMESS_PACKET_ENCODINGS
+        ),
+        "tls": _parse_tls(data.get("tls"), force_enabled=False),
+    }
+
+
+def _emit_anytls(out: dict[str, Any], node: Node) -> None:
+    out["password"] = node.password
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_reject(out: dict[str, Any], node: Node) -> None:
+    return
+
+
+def _emit_http(out: dict[str, Any], node: Node) -> None:
+    if node.username:
+        out["username"] = node.username
+    if node.password:
+        out["password"] = node.password
+    if node.tls.enabled or node.tls.server_name or node.tls.alpn:
+        out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_hysteria(out: dict[str, Any], node: Node) -> None:
+    if node.auth:
+        out["auth"] = node.auth
+    if node.auth_str:
+        out["auth_str"] = node.auth_str
+    if node.obfs:
+        out["obfs"] = node.obfs
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_hysteria2(out: dict[str, Any], node: Node) -> None:
+    out["password"] = node.password
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_naive(out: dict[str, Any], node: Node) -> None:
+    if node.username:
+        out["username"] = node.username
+    if node.password:
+        out["password"] = node.password
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_shadowsocks(out: dict[str, Any], node: Node) -> None:
+    out["method"] = node.cipher
+    out["password"] = node.password
+
+
+def _emit_shadowtls(out: dict[str, Any], node: Node) -> None:
+    out["version"] = node.version
+    if node.password:
+        out["password"] = node.password
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_snell(out: dict[str, Any], node: Node) -> None:
+    out["version"] = node.version
+    out["psk"] = node.psk
+    if node.reuse is not None:
+        out["reuse"] = node.reuse
+    if node.version == 4:
+        if node.obfs:
+            out["obfs_mode"] = node.obfs
+        if node.obfs_host:
+            out["obfs_host"] = node.obfs_host
+    elif node.mode:
+        out["mode"] = node.mode
+
+
+def _emit_socks5(out: dict[str, Any], node: Node) -> None:
+    out["version"] = "5"
+    if node.username:
+        out["username"] = node.username
+    if node.password:
+        out["password"] = node.password
+
+
+def _emit_ssh(out: dict[str, Any], node: Node) -> None:
+    out["user"] = node.username
+    if node.password:
+        out["password"] = node.password
+    if node.private_key:
+        out["private_key"] = node.private_key
+    if node.private_key_passphrase:
+        out["private_key_passphrase"] = node.private_key_passphrase
+    if node.host_key:
+        out["host_key"] = list(node.host_key)
+    if node.host_key_algorithms:
+        out["host_key_algorithms"] = list(node.host_key_algorithms)
+
+
+def _emit_trojan(out: dict[str, Any], node: Node) -> None:
+    out["password"] = node.password
+    if node.tls.enabled or node.tls.server_name or node.tls.alpn:
+        out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_tuic(out: dict[str, Any], node: Node) -> None:
+    out["uuid"] = node.uuid
+    out["password"] = node.password
+    out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_vless(out: dict[str, Any], node: Node) -> None:
+    out["uuid"] = node.uuid
+    if node.flow:
+        out["flow"] = node.flow
+    if node.packet_encoding:
+        out["packet_encoding"] = node.packet_encoding
+    if node.tls.enabled or node.tls.server_name or node.tls.alpn:
+        out["tls"] = _emit_tls(node.tls)
+
+
+def _emit_vmess(out: dict[str, Any], node: Node) -> None:
+    out["uuid"] = node.uuid
+    out["security"] = node.cipher
+    if node.alter_id:
+        out["alter_id"] = node.alter_id
+    if node.global_padding:
+        out["global_padding"] = True
+    if node.packet_encoding:
+        out["packet_encoding"] = node.packet_encoding
+    if node.tls.enabled or node.tls.server_name or node.tls.alpn:
+        out["tls"] = _emit_tls(node.tls)
+
+
+def _check_reject(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, RejectNode) and node.mode != RejectMode.REJECT:
+        unsupported.append("mode")
+    return unsupported
+
+
+def _check_shadowsocks(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, ShadowsocksNode) and node.cipher not in _SHADOWSOCKS_METHODS:
+        unsupported.append("cipher")
+    return unsupported
+
+
+def _check_snell(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, SnellNode):
+        if node.version not in {4, 6}:
+            unsupported.append("version")
+        elif node.version == 4 and node.obfs not in {None, *_SNELL_V4_OBFS_MODES}:
+            unsupported.append("obfs")
+        elif node.version == 4 and node.mode is not None:
+            unsupported.append("mode")
+        elif node.version == 6:
+            if node.mode not in {None, *_SNELL_V6_MODES}:
+                unsupported.append("mode")
+            if node.obfs is not None:
+                unsupported.append("obfs")
+            if node.obfs_host is not None:
+                unsupported.append("obfs_host")
+    return unsupported
+
+
+def _check_shadowtls(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, ShadowTLSNode):
+        if node.version not in {1, 2, 3}:
+            unsupported.append("version")
+        if node.version == 1 and node.password:
+            unsupported.append("password")
+    return unsupported
+
+
+def _check_tuic(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, TUICNode) and (node.version not in {None, 5} or node.token):
+        unsupported.append("version")
+    return unsupported
+
+
+def _check_vmess(node: Node) -> list[str]:
+    unsupported = []
+    if isinstance(node, VmessNode):
+        if node.cipher not in _VMESS_SECURITY_VALUES:
+            unsupported.append("cipher")
+        if (
+            node.packet_encoding is not None
+            and node.packet_encoding not in _VMESS_PACKET_ENCODINGS
+        ):
+            unsupported.append("packet_encoding")
+    return unsupported
 
 
 def _keys(*values: str) -> frozenset[str]:
@@ -720,6 +802,8 @@ _CODECS = (
         AnyTLSNode,
         _keys("password", "tls"),
         _keys("password", "tls"),
+        parse_fields=_parse_anytls,
+        emit_fields=_emit_anytls,
         tcp_only=True,
         force_tls=True,
     ),
@@ -729,12 +813,22 @@ _CODECS = (
         RejectNode,
         frozenset(),
         _keys("mode", "udp"),
+        parse_fields=_parse_reject,
+        emit_fields=_emit_reject,
+        check_fields=_check_reject,
         endpoint=False,
         tcp_only=True,
         common_options=False,
     ),
     SingBoxOutboundCodec(
-        "direct", Protocol.DIRECT, DirectNode, frozenset(), frozenset(), endpoint=False
+        "direct",
+        Protocol.DIRECT,
+        DirectNode,
+        frozenset(),
+        frozenset(),
+        parse_fields=_parse_direct,
+        emit_fields=_emit_reject,
+        endpoint=False,
     ),
     SingBoxOutboundCodec(
         "http",
@@ -742,6 +836,8 @@ _CODECS = (
         HttpNode,
         _keys("username", "password", "tls"),
         _keys("username", "password", "tls"),
+        parse_fields=_parse_http,
+        emit_fields=_emit_http,
         tcp_only=True,
     ),
     SingBoxOutboundCodec(
@@ -750,6 +846,8 @@ _CODECS = (
         HysteriaNode,
         _keys("auth", "auth_str", "obfs", "tls"),
         _keys("auth", "auth_str", "obfs", "tls"),
+        parse_fields=_parse_hysteria,
+        emit_fields=_emit_hysteria,
         force_tls=True,
     ),
     SingBoxOutboundCodec(
@@ -758,6 +856,8 @@ _CODECS = (
         Hysteria2Node,
         _keys("password", "tls"),
         _keys("password", "tls"),
+        parse_fields=_parse_hysteria2,
+        emit_fields=_emit_hysteria2,
         force_tls=True,
     ),
     SingBoxOutboundCodec(
@@ -766,6 +866,8 @@ _CODECS = (
         NaiveNode,
         _keys("username", "password", "tls"),
         _keys("username", "password", "tls"),
+        parse_fields=_parse_naive,
+        emit_fields=_emit_naive,
         tcp_only=True,
         force_tls=True,
     ),
@@ -775,6 +877,9 @@ _CODECS = (
         ShadowsocksNode,
         _keys("method", "password", "network"),
         _keys("cipher", "password"),
+        parse_fields=_parse_shadowsocks,
+        emit_fields=_emit_shadowsocks,
+        check_fields=_check_shadowsocks,
         network=True,
     ),
     SingBoxOutboundCodec(
@@ -783,6 +888,9 @@ _CODECS = (
         ShadowTLSNode,
         _keys("version", "password", "tls"),
         _keys("version", "password", "tls"),
+        parse_fields=_parse_shadowtls,
+        emit_fields=_emit_shadowtls,
+        check_fields=_check_shadowtls,
         tcp_only=True,
         force_tls=True,
     ),
@@ -792,6 +900,9 @@ _CODECS = (
         SnellNode,
         _keys("version", "psk", "reuse", "network", "obfs_mode", "obfs_host", "mode"),
         _keys("psk", "version", "reuse", "mode", "obfs", "obfs_host"),
+        parse_fields=_parse_snell,
+        emit_fields=_emit_snell,
+        check_fields=_check_snell,
         network=True,
     ),
     SingBoxOutboundCodec(
@@ -800,6 +911,8 @@ _CODECS = (
         Socks5Node,
         _keys("version", "username", "password", "network"),
         _keys("username", "password"),
+        parse_fields=_parse_socks5,
+        emit_fields=_emit_socks5,
         network=True,
     ),
     SingBoxOutboundCodec(
@@ -822,6 +935,8 @@ _CODECS = (
             "host_key",
             "host_key_algorithms",
         ),
+        parse_fields=_parse_ssh,
+        emit_fields=_emit_ssh,
         tcp_only=True,
     ),
     SingBoxOutboundCodec(
@@ -830,6 +945,8 @@ _CODECS = (
         TrojanNode,
         _keys("password", "network", "tls"),
         _keys("password", "tls"),
+        parse_fields=_parse_trojan,
+        emit_fields=_emit_trojan,
         network=True,
     ),
     SingBoxOutboundCodec(
@@ -838,6 +955,9 @@ _CODECS = (
         TUICNode,
         _keys("uuid", "password", "network", "tls"),
         _keys("uuid", "password", "version", "tls"),
+        parse_fields=_parse_tuic,
+        emit_fields=_emit_tuic,
+        check_fields=_check_tuic,
         network=True,
         force_tls=True,
     ),
@@ -847,6 +967,8 @@ _CODECS = (
         VlessNode,
         _keys("uuid", "flow", "network", "tls", "packet_encoding"),
         _keys("uuid", "flow", "tls", "packet_encoding"),
+        parse_fields=_parse_vless,
+        emit_fields=_emit_vless,
         network=True,
     ),
     SingBoxOutboundCodec(
@@ -863,6 +985,9 @@ _CODECS = (
             "packet_encoding",
         ),
         _keys("uuid", "alter_id", "cipher", "global_padding", "tls", "packet_encoding"),
+        parse_fields=_parse_vmess,
+        emit_fields=_emit_vmess,
+        check_fields=_check_vmess,
         network=True,
     ),
 )

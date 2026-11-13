@@ -1,3 +1,4 @@
+from subio_v2.core.results import IssueDraft, IssueSeverity
 import base64
 import urllib.parse
 
@@ -60,7 +61,9 @@ def parse(line: str) -> Node | None:
             else:
                 method = urllib.parse.unquote(url.username or "")
                 password = urllib.parse.unquote(url.password or "")
-        name = urllib.parse.unquote(url.fragment) if url.fragment else f"{server}:{port}"
+        name = (
+            urllib.parse.unquote(url.fragment) if url.fragment else f"{server}:{port}"
+        )
         query = urllib.parse.parse_qs(url.query)
         plugin_value = query.get("plugin", [None])[0]
         plugin = None
@@ -88,12 +91,52 @@ def parse(line: str) -> Node | None:
         return None
 
 
+def check(node: Node, proto_caps: dict, platform: str) -> list[IssueDraft]:
+    if not isinstance(node, ShadowsocksNode):
+        return []
+    warnings: list[IssueDraft] = []
+    if node.udp_port is not None:
+        warnings.append(
+            IssueDraft(
+                IssueSeverity.ERROR,
+                "This target cannot preserve a separate UDP port",
+                "udp_port",
+                code="conversion.unsupported-platform-field",
+            )
+        )
+    supported_ciphers = proto_caps.get("ciphers", set())
+    if node.cipher and node.cipher not in supported_ciphers:
+        warnings.append(
+            IssueDraft(
+                severity=IssueSeverity.ERROR,
+                message=f"Cipher '{node.cipher}' is not supported by {platform}",
+                field="cipher",
+                suggestion=f"Supported ciphers: {', '.join(sorted(supported_ciphers))}",
+            )
+        )
+    if node.plugin:
+        supported_plugins = proto_caps.get("plugins", set())
+        if node.plugin not in supported_plugins:
+            warnings.append(
+                IssueDraft(
+                    severity=IssueSeverity.ERROR,
+                    message=f"Plugin '{node.plugin}' is not supported by {platform}",
+                    field="plugin",
+                    suggestion=f"Supported plugins: {', '.join(sorted(supported_plugins))}"
+                    if supported_plugins
+                    else "No plugins supported",
+                )
+            )
+    return warnings
+
+
 CODEC = LinkCodec(
     Protocol.SHADOWSOCKS,
     frozenset({"dae", "v2rayn"}),
     build,
     schemes=frozenset({"ss"}),
     parse=parse,
+    check=check,
     target_constraints={
         "dae": {
             "ciphers": frozenset(

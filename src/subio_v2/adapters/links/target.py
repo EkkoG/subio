@@ -5,9 +5,10 @@ from subio_v2.adapters.checks import (
     grpc_parameters,
     ignored_fields,
     network_features,
+    unsupported_grpc_parameters,
 )
 from subio_v2.adapters.contracts import NodeTargetCodec, TargetAdapter
-from subio_v2.adapters.links.codecs import get_codec
+from subio_v2.adapters.links.codecs import all_codecs
 from subio_v2.core.dialect import DialectContext
 from subio_v2.core.nodes import Node, Protocol
 from subio_v2.core.results import IssueDraft, IssueSeverity
@@ -53,45 +54,25 @@ def check_link_fields(node: Node) -> list[IssueDraft]:
 
 
 def make_target(target: str, policy) -> TargetAdapter:
-    codec = get_codec(Protocol.VLESS)
-    constraints = codec.target_constraints[target]
+    def bind(codec):
+        constraints = codec.target_constraints.get(target, {})
+        grpc_check = (
+            grpc_parameters
+            if codec.protocol == Protocol.VLESS
+            else lambda node: unsupported_grpc_parameters(node, target)
+        )
 
-    def check_vless(node: Node) -> list[IssueDraft]:
-        issues = grpc_parameters(node)
-        network = node.transport.network_value
-        transports = constraints["transports"]
-        if network not in transports:
-            issues.append(
-                IssueDraft(
-                    IssueSeverity.ERROR,
-                    f"Transport '{network}' is not supported by {target}",
-                    "transport.network",
-                    suggestion=f"Supported transports: {', '.join(sorted(transports))}",
-                )
-            )
-        flows = constraints.get("flows", set())
-        if node.flow and node.flow not in flows:
-            issues.append(
-                IssueDraft(
-                    IssueSeverity.ERROR,
-                    f"Flow '{node.flow}' is not supported by {target}",
-                    "flow",
-                    suggestion=f"Supported flows: {', '.join(sorted(flows))}"
-                    if flows
-                    else "No flows supported",
-                )
-            )
-        if node.tls.reality_opts and "reality" not in constraints.get(
-            "features", set()
-        ):
-            issues.append(
-                IssueDraft(
-                    IssueSeverity.ERROR,
-                    f"Reality is not supported by {target}",
-                    "reality",
-                )
-            )
-        return issues
+        def check(node):
+            return codec.check(node, constraints, target)
+
+        return NodeTargetCodec(
+            codec.protocol,
+            check,
+            lambda node, _: codec.build(node),
+            constraints,
+            precheck=grpc_check,
+            check_common=common,
+        )
 
     def common(node: Node) -> list[IssueDraft]:
         fields = foreign_surge_options(node)
@@ -110,13 +91,9 @@ def make_target(target: str, policy) -> TargetAdapter:
     return TargetAdapter(
         DialectContext(target, "text"),
         {
-            codec.protocol: NodeTargetCodec(
-                codec.protocol,
-                check_vless,
-                lambda node, _: codec.build(node),
-                constraints,
-            )
+            codec.protocol: bind(codec)
+            for codec in all_codecs()
+            if target in codec.targets
         },
-        common,
-        "docs/support_matrix.md#13-surge-vless: implemented VLESS share-link contract",
+        "docs/support_matrix.md#13-surge-vless: implemented share-link contracts",
     )
