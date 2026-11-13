@@ -8,6 +8,9 @@ from subio_v2.main import main
 from subio_v2.core.errors import TemplateRenderError
 from subio_v2.infrastructure import age
 from subio_v2.infrastructure.logging import logger
+from subio_v2.workflow.config import ProviderConfig
+from subio_v2.workflow.providers import ProviderLoaderService
+from subio_v2.workflow.report import build_report, render_report
 
 
 CANARY = "PRIVATE_CANARY_'\\\"\u4e2d\u6587"
@@ -33,6 +36,55 @@ def test_recursive_port_diagnostic_keeps_sibling_without_password():
 ''')
     assert [node.name for node in parsed.nodes] == ["good"]
     assert "PRIVATE_CANARY" not in parsed.issues[0].message
+
+
+@pytest.mark.parametrize('family', ['mihomo', 'clash-meta', 'clash', 'stash'])
+@pytest.mark.parametrize('field,value', [
+    ('type', '{password: PRIVATE_CANARY}'),
+    ('type', '[{password: PRIVATE_CANARY}]'),
+    ('type', '*bad'), ('port', '*bad'), ('name', '*bad'), ('type', '123'),
+])
+def test_diagnostic_metadata_cannot_stringify_private_containers(family, field, value):
+    fields = {'name': 'bad', 'type': 'ss', 'server': 'example.test', 'port': '443',
+              'cipher': 'aes-128-gcm', 'password': 'PRIVATE_CANARY'}
+    fields[field] = value
+    document = 'proxies:\n  - &bad\n' + ''.join(
+        f'    {key}: {item}\n' for key, item in fields.items()
+    ) + '  - {name: good, type: ss, server: example.test, port: 443, cipher: aes-128-gcm, password: p}\n'
+    parsed = get_parser(family, source_kind='remote').parse_result(document)
+    assert [node.name for node in parsed.nodes] == ['good']
+    issue = parsed.issues[0]
+    assert (issue.code, issue.field, issue.stage) == ('parse.node', 'proxies[0]', 'parse')
+    assert issue.protocol == (None if field == 'type' else 'ss')
+    providers = ProviderLoaderService._finish_parse(
+        parsed, ProviderConfig(name='source', provider_type=family, url='https://example.test/nodes'), 'synthetic-digest',
+    )
+    report = build_report(providers)
+    assert report['issues'][0]['source'] == 'source'
+    for output_format in ('json', 'text'):
+        assert 'PRIVATE_CANARY' not in render_report(report, output_format)
+
+
+@pytest.mark.parametrize('command', [['check'], ['inspect', 'artifacts']])
+def test_real_json_report_does_not_echo_type_alias(tmp_path, monkeypatch, capsys, command):
+    (tmp_path / 'nodes.yaml').write_text('''proxies:
+  - &bad {name: bad, type: *bad, server: example.test, port: 443, password: PRIVATE_CANARY}
+  - {name: good, type: direct}
+''')
+    config = tmp_path / 'config.json'
+    config.write_text(json.dumps({
+        'provider': [{'name': 'source', 'type': 'mihomo', 'file': 'nodes.yaml'}],
+        'artifact': [{'name': 'out.yaml', 'type': 'mihomo', 'providers': ['source']}],
+    }))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, 'argv', ['subio', *command, str(config), '--format', 'json'])
+    assert main() == 1
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert report['issues'][0]['code'] == 'parse.node'
+    assert report['issues'][0]['protocol'] is None
+    assert 'PRIVATE_CANARY' not in captured.out + captured.err
+    assert not (tmp_path / 'dist').exists()
 
 
 @pytest.mark.parametrize("command", [["check"], ["inspect", "artifacts"]])

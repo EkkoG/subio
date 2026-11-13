@@ -89,7 +89,7 @@ class ClashParser:
                     ConversionIssue(
                         severity=IssueSeverity.ERROR,
                         node=proxy.get("name") if isinstance(proxy.get("name"), str) else None,
-                        protocol=str(proxy.get("type")) if proxy.get("type") else None,
+                        protocol=proxy.get("type") if isinstance(proxy.get("type"), str) else None,
                         source=None,
                         target=None,
                         field=f"proxies[{index}]",
