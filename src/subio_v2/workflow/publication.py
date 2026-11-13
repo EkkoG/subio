@@ -4,8 +4,9 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from subio_v2.core.errors import ArtifactGenerationError
-from subio_v2.infrastructure.files import set_private_permissions
+from subio_v2.infrastructure.files import filename_aliases, set_private_permissions
 from subio_v2.workflow.artifacts import ArtifactDraft
+from subio_v2.workflow.manifest import MANIFEST_NAME
 
 
 class ArtifactPublisher:
@@ -15,6 +16,14 @@ class ArtifactPublisher:
         prepared: list[tuple[str, Path]] = []
 
         try:
+            drafts = tuple(drafts)
+            filenames = [draft.filename for draft in drafts]
+            aliases = filename_aliases(dist_dir, [MANIFEST_NAME, *filenames])
+            if len(filenames) != len(set(filenames)) or any(
+                filename == MANIFEST_NAME or aliases[filename] != filename
+                for filename in filenames
+            ):
+                raise ArtifactGenerationError("Artifact filenames conflict with another output or the reserved manifest name")
             for draft in drafts:
                 filename, content = draft.filename, draft.content
                 target = dist_dir / filename

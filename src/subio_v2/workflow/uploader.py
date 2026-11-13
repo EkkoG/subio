@@ -4,9 +4,11 @@ import shutil
 import subprocess
 import tempfile
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from subio_v2.core.errors import UploadError
+from subio_v2.infrastructure.files import filename_aliases, set_private_permissions
 from subio_v2.infrastructure.logging import logger
 from subio_v2.workflow.artifacts import ArtifactUploadRequest
 from subio_v2.workflow.config import ArtifactConfig, UploadConfig, UploaderConfig
@@ -81,6 +83,12 @@ class GistBatchUploader:
         safe_filename = os.path.basename(file_name)
         if safe_filename != file_name or safe_filename in {".", ".."}:
             raise UploadError(f"Invalid upload filename: {file_name}")
+        try:
+            aliases = filename_aliases(Path(tempfile.gettempdir()), [".git", safe_filename])
+        except (OSError, ValueError) as exc:
+            raise UploadError(f"Cannot validate upload filename ({type(exc).__name__})") from exc
+        if aliases[safe_filename] == ".git":
+            raise UploadError("Upload filename conflicts with Git metadata")
 
         clean = self.clean_gist or uploader.clean
         if gist_id not in self._pending:
@@ -192,9 +200,19 @@ class GistBatchUploader:
 
             for filename, content in files.items():
                 file_path = os.path.join(repo_dir, filename)
-                with open(file_path, "w", encoding="utf-8") as output:
-                    output.write(content)
-                os.chmod(file_path, 0o600)
+                if os.path.isdir(file_path) and not os.path.islink(file_path):
+                    raise UploadError("Upload target is a directory")
+                fd, temporary = tempfile.mkstemp(prefix=".subio-upload-", dir=repo_dir)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as output:
+                        set_private_permissions(output.fileno(), temporary)
+                        output.write(content)
+                    os.replace(temporary, file_path)
+                finally:
+                    try:
+                        os.unlink(temporary)
+                    except FileNotFoundError:
+                        pass
 
             if clean:
                 self._run_git(["git", "-C", repo_dir, "add", "-u"], git_env, token)

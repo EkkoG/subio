@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from subio_v2.core.errors import ArtifactGenerationError
-from subio_v2.infrastructure.files import set_private_permissions
+from subio_v2.infrastructure.files import filename_aliases, set_private_permissions
 from subio_v2.workflow.artifacts import ArtifactSummary
 from subio_v2.workflow.providers import ProviderSummary
 
@@ -105,7 +105,9 @@ def managed_orphans(
     if previous is None:
         return ()
     artifacts = previous.get("artifacts", {})
-    orphaned = sorted(set(artifacts) - current_filenames - {MANIFEST_NAME})
+    aliases = filename_aliases(dist_dir, [MANIFEST_NAME, *sorted(current_filenames), *sorted(artifacts)])
+    protected = {aliases[name] for name in current_filenames | {MANIFEST_NAME}}
+    orphaned = sorted(name for name in artifacts if aliases[name] not in protected)
     for filename in orphaned:
         target = dist_dir / filename
         if (
