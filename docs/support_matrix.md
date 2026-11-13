@@ -125,6 +125,9 @@ Surge TUIC 省略版本时按凭据推断 v4/v5，校验和输出使用同一版
 MASQUE 跳跃间隔、TrustTunnel max-streams 必须为正整数，Tailscale MTU 范围为 576..1420。
 MASQUE 无法表示的 CONNECT-IP/平台专属字段、SSH 私钥解密口令与 AmneziaWG 选项返回字段级 ERROR。
 Surge 序列化拒绝所有会被文档解析器拆行的物理行分隔符。
+Surge WireGuard client-id 的三段字节和三字节 Base64 表示进入同一 reserved 模型；其他来源表示
+仅同方言保留，跨目标与未知 peer 字段一样给出来源字段诊断。共享 keepalive 应用到所有显式 peers，
+模型未覆盖时保留来源异构值。已消费参数只使用最终规范值，未知重复参数继续同方言保留。
 
 ## 2. 可分享规则集输入
 

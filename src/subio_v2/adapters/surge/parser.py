@@ -15,6 +15,7 @@ from subio_v2.adapters.surge.codecs import (
 )
 from subio_v2.adapters.surge.codecs._shared import (
     SurgeProtocolParseContext,
+    _client_id_bytes,
     _parameter_bool,
 )
 from subio_v2.adapters.surge.codecs.vless import validate_surge_node
@@ -122,6 +123,7 @@ class SurgeParser:
                         values=parameters.last_values,
                         tokens=parameters,
                     )
+                    keystore_errors.pop(key_id, None)
                 except (TypeError, ValueError) as exc:
                     keystore_errors[key_id] = f"line {index}: {exc}"
 
@@ -588,11 +590,7 @@ class SurgeParser:
                 reserved = None
                 client_id = peer_values.get("client-id")
                 if client_id:
-                    parts = client_id.split("/")
-                    if len(parts) == 3 and all(part.isdigit() for part in parts):
-                        candidate = [int(part) for part in parts]
-                        if all(0 <= value <= 255 for value in candidate):
-                            reserved = candidate
+                    reserved = _client_id_bytes(client_id)
                 surge_peers.append(peer_values)
                 wireguard_peers.append(
                     WireguardPeer(
@@ -656,6 +654,16 @@ class SurgeParser:
         semantic_fields = [
             f"wireguard.{key}" for key in sorted(set(values) - known_section_keys)
         ]
+        known_peer_keys = {
+            "public-key", "preshared-key", "allowed-ips", "endpoint", "client-id", "keepalive",
+        }
+        for index, (source_peer, peer) in enumerate(zip(surge_peers, wireguard_peers)):
+            semantic_fields.extend(
+                f"wireguard.peers[{index}].{key}"
+                for key in sorted(set(source_peer) - known_peer_keys)
+            )
+            if source_peer.get("client-id") and peer.reserved is None:
+                semantic_fields.append(f"wireguard.peers[{index}].client-id")
         if "prefer-ipv6" in values:
             semantic_fields.append("wireguard.prefer-ipv6")
         if len(set(keepalives)) > 1:
@@ -894,18 +902,12 @@ class SurgeParser:
         consumed = SURGE_COMMON_PARAMETERS | SURGE_PROTOCOL_PARAMETERS.get(
             p_type, frozenset()
         )
-        last_indexes = {
-            parameter.key: index for index, parameter in enumerate(record.parameters)
-        }
         preserved = [
             (parameter.key, parameter.value)
-            for index, parameter in enumerate(record.parameters)
+            for parameter in record.parameters
             if parameter.key
             not in SURGE_MULTI_VALUE_PARAMETERS.get(p_type, frozenset())
-            and (
-                parameter.key not in consumed
-                or (p_type != "vless" and index != last_indexes[parameter.key])
-            )
+            and parameter.key not in consumed
         ]
         semantic_fields = [
             key

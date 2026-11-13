@@ -7,7 +7,7 @@ from subio_v2.adapters.base import BaseEmitter
 from subio_v2.adapters.surge.codecs import (
     DEFAULT_SURGE_TARGET,
 )
-from subio_v2.adapters.surge.codecs._shared import _server_str, _SurgeEmissionError
+from subio_v2.adapters.surge.codecs._shared import _client_id_bytes, _server_str, _SurgeEmissionError
 from subio_v2.adapters.surge.resources import (
     SurgeKeystoreEntry,
     SurgeNamedSection,
@@ -536,6 +536,7 @@ class SurgeEmitter(BaseEmitter):
                     "preshared_key": peer.preshared_key,
                     "allowed_ips": peer.allowed_ips,
                     "reserved": peer.reserved,
+                    "keepalive": node.persistent_keepalive,
                 }
                 for peer in node.peers
             ]
@@ -593,7 +594,9 @@ class SurgeEmitter(BaseEmitter):
             else:
                 values.pop("preshared-key", None)
             reserved = model.get("reserved")
-            values.pop("client-id", None)
+            original_client_id = values.pop("client-id", None)
+            if reserved is None and original_client_id and _client_id_bytes(original_client_id) is None:
+                values["client-id"] = original_client_id
             if reserved:
                 if isinstance(reserved, list) and any(
                     "/" in str(value) for value in reserved
@@ -609,7 +612,8 @@ class SurgeEmitter(BaseEmitter):
                     else str(reserved)
                 )
             keepalive = model.get("keepalive")
-            if not node.peers:
+            heterogeneous_keepalive = "wireguard.peers.keepalive" in node.source_extensions.get("surge", {}).get("semantic_fields", [])
+            if not node.peers or not heterogeneous_keepalive or keepalive is not None:
                 values.pop("keepalive", None)
             if keepalive is not None:
                 values["keepalive"] = str(keepalive)

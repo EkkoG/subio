@@ -1,3 +1,5 @@
+import base64
+import binascii
 from dataclasses import dataclass
 
 from subio_v2.adapters.surge.syntax import SurgeProxyRecord
@@ -97,6 +99,19 @@ def _server_str(node: Node) -> str:
     if "=" in value:
         raise SurgeServerError("Surge positional server cannot contain '='")
     return value
+
+
+def _client_id_bytes(value: str) -> list[int] | None:
+    parts = value.split("/")
+    if len(parts) == 3 and all(part.isdigit() for part in parts):
+        candidate = [int(part) for part in parts]
+        if all(0 <= item <= 255 for item in candidate):
+            return candidate
+    try:
+        decoded = base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    return list(decoded) if len(decoded) == 3 else None
 
 
 def _serialize_headers(headers: dict[str, str], *, separator: str, field: str) -> str:
