@@ -200,10 +200,6 @@ def test_obsolete_internal_authorities_are_absent():
         "_PROTOCOL_FIELDS",
         "LINK_CODECS",
         "LINK_BUILDERS",
-        "def _parse_vmess",
-        "def _parse_ss",
-        "def _parse_trojan",
-        "def _parse_vless",
         "def _validate_config",
         "def _warn_platform_type_replacements",
         "def parse_nodes",
@@ -217,6 +213,15 @@ def test_obsolete_internal_authorities_are_absent():
         "BaseParser",
     ):
         assert symbol not in production
+
+    link_document = REPO_ROOT / "src/subio_v2/adapters/links/parser.py"
+    for symbol in (
+        "def _parse_vmess",
+        "def _parse_ss",
+        "def _parse_trojan",
+        "def _parse_vless",
+    ):
+        assert symbol not in link_document.read_text(encoding="utf-8")
 
     engine_source = (
         REPO_ROOT / "src" / "subio_v2" / "workflow" / "engine.py"

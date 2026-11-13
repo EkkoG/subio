@@ -92,7 +92,10 @@ proxies:
     }
     assert nodes[1].tls.enabled is False
 
-    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit_result(nodes).content["proxies"]}
+    proxies = {
+        proxy["name"]: proxy
+        for proxy in ClashEmitter().emit_result(nodes).content["proxies"]
+    }
     assert proxies["vmess-ws"]["ws-opts"] == {
         "path": "/ws",
         "v2ray-http-upgrade": False,
@@ -205,7 +208,10 @@ proxies:
     assert nodes[1].interface_ip is None
     assert nodes[1].allowed_ips == ["10.0.0.0/8"]
 
-    proxies = {proxy["name"]: proxy for proxy in ClashEmitter().emit_result(nodes).content["proxies"]}
+    proxies = {
+        proxy["name"]: proxy
+        for proxy in ClashEmitter().emit_result(nodes).content["proxies"]
+    }
     assert proxies["wg-both"]["ip"] == "10.0.0.2/32"
     assert proxies["wg-both"]["allowed-ips"] == ["10.0.0.0/8", "fd00::/8"]
     assert "ip" not in proxies["wg-allowed-only"]
@@ -213,8 +219,10 @@ proxies:
 
 
 def test_socks5_tls_is_rejected_when_link_format_cannot_represent_it():
-    node = ClashParser().parse_result(
-        """
+    node = (
+        ClashParser()
+        .parse_result(
+            """
 proxies:
   - name: socks-tls
     type: socks5
@@ -223,7 +231,9 @@ proxies:
     tls: true
     sni: example.com
 """
-    ).nodes[0]
+        )
+        .nodes[0]
+    )
 
     assert DaeEmitter().check_node(node).supported is False
     assert V2RayNEmitter().check_node(node).supported is False
@@ -233,8 +243,10 @@ proxies:
 
 
 def test_emission_result_normalizes_capability_issue_fields():
-    node = ClashParser().parse_result(
-        """
+    node = (
+        ClashParser()
+        .parse_result(
+            """
 proxies:
   - name: socks-tls
     type: socks5
@@ -242,7 +254,9 @@ proxies:
     port: 443
     tls: true
 """
-    ).nodes[0]
+        )
+        .nodes[0]
+    )
     node.source_provider = "source-a"
 
     result = V2RayNEmitter().emit_result([node])
@@ -261,8 +275,12 @@ proxies:
 
 
 def test_link_builder_failure_becomes_error_issue(monkeypatch):
-    node = ClashParser().parse_result(
-        """
+    from dataclasses import replace
+
+    node = (
+        ClashParser()
+        .parse_result(
+            """
 proxies:
   - name: ss-node
     type: ss
@@ -271,13 +289,19 @@ proxies:
     cipher: aes-256-gcm
     password: p
 """
-    ).nodes[0]
+        )
+        .nodes[0]
+    )
     node.source_provider = "source-b"
-    monkeypatch.setattr(
-        "subio_v2.adapters.links.v2rayn.link.build_url", lambda _, **__: None
+    emitter = V2RayNEmitter()
+    binding = emitter._conversion.target.codecs[node.type]
+    monkeypatch.setitem(
+        emitter._conversion.target.codecs,
+        node.type,
+        replace(binding, encode=lambda *_: None),
     )
 
-    result = V2RayNEmitter().emit_result([node])
+    result = emitter.emit_result([node])
 
     assert result.supported_nodes == []
     assert len(result.errors) == 1
@@ -326,8 +350,10 @@ def test_v2rayn_link_builders_match_declared_http_and_h2_capabilities():
 
 
 def test_semantic_features_are_errors_when_target_would_drop_them():
-    hysteria2 = ClashParser().parse_result(
-        """
+    hysteria2 = (
+        ClashParser()
+        .parse_result(
+            """
 proxies:
   - name: hy2-obfs
     type: hysteria2
@@ -337,9 +363,13 @@ proxies:
     obfs: salamander
     obfs-password: secret
 """
-    ).nodes[0]
-    vmess = ClashParser().parse_result(
-        """
+        )
+        .nodes[0]
+    )
+    vmess = (
+        ClashParser()
+        .parse_result(
+            """
 proxies:
   - name: vmess-cipher
     type: vmess
@@ -348,8 +378,12 @@ proxies:
     uuid: u
     cipher: unsupported-cipher
 """
-    ).nodes[0]
+        )
+        .nodes[0]
+    )
 
     assert SurgeEmitter().check_node(hysteria2).supported is True
-    assert "salamander-password=secret" in SurgeEmitter().emit_result([hysteria2]).content
+    assert (
+        "salamander-password=secret" in SurgeEmitter().emit_result([hysteria2]).content
+    )
     assert V2RayNEmitter().check_node(vmess).supported is False
