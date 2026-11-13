@@ -1,3 +1,4 @@
+from io import BytesIO
 import asyncio
 import copy
 import json
@@ -903,7 +904,7 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
                                    "Subscription-Userinfo": "upload=1;download=2;total=10;expire=0;unknown=raw-header-canary",
                                    "Set-Cookie": "raw-header-canary", "ETag": "raw-header-canary",
                                }, raise_for_status=lambda: None,
-                               content=b"proxies: [{name: static, type: socks5, server: static.test, port: 1080}]")
+                               raw=BytesIO(b"proxies: [{name: static, type: socks5, server: static.test, port: 1080}]"), close=lambda: None)
 
     def denied(*args, **kwargs):
         pytest.fail("Render attempted publication, report, manifest or upload")
@@ -936,7 +937,7 @@ def test_request_results_are_not_persisted_or_forwarded_upstream(tmp_path, monke
     assert len(upstream) == 1 and cache == []
     assert all(TOKEN not in repr(value) and SECRET not in repr(value) for value in (upstream, cache))
     assert all(item[0] == "https://upstream.test/static" for item in upstream)
-    assert upstream[0][1]["headers"] == {"User-Agent": "static-agent"}
+    assert upstream[0][1]["headers"] == {"User-Agent": "static-agent", "Accept-Encoding": "gzip, deflate, zstd"}
     assert before == {item.relative_to(tmp_path) for item in tmp_path.rglob("*")}
     assert not (tmp_path / "dist").exists()
     captured = capsys.readouterr()

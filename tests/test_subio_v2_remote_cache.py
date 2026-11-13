@@ -1,4 +1,5 @@
 import stat
+from io import BytesIO
 
 import pytest
 
@@ -14,13 +15,16 @@ class Response:
     def __init__(self, status_code=200, content=b"payload", headers=None):
         self.status_code = status_code
         self.content = content
+        self.raw = BytesIO(content)
+        self.closed = False
         self.headers = headers or {}
 
     def raise_for_status(self):
         return None
 
-    def iter_content(self, chunk_size):
-        yield self.content
+    def close(self):
+        self.closed = True
+        self.raw.close()
 
 
 class Session:
@@ -32,7 +36,7 @@ class Session:
     def mount(self, *args, **kwargs):
         return None
 
-    def get(self, url, headers=None, timeout=None):
+    def get(self, url, headers=None, timeout=None, **kwargs):
         self.calls.append((url, headers, timeout))
         return next(self.responses)
 
@@ -115,7 +119,7 @@ def test_remote_loader_disk_cache_uses_conditional_request(tmp_path, monkeypatch
 
 def test_remote_loader_can_explicitly_use_stale_cache_on_error(tmp_path, monkeypatch):
     class ErrorSession(Session):
-        def get(self, url, headers=None, timeout=None):
+        def get(self, url, headers=None, timeout=None, **kwargs):
             raise RuntimeError("network")
 
     sessions = [Session([Response()]), ErrorSession([])]

@@ -89,7 +89,7 @@ def decode_mrs(content: bytes, behavior: str) -> list[str]:
         if len(rules) != count:
             raise ConfigError("MRS domain rule count does not match its payload")
     else:
-        rules = _decode_ipcidr_set(reader)
+        rules = _decode_ipcidr_set(reader, count)
         if len(rules) != count:
             raise ConfigError("MRS IP CIDR rule count does not match its payload")
 
@@ -142,7 +142,7 @@ def _decode_domain_set(reader: _Reader) -> list[str]:
     return [key for key in ordered if f"+.{key}" not in key_set]
 
 
-def _decode_ipcidr_set(reader: _Reader) -> list[str]:
+def _decode_ipcidr_set(reader: _Reader, count: int) -> list[str]:
     if reader.byte() != 1:
         raise ConfigError("Unsupported MRS ipcidr-set version")
 
@@ -156,9 +156,10 @@ def _decode_ipcidr_set(reader: _Reader) -> list[str]:
         last = _unmap_address(ipaddress.ip_address(reader.read(16)))
         if first.version != last.version or int(first) > int(last):
             raise ConfigError("Invalid MRS IP address range")
-        prefixes.extend(
-            str(prefix) for prefix in ipaddress.summarize_address_range(first, last)
-        )
+        for prefix in ipaddress.summarize_address_range(first, last):
+            if len(prefixes) >= min(count, MAX_MRS_ITEMS):
+                raise ConfigError("MRS IP CIDR rule count exceeds the limit or declared count")
+            prefixes.append(str(prefix))
     return prefixes
 
 

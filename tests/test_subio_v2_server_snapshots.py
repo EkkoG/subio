@@ -1,3 +1,4 @@
+from io import BytesIO
 """HTTP lifecycle contracts use synthetic resources, event barriers and a fake clock."""
 
 import asyncio
@@ -401,7 +402,7 @@ def test_every_warmup_round_closes_real_loader_sessions(tmp_path, monkeypatch, o
         if url.endswith("missing"):
             raise RuntimeError("synthetic_secret_not_for_diagnostics")
         return SimpleNamespace(status_code=200, headers={}, raise_for_status=lambda: None,
-                               content=(tmp_path / "nodes.yaml").read_bytes())
+                               raw=BytesIO((tmp_path / "nodes.yaml").read_bytes()), close=lambda: None)
 
     monkeypatch.setattr(RunRemoteLoader, "__init__", init)
     monkeypatch.setattr("requests.Session.get", get)

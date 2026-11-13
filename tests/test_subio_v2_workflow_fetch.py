@@ -1,4 +1,5 @@
 from pathlib import Path
+from io import BytesIO
 
 import pytest
 
@@ -48,7 +49,12 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
     captured = {"headers": None}
 
     class Resp:
-        content = b"hello"
+        raw = BytesIO(b"hello")
+        headers = {}
+        status_code = 200
+
+        def close(self):
+            self.raw.close()
 
         def raise_for_status(self):
             pass
@@ -63,7 +69,7 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
         def mount(self, *args, **kwargs):
             pass
 
-        def get(self, url, headers=None, timeout=None):
+        def get(self, url, headers=None, timeout=None, **kwargs):
             captured["headers"] = headers
             if "fail" in url:
                 raise RuntimeError("network fail")
@@ -81,7 +87,7 @@ def test_fetch_content_url_errors_and_headers(tmp_path, monkeypatch):
         RunRemoteLoader(),
     )
     assert c == b"hello"
-    assert captured["headers"] == {"User-Agent": "UA"}
+    assert captured["headers"]["User-Agent"] == "UA"
 
     # Failure path aborts instead of publishing a partial workflow.
     with pytest.raises(ProviderLoadError, match="Failed to fetch provider"):
@@ -97,7 +103,14 @@ def test_run_remote_loader_caches_by_url_and_headers_only_within_one_instance(
     calls: list[tuple[str, dict[str, str]]] = []
 
     class Resp:
-        content = b"payload"
+        headers = {}
+        status_code = 200
+
+        def __init__(self):
+            self.raw = BytesIO(b"payload")
+
+        def close(self):
+            self.raw.close()
 
         def raise_for_status(self):
             pass
@@ -112,7 +125,7 @@ def test_run_remote_loader_caches_by_url_and_headers_only_within_one_instance(
         def mount(self, *args, **kwargs):
             pass
 
-        def get(self, url, headers=None, timeout=None):
+        def get(self, url, headers=None, timeout=None, **kwargs):
             calls.append((url, headers))
             return Resp()
 
@@ -143,7 +156,7 @@ def test_run_remote_loader_sanitizes_transport_errors(monkeypatch):
         def mount(self, *args, **kwargs):
             pass
 
-        def get(self, url, headers=None, timeout=None):
+        def get(self, url, headers=None, timeout=None, **kwargs):
             raise RuntimeError(f"secret URL: {url}")
 
     monkeypatch.setattr(

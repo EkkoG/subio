@@ -114,7 +114,7 @@ def test_shared_loader_interleaving_keeps_fetched_source_metadata(tmp_path, monk
             assert prepared.bind({}).metadata[prepared.config.name] is not None
             assert prepared.bind({}).metadata[prepared.config.name].subscription_user_info["upload"] == expected
         assert len(session.calls) == 3
-        assert [call[:2] for call in session.calls] == [
+        assert [(call[0], {k: v for k, v in call[1].items() if k != 'Accept-Encoding'}) for call in session.calls] == [
             (source.url, {}), (source.url, {"User-Agent": "client-a"}),
             ("https://example.test/v", {}),
         ]
