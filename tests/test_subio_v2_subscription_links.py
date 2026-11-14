@@ -71,12 +71,21 @@ def test_install_links_require_a_template_and_unencrypted_supported_target(targe
     "file:///tmp", "https://", "https://user:password@example.test", "https://example.test?x=1",
     "https://example.test#fragment", "https://example.test:invalid", "https://example.test/\npath",
     " https://example.test", "https://example.test\\path", "https://example.test/%ZZ",
+    "https://%", "https://%0", "https://%GG", "https://example%ZZ.test",
 ])
 def test_invalid_base_urls_are_rejected_without_disclosing_input(base):
     with pytest.raises(ParameterError) as caught:
         _build(_config(), base, TOKEN)
     assert base not in str(caught.value)
     assert TOKEN not in str(caught.value)
+
+
+@pytest.mark.parametrize("base", [
+    "https://example.test/%25", "https://%41.example.test", "http://localhost:8000",
+    "http://[::1]:8000", "https://\u4f8b\u5b50.test",
+])
+def test_valid_base_url_neighbors_are_preserved(base):
+    assert _build(_config(), base, TOKEN)[0].url.startswith(base + "/subscription/")
 
 
 def test_links_validate_token_params_selection_and_request_size():
@@ -163,6 +172,57 @@ def test_qr_requires_one_output_and_separate_output_files(tmp_path, monkeypatch,
     assert not qr.exists()
     assert _cli(tmp_path, monkeypatch, "--output", str(qr), "--qr", str(qr)) == 1
     assert not qr.exists()
+
+
+@pytest.mark.parametrize("names", [
+    ("links.svg", "LINKS.svg"), ("caf\u00e9.svg", "cafe\u0301.svg"),
+])
+@pytest.mark.parametrize("existing", [False, True])
+def test_qr_rejects_filesystem_filename_aliases(tmp_path, monkeypatch, capsys, names, existing):
+    pytest.importorskip("qrcode")
+    probe = tmp_path / "probe"
+    probe.mkdir()
+    (probe / names[0]).touch()
+    equivalent = (probe / names[1]).exists()
+    output, qr = (tmp_path / name for name in names)
+    if existing:
+        output.write_text("original content")
+    result = _cli(tmp_path, monkeypatch, "--output", str(output), "--qr", str(qr))
+    diagnostic = capsys.readouterr().out
+    if equivalent:
+        assert result == 1
+        assert "different files" in diagnostic
+        assert TOKEN not in diagnostic
+        if existing:
+            assert output.read_text() == "original content"
+        else:
+            assert not output.exists() and not qr.exists()
+    else:
+        assert result == 0
+        assert "URL: https://example.test/" in output.read_text()
+        assert ElementTree.fromstring(qr.read_bytes()).tag == "{http://www.w3.org/2000/svg}svg"
+
+
+@pytest.mark.parametrize("parent_names", [
+    ("outputs", "OUTPUTS"), ("caf\u00e9", "cafe\u0301"),
+])
+def test_qr_checks_equivalent_parent_directories(tmp_path, monkeypatch, capsys, parent_names):
+    pytest.importorskip("qrcode")
+    output_parent, qr_parent = (tmp_path / name for name in parent_names)
+    output_parent.mkdir()
+    qr_parent.mkdir(exist_ok=True)
+    equivalent = output_parent.samefile(qr_parent)
+    output, qr = output_parent / "links.svg", qr_parent / "links.svg"
+    result = _cli(tmp_path, monkeypatch, "--output", str(output), "--qr", str(qr))
+    diagnostic = capsys.readouterr().out
+    if equivalent:
+        assert result == 1
+        assert "different files" in diagnostic
+        assert not output.exists() and not qr.exists()
+    else:
+        assert result == 0
+        assert "URL: https://example.test/" in output.read_text()
+        assert ElementTree.fromstring(qr.read_bytes()).tag == "{http://www.w3.org/2000/svg}svg"
 
 
 def test_generated_url_reaches_real_parameterized_http_output(tmp_path, monkeypatch):

@@ -31,7 +31,7 @@ def _base_url(value: str) -> str:
                 or parsed.username is not None or parsed.password is not None
                 or (parsed.port is not None and parsed.port == 0)):
             raise ValueError
-        if re.search(r"%(?![0-9A-Fa-f]{2})", parsed.path):
+        if re.search(r"%(?![0-9A-Fa-f]{2})", value):
             raise ValueError
         return urlunsplit((parsed.scheme, parsed.netloc,
                            quote(parsed.path.rstrip("/"), safe="/%:@-._~!$&'()*+,;="), "", ""))

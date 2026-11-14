@@ -13,7 +13,7 @@ from subio_v2.core.errors import (
     WorkflowError,
 )
 from subio_v2.infrastructure import age
-from subio_v2.infrastructure.files import set_private_permissions
+from subio_v2.infrastructure.files import filename_aliases, set_private_permissions
 from subio_v2.infrastructure.logging import LOG_LEVELS, logger
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.engine import WorkflowEngine
@@ -141,6 +141,14 @@ def _run_links(args) -> int:
         if args.qr and args.output and Path(args.qr).resolve() == Path(args.output).resolve():
             raise ParameterError("Link output and QR output must use different files")
         qr = _subscription_qr(links[0].url) if args.qr else None
+        if args.qr and args.output:
+            output_path, qr_path = Path(args.output).resolve(), Path(args.qr).resolve()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            qr_path.parent.mkdir(parents=True, exist_ok=True)
+            if output_path.parent.samefile(qr_path.parent):
+                aliases = filename_aliases(output_path.parent, (output_path.name, qr_path.name))
+                if aliases[output_path.name] == aliases[qr_path.name]:
+                    raise ParameterError("Link output and QR output must use different files")
         if args.report_format == "json":
             content = json.dumps([asdict(link) for link in links], ensure_ascii=False, indent=2) + "\n"
         else:
