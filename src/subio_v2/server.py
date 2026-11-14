@@ -27,6 +27,7 @@ from subio_v2.infrastructure.logging import LOG_LEVELS, Logger, logger
 from subio_v2.infrastructure.remote import RemoteLoadError
 from subio_v2.workflow.config import ConfigLoader
 from subio_v2.workflow.parameters import (
+    RENDER_TOKEN_PATTERN,
     ParameterError,
     ParameterLimitError,
     normalize_parameters,
@@ -39,7 +40,6 @@ from subio_v2.workflow.rendering import (
 )
 
 
-_TOKEN = re.compile(r"[A-Za-z0-9_-]{32,128}\Z", re.ASCII)
 _BAD_ESCAPE = re.compile(rb"%(?![A-Fa-f0-9]{2})")
 _HEADERS = {
     "Cache-Control": "no-store, private",
@@ -133,7 +133,7 @@ def _failure_status(exc: Exception) -> int:
 class _RenderService:
     def __init__(self, config_path: str, refresh_interval: int, max_snapshot_age: int):
         token = os.environ.get("SUBIO_RENDER_TOKEN", "")
-        if not _TOKEN.fullmatch(token):
+        if not RENDER_TOKEN_PATTERN.fullmatch(token):
             raise ServerConfigurationError("SUBIO_RENDER_TOKEN is missing or invalid")
         _validate_freshness(refresh_interval, max_snapshot_age)
         self._token = token.encode("ascii")

@@ -78,6 +78,48 @@ Mihomo 和 Surge 客户端中选择 `exit-ss`；初始化的 sing-box 模板默�
 `route.final`。节点名改动后，跨 provider 手写的 `dialer_proxy` 也要指向最终入口名称；同一
 provider 内已有节点引用由 rename 自动更新。
 
+## 生成订阅链接与本地二维码
+
+先按 [GET 渲染指南](get_rendering.md) 启动服务。链接工具使用与该服务相同的
+`SUBIO_RENDER_TOKEN` 环境变量；它不生成新 token，也不会缩小该 token 的权限。
+
+```bash
+subio links my-subio/config.toml --base-url https://subscriptions.example.com
+subio links my-subio/config.toml --base-url https://subscriptions.example.com \
+  --artifact mihomo.yaml --format json --output subscription-links.json
+```
+
+`--artifact` 选择具体输出文件名，包括 `users` 展开的名称，例如 `user-alice.yaml`；不传时列出全部输出。
+`--base-url` 可包含反向代理路径前缀，不能包含用户名、密码、query 或 fragment。反代须将该前缀
+转发到实际服务。HTTP 可用于本地测试，对外服务应使用 HTTPS。
+
+参数沿用 `convert --param NAME=VALUE` 的字面输入规则；工具负责 URL 编码，例如：
+
+```bash
+subio links my-subio/config.toml --base-url https://subscriptions.example.com/subio \
+  --artifact mihomo.yaml --param 'label=Hong Kong + Japan' --output links.txt
+```
+
+参数类型、约束和请求大小会预检；工具只读配置，不下载 provider、读取模板或执行转换，因此不能证明
+源数据已就绪或模板内容有效。有模板且未加密的 Mihomo/Clash、Surge 产物会附带对应配置导入 URI；
+模板声明表示完整配置意图，完整性仍由用户负责。无模板节点列表、Age 密文（包括全局加密）和其他
+目标仅输出原始 URL，不自动开启客户端。导入方式依据
+[Clash Verge 文档](https://www.clashverge.dev/guide/url_schemes.html) 与
+[Surge 文档](https://manual.nssurge.com/tools/url-scheme.html)。
+
+源码环境启用二维码可选依赖后，为单个输出生成 SVG：
+
+```bash
+uv sync --extra server --extra qr
+uv run --extra qr subio links my-subio/config.toml --base-url https://subscriptions.example.com \
+  --artifact mihomo.yaml --output links.txt --qr subscription.svg
+```
+
+二维码在本机生成，内容是原始订阅 URL，不调用外部二维码服务；URL 超过二维码容量时明确失败，
+不截断内容。链接与二维码文件为 `0600`；`--output` 和 `--qr` 会替换各自指定的输出文件。
+未指定 `--output` 时会将完整链接写到 stdout。链接和二维码包含 token 与显式参数，持有者获得
+相应访问权限；命令行参数也可能进入 shell 历史与进程列表。不要把它们当成不含凭据的普通报告。
+
 ## 模板的责任
 
 初始化模板仅提供最小客户端配置。端口、DNS、策略组和其他客户端选项继续由对应模板维护；

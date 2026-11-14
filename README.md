@@ -43,7 +43,8 @@ uv run subio convert example/config.toml --dry-run
 可先运行 `subio init my-subio` 生成可编辑项目，再运行 `subio check my-subio/config.toml`。
 `--preset merge` 用于多来源合并，`--preset chain` 用于入口加落地；重复 `--target` 可选择
 Mihomo、Surge、sing-box 多种输出。源码仓库中在命令前加 `uv run`。
-初始化不会覆盖已有内容。完整操作见 [常用订阅配方](./docs/recipes.md)。
+初始化不会覆盖已有内容。`subio links CONFIG --base-url URL` 可生成订阅和客户端导入链接，
+可选 `qr` extra 支持本地 SVG 二维码。完整操作见 [常用订阅配方](./docs/recipes.md)。
 
 - 在当前目录下创建配置文件 `config.toml`，内容参考 [config.toml](./example/config.toml)。SubIO 也支持 YAML、JSON 和 JSON5 配置。
 - 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/mihomo.yaml)。

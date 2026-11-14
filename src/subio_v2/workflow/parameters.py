@@ -12,6 +12,7 @@ from subio_v2.core.parameters import ParameterValue
 
 
 _NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z", re.ASCII)
+RENDER_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{32,128}\Z", re.ASCII)
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z", re.ASCII)
 _TYPES = {"string": str, "integer": int, "boolean": bool}
 

@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 import tempfile
@@ -100,6 +101,66 @@ def _run_init(args) -> int:
         return 1
     logger.success(f"Project created: {config_path}")
     logger.info("Replace the example servers and passwords before client use")
+    return 0
+
+
+def _subscription_qr(url: str) -> bytes:
+    try:
+        import qrcode
+        from qrcode.image.svg import SvgPathImage
+    except ImportError:
+        raise ParameterError("Install subio[qr] to create QR codes") from None
+    try:
+        return qrcode.make(url, image_factory=SvgPathImage).to_string()
+    except (qrcode.exceptions.DataOverflowError, ValueError):
+        # qrcode 8.2 can reject auto-fit version 41 with ValueError.
+        raise ParameterError("Subscription URL exceeds QR code capacity") from None
+
+
+def _run_links(args) -> int:
+    from dataclasses import asdict
+    from subio_v2.workflow.subscription_links import build_subscription_links
+
+    try:
+        pairs = []
+        for raw in args.param:
+            name, separator, value = raw.partition("=")
+            if not separator:
+                raise ParameterError("Rendering parameter must use NAME=VALUE")
+            pairs.append((name, value))
+        config_path = args.config or find_default_config()
+        if config_path is None:
+            raise ParameterError("Config file not found")
+        config = ConfigLoader.load(config_path)
+        links = build_subscription_links(
+            config, args.base_url, os.environ.get("SUBIO_RENDER_TOKEN", ""),
+            artifact_name=args.artifact, parameter_pairs=tuple(pairs),
+        )
+        if args.qr and len(links) != 1:
+            raise ParameterError("Select one output with --artifact to create a QR code")
+        if args.qr and args.output and Path(args.qr).resolve() == Path(args.output).resolve():
+            raise ParameterError("Link output and QR output must use different files")
+        qr = _subscription_qr(links[0].url) if args.qr else None
+        if args.report_format == "json":
+            content = json.dumps([asdict(link) for link in links], ensure_ascii=False, indent=2) + "\n"
+        else:
+            content = "".join(
+                f"{link.file_name} ({link.target})\n  URL: {link.url}\n"
+                + (f"  Import: {link.install_url}\n" if link.install_url else "")
+                for link in links
+            )
+        if args.output:
+            _atomic_write_bytes(args.output, content.encode("utf-8"))
+        if qr is not None:
+            _atomic_write_bytes(args.qr, qr)
+        if not args.output:
+            sys.stdout.write(content)
+    except ParameterError as exc:
+        logger.error(str(exc))
+        return 1
+    except (WorkflowError, OSError, ValueError) as exc:
+        logger.error(f"Subscription link generation failed ({type(exc).__name__})")
+        return 1
     return 0
 
 
@@ -377,6 +438,15 @@ def main():
     init_parser.add_argument("--target", choices=STARTER_TARGETS, action="append",
                              help="Output target; repeat for multiple targets (default: mihomo)")
 
+    links_parser = subparsers.add_parser("links", help="Build subscription and client import URLs")
+    links_parser.add_argument("config", nargs="?", help="Path to config file")
+    links_parser.add_argument("--base-url", required=True, help="Public service URL, including any proxy prefix")
+    links_parser.add_argument("--artifact", help="Select one concrete output filename")
+    links_parser.add_argument("--param", action="append", default=[], metavar="NAME=VALUE")
+    links_parser.add_argument("--format", dest="report_format", choices=("text", "json"), default="text")
+    links_parser.add_argument("--output", help="Write links to a private file instead of stdout")
+    links_parser.add_argument("--qr", metavar="SVG_FILE", help="Write a local QR code for one output; requires subio[qr]")
+
     # subio convert [config] [--dry-run] [--clean-gist]
     convert_parser = subparsers.add_parser(
         "convert",
@@ -500,6 +570,11 @@ def main():
             )
 
         parser.error = convert_parser.error = convert_parse_error
+    elif sys.argv[1:2] == ["links"]:
+        def links_parse_error(_message):
+            links_parser.exit(2, "subio links: error: invalid_arguments; use subio links --help\n")
+
+        parser.error = links_parser.error = links_parse_error
     elif sys.argv[1:2] == ["age"]:
         def age_parse_error(_message):
             age_parser.exit(2, "subio age: error: invalid_arguments; use subio age --help\n")
@@ -509,6 +584,8 @@ def main():
     args = parser.parse_args()
     if args.subcommand == "init":
         return _run_init(args)
+    if args.subcommand == "links":
+        return _run_links(args)
     if args.subcommand == "serve" and args.max_snapshot_age < args.refresh_interval:
         parser.error("Maximum snapshot age must be at least the refresh interval")
 

@@ -210,6 +210,13 @@ SubIO v2 不建立 `[Proxy Group]` 的通用 IR。Surge `select`、`url-test`、
 
 ## 4. 兼容性
 
+`subio init [DIRECTORY]` 提供 basic/merge/chain 配方，可重复 `--target` 生成 Mihomo、Surge、
+sing-box 的普通配置与模板；只写新建或空目录，不扩大协议支持范围。
+`subio links [CONFIG] --base-url URL` 仅从配置生成固定输出 URL，支持具体 `--artifact`、字面
+`--param`、text/json 和私有文件输出；可选 `qr` extra 在本地生成单输出 SVG。它不读取源或模板、
+不改变认证或目标，完整配置导入 URI 仅用于有模板且未加密的 Mihomo/Clash、Surge。
+操作与限制见 [常用订阅配方](recipes.md)。
+
 ### 4.1 convert 参数化生成
 
 `subio convert CONFIG --param NAME=VALUE` 可重复传入最多 32 个字面参数，按第一个 `=` 分割，
