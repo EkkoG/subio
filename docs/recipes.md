@@ -1,0 +1,88 @@
+# 常用订阅配方
+
+## 从可编辑项目开始
+
+在已安装 SubIO 的环境中执行：
+
+```bash
+subio init my-subio
+subio check my-subio/config.toml
+subio convert my-subio/config.toml --dry-run
+```
+
+在源码仓库使用时，在命令前加 `uv run`。`init` 默认生成 `basic` 配方和 Mihomo 输出；目标目录
+必须不存在或为空，其父目录须已存在。非空目录、文件和目标目录 symlink 均拒绝，不提供覆盖开关。
+新建目录权限为 `0700`，文件为 `0600`；已有空根目录保留原权限。写入失败时只清理本次创建的内容。
+
+生成的 `config.toml`、`provider/*.toml` 和 `template/*` 都是普通文件，可直接修改。节点使用
+`.test` 示例地址和示例密码；通过检查只证明能转换，实际使用前必须替换为自己的服务器与凭据。
+初始化不下载内容、不设置上传，也不生成另一套运行时 preset 配置。
+
+`check` 验证而不写产物；`convert --dry-run` 会写当前工作目录的 `dist/`，只跳过远程上传。
+
+## 多份来源，一次生成多种客户端配置
+
+```bash
+subio init my-subio --preset merge --target mihomo --target surge --target sing-box
+subio check my-subio/config.toml
+```
+
+`merge` 创建两份独立 provider，每个 artifact 都按声明顺序选取两份来源。要替换成远程订阅，
+编辑对应 provider，保留 `name`，将 `file` 删除，设置显式输入类型与 `url`，例如：
+
+```toml
+[[provider]]
+name = "entry"
+type = "mihomo"
+url = "https://subscription.example.invalid/source"
+```
+
+来源格式始终显式选择。相同的节点可以供多个 artifact 使用；各目标不能表示的字段仍会产生 issue，
+不会因为选了现成模板就绕过检查。重名默认报错；确需按源顺序保留首个时设置 artifact 的
+`on_duplicate_name = "keep_first"`。同名不代表节点内容相同。
+
+## 按名称和协议筛选，再排序
+
+在配置顶层添加：
+
+```toml
+[selectors.hk]
+name_regex = '香港|Hong Kong|\bHK\b'
+exclude_name_regex = '测试|过期'
+protocols = ["shadowsocks", "vless"]
+sort_by = ["protocol", "name"]
+```
+
+在需要的 `[[artifact]]` 内设置 `selector = "hk"`。这是名称匹配，不是 IP 地理位置检测。
+`sort_by` 支持 `source_order`、`name`、`protocol`、`source_provider`；`limit` 可限制选中数量。
+筛选到零个节点默认失败。代理链不能筛掉已知上游，否则会按已有依赖规则拒绝。
+
+重命名可使用 [README 中的正则规则](../README.md#节点重命名)；selector 的
+`match_original_name = true` 可匹配重命名前的名称。
+
+## 机场入口加落地节点
+
+```bash
+subio init my-chain --preset chain --target mihomo --target surge --target sing-box
+subio check my-chain/config.toml
+```
+
+将 `provider/nodes.toml` 中的 `entry-ss` 改成入口节点，将 `provider/extra.toml` 中的 `exit-ss`
+改成落地节点。配置中的落地 provider 使用 `dialer_proxy = "entry-ss"`：
+
+- Mihomo 输出落地节点的 `dialer-proxy`；
+- Surge 输出落地节点的 `underlying-proxy`；
+- sing-box 输出落地节点的 `detour`。
+
+Mihomo 和 Surge 客户端中选择 `exit-ss`；初始化的 sing-box 模板默认使用最后一个节点作为
+`route.final`。节点名改动后，跨 provider 手写的 `dialer_proxy` 也要指向最终入口名称；同一
+provider 内已有节点引用由 rename 自动更新。
+
+## 模板的责任
+
+初始化模板仅提供最小客户端配置。端口、DNS、策略组和其他客户端选项继续由对应模板维护；
+SubIO 不导入或转换完整平台配置。sing-box 输出仍必须使用 JSON 模板，通过
+`nodes.outbounds()`、`nodes.endpoints()` 组合节点；其他设置由模板负责。
+
+更复杂的规则与节点示例见 [example](../example/README.md)，协议和字段限制见
+[支持矩阵](support_matrix.md)，HTTP 订阅部署见 [GET 渲染指南](get_rendering.md)。

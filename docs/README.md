@@ -7,6 +7,7 @@
 - `docs/support_matrix.md`：当前节点、规则集输入和目标输出能力；
 - `docs/subio_node_format.md`：SubIO 原生节点文件 v2、协议字段和 rejection 规则；
 - `docs/get_rendering.md`：可选 GET 服务、类型化本地源参数、URL token 与安全部署限制；
+- `docs/recipes.md`：项目初始化、多来源合并、筛选排序与代理链的常用配方；
 - `docs/e2e_testing.md`：离线示例、CLI 端到端覆盖和敏感内容审计；
 - `tests/README.md`：测试目录和推荐验证顺序。
 

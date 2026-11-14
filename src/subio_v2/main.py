@@ -87,6 +87,22 @@ def _config_secrets(config):
     ]
 
 
+def _run_init(args) -> int:
+    from subio_v2.workflow.starter import initialize_project
+
+    try:
+        config_path = initialize_project(
+            Path(args.directory), preset=args.preset,
+            targets=tuple(args.target or ("mihomo",)),
+        )
+    except (OSError, ValueError) as exc:
+        logger.error(f"Project initialization failed: {exc}")
+        return 1
+    logger.success(f"Project created: {config_path}")
+    logger.info("Replace the example servers and passwords before client use")
+    return 0
+
+
 def _run_convert(args) -> int:
     parameter_mode = bool(args.param)
     redactions = [raw.partition("=")[2] for raw in args.param]
@@ -353,6 +369,14 @@ def main():
         title="subcommands", dest="subcommand", metavar="<subcommand>"
     )
 
+    from subio_v2.workflow.starter import STARTER_PRESETS, STARTER_TARGETS
+
+    init_parser = subparsers.add_parser("init", help="Create an editable starter project")
+    init_parser.add_argument("directory", nargs="?", default=".", help="New or empty directory")
+    init_parser.add_argument("--preset", choices=STARTER_PRESETS, default="basic")
+    init_parser.add_argument("--target", choices=STARTER_TARGETS, action="append",
+                             help="Output target; repeat for multiple targets (default: mihomo)")
+
     # subio convert [config] [--dry-run] [--clean-gist]
     convert_parser = subparsers.add_parser(
         "convert",
@@ -483,6 +507,8 @@ def main():
         for command_parser in (parser, age_parser, keygen, convert, encrypt, decrypt):
             command_parser.error = age_parse_error
     args = parser.parse_args()
+    if args.subcommand == "init":
+        return _run_init(args)
     if args.subcommand == "serve" and args.max_snapshot_age < args.refresh_interval:
         parser.error("Maximum snapshot age must be at least the refresh interval")
 
