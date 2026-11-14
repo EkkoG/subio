@@ -25,13 +25,19 @@ def filter_nodes(nodes: list[Node], config: FilterConfig | None) -> list[Node]:
 
 def rename_nodes(nodes: list[Node], config: RenameConfig) -> list[Node]:
     renamed: dict[str, str] = {}
+    rules = [
+        (re.compile(rule.old) if rule.regex else rule.old, rule.new)
+        for rule in config.replace
+    ]
     for node in nodes:
         if node.original_name is None:
             node.original_name = node.name
         name = node.name
-        for rule in config.replace:
-            if rule.old:
-                name = name.replace(rule.old, rule.new)
+        for pattern, replacement in rules:
+            if isinstance(pattern, re.Pattern):
+                name = pattern.sub(replacement, name)
+            elif pattern:
+                name = name.replace(pattern, replacement)
         old_name = node.name
         node.name = f"{config.add_prefix}{name}{config.suffix}"
         renamed[old_name] = node.name

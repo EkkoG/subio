@@ -37,6 +37,7 @@ class FilterConfig:
 class RenameRule:
     old: str
     new: str
+    regex: bool = False
 
 
 @dataclass(frozen=True)
@@ -53,7 +54,7 @@ class RenameConfig:
             add_prefix=value.get("add_prefix", ""),
             suffix=value.get("suffix", ""),
             replace=tuple(
-                RenameRule(item["old"], item["new"])
+                RenameRule(item["old"], item["new"], item.get("regex", False))
                 for item in value.get("replace", ())
             ),
         )

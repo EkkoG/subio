@@ -283,6 +283,14 @@ class ConfigValidator:
                 item.get("new"), str
             ):
                 raise ConfigError(f"{label} replace entries need string old/new")
+            regex = item.get("regex", False)
+            if not isinstance(regex, bool):
+                raise ConfigError(f"{label} replace regex must be a boolean")
+            if regex:
+                try:
+                    re.compile(item["old"]).sub(item["new"], "")
+                except (re.error, IndexError, OverflowError, RecursionError) as exc:
+                    raise ConfigError(f"{label} contains an invalid regex or replacement") from exc
 
     @staticmethod
     def _validate_references(config: Mapping[str, Any]) -> None:

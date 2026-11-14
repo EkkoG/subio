@@ -114,6 +114,24 @@ password = "secret"
 确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
 跨平台转换，也不会由 SubIO 执行。
 
+#### 节点重命名
+
+`provider.rename.replace` 默认执行字面替换。单条规则设置 `regex = true` 后使用 Python 正则，
+支持捕获组替换和空字符串删除。规则按声明顺序执行，最后添加前缀和后缀；无效模式或替换引用在读取
+provider 前拒绝。原名继续用于原名筛选，同一 provider 内的 dialer 引用随重命名更新。
+
+```toml
+[provider.rename]
+add_prefix = "edge-"
+replace = [
+  { old = '^HK-0*(\d+)-.*$', new = 'HK-\1', regex = true },
+  { old = "Hong Kong", new = "HK" },
+]
+```
+
+TOML 单引号保留正则中的反斜杠；旧规则无需增加 `regex`。字面规则的空 `old` 仍不执行替换。
+正则是可信本地配置，不执行脚本；重命名造成的重名继续由 artifact 的既有策略处理。
+
 #### Age 密钥与解密
 
 可用身份文件避免把私钥放入命令行参数。文件只包含一个 X25519 identity，允许空行和以 `#` 开头的注释；
