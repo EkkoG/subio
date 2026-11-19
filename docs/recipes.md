@@ -57,8 +57,24 @@ sort_by = ["protocol", "name"]
 `sort_by` 支持 `source_order`、`name`、`protocol`、`source_provider`；`limit` 可限制选中数量。
 筛选到零个节点默认失败。代理链不能筛掉已知上游，否则会按已有依赖规则拒绝。
 
-重命名可使用 [README 中的正则规则](../README.md#节点重命名)；selector 的
-`match_original_name = true` 可匹配重命名前的名称。
+selector 的 `match_original_name = true` 可匹配重命名前的名称。
+
+## 节点重命名
+
+在要改名的 `[[provider]]` 下添加 `[provider.rename]`。替换默认按字面匹配；单条规则设置
+`regex = true` 可以用 Python 正则和捕获组，`new = ""` 可删除匹配部分。
+
+```toml
+[provider.rename]
+add_prefix = "edge-"
+replace = [
+  { old = '^HK-0*(\d+)-.*$', new = 'HK-\1', regex = true },
+  { old = "Hong Kong", new = "HK" },
+]
+```
+
+替换按声明顺序执行，最后添加前缀和后缀。TOML 单引号会保留正则中的反斜杠。
+同一 provider 内的节点引用随改名更新；改名后出现重名时，继续使用 artifact 的重名策略。
 
 ## 机场入口加落地节点
 
@@ -119,6 +135,26 @@ uv run --extra qr subio links my-subio/config.toml --base-url https://subscripti
 不截断内容。链接与二维码文件为 `0600`；`--output` 和 `--qr` 会替换各自指定的输出文件。
 未指定 `--output` 时会将完整链接写到 stdout。链接和二维码包含 token 与显式参数，持有者获得
 相应访问权限；命令行参数也可能进入 shell 历史与进程列表。不要把它们当成不含凭据的普通报告。
+
+## 发布与加密
+
+本地文件生成成功后，普通 `subio convert` 也会按配置上传到 GitHub Gist；先用 `--dry-run`
+验证产物。上传者和逐产物上传配置见 [远程示例](../example/config.remote.toml)。需要管理本地旧产物时，
+用 `--write-manifest` 记录清单，之后 `--clean-dist` 只删除上一份清单管理的旧文件。
+
+配置 `artifact.age_public_key` 可加密输出。推荐把 Age 私钥保存在仅自己可读的身份文件里，
+避免把私钥放进命令行参数。下面第一条 `subio` 命令创建新密钥，第二条显示对应的公钥，
+第三条将用该公钥加密的产物解密为本地文件：
+
+```bash
+umask 077
+subio age keygen > identity.txt
+subio age convert --identity-file identity.txt
+subio age decrypt --identity-file identity.txt subscription.age subscription.yaml
+```
+
+身份文件只包含一个 X25519 identity，可以含空行和以 `#` 开头的注释。解密时省略输出文件会写到
+标准输出；输入或输出填 `-` 时分别使用标准输入或标准输出。
 
 ## 模板的责任
 

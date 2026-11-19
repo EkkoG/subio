@@ -1,310 +1,84 @@
-SubIO 是一个类似于 [Surgio](https://surgio.js.org/) 的多平台代理节点与规则集转换工具，
-重点是轻量和易于扩展协议，不承担完整客户端配置的无损中转。
+# SubIO v2
 
-### 原理
+把本地节点和远程订阅整理成 Mihomo、Surge、sing-box 等客户端可用的配置。同一份来源可以筛选、改名，
+也可以与其他来源合并，再一次生成多个客户端的配置。
 
-SubIO 将已知订阅中的代理节点和可分享规则集转换成统一语义，再按目标平台生成配置片段。
+SubIO 转换代理节点和可独立分享的规则集。DNS、策略组等客户端设置由各目标的模板定义；导入一份客户端配置时，
+SubIO 只提取它支持的节点。
 
-核心由输入 parser/codec 和目标 renderer 组成：前者把节点或规则集解析为语义模型，后者按目标
-平台生成配置片段；模板和 artifact 负责组合与发布结果。
+[快速开始](#快速开始) · [支持的格式](#支持的格式) · [常用订阅配方](docs/recipes.md) · [HTTP 订阅部署](docs/get_rendering.md)
 
-节点转换通常定义 provider 和 artifact，并使用 template 组合目标配置。sing-box artifact 必须使用
-JSON Jinja 模板；它可以调用节点和规则集转换结果来生成完整客户端配置。
+## 安装
 
-### 安装
+需要 Python 3.11 或更高版本。从 GitHub 安装命令行工具：
 
-#### 使用 pip 安装
-
-```shell
-pip3 install -e git+https://github.com/ekkog/subio#egg=subio
+```bash
+uv tool install git+https://github.com/EkkoG/subio.git
 ```
 
-安装后使用 `subio` 命令运行（`subio2` 为同一入口的别名）。
+使用 pip 时，在已激活的虚拟环境中运行
+`python -m pip install "subio @ git+https://github.com/EkkoG/subio.git"`。
 
-#### 从源码安装（使用 uv）
+## 快速开始
 
-```shell
-# 克隆仓库
-git clone https://github.com/ekkog/subio.git
+先用示例节点为 Mihomo 和 Surge 各生成一份配置：
+
+```bash
+subio init my-subio --target mihomo --target surge
+cd my-subio
+subio convert --dry-run
+```
+
+生成的文件是 `dist/mihomo.yaml` 和 `dist/surge.conf`。`--dry-run` 会在当前目录写出文件，
+但不会上传；如果配置了远程来源，仍会读取订阅。只想验证配置时，运行 `subio check`，它会检查输入、
+转换和模板，但不写产物。
+
+示例节点只用于验证流程。要实际连接，在 `provider/nodes.toml` 中填入自己的节点信息。已有 Mihomo
+订阅地址时，可以改用它：把 `config.toml` 中原来的 `[[provider]]` 整段替换为下面的内容，并换成你的 URL。
+
+```toml
+[[provider]]
+name = "entry"
+type = "mihomo"
+url = "https://subscription.example.com/nodes"
+```
+
+`name` 保留为 `entry`，这样两个输出都能找到这个来源。`type` 填**原订阅的格式**；输出格式由
+`[[artifact]]` 各自的 `type` 决定。修改后重新运行 `subio convert --dry-run`，把 `dist/` 中
+对应的文件导入客户端。策略组、端口等设置可在 `template/` 中编辑。
+
+## 支持的格式
+
+| 用途 | 格式 |
+| --- | --- |
+| 节点输入 | Mihomo、Stash、Surge、sing-box、v2rayN 分享链接或订阅、[SubIO v2 节点文件](docs/subio_node_format.md) |
+| 节点输出 | Mihomo、Stash、Surge、sing-box、dae、v2rayN |
+| 可分享规则集输入 | Mihomo / Stash 的 text、YAML、MRS；Surge 的 Rule Set 和 Domain Set；sing-box 的 Source JSON |
+
+这里列的是格式，具体协议和字段要看[支持矩阵](docs/support_matrix.md)。目标无法保留所需的协议参数
+或规则语义时，SubIO 会报告问题，默认停止生成。sing-box 输出需要 JSON 模板来组合节点与路由规则。
+`clash-meta` 仍是 `mihomo` 的兼容别名；原版 `clash` 已废弃，仍支持其原有格式的输入和输出。
+
+## 接下来可以做什么
+
+| 需求 | 从这里开始 |
+| --- | --- |
+| 合并多份订阅，筛选、排序或改名 | [多来源配方](docs/recipes.md#多份来源一次生成多种客户端配置) |
+| 用一个节点做入口、另一个做落地 | [代理链配方](docs/recipes.md#机场入口加落地节点) |
+| 给客户端提供可刷新的订阅 URL | [启动 HTTP 渲染服务](docs/get_rendering.md)，再用 [`subio links`](docs/recipes.md#生成订阅链接与本地二维码) 生成链接、受支持的客户端导入 URI 或本地二维码 |
+| 在模板中使用规则集，或配置 Age 和 GitHub Gist | [可运行的示例与配置参考](example/README.md)、[发布与加密配方](docs/recipes.md#发布与加密) |
+| 排查哪些来源或输出有问题 | `subio inspect providers`、`subio inspect artifacts` |
+
+## 从源码运行
+
+```bash
+git clone https://github.com/EkkoG/subio.git
 cd subio
-
-# 安装 uv（如果尚未安装）
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 安装依赖并创建虚拟环境
 uv sync
-
-# 运行示例项目，不执行远程上传
 uv run subio convert example/config.toml --dry-run
 ```
 
-### 使用
+示例只读仓库内的样例数据，不需要真实订阅。直接在源码仓库使用 CLI 时，在命令前加 `uv run`。
+更多内容见[文档索引](docs/README.md)和[开发指南](docs/DEV.md)。
 
-可先运行 `subio init my-subio` 生成可编辑项目，再运行 `subio check my-subio/config.toml`。
-`--preset merge` 用于多来源合并，`--preset chain` 用于入口加落地；重复 `--target` 可选择
-Mihomo、Surge、sing-box 多种输出。源码仓库中在命令前加 `uv run`。
-初始化不会覆盖已有内容。`subio links CONFIG --base-url URL` 可生成订阅和客户端导入链接，
-可选 `qr` extra 支持本地 SVG 二维码。完整操作见 [常用订阅配方](./docs/recipes.md)。
-
-- 在当前目录下创建配置文件 `config.toml`，内容参考 [config.toml](./example/config.toml)。SubIO 也支持 YAML、JSON 和 JSON5 配置。
-- 在当前目录下新建 `template` 目录，并在该目录下创建模板文件，参考 [template](./example/template/mihomo.yaml)。
-- 可以在当前目录下创建 `snippet` 目录，用于存放参数化规则片段，参考 [pt](./example/snippet/pt)。第一行声明逗号分隔的 policy 参数，后续每行是规则；`{{ rule }}` 只表示已声明的 policy 参数引用，不是通用 Jinja 模板源码。
-- 可以在模板中引用远程规则集；远程规则集输入需要通过 `[[ruleset]]` 在配置文件中定义。
-
-#### 节点输入
-
-节点 provider 目前支持 `mihomo`、`clash`、`stash`、`surge`、`sing-box`、`v2rayn` 和 `subio`。现代
-Mihomo YAML 应使用 `type = "mihomo"`；`clash-meta` 仍作为完全等价的兼容别名，但配置加载时会
-提示替换为 `mihomo`。`clash` 专指原版 Clash YAML，已废弃但仍按原版能力继续支持，配置加载时
-会提示迁移到 `mihomo`。
-
-例如读取 Mihomo YAML 节点：
-
-```toml
-[[provider]]
-name = "mihomo_nodes"
-type = "mihomo"
-file = "mihomo.yaml"
-```
-
-读取 Stash YAML 节点：
-
-```toml
-[[provider]]
-name = "stash_nodes"
-type = "stash"
-file = "stash.yaml"
-```
-
-读取平台无关的 SubIO 节点文件：
-
-```toml
-[[provider]]
-name = "self-hosted"
-type = "subio"
-file = "nodes.toml"
-```
-
-`nodes.toml` 使用版本化的原生节点语义，不是 Mihomo 字段的另一种序列化：
-
-```toml
-version = 2
-
-[[nodes]]
-name = "HK-01"
-type = "shadowsocks"
-server = "hk.example.com"
-port = 8388
-cipher = "aes-256-gcm"
-password = "secret"
-```
-
-原生格式同时支持 TOML、JSON、JSON5、YAML，四种序列化共享同一严格对象模型。完整字段、协议索引、
-多用户覆盖和旧格式拒绝行为见 [SubIO 节点文件格式 v2](./docs/subio_node_format.md)。
-
-`artifact.type` 使用同一命名契约：新配置用 `mihomo`，旧 `clash-meta` 配置保持兼容并产生替代
-提示，原版 `clash` 继续使用较小的独立能力范围并产生废弃提示。模板名、artifact 文件名和上传
-文件名中的 `clash` 只是用户自定义文本，不会自动重命名。
-
-`provider.type = "sing-box"` 读取 sing-box JSON 中当前 codec 支持的 `outbounds` 和 `endpoints`；
-`artifact.type = "sing-box"` 必须指定 JSON Jinja `template`，其中
-`nodes.outbounds()`、`nodes.endpoints()` 和规则集 callable 可组合为完整客户端配置。完整配置中
-未转换的部分由模板维护，SubIO 不导入完整配置或建立通用客户端配置 IR。可运行的节点加规则示例见
-[config.singbox-nodes.toml](./example/config.singbox-nodes.toml)。
-
-具体目标协议和跨平台限制见 [支持矩阵](./docs/support_matrix.md)。
-
-原生 SubIO v2 可直接构造当前 27 种公开具体 Node IR；固定 schema 基线中的 26 种 Mihomo 节点
-类型和 Stash-only Juicity 均有明确模型。真正未知的 YAML type 只允许回到其来源平台，不能进入
-原生 SubIO 文件。Surge External 的本地 file provider 默认可输出回 Surge，远程 URL 默认忽略；
-确需远程同平台透传时，在对应 Surge provider 上设置 `allow_unsafe_external = true`。External 不会
-跨平台转换，也不会由 SubIO 执行。
-
-#### 节点重命名
-
-`provider.rename.replace` 默认执行字面替换。单条规则设置 `regex = true` 后使用 Python 正则，
-支持捕获组替换和空字符串删除。规则按声明顺序执行，最后添加前缀和后缀；无效模式或替换引用在读取
-provider 前拒绝。原名继续用于原名筛选，同一 provider 内的 dialer 引用随重命名更新。
-
-```toml
-[provider.rename]
-add_prefix = "edge-"
-replace = [
-  { old = '^HK-0*(\d+)-.*$', new = 'HK-\1', regex = true },
-  { old = "Hong Kong", new = "HK" },
-]
-```
-
-TOML 单引号保留正则中的反斜杠；旧规则无需增加 `regex`。字面规则的空 `old` 仍不执行替换。
-正则是可信本地配置，不执行脚本；重命名造成的重名继续由 artifact 的既有策略处理。
-
-#### Age 密钥与解密
-
-可用身份文件避免把私钥放入命令行参数。文件只包含一个 X25519 identity，允许空行和以 `#` 开头的注释；
-`age keygen` 的输出可直接作为身份文件。请限制该文件的读取权限。
-
-```bash
-umask 077
-subio age keygen > identity.txt
-subio age convert --identity-file identity.txt
-subio age decrypt --identity-file identity.txt subscription.age subscription.yaml
-```
-
-解密省略目标文件时写到 stdout，来源或目标为 `-` 时使用 stdin 或 stdout。
-旧用法 `subio age convert SECRET_KEY` 和 `subio age decrypt SECRET_KEY SOURCE [TARGET]` 继续支持，
-但会把私钥放入进程 argv，也可能进入 shell 历史。推荐使用 `--identity-file`。
-
-#### CLI 参数化生成
-
-`convert` 可重复使用 `--param NAME=VALUE`，将同一组输入按各 artifact 的 `params` 声明独立转换，
-绑定本地参数化 provider，并把相同的不可变 `params` 交给最终模板。无需逐个声明字符串参数；
-`artifact.params` 可补充整数、布尔值、默认值和约束。不传 `--param` 时也会使用各 artifact 自己的默认值。
-
-```bash
-uv run subio convert example/render/config.toml --dry-run \
-  --param 'username=example-user' --param 'password=example + & = % # value' \
-  --param 'port=1081' --param 'udp=false'
-```
-
-每个参数只在第一个 `=` 处分开；空值、空白、Unicode、后续 `=`、`+`、`%`、`&` 和看似 Jinja 的文本
-原样保留，不做 URL 解码或环境展开。请按 shell 规则引用参数。CLI 不需要认证 token，但 `token` 仍为
-保留参数名。名称、重复值、每次最多 32 个参数、单值最多 1024 UTF-8 bytes、类型与约束沿用
-[参数规则](./docs/get_rendering.md#文件名和参数声明)；引用缺失值或非法输入返回非零，并在完整生成前阻止发布。
-`--dry-run` 仍写本地 `dist`，只跳过远程上传。参数化转换仅打印安全状态、错误类别和计数；manifest
-只记录来源哈希及逐输出的解析/选择计数，不记录参数值。生成的文件和配置的上传结果会包含渲染后的凭据。
-命令行参数可能进入 shell 历史和进程列表，应按这些位置的可见范围处理凭据。
-`check`、`inspect` 不接受 `--param`，仍在输入 I/O 前拒绝参数化源。
-
-#### GET/HEAD 参数化渲染服务
-
-可选的 `server` extra 提供 `GET /subscription/<file_name>?token=...` 和同路径 HEAD，无需附加请求头。请求参数
-默认按字符串处理，无需预先逐个声明；仅在需要类型、默认值或约束时补充 `artifact.params`。
-参数可替换本地 Mihomo/Clash YAML 或原生 SubIO v2 节点文件的标量，引用缺失参数直接报错。
-`token` 专用于鉴权，不进入模板参数。
-`file_name` 直接使用已有 artifact 输出文件名，无需声明额外路由。
-服务默认监听 loopback，可用 `--host 0.0.0.0` 或具体网卡地址部署；不发布文件或上传结果。
-启动日志显示资源准备进度，实际绑定成功后显示 `Ready to accept GET requests`。普通静态 CLI 的用法保持不变。
-`--log-level` 默认 `info`；排查可用 `debug` 查看逐项准备过程和安全错误诊断，用 `warning` 或 `error` 减少输出。
-启动和后台刷新预先准备内存资源快照，普通请求不重新读取/下载源或解析静态输入。本地节点、snippet
-和模板修改在成功刷新后可见；配置或 token 修改须重启。`--refresh-interval` 默认 300 秒，
-`--max-snapshot-age` 默认 900 秒，均为正整数且后者至少等于前者。未准备或过期的路由返回 503；
-获取失败不会延长旧快照期限。serve 关闭远程磁盘响应缓存，`remote.cache` 仍用于静态 CLI。
-
-```bash
-uv sync --extra server
-export SUBIO_RENDER_TOKEN="$(uv run python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-uv run --extra server subio serve example/render/config.toml
-```
-
-引用远程 provider 的 artifact 会在成功响应中汇总已知用量为 `Subscription-Userinfo`；本地和未知用量不推算。
-HEAD 执行相同完整渲染与检查，只省去传输正文。离线示例包含两个 artifact 和安全模板，见
-[GET/HEAD 示例](./example/render/README.md)。用量字段与限制、参数声明、URL 编码、CLI 与 HTTP 的运行边界、
-token 轮换和 TLS 反向代理设置见 [GET/HEAD 渲染指南](./docs/get_rendering.md)。
-一个 token 授权全部已配置 artifact；GET/HEAD URL 中的凭据仍可能泄露到历史、代理/APM 日志或网络，
-`no-store` 无法清除这些副本。
-
-#### 规则集输入
-
-远程规则集输入使用 `type`、`behavior` 和 `format` 显式选择 codec：
-
-```toml
-[[ruleset]]
-name = "mihomo_domains"
-url = "https://example.com/domains.yaml"
-type = "mihomo"
-behavior = "domain"
-format = "yaml"
-
-[[ruleset]]
-name = "surge_rules"
-url = "https://example.com/rules.list"
-type = "surge"
-behavior = "classical"
-format = "text"
-
-[[ruleset]]
-name = "stash_ip"
-url = "https://example.com/ipcidr.mrs"
-type = "stash"
-behavior = "ipcidr"
-format = "mrs"
-
-[[ruleset]]
-name = "singbox_source"
-url = "https://example.com/rules.json"
-type = "sing-box"
-behavior = "classical"
-format = "source"
-```
-
-当三个字段都未声明时，精确默认为 `mihomo + classical + text`；不根据 URL、
-扩展名或解析失败切换格式。当前文本输入的合法组合为：
-
-- Mihomo / Stash：`domain | ipcidr | classical` 与 `text | yaml`；其中 MRS 只支持
-  `domain | ipcidr`；
-- Surge：`classical | domain` 与 `text`；
-- sing-box：`classical + source`，读取官方 Source JSON v1-v5。
-
-MRS 由进程内 data-only decoder 解析，不调用 Mihomo CLI 或系统 `zstd`。解码器限制压缩输入和
-解压输出大小，并校验 MRS 版本、behavior、计数、trie/IP range 结构与尾部数据；
-`classical + mrs` 会直接拒绝。
-
-Mihomo/Stash 的 `.` 仅子域语义、Surge Domain Set 的 `.` 包含根域语义会按方言
-分别解析。引用外部脚本或其他规则资源的条目不会被执行；被当前目标无法精确表达的
-规则会产生结构化 conversion error，并在 artifact 写入或上传前阻断。
-
-Mihomo、Stash 和 Surge 的 classical 输入支持官方自包含 predicate、options 和
-`AND`/`OR`/`NOT`。转换会处理
-`MATCH`/`FINAL`、`DST-PORT`/`DEST-PORT`、来源 IP、TCP/UDP 网络类型和进程名/路径模式等已确认的
-等价语义；Stash `no-track` 与 Surge 专属 options 只输出到各自平台。
-
-`provider.type = "sing-box"` 可读取 sing-box Source JSON 规则集作为规则输入，但不提供独立
-Source JSON 输出 artifact。要输出规则，请通过完整客户端 JSON 模板中的规则集 callable 组合到
-`route.rules`。
-
-已有 `[[ruleset]] name/url`、模板 callable、policy 参数和其他平台的输出文本格式保持不变。Python API 中
-`EmissionResult.emitted_policy_names` 已移除：成功生成的节点名称从 `supported_nodes` 读取；模板通过
-`nodes.render()`、`nodes.names()`、`nodes.count()` 和 `nodes.exists()` 读取安全节点摘要，旧模板变量
-继续由 workflow 兼容适配。Parser 和 Emitter 的结构化结果只返回节点、内容、问题和有界 fragments；
-Surge Keystore 及命名 section 作为节点附件随节点流转。
-
-然后执行 `subio` 命令即可。
-
-```shell
-# 使用默认配置文件（自动查找 config.toml/yaml/yml/json/json5）
-subio convert
-
-# 指定配置文件
-subio convert example/config.toml
-
-# 干运行模式（不推送到远程，仅本地生成）
-subio convert example/config.toml --dry-run
-
-# 只验收，不写 dist、不上传
-subio check example/config.toml
-subio check example/config.toml --format json --compare-dist
-
-# 查看 Provider 或 Artifact 摘要
-subio inspect providers example/config.toml
-subio inspect artifacts example/config.toml --format json
-
-# 显式记录产物清单；clean-dist 只清理上一份清单管理的旧文件
-subio convert example/config.toml --write-manifest
-subio convert example/config.toml --clean-dist
-
-# 清理 gist 中所有现有文件后再上传
-subio convert example/config.toml --clean-gist
-```
-
-### 致谢
-
-- [Surgio](https://surgio.js.org/)
-
-### 开发文档
-
-- [开发约束与架构](./docs/DEV.md)
-- [SubIO 节点文件格式 v2](./docs/subio_node_format.md)
-- [GET/HEAD 参数化渲染与安全部署](./docs/get_rendering.md)
-- [支持矩阵](./docs/support_matrix.md)
-- [端到端测试](./docs/e2e_testing.md)
-- [文档索引](./docs/README.md)
+项目灵感来自 [Surgio](https://surgio.js.org/)。
